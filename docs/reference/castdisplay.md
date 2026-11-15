@@ -29,7 +29,7 @@ audio_format=(24000, 2), audio_loop=False)`
 | `kind` | `"windows"` (Wireless Display app) or `"roku"` (Screen mirroring) |
 | `canvas` | `(w, h)` of the stream, at least the picture, which is centred on black |
 | `fps`, `bitrate` | the stream's |
-| `name` | what the sink lists the cast as; `None` is the board's name, [`boarddev.name()`](boarddev.md) |
+| `name` | what the sink lists the cast as; `None` is the board's name, [`boarddev.name()`](../guides/board-name.md) |
 | `log` | where session messages go (default: nowhere) |
 | `audio` | `None` for silence; `True` for the app's sound; on a desktop, a file, URL or list of ffmpeg input arguments |
 | `audio_format` | `(rate, channels)` the P4's audio pump drives, for `audio=True` |
