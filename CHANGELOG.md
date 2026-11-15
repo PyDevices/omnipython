@@ -1,3 +1,13 @@
+## v0.8.0.dev18 (2026-11-15)
+
+- lib-lock: a pinned package can name its micropython-lib and Adafruit dependencies (#595)
+- omip: a target that isn't a lib folder holds the app's folder (#591)
+- displaydev: can_rotate says whether rotation turns what you draw (#592)
+- iconkit: a release reaches the mip index without a manual dispatch (#593)
+- omip: downloads time out and land whole; CircuitPython configs install their drivers (#589)
+- GIGA Display Shield: omip by mip into /flash/lib, and the ROMFS recipe keeps the firmware's modules (#588)
+- wifi_manager: join a single known network without scanning first (#585)
+
 ## v0.8.0.dev17 (2026-11-14)
 
 - Index: touchkit requires deskkit (#582)
