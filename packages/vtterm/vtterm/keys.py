@@ -7,7 +7,8 @@
 pydevices' ``keys`` module) to bytes: letters and symbols on a US layout,
 Ctrl+letter as a control code, and the arrows, Home, End, Page Up, Page Down,
 Insert, Delete and F1 to F4 as escape sequences. `KeyEvents` reads key-down
-events from a function such as a desktop display's ``get_events``.
+events from a function such as a desktop display's ``get_events``, and mouse
+events too when you give it a `Mouse <vtterm.mouse.Mouse>`.
 """
 
 # Key codes and modifier bits, the same values as pydevices' keys module.
@@ -136,12 +137,15 @@ class KeyEvents:
             go to ``other`` if given.
         screen (Screen): Its ``app_cursor`` mode picks the arrow sequences.
         other (callable): Called with each event that isn't a key-down.
+        mouse (Mouse): A `Mouse <vtterm.mouse.Mouse>` whose reports for mouse
+            events are returned with the keys' bytes, in order.
     """
 
-    def __init__(self, get_events, screen=None, other=None):
+    def __init__(self, get_events, screen=None, other=None, mouse=None):
         self.get_events = get_events
         self.screen = screen
         self.other = other
+        self.mouse = mouse
 
     def read(self):
         """Return the bytes for the keys pressed since the last call, or ``None``."""
@@ -155,6 +159,11 @@ class KeyEvents:
                 b = key_bytes(e.key, e.mod, app)
                 if b:
                     out = b if out is None else out + b
-            elif self.other is not None:
-                self.other(e)
+            else:
+                if self.mouse is not None:
+                    b = self.mouse.event(e)
+                    if b:
+                        out = b if out is None else out + b
+                if self.other is not None:
+                    self.other(e)
         return out

@@ -14,5 +14,5 @@ metadata(
 
 package(
     "vtterm",
-    files=("__init__.py", "console.py", "keyboards.py", "keys.py", "parser.py", "render.py", "screen.py", "session.py"),
+    files=("__init__.py", "console.py", "keyboards.py", "keys.py", "mouse.py", "parser.py", "render.py", "screen.py", "session.py"),
 )

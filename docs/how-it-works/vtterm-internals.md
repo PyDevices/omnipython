@@ -34,6 +34,12 @@ which is most of what a REPL prints.
 color fits in one byte. The palette needed for that is imported only when the
 first 24-bit color arrives.
 
+A cell's character is one byte too, and the fonts are ASCII. The line-drawing
+characters, from the DEC set or from UTF-8, are stored as the codes below 32,
+which no printable character uses, and the renderer draws those as lines
+itself. They meet at the middle of each cell's edges, so a box joins up with
+any font.
+
 ## The screen
 
 Each row is four bytearrays the width of the screen: characters, foreground,
