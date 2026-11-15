@@ -397,6 +397,8 @@ and Android.
   Get it: `omip`, from the app's folder, from source. Runs on: MP.
 - [`Wake word`](https://github.com/PyDevices/apps/tree/main/apps/wake): Listen on a USB microphone for "Hey Jarvis" and flash on each detection.\
   Get it: `omip`, from the app's folder, from source. Runs on: ESP32-P4 touch board.
+- [`Gamepad`](https://github.com/PyDevices/apps/tree/main/apps/gamepad): Make the board a game controller for a computer, or see what a gamepad plugged into it sends.\
+  Get it: `omip`, from the app's folder, from source. Runs on: MP on a touch board with native USB or a USB host port.
 - [`Home`](https://github.com/PyDevices/apps/tree/main/apps/home): Launch the apps from pages, one page per category.\
   Get it: `omip`, from the app's folder, from source. Runs on: ESP32-P4 touch board.
 - [`System`](https://github.com/PyDevices/apps/tree/main/apps/system): See the free heap, the last switches and what the apps left running.\
@@ -430,7 +432,7 @@ and Android.
 - **D:** [`deskkit`](#libraries-the-apps-use), [`Display drivers`](#drive-a-chip), [`display_driver`](#draw-on-a-screen), [`displaydev`](#draw-on-a-screen), [`displayif`](#draw-on-a-screen), [`Doorbell`](#run-a-finished-app)
 - **E:** [`Environment sensors`](#drive-a-chip), [`events`](#write-an-app)
 - **F:** [`frame_recorder`](#draw-on-a-screen), [`fs_driver`](#draw-on-a-screen)
-- **G:** [`Gallery`](#run-a-finished-app)
+- **G:** [`Gallery`](#run-a-finished-app), [`Gamepad`](#run-a-finished-app)
 - **H:** [`h264enc`](#use-cameras-video-and-ai-on-a-board), [`Hands free`](#run-a-finished-app), [`Haptics`](#drive-a-chip), [`hmilink`](#connect-devices), [`Home`](#run-a-finished-app)
 - **I:** [`I/O expanders`](#drive-a-chip), [`iconkit`](#draw-on-a-screen), [`IMUs`](#drive-a-chip), [`Infrared`](#drive-a-chip), [`Internet radio`](#run-a-finished-app)
 - **J:** [`Joysticks`](#drive-a-chip), [`jpegio`](#draw-on-a-screen), [`jpegio for CPython`](#draw-on-a-screen), [`jupyter.py`](#run-somewhere-other-than-a-board)
