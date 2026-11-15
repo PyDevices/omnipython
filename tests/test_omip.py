@@ -437,6 +437,53 @@ class CPythonInstall(Indexes):
         self.assertEqual(beside("/", "apps/home"), "/apps/home")
         self.assertEqual(beside("/sd", "/apps/home"), "/apps/home")
 
+    def _android(self, cafile=None, capath=None, folder=True):
+        """Make the omip under test see Android: no CA store of Python's own, a folder of CA files."""
+        certs = self.scratch / "cacerts"
+        certs.mkdir(exist_ok=True)
+        for name in ("a1b2c3d4.0", "e5f6a7b8.0"):
+            (certs / name).write_text("pem\n", encoding="utf-8")
+        self.omip._ANDROID_CACERTS = str(certs if folder else self.scratch / "missing")
+        self.omip._android_context = None
+        paths = mock.Mock(cafile=cafile, capath=capath)
+        patch = mock.patch("ssl.get_default_verify_paths", return_value=paths)
+        patch.start()
+        self.addCleanup(patch.stop)
+
+    def test_android_https_trusts_the_folder_of_ca_files(self):
+        self._android()
+        fake = mock.Mock()
+        with mock.patch("ssl.create_default_context", return_value=fake):
+            context = self.omip._context()
+            self.assertIs(self.omip._context(), context)
+        self.assertIs(context, fake)
+        loaded = sorted(Path(call.kwargs["cafile"]).name for call in fake.load_verify_locations.call_args_list)
+        self.assertEqual(loaded, ["a1b2c3d4.0", "e5f6a7b8.0"])
+
+    def test_one_unreadable_ca_file_doesnt_stop_the_rest(self):
+        self._android()
+        fake = mock.Mock()
+        fake.load_verify_locations.side_effect = [__import__("ssl").SSLError("bad pem"), None]
+        with mock.patch("ssl.create_default_context", return_value=fake):
+            self.assertIs(self.omip._context(), fake)
+        self.assertEqual(fake.load_verify_locations.call_count, 2)
+
+    def test_a_python_with_its_own_ca_store_is_left_alone(self):
+        self._android(capath=str(self.scratch))
+        self.assertIsNone(self.omip._context())
+
+    def test_no_android_folder_means_the_default_context(self):
+        self._android(folder=False)
+        self.assertIsNone(self.omip._context())
+
+    def test_the_context_reaches_the_request(self):
+        self._android()
+        sentinel = object()
+        with mock.patch.object(self.omip, "_context", return_value=sentinel), mock.patch("urllib.request.urlopen") as urlopen:
+            urlopen.return_value.__enter__.return_value.read.return_value = b""
+            self.omip._get("https://lib.omnipython.org/index.json", lambda chunk: None)
+        self.assertIs(urlopen.call_args.kwargs["context"], sentinel)
+
     def test_url_base_is_where_relative_urls_are_found(self):
         site = self.ours_dir / "site"
         (site / "src").mkdir(parents=True)
