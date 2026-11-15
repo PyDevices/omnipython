@@ -37,7 +37,10 @@ class PSDevices(WebInput):
     - **Touch / pen** (Pointer Events with ``pointerType`` other than
       ``mouse``): ``FINGERDOWN`` / ``FINGERUP`` / ``FINGERMOTION`` with
       ``pointerId`` as ``finger_id``, so LVGL gesture recognizers see
-      multipoint contacts (same contract as SDL/pygame fingers).
+      multipoint contacts (same contract as SDL/pygame fingers). A finger
+      move also gives ``MOUSEMOTION`` with ``touch=True``, and a finger down
+      or up a ``Button`` with ``touch=True``, so drag code written for the
+      mouse works.
     - **Wheel**: ``MOUSEWHEEL`` (also consumed by encoder devices).
     - **Keyboard**: ``KEYDOWN`` / ``KEYUP`` with SDL-style key codes, names and
       modifier masks (left/right modifier variants via key location).
