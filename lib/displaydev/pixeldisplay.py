@@ -230,7 +230,12 @@ class PixelDisplay(DisplayDriver):
 
     Args:
         pixel_buffer: ``PixelFramebuffer`` (or Adafruit equivalent on CircuitPython).
+
+    ``can_rotate`` is False: the matrix's wiring sets its orientation, taken
+    from ``pixel_buffer`` when the driver starts.
     """
+
+    can_rotate = False
 
     def __init__(self, pixel_buffer, *, quiet=False):
         self._raw_buffer = pixel_buffer

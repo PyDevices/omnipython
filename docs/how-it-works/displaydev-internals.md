@@ -112,6 +112,15 @@ layout when scrolled.
 | **PSDisplay** | `_rotation` tracked; **no** `_rotation_helper` (surface dims swap only) |
 | **JNDisplay** | Same as PS — property only, no pixel rotation |
 | **PixelDisplay** | `rotation` on inner framebuf (grid wiring), not LCD-style |
+| **FBDisplay** | `_rotation` tracked; no pixel rotation, and the panel's framebuffer keeps its own layout |
+
+A driver says whether `rotation` turns what you draw in `can_rotate`. It's
+`False` on **FBDisplay** and **PixelDisplay**, where a rotation swaps `width`
+and `height` over a buffer that keeps the panel's layout, so drawing at the
+swapped size runs out of range. A program that wants landscape checks it
+before rotating, and keeps the panel's own orientation when it's `False`.
+LVGL turns its frames itself on those boards, through the display's
+`lvgl_rotation`.
 
 Full rotation matters for **SDL/PG** desktop LCD simulation. Browser and notebook
 backends document that rotation reshapes the surface but does not rotate pointer

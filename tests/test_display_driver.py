@@ -75,6 +75,9 @@ class TestGeometry(unittest.TestCase):
             d.rotation = 1  # interpreted as index 1 -> 90 degrees
         self.assertEqual(d.rotation, 90)
 
+    def test_a_driver_rotates_unless_it_says_otherwise(self):
+        self.assertTrue(ScrollDisplay.can_rotate)
+
     def test_rotation_no_change_is_cheap(self):
         d, _ = make_fbdisplay(8, 4)
         with quiet():
