@@ -50,6 +50,22 @@ def available() -> bool:
     """True when this firmware carries a usable pump."""
 def on_board() -> bool:
     """True when the pump owns a peripheral, rather than a ring."""
+def speaker() -> bool:
+    """True when the pump can play to the computer's speaker itself (Windows)."""
+
+class SpeakerWire:
+    """The wire `BusioDriver` builds a desktop speaker output on."""
+
+    port: int
+    sck: int
+    ws: int
+    sd: int
+    mck: None
+    mck_fs: None
+    sd_in: None
+    sink: str
+    def __init__(self, sink: str = "wasapi") -> None: ...
+
 def duplex() -> bool:
     """True when this firmware can record while it plays, on one I2S port."""
 def clock_running() -> bool:
@@ -143,7 +159,7 @@ class BusioDriver(_Driver):
     """esp32: the graph goes to `audiobusio.I2SOut`, and it owns the bus."""
 
     needs_service: bool
-    wire: I2SWire | DACWire
+    wire: I2SWire | DACWire | SpeakerWire
     fmt: AudioFormat
     transport: Any
     volume: int

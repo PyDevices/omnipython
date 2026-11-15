@@ -1447,6 +1447,95 @@ class FakeAudioOut(FakeI2SOut):
         self.buffer_ms = buffer_ms
 
 
+class Speaker(Recorder):
+    """``win_audio``'s output on the default device: it names a speaker."""
+
+    speaker_sink = "wasapi"
+
+
+class WindowsPlaysToTheSpeakerItself(PumpFixture):
+    """Windows: the pump writes the graph to WASAPI on its own thread.
+
+    ``audiobusio.I2SOut(..., sink="wasapi")`` opens the default speaker, so a
+    transport that names it hands the graph over and is never written to.
+    Feeding WASAPI from Python costs a ring, a coalescing queue and the
+    interpreter's ticks between the graph and the device.
+    """
+
+    def setUp(self):
+        super().setUp()
+
+        class Driver:                     # `speaker()` asks for this name
+            def sink_stats(self):
+                return None
+
+        pump_mod._driver = Driver()
+        pump_mod._driver_looked = True
+        FakeI2SOut.built = []
+        FakeI2SOut.live = None
+        self._saved_busio = (pump_mod._busio, pump_mod._busio_looked)
+        pump_mod._busio = FakeBusio()
+        pump_mod._busio_looked = True
+        self.addCleanup(self._put_busio_back)
+
+    def _put_busio_back(self):
+        pump_mod._busio, pump_mod._busio_looked = self._saved_busio
+        FakeI2SOut.live = None
+
+    def test_the_driver_can_play_to_a_speaker_and_is_not_a_board(self):
+        self.assertTrue(pump_mod.speaker())
+        self.assertFalse(pump_mod.on_board())
+
+    def test_the_graph_goes_to_the_speaker_and_the_transport_stays_shut(self):
+        transport = Speaker()
+        out = self.player(transport)
+        self.assertTrue(out.pumped)
+        self.assertEqual(len(FakeI2SOut.built), 1,
+                         "the graph was not handed to I2SOut")
+        i2s = FakeI2SOut.built[0]
+        self.assertEqual(i2s.sink, "wasapi")
+        self.assertEqual(i2s.sample_rate, RATE)
+        self.assertIsNone(i2s.port, "a speaker has no I2S port to name")
+        out.service()
+        self.assertEqual(transport.opened, 0,
+                         "the transport opened a second WASAPI stream")
+        self.assertEqual(bytes(transport.data), b"")
+
+    def test_a_transport_with_no_speaker_stays_on_the_ring(self):
+        out = self.player(Recorder())
+        self.assertTrue(out.pumped)
+        self.assertEqual(FakeI2SOut.built, [])
+        self.assertIsInstance(pump_mod.owner()._driver, pump_mod.RingDriver)
+
+    def test_a_lowered_volume_keeps_the_transport_that_applies_it(self):
+        transport = Speaker()
+        transport.set_volume(50)
+        self.player(transport)
+        self.assertEqual(FakeI2SOut.built, [],
+                         "the speaker would play at full volume")
+
+    def test_muting_while_it_plays_moves_the_sample_to_the_transport(self):
+        transport = Speaker()
+        out = self.player(transport, loop=True)
+        i2s = FakeI2SOut.built[0]
+        out.mute(True)
+        self.assertTrue(i2s.deinited, "the speaker went on playing")
+        self.assertTrue(out.playing)
+        out.service()
+        self.assertTrue(transport.data, "nothing carried the sample on")
+
+    def test_turning_it_down_while_it_plays_does_the_same(self):
+        transport = Speaker()
+        out = self.player(transport, loop=True)
+        out.set_volume(100)
+        self.assertFalse(FakeI2SOut.built[0].deinited,
+                         "full volume is the speaker's to play")
+        out.set_volume(20)
+        self.assertTrue(FakeI2SOut.built[0].deinited)
+        out.service()
+        self.assertTrue(transport.data)
+
+
 class FakeAudioio:
     AudioOut = FakeAudioOut
 

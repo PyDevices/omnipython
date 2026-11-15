@@ -153,6 +153,18 @@ class WinPCMOutput(PCMOutput):
         self._last_push_ms = None
         self._play_origin_ms = None
 
+    @property
+    def speaker_sink(self):
+        """The firmware's name for this speaker, or None.
+
+        ``"wasapi"`` for the default device: on an interpreter whose pump can
+        open it (`audiodev.pump.speaker`), `AudioOut
+        <audiodev.sample_out.AudioOut>` hands the graph to the pump, which
+        writes it to WASAPI from its own thread and never opens this
+        transport. A named ``device`` stays on this transport.
+        """
+        return "wasapi" if self.device_name is None else None
+
     def _hw_queued(self):
         if not self._client:
             return 0
