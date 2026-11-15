@@ -22,6 +22,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 from PIL import Image
 
@@ -171,6 +172,36 @@ class Generator(unittest.TestCase):
         self.assertEqual(code, 1)
         self.assertIn("alpha", err)
 
+    def _symbol(self, name):
+        """A filled Material Symbol SVG for *name*: its left half solid, as the checkout keeps one."""
+        d = self.src / "symbols" / "web" / name / "materialsymbolsoutlined"
+        d.mkdir(parents=True)
+        (d / ("%s_fill1_%dpx.svg" % (name, SIZE))).write_text(
+            '<svg xmlns="http://www.w3.org/2000/svg" height="%d" viewBox="0 -960 960 960" width="%d">'
+            '<path d="M0-960h480v960H0Z"/></svg>' % (SIZE, SIZE))
+
+    def test_a_name_with_no_png_is_drawn_from_its_material_symbol(self):
+        self._symbol("instant_mix")
+        code, err = self.run_cli(self.src, "--size", SIZE, "--names", "wifi,instant_mix", "--out", self.out)
+        self.assertEqual((code, err), (0, ""))
+        module = _load(self.out)
+        self.assertEqual(module.NAMES, ("instant_mix", "wifi"))
+        half = (b"\xff" * (SIZE // 2) + b"\x00" * (SIZE // 2)) * SIZE
+        self.assertEqual(bytes(module.DATA[: SIZE * SIZE]), half)
+
+    def test_a_png_wins_over_a_symbol_of_the_same_name(self):
+        self._symbol("wifi")
+        self.run_cli(self.src, "--size", SIZE, "--names", "wifi", "--out", self.out)
+        self.assertEqual(bytes(_load(self.out).DATA), _alpha(1))
+
+    def test_a_symbol_without_resvg_says_what_to_install(self):
+        self._symbol("instant_mix")
+        with mock.patch.dict(sys.modules, {"resvg_py": None}):
+            code, err = self.run_cli(self.src, "--size", SIZE, "--names", "instant_mix", "--out", self.out)
+        self.assertEqual(code, 1)
+        self.assertIn("resvg-py", err)
+        self.assertFalse(self.out.exists())
+
     def test_budgets(self):
         self.assertEqual(make_icons.parse_budget("72k"), 73728)
         self.assertEqual(make_icons.parse_budget("100"), 100)
@@ -187,7 +218,9 @@ class Shipped(unittest.TestCase):
             import iconkit
         finally:
             sys.path.remove(str(LIB))
-        for size, count in ((24, 128), (48, 32)):
+        # Each set's budget is 72 KB plus the one icon added to it since
+        # (instant_mix); a new icon raises it by that icon and no more.
+        for size, count in ((24, 129), (48, 33)):
             listed = []
             for line in (LIB / "iconkit" / ("icons_%d.txt" % size)).read_text().splitlines():
                 line = line.split("#", 1)[0].strip()
@@ -197,7 +230,7 @@ class Shipped(unittest.TestCase):
             self.assertEqual(len(listed), count)
             module = __import__("iconkit._a8_%d" % size, None, None, ("DATA",))
             self.assertEqual(len(module.DATA), count * size * size)
-            self.assertLessEqual(len(module.DATA), 72 * 1024)
+            self.assertLessEqual(len(module.DATA), 72 * 1024 + size * size)
 
     def test_the_app_tiles_are_in_both_sets(self):
         tiles = {line.split("#")[0].strip() for line in (LIB / "iconkit" / "icons_48.txt").read_text().splitlines()} - {""}
