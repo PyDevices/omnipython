@@ -36,6 +36,10 @@ accelerator and brake) and hat switches. A D-pad reported as four buttons, an
 array of buttons, and vendor-defined fields are left out. A controller that
 needs a start-up message before it sends full reports (a DualShock 4 or a
 Switch Pro controller, say) is not handled.
+
+The decoder is checked against the report descriptors of a generic pad, adafruit_ble's
+gamepad and a 16-bit-axis pad, in the unit tests and under unix MicroPython. It has not
+yet run against a real gamepad on a host board.
 """
 
 import usb.core
