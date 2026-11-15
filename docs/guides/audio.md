@@ -303,6 +303,11 @@ async contract as hardware devices.
 `audiodev.win_audio` is the Windows WASAPI backend (`uwin32`), selected ahead
 of `sdl2_audio` on Windows when available.
 
+`audiodev.alsa_audio` plays and records through ALSA on Linux, from CPython and
+unix MicroPython, with no SDL2 or pygame. `alsa_audio.devices()` lists the sound
+cards; pass one as `device="plughw:2,0"`. It is tried last, and only where there
+is a sound card.
+
 `audiodev.wasm_audio` is the direct MicroPython WebAssembly backend. The
 compiled bridge owns Web Audio and permission state, while Python sees only
 neutral PCM buffers and queue operations. It supports mono/stereo 8-, 16-, and
@@ -348,7 +353,7 @@ backends.register("audio", "mine", "my_audio", probe=lambda: my_card_present())
 backends.require("audio", "mine")
 ```
 
-`select_backend()` tries the `PYDEVICES_AUDIO` environment variable (one name, nothing else), then what a config `require`d, in order and skipping any whose probe says no, then the built-in transports in the order above. The built-in names are `wasm_audio`, `web_audio`, `win_audio`, `sdl2_audio` and `pygame_audio`. A transport you registered is never picked unless it was required or you named it. On MicroPython, `require` is the only way a transport gets registered; nothing scans for installed ones.
+`select_backend()` tries the `PYDEVICES_AUDIO` environment variable (one name, nothing else), then what a config `require`d, in order and skipping any whose probe says no, then the built-in transports in the order above. The built-in names are `wasm_audio`, `web_audio`, `win_audio`, `sdl2_audio`, `pygame_audio` and `alsa_audio`. A transport you registered is never picked unless it was required or you named it. On MicroPython, `require` is the only way a transport gets registered; nothing scans for installed ones.
 
 ## Emulated devices (CI / no hardware)
 

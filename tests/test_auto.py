@@ -43,6 +43,40 @@ class AutoSelectTests(unittest.TestCase):
         ):
             self.assertEqual(auto.select_backend(), "web_audio")
 
+    def test_alsa_is_the_fallback_on_linux_with_a_card(self):
+        with mock.patch.object(auto, "_is_micropython", return_value=False), mock.patch.object(
+            auto, "_uwin32_available", return_value=False
+        ), mock.patch.object(auto, "_module_available", return_value=False), mock.patch.object(
+            auto.sys, "platform", "linux"
+        ), mock.patch.object(auto, "_alsa_cards", return_value=True):
+            self.assertEqual(auto.select_backend(), "alsa_audio")
+
+    def test_alsa_gives_way_to_sdl_and_pygame(self):
+        with mock.patch.object(auto, "_is_micropython", return_value=False), mock.patch.object(
+            auto, "_uwin32_available", return_value=False
+        ), mock.patch.object(auto.sys, "platform", "linux"), mock.patch.object(
+            auto, "_alsa_cards", return_value=True
+        ):
+            with mock.patch.object(auto, "_module_available", side_effect=lambda n: n == "usdl2"):
+                self.assertEqual(auto.select_backend(), "sdl2_audio")
+            with mock.patch.object(auto, "_module_available", side_effect=lambda n: n == "pygame"):
+                self.assertEqual(auto.select_backend(), "pygame_audio")
+
+    def test_alsa_needs_a_card_and_linux(self):
+        with mock.patch.object(auto, "_is_micropython", return_value=False), mock.patch.object(
+            auto, "_uwin32_available", return_value=False
+        ), mock.patch.object(auto, "_module_available", return_value=False), mock.patch.object(
+            auto, "_alsa_cards", return_value=True
+        ):
+            with mock.patch.object(auto.sys, "platform", "darwin"):
+                with self.assertRaises(ImportError):
+                    auto.select_backend()
+            with mock.patch.object(auto.sys, "platform", "linux"), mock.patch.object(
+                auto, "_alsa_cards", return_value=False
+            ):
+                with self.assertRaises(ImportError):
+                    auto.select_backend()
+
     def test_pygame_fallback_and_actionable_error(self):
         with mock.patch.object(auto, "_is_micropython", return_value=False), mock.patch.object(
             auto, "_uwin32_available", return_value=False
@@ -50,7 +84,9 @@ class AutoSelectTests(unittest.TestCase):
             self.assertEqual(auto.select_backend(), "pygame_audio")
         with mock.patch.object(auto, "_is_micropython", return_value=False), mock.patch.object(
             auto, "_uwin32_available", return_value=False
-        ), mock.patch.object(auto, "_module_available", return_value=False):
+        ), mock.patch.object(auto, "_module_available", return_value=False), mock.patch.object(
+            auto, "_alsa_cards", return_value=False
+        ):
             with self.assertRaisesRegex(ImportError, "install pygame-ce"):
                 auto.select_backend()
 
@@ -93,6 +129,7 @@ class AutoSelectTests(unittest.TestCase):
             "android_audio.py",
             "emulated_audio.py",
             "win_audio.py",
+            "alsa_audio.py",
             "worklet_audio.py",
             "__init__.py",
         ):
