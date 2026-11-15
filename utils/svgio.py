@@ -94,7 +94,11 @@ class _Records:
             extra = (extra + " " + last).strip()
         s = ' fill="%s"' % _paint(fill)
         if stroke != _NO_STROKE:
-            s += ' stroke="%s" stroke-width="%s" stroke-linecap="round" stroke-linejoin="round"' % (_paint(stroke), _n(width))
+            s += ' stroke="%s" stroke-width="%s"' % (_paint(stroke), _n(width))
+            # round, unless the extra attributes say how
+            for name in ("stroke-linecap", "stroke-linejoin"):
+                if name not in extra:
+                    s += ' %s="round"' % name
         if opacity < 1:
             s += ' opacity="%s"' % _n(opacity)
         return s + " " + extra if extra else s
