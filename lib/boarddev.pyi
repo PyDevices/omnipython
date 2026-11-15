@@ -42,7 +42,7 @@ def env_get(name: str, default: str | None = None) -> str | None:
     """Read a string environment variable portably (honors `env_set` overrides)."""
     ...
 
-def env_int(name: str, default: int = 0) -> str:
+def env_int(name: str, default: int = 0) -> int:
     """Read an integer environment variable portably."""
     ...
 
