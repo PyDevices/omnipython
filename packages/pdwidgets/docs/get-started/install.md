@@ -35,10 +35,13 @@ cover the other desktop setups under Install.
 From the board's REPL, with the board online:
 
 ```python
-import mip
+import omip
 for package in ("pydevices", "pygraphics", "palettes", "pdwidgets"):
-    mip.install(package, index="https://PyDevices.github.io/mip")
+    omip.install(package)
 ```
+
+`omip` comes with OmniPython firmware. On other MicroPython firmware, run
+`mip.install("github:PyDevices/pydevices/lib/omip.py")` once to put it on the board.
 
 mip doesn't follow dependencies between these packages, so each is installed by
 name. Your board also needs its board config, which says how its display and

@@ -12,10 +12,12 @@ pip install -i https://test.pypi.org/simple/ --extra-index-url https://pypi.org/
 ```
 
 ```python
-import mip
-mip.install("github:PyDevices/pydevices/board_configs/fbdisplay/esp32-p4-wifi6-touch-lcd-4b",
-            index="https://PyDevices.github.io/mip")
+import omip
+omip.install("github:PyDevices/pydevices/board_configs/fbdisplay/esp32-p4-wifi6-touch-lcd-4b")
 ```
+
+`omip` comes with OmniPython firmware. On other MicroPython firmware, run
+`mip.install("github:PyDevices/pydevices/lib/omip.py")` once to put it on the board.
 
 The first is for a desktop. The second installs one board's config on that
 board, and pydevices with it; [Install](docs/get-started/install.md) has every

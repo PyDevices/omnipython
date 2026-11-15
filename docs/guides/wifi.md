@@ -16,9 +16,12 @@ It runs on MicroPython and CircuitPython. It's part of the `pydevices`
 package, so a firmware that freezes pydevices already has it. Otherwise:
 
 ```python
-import mip
-mip.install("pydevices", index="https://PyDevices.github.io/mip")
+import omip
+omip.install("pydevices")
 ```
+
+`omip` comes with OmniPython firmware. On other MicroPython firmware, run
+`mip.install("github:PyDevices/pydevices/lib/omip.py")` once to put it on the board.
 
 On CircuitPython, copy [`lib/wifi_manager.py`](https://github.com/PyDevices/pydevices/blob/main/lib/wifi_manager.py) to the board's `/lib`.
 

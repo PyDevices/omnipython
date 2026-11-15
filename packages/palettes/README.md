@@ -12,9 +12,12 @@ pip install -i https://test.pypi.org/simple/ --extra-index-url https://pypi.org/
 ```
 
 ```python
-import mip
-mip.install("palettes", index="https://PyDevices.github.io/mip")
+import omip
+omip.install("palettes")
 ```
+
+`omip` comes with OmniPython firmware. On other MicroPython firmware, run
+`mip.install("github:PyDevices/pydevices/lib/omip.py")` once to put it on the board.
 
 ```python
 from palettes import get_palette

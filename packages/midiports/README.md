@@ -86,8 +86,11 @@ From release 0.7.6, `midiports` is in the PyDevices index too, so a board
 config can `require("midiports")` and you can install it by name:
 
 ```python
-mip.install("midiports", index="https://PyDevices.github.io/mip")
+omip.install("midiports")
 ```
+
+`omip` comes with OmniPython firmware. On other MicroPython firmware, run
+`mip.install("github:PyDevices/pydevices/lib/omip.py")` once to put it on the board.
 
 That installs `midiports` alone, because `adafruit_midi` isn't in any mip
 index. If your board doesn't have it, use the `github:` install above, which

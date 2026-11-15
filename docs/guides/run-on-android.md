@@ -77,7 +77,7 @@ On a Runner older than 0.2.2, which doesn't carry the audio libraries, add
 
 `--deps` takes the package from the Python you run `android.py` with if it is
 installed there (a developer's venv or checkout), and otherwise downloads it
-from the [PyDevices MIP index](https://PyDevices.github.io/mip) into
+from the [OmniPython index](https://lib.omnipython.org) into
 `~/.pydevices/mip`. A package it can't find is an error on your computer,
 before anything is copied to the phone. `--index URL` or `PYDEVICES_MIP_INDEX`
 points it at another index.
@@ -186,7 +186,7 @@ stops the service. Non-Android consumers still get `session=None` — no API cha
 Prebuilt **`pydevices-lvgl`** wheels for Android are on
 [TestPyPI](https://test.pypi.org/project/pydevices-lvgl/) and are included in the
 launcher APK. The launcher home UI is LVGL; its buttons `mip.install` examples
-from GitHub with `index=` the [PyDevices MIP index](https://PyDevices.github.io/mip).
+from GitHub with `index=` the [OmniPython index](https://lib.omnipython.org).
 
 ## Android TV / Fire OS
 

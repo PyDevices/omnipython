@@ -11,10 +11,13 @@ pip install -i https://test.pypi.org/simple/ --extra-index-url https://pypi.org/
 ```
 
 ```python
-import mip
+import omip
 for package in ("pydevices", "pygraphics", "palettes", "pdwidgets"):
-    mip.install(package, index="https://PyDevices.github.io/mip")
+    omip.install(package)
 ```
+
+`omip` comes with OmniPython firmware. On other MicroPython firmware, run
+`mip.install("github:PyDevices/pydevices/lib/omip.py")` once to put it on the board.
 
 The first is for a desktop, and `pydevices-desktop` brings the display it draws
 on. The second installs onto a board, which also needs its board config:

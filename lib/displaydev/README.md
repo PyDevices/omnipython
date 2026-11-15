@@ -31,10 +31,13 @@ For desktop SDL, also install [`pydevices-desktop`](https://test.pypi.org/projec
 ### MicroPython (MIP)
 
 ```python
-import mip
+import omip
 
-mip.install("pydevices", index="https://PyDevices.github.io/mip")
+omip.install("pydevices")
 ```
+
+`omip` comes with OmniPython firmware. On other MicroPython firmware, run
+`mip.install("github:PyDevices/pydevices/lib/omip.py")` once to put it on the board.
 
 ## Quick start
 

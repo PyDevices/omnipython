@@ -64,19 +64,19 @@ mip.install pattern in [`wokwi/main.py`](https://github.com/PyDevices/gallery/bl
 ```python
 import mip
 
-MICROPYTHON_LIB = "https://PyDevices.github.io/mip"
+OMNIPYTHON_LIB = "https://lib.omnipython.org"
 PYDEVICES = "github:PyDevices/pydevices"
 PYDEVICES_EXAMPLES = "github:PyDevices/gallery"
 
 # Board package pulls ili9341/ft6x36/spibus from this repo and displaydev from
-# the MIP index (displaydev → events + keys). Install optional appdev in the
+# the OmniPython index (displaydev → events + keys). Install optional appdev in the
 # application when the example uses that traffic controller.
 mip.install(
     PYDEVICES + "/board_configs/busdisplay/spi/wokwi_ili9341_ft6x36_esp32s3/",
-    index=MICROPYTHON_LIB,
+    index=OMNIPYTHON_LIB,
     target=".",
 )
-mip.install("pygraphics", index=MICROPYTHON_LIB, target=".")
+mip.install("pygraphics", index=OMNIPYTHON_LIB, target=".")
 mip.install(PYDEVICES_EXAMPLES + "/lib/examples/testris.py", target=".")
 
 import testris

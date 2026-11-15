@@ -18,9 +18,12 @@ Releases are on TestPyPI, which is why the command names it. A plain
 From the board's REPL, with the board online:
 
 ```python
-import mip
-mip.install("palettes", index="https://PyDevices.github.io/mip")
+import omip
+omip.install("palettes")
 ```
+
+`omip` comes with OmniPython firmware. On other MicroPython firmware, run
+`mip.install("github:PyDevices/pydevices/lib/omip.py")` once to put it on the board.
 
 The same two lines work on the unix port of MicroPython. Pass `target="some/folder"`
 to `mip.install` to choose where the files go.

@@ -25,10 +25,9 @@ omnipython-lvgl.
 ## 1. Install the minimum PyDevices packages
 
 ```python
-import mip
-INDEX = "https://PyDevices.github.io/mip"
-mip.install("pydevices", index=INDEX)  # displaydev, appdev, display_driver and the rest of lib/
-mip.install("github:PyDevices/pydevices/board_configs/<your_board>")
+import omip
+omip.install("pydevices")  # displaydev, appdev, display_driver and the rest of lib/
+omip.install("github:PyDevices/pydevices/board_configs/<your_board>")
 ```
 
 Replace `<your_board>` with a path from

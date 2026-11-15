@@ -101,7 +101,7 @@ pypi-extras = { ble = ["bleak>=1.0"] }
 [medialink]
 # Board-to-board audio and video is its own MIP package, as BLE is, so a
 # board that never streams doesn't carry it:
-#     mip.install("medialink", index="https://PyDevices.github.io/mip")
+#     omip.install("medialink")
 # It needs no other package. Discovery uses the firmware's mdns module, and
 # the intercom takes any audiodev microphone and speaker it is handed.
 own-package = true
@@ -109,7 +109,7 @@ own-package = true
 # midiports and the USB packages are directories at the top of the repository,
 # not in lib/, each with its own manifest.py. `top-level = true` publishes that
 # directory to the index under its own name, so a board installs it with
-#     mip.install("usb-host-msc", index="https://PyDevices.github.io/mip")
+#     omip.install("usb-host-msc")
 # and a board config can require() it by name. The manifest.py is the single
 # source for what a package is, requires and ships: the publisher reads it, and
 # a firmware build freezes the same file. Only the version changes. The index
