@@ -104,6 +104,18 @@ class HotspotTest(unittest.TestCase):
         finder.deinit()
         self.assertEqual(self.rejoined, [])
 
+    def test_no_name_is_the_board_name(self):
+        import boarddev
+
+        boarddev.name("attic")
+        try:
+            finder = discovery.Hotspot("secret123")
+            finder.advertise(None, 47800)
+            self.assertEqual(finder.find("kitchen"), [])
+            self.assertEqual(self.radio.calls, [("start_ap", "attic", "secret123")])
+        finally:
+            boarddev.name(None)
+
     def test_a_host_not_up_yet_is_an_empty_answer(self):
         finder = discovery.Hotspot("secret123")
         finder.advertise("kitchen", 47800)
@@ -163,6 +175,39 @@ class HotspotTest(unittest.TestCase):
             discovery.Hotspot("secret123")
 
 
+class MDNSTest(unittest.TestCase):
+    def setUp(self):
+        test = self
+
+        class Server:
+            def __init__(self, interface):
+                self.instance_name = None
+
+            def advertise_service(self, **kw):
+                test.advertised = (self.instance_name, kw)
+
+        module = types.ModuleType("mdns")
+        module.Server = Server
+        self.saved = sys.modules.get("mdns")
+        sys.modules["mdns"] = module
+
+    def tearDown(self):
+        if self.saved is None:
+            del sys.modules["mdns"]
+        else:
+            sys.modules["mdns"] = self.saved
+
+    def test_no_name_is_the_board_name(self):
+        import boarddev
+
+        boarddev.name("hall")
+        try:
+            discovery.MDNS().advertise(None, 47800)
+        finally:
+            boarddev.name(None)
+        self.assertEqual(self.advertised, ("hall", {"service_type": "_medialink", "protocol": "_udp", "port": 47800}))
+
+
 class BLETest(unittest.TestCase):
     def setUp(self):
         from bledev.fake import Air, FakeBLE
@@ -195,6 +240,19 @@ class BLETest(unittest.TestCase):
         finally:
             board.deinit()
             other.deinit()
+
+    def test_no_name_advertises_the_board_name(self):
+        import boarddev
+
+        boarddev.name("porch")
+        board = discovery.BLE(self.board)
+        try:
+            board.advertise(None, 47800, address="192.168.1.40")
+            finder = discovery.BLE(self.computer)
+            self.assertEqual(finder.find("porch", timeout=0.5), [("porch", ("192.168.1.40", 47800))])
+        finally:
+            board.deinit()
+            boarddev.name(None)
 
     def test_deinit_stops_advertising(self):
         board = discovery.BLE(self.board)

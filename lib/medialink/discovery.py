@@ -7,7 +7,8 @@
 Discovery turns a name into a transport address. Each kind has the same
 two calls: ``advertise(name, port)`` for this side, and ``find(name)`` for
 the other, which hands back ``[(name, (ip, port))]`` for
-`Link.connect`.
+`Link.connect`. A ``name`` of None advertises the board's own name,
+``boarddev.name()``.
 
 `MDNS` finds a peer on the network both are already on. A peer
 advertises itself as a ``_medialink._udp`` service under its name; another
@@ -29,6 +30,8 @@ When you already know the address, skip discovery and connect to it.
 """
 
 import sys
+
+import boarddev
 
 from medialink._compat import sleep_ms, ticks_diff, ticks_ms
 
@@ -58,8 +61,9 @@ class MDNS:
         return self._server.hostname
 
     def advertise(self, name, port):
-        """Answer for ``name`` on UDP ``port`` until `deinit`."""
-        self._server.instance_name = name
+        """Answer for ``name`` on UDP ``port`` until `deinit`. A ``name`` of
+        None is the board's, ``boarddev.name()``."""
+        self._server.instance_name = name or boarddev.name()
         self._server.advertise_service(service_type=SERVICE_TYPE, protocol=PROTOCOL, port=port)
 
     def find(self, name=None, timeout=2):
@@ -155,8 +159,9 @@ class Hotspot:
         self._static = None
 
     def advertise(self, name, port):
-        """Remember this side's name and port; the hotspot starts at ``find()``."""
-        self.name = name
+        """Remember this side's name and port; the hotspot starts at ``find()``.
+        A ``name`` of None is the board's, ``boarddev.name()``."""
+        self.name = name or boarddev.name()
         self.port = port
 
     def find(self, name=None, timeout=None):
@@ -321,6 +326,9 @@ class BLE:
         self._loop = None
 
     def advertise(self, name, port, address=None):
+        """Send out ``name`` (None: the board's, ``boarddev.name()``) with this
+        side's address and ``port`` until `deinit`."""
+        name = name or boarddev.name()
         if address is None:
             address = _own_address()
         if address is None:

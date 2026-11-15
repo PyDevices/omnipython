@@ -35,7 +35,7 @@ from .micecast import Session  # noqa: E402
 
 
 class RokuScreen:
-    def __init__(self, host, name="PyDevices", log=print):
+    def __init__(self, host, name=None, log=print):
         self.host = host
         self.name = name
         self.log = log

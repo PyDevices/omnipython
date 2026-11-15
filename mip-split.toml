@@ -92,6 +92,8 @@ host-only = [
 # aioble needs no step. On CircuitPython it needs Adafruit's asyncio instead,
 # named as repo.bledev.circuitpython for omip the same way.
 own-package = true
+# The services advertise the board's name, boarddev.name(), from pydevices.
+requires = ["pydevices"]
 # The central-only host backends go in pydevices-desktop, as for the other
 # packages here. A name listed before its file exists fails the sync.
 host-only = ["bleak", "webble"]
@@ -103,9 +105,11 @@ pypi-extras = { ble = ["bleak>=1.0"] }
 # Board-to-board audio and video is its own MIP package, as BLE is, so a
 # board that never streams doesn't carry it:
 #     omip.install("medialink")
-# It needs no other package. Discovery uses the firmware's mdns module, and
-# the intercom takes any audiodev microphone and speaker it is handed.
+# Discovery uses the firmware's mdns module and advertises the board's name,
+# boarddev.name(), from pydevices; the intercom takes any audiodev microphone
+# and speaker it is handed.
 own-package = true
+requires = ["pydevices"]
 
 # midiports and the USB packages are directories at the top of the repository,
 # not in lib/, each with its own manifest.py. `top-level = true` publishes that

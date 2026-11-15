@@ -31,6 +31,8 @@ nothing here writes a credential to the filesystem.
 
 import asyncio
 
+import boarddev
+
 import sys
 
 from . import (
@@ -252,7 +254,7 @@ class Server:
     def __init__(
         self,
         ble,
-        name="improv",
+        name=None,
         *,
         join=None,
         redirect="http://{ip}/",
@@ -263,6 +265,8 @@ class Server:
         device_info=None,
     ):
         self.ble = ble
+        if name is None:
+            name = boarddev.name()
         self.name = name
         self._join = join or wifi_connect
         self.redirect = redirect
@@ -454,8 +458,11 @@ class Server:
             await self._send_result(CMD_WIFI_SETTINGS)
 
 
-async def serve(ble, name="improv", *, timeout_ms=None, **options):
+async def serve(ble, name=None, *, timeout_ms=None, **options):
     """Serve Improv on ``ble`` until provisioned; return the redirect URL (or the IP).
+
+    ``name`` is what it advertises as; by default the board's name,
+    ``boarddev.name()``.
 
     ``options`` go to `Server`.
     """

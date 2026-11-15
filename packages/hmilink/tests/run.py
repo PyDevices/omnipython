@@ -17,6 +17,8 @@ import sys
 sys.path.insert(0, os.getcwd() + "/hmilink")
 try:
     sys.path.insert(0, __file__.rsplit("/", 2)[0])
+    # pydevices' lib/, for boarddev.name() when a device announces itself.
+    sys.path.insert(0, __file__.rsplit("/", 1)[0] + "/../../../lib")
 except (NameError, IndexError):
     pass
 
@@ -489,6 +491,93 @@ def test_tcp_pool():
     device.close()
 
 
+class _FakeService:
+    def __init__(self, instance_name, ipv4_address, port):
+        self.instance_name = instance_name
+        self.ipv4_address = ipv4_address
+        self.port = port
+
+
+class _FakeMDNS:
+    """The mdns module's Server, recording what it's asked."""
+
+    servers = []
+    answers = ()
+
+    class Server:
+        def __init__(self, interface):
+            self.instance_name = None
+            self.services = []
+            self.live = True
+            _FakeMDNS.servers.append(self)
+
+        def advertise_service(self, *, service_type, protocol, port, txt_records=None):
+            self.services.append((self.instance_name, service_type, protocol, port, txt_records))
+
+        def find(self, *, service_type, protocol, timeout=1):
+            check((service_type, protocol) == ("_hmilink", "_tcp"), "find asks for _hmilink._tcp")
+            return _FakeMDNS.answers
+
+        def deinit(self):
+            self.live = False
+
+
+def test_announce():
+    saved = sys.modules.get("mdns")
+    sys.modules["mdns"] = _FakeMDNS
+    try:
+        _FakeMDNS.servers = []
+        listener = tcp.serve(PORT, bind="127.0.0.1", page=b"<html>hi</html>", announce="kitchen")
+        server = _FakeMDNS.servers[-1]
+        check(listener.name == "kitchen", "the listener's name")
+        check(
+            server.services
+            == [
+                ("kitchen", "_hmilink", "_tcp", PORT, None),
+                ("kitchen", "_http", "_tcp", PORT, ["path=/"]),
+            ],
+            "announced as hmilink and, with a page, http: %r" % (server.services,),
+        )
+        listener.close()
+        check(not server.live, "close() ends the announcement")
+
+        import boarddev
+
+        boarddev.name("rack-2")
+        try:
+            listener = tcp.serve(PORT, bind="127.0.0.1", announce=True)
+        finally:
+            boarddev.name(None)
+        server = _FakeMDNS.servers[-1]
+        check(server.services == [("rack-2", "_hmilink", "_tcp", PORT, None)], "the board's name, no page: %r" % (server.services,))
+        listener.close()
+
+        _FakeMDNS.answers = (
+            _FakeService("kitchen", "192.168.1.40", 9000),
+            _FakeService("garage", "192.168.1.41", 9001),
+            _FakeService("lost", None, 9002),
+        )
+        check(tcp.find() == [("kitchen", ("192.168.1.40", 9000)), ("garage", ("192.168.1.41", 9001))], "find all")
+        check(tcp.find("garage") == [("garage", ("192.168.1.41", 9001))], "find one by name")
+        check(tcp.find("nobody") == [], "find none")
+        check(not _FakeMDNS.servers[-1].live, "find() lets the mdns server go")
+
+        if sys.implementation.name == "cpython":
+            # Only CPython's import treats None in sys.modules as missing.
+            sys.modules["mdns"] = None
+            try:
+                tcp.serve(PORT, bind="127.0.0.1", announce="kitchen")
+                check(False, "announcing without mdns raises")
+            except ImportError as e:
+                check("mdns" in str(e), "the error names mdns")
+            tcp.serve(PORT, bind="127.0.0.1").close()  # the failed one let its port go
+    finally:
+        if saved is None:
+            sys.modules.pop("mdns", None)
+        else:
+            sys.modules["mdns"] = saved
+
+
 def test_pty():
     """The stream transport over real ttys: two pty pairs, raw mode, non-blocking reads."""
     import fcntl
@@ -648,6 +737,8 @@ def test_all():
         print("tcp ok (lines, WebSocket, page)")
         test_tcp_pool()
         print("tcp ok over recv_into sockets (CircuitPython's)")
+        test_announce()
+        print("tcp ok announcing and finding over mDNS")
     else:
         print("tcp skipped: no socket module")
     if osc is not None and getattr(osc, "_socket", None) is not None:

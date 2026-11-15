@@ -39,7 +39,6 @@ with each kind of peripheral described honestly by its role.
   encryption on the transports that can carry it, for networks you don't fully
   trust. medialink's links use the same secret to encrypt their sound and
   pictures.
-- Announce the device over mDNS, so a phone finds it without typing its address.
 - `hmilink.appkit`: an appkit launcher and its apps' models served over one
   transport, so a phone can see and switch apps. An app set that serves no
   panel loads none of it.
