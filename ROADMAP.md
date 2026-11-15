@@ -11,7 +11,6 @@ with each kind of peripheral described honestly by its role.
 
 ## USB
 
-- USB Ethernet adapters (CDC-ECM) in `usb-host-net`, beside phone tethering.
 - The HID, CDC and MSC host drivers on CircuitPython's own `usb.core` (RP2040,
   i.MX): they lack only `configuration_descriptor()` and the private
   `_release_all()` there. Audio, video and net need the usbhost engine.
