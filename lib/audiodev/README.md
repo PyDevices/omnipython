@@ -693,6 +693,12 @@ pointer/key handler to resume on the next gesture, prints a hint telling the use
 to click the page, and keeps already-scheduled buffers alive for their wall-clock
 duration so a later gesture can still play them.
 
+`AudioOut` asks the transport whether it is `locked()`. While it is, `play()`
+returns and keeps the sample, and the first `service()` after the click opens
+the transport and starts it, so a page needs no catch-and-retry. The direct
+WebAssembly build does the same: its transport raises `AudioLocked` from
+`open()` until the page's first click, tap or key press turns audio on.
+
 There is no host device to wedge here, so none of the SDL stall machinery exists.
 
 ## `worklet_audio.py`

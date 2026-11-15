@@ -40,6 +40,17 @@ except ImportError:  # pragma: no cover - CPython host
 LATENCIES = (None, "low", "buffered")
 
 
+class AudioLocked(RuntimeError):
+    """The platform won't start audio until the user acts.
+
+    A browser keeps its audio context suspended until a click or key press.
+    A transport raises this from ``open()`` while that holds, and `AudioOut`
+    keeps the sample and starts it on the first tick after the platform
+    unlocks, so an app calls ``play()`` once and needs no retry of its own.
+    It is a `RuntimeError`, so code that catches that keeps working.
+    """
+
+
 def check_latency(latency):
     """Validate a latency profile name, returning it unchanged.
 
@@ -1430,6 +1441,7 @@ __all__ = (
     "AudioFormat",
     "AudioFactory",
     "AudioCapability",
+    "AudioLocked",
     "I2SWire",
     "DACWire",
     "PDMWire",

@@ -32,7 +32,7 @@ if str(_TESTS) not in sys.path:
     sys.path.insert(0, str(_TESTS))
 import _env  # noqa: E402, F401
 
-from audiodev import AudioFormat, PCMOutput            # noqa: E402
+from audiodev import AudioFormat, AudioLocked, PCMOutput  # noqa: E402
 from audiodev import pump as pump_mod                  # noqa: E402
 from audiodev import sample_out                        # noqa: E402
 
@@ -956,6 +956,75 @@ class AFaultIsASentence(PumpFixture):
         self.engine.alive = False
         owner.status()[5 * 8] = 99
         self.assertIn("error 99", owner.died())
+
+
+class APlayerWaitsForTheBrowserToUnlockAudio(PumpFixture):
+    """A transport that is locked until the user acts keeps the sample.
+
+    ``play()`` returns, the player reads as playing, and the first tick after
+    the unlock opens the transport and writes: the app never retries.
+    """
+
+    class Locked(Recorder):
+        def __init__(self):
+            super().__init__()
+            self.unlocked = False
+
+        def _open(self):
+            if not self.unlocked:
+                raise AudioLocked("click the page first")
+
+    class Suspended(Recorder):
+        """Opens at once, like a context that starts suspended."""
+
+        unlocked = False
+
+        def locked(self):
+            return not self.unlocked
+
+    def test_play_does_not_raise_and_nothing_is_written_while_locked(self):
+        transport = self.Locked()
+        out = sample_out.AudioOut(transport, chunk_ms=10)
+        self.addCleanup(out.close)
+        out.play(FakeSample())
+        for _ in range(3):
+            out.service()
+        self.assertTrue(out.playing)
+        self.assertEqual(bytes(transport.data), b"")
+
+    def test_the_first_tick_after_the_unlock_starts_playing(self):
+        transport = self.Locked()
+        out = sample_out.AudioOut(transport, chunk_ms=10)
+        self.addCleanup(out.close)
+        out.play(FakeSample())
+        out.service()
+        transport.unlocked = True
+        out.service()
+        out.service()
+        self.assertTrue(len(transport.data) > 0)
+
+    def test_a_context_that_opens_suspended_is_held_the_same_way(self):
+        transport = self.Suspended()
+        out = sample_out.AudioOut(transport, chunk_ms=10)
+        self.addCleanup(out.close)
+        out.play(FakeSample())
+        out.service()
+        self.assertEqual(bytes(transport.data), b"")
+        transport.unlocked = True
+        out.service()
+        out.service()
+        self.assertTrue(len(transport.data) > 0)
+
+    def test_stop_cancels_the_wait(self):
+        transport = self.Locked()
+        out = sample_out.AudioOut(transport, chunk_ms=10)
+        self.addCleanup(out.close)
+        out.play(FakeSample())
+        out.stop()
+        transport.unlocked = True
+        out.service()
+        self.assertFalse(out.playing)
+        self.assertEqual(bytes(transport.data), b"")
 
 
 class ATransportThatRefusesToOpenLeavesNothingBehind(PumpFixture):
