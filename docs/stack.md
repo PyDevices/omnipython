@@ -399,6 +399,8 @@ and Android.
   Get it: `omip`, from the app's folder, from source. Runs on: ESP32-P4 touch board.
 - [`Gamepad`](https://github.com/PyDevices/apps/tree/main/apps/gamepad): Make the board a game controller for a computer, or see what a gamepad plugged into it sends.\
   Get it: `omip`, from the app's folder, from source. Runs on: MP on a touch board with native USB or a USB host port.
+- [`MIDI Controller`](https://github.com/PyDevices/apps/tree/main/apps/midicontroller): Play a synth or a DAW from the touch screen: pads, knobs, faders, a mixer, an XY pad and keys, over USB, BLE MIDI, a computer's MIDI ports or a browser's Web MIDI.\
+  Get it: `omip`, from the app's folder, from source. Runs on: MP on a touch board.
 - [`Home`](https://github.com/PyDevices/apps/tree/main/apps/home): Launch the apps from pages, one page per category.\
   Get it: `omip`, from the app's folder, from source. Runs on: ESP32-P4 touch board.
 - [`System`](https://github.com/PyDevices/apps/tree/main/apps/system): See the free heap, the last switches and what the apps left running.\
@@ -438,7 +440,7 @@ and Android.
 - **J:** [`Joysticks`](#drive-a-chip), [`jpegio`](#draw-on-a-screen), [`jpegio for CPython`](#draw-on-a-screen), [`jupyter.py`](#run-somewhere-other-than-a-board)
 - **K:** [`keys`](#write-an-app)
 - **L:** [`LEDs`](#drive-a-chip), [`lib`](#find-the-projects-own-sites), [`lite-assistant`](#connect-devices), [`lvgl`](#draw-on-a-screen)
-- **M:** [`mdns`](#connect-devices), [`mdns for CPython`](#connect-devices), [`medialink`](#connect-devices), [`micropython shim`](#run-somewhere-other-than-a-board), [`MIDI module`](#run-a-finished-app), [`midiEngine`](#run-a-finished-app), [`midiports`](#play-and-sequence-music), [`mip`](#find-the-projects-own-sites), [`MP3 player`](#run-a-finished-app), [`mp4mux`](#use-cameras-video-and-ai-on-a-board), [`mpftp`](#set-up-a-board), [`mpvst`](#make-and-shape-sound), [`multimer`](#write-an-app)
+- **M:** [`mdns`](#connect-devices), [`mdns for CPython`](#connect-devices), [`medialink`](#connect-devices), [`micropython shim`](#run-somewhere-other-than-a-board), [`MIDI Controller`](#run-a-finished-app), [`MIDI module`](#run-a-finished-app), [`midiEngine`](#run-a-finished-app), [`midiports`](#play-and-sequence-music), [`mip`](#find-the-projects-own-sites), [`MP3 player`](#run-a-finished-app), [`mp4mux`](#use-cameras-video-and-ai-on-a-board), [`mpftp`](#set-up-a-board), [`mpvst`](#make-and-shape-sound), [`multimer`](#write-an-app)
 - **O:** [`Object detection`](#run-a-finished-app), [`omip`](#set-up-a-board), [`OmniPython firmware`](#set-up-a-board), [`orientation`](#write-an-app), [`Ostinato`](#run-a-finished-app)
 - **P:** [`palettes`](#draw-on-a-screen), [`pdwidgets`](#draw-on-a-screen), [`picotts`](#make-and-shape-sound), [`pngio`](#draw-on-a-screen), [`pngio for CPython`](#draw-on-a-screen), [`Power`](#drive-a-chip), [`ppa`](#draw-on-a-screen), [`programkit`](#libraries-the-apps-use), [`pydevices-desktop`](#run-somewhere-other-than-a-board), [`PyDevices.github.io`](#find-the-projects-own-sites), [`pygraphics`](#draw-on-a-screen), [`pyscript-template`](#run-somewhere-other-than-a-board), [`pyscript.py`](#run-somewhere-other-than-a-board)
 - **R:** [`Radios`](#drive-a-chip), [`Real-time clocks`](#drive-a-chip), [`REPL`](#run-a-finished-app), [`Roku remote`](#run-a-finished-app)
