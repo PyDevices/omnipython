@@ -1,3 +1,9 @@
+## v0.0.26.dev0 (2026-11-15)
+
+- Console: `readinto` reads from the reader you gave it (#622)
+- Type stubs ship in the wheel, for the package, its 49 widgets and 79 icons (#621)
+- Install docs point at lib.omnipython.org (#603)
+
 ## v0.0.25 (2026-10-22)
 
 - The release candidate, promoted to a final: pdwidgets now lives in the pydevices repository, in its `pdwidgets/` folder, and releases from there with tags named `pdwidgets-vX.Y.Z`. The package, its import name and its version numbers are unchanged.

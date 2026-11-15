@@ -1,3 +1,8 @@
+## v0.1.0.dev2 (2026-11-15)
+
+- instant_mix in both sets, drawn from its Material Symbol (#623)
+- Type stubs ship in the wheel (#620)
+
 ## v0.1.0.dev1 (2026-11-12)
 
 - iconkit: the first published build, on TestPyPI and the PyDevices mip index.
