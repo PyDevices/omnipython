@@ -16,10 +16,14 @@ alternate setting 1.
 import pathlib
 import struct
 import sys
+import tempfile
 import types
 import unittest
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "tests"))
+import _mprun  # noqa: E402
+
 sys.path.insert(0, str(ROOT  / "packages" / "usb" / "usb-host-net"))
 
 if not hasattr(__import__("time"), "sleep_ms"):
@@ -185,6 +189,44 @@ class EcmTests(unittest.TestCase):
         net = Tether(FakeEcm(stall_filter=True))
         self.assertTrue(net.active(True))
         self.assertEqual(len(started), 1)
+
+
+# Run under MicroPython: the MAC string is read the way a board reads it.
+_MAC_ON_MICROPYTHON = """
+import sys
+class _Mod:
+    pass
+core = _Mod()
+core.USBError = OSError
+usb = _Mod()
+usb.core = core
+sys.modules["usb"] = usb
+sys.modules["usb.core"] = core
+sys.modules["_usbhost"] = _Mod()
+net = {"__name__": "net"}
+exec(open(sys.argv[1]).read(), net)
+
+class Dev:
+    def ctrl_transfer(self, rt, req, value, index, data, timeout=None):
+        text = "02112233445A".encode()
+        wide = bytes(b for c in text for b in (c, 0))
+        data[:2 + len(wide)] = bytes([2 + len(wide), 3]) + wide
+        return 2 + len(wide)
+
+print(net["_mac"](Dev(), 4).hex())
+"""
+
+
+class EcmOnMicroPythonTests(unittest.TestCase):
+    def test_the_mac_string_reads_on_micropython(self):
+        interpreter = _mprun.need_micropython(self)
+        net = ROOT / "packages" / "usb" / "usb-host-net" / "usb" / "host" / "net.py"
+        with tempfile.TemporaryDirectory() as folder:
+            script = pathlib.Path(folder) / "mac_on_micropython.py"
+            script.write_text(_MAC_ON_MICROPYTHON)
+            result = _mprun.run([interpreter, script, net], timeout=60)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertEqual(result.stdout.strip(), "02112233445a")
 
 
 if __name__ == "__main__":

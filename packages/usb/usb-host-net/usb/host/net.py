@@ -109,7 +109,8 @@ def _mac(dev, index):
     """The 6 bytes of the MAC address a CDC-ECM device keeps as 12 hex digits in a string."""
     buf = bytearray(64)
     n = dev.ctrl_transfer(0x80, 6, 0x0300 | index, 0x0409, buf, 1000)
-    text = bytes(buf[2:n:2]).decode()
+    # Every other byte: MicroPython slices a bytearray only with step 1.
+    text = bytes(buf[k] for k in range(2, n, 2)).decode()
     if len(text) < 12:
         raise OSError(5, "no MAC address in string %d" % index)
     return bytes(int(text[k:k + 2], 16) for k in range(0, 12, 2))

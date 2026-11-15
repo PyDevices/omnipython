@@ -170,6 +170,17 @@ jobs:
         timeout-minutes: 5
         run: python -m unittest discover -s tests -p 'test_omip.py' -k MicroPythonRun -v
 
+      # usb.host.net reads a CDC-ECM adapter's MAC string with code that runs on
+      # a board, where a bytearray takes only step-1 slices.
+      - name: usb.host.net on MicroPython
+        working-directory: pydevices
+        env:
+          PYDEVICES_MICROPYTHON: >-
+            ${{ github.workspace }}/micropython/ports/unix/build-standard/micropython
+          PYDEVICES_REQUIRE_MICROPYTHON: '1'
+        timeout-minutes: 5
+        run: python -m unittest discover -s tests -p 'test_usb_host_net.py' -k EcmOnMicroPythonTests -v
+
       # sys.exit() or Ctrl-C from a timer must end the program however the
       # tick reached the main thread. On unix MicroPython the signal source
       # delivers through micropython.schedule, which swallows both, and which
