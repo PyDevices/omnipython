@@ -1,4 +1,4 @@
-# The type stubs under lib/, utils/ and the palettes and iconkit packages: mypy reads every .pyi, and stubtest imports each
+# The type stubs under lib/, utils/ and the palettes, iconkit and pdwidgets packages: mypy reads every .pyi, and stubtest imports each
 # module under CPython and fails when its stub and the code disagree about a
 # name or a signature. Runs when a stub, the code it describes or this file changes.
 name: Stubs
@@ -11,6 +11,7 @@ on:
       - 'utils/**'
       - 'packages/palettes/lib/**'
       - 'packages/iconkit/lib/**'
+      - 'packages/pdwidgets/lib/**'
       - 'tools/check_stubs.py'
       - 'tools/stubs/**'
       - '.github/workflows/stubs.yml'
@@ -20,6 +21,7 @@ on:
       - 'utils/**'
       - 'packages/palettes/lib/**'
       - 'packages/iconkit/lib/**'
+      - 'packages/pdwidgets/lib/**'
       - 'tools/check_stubs.py'
       - 'tools/stubs/**'
       - '.github/workflows/stubs.yml'
@@ -43,7 +45,7 @@ jobs:
       - run: >
           python -m pip install mypy pillow numpy ipython bleak zeroconf resvg-py
           -i https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/
-          pydevices-lvgl
+          pydevices-lvgl pydevices-pygraphics
       - name: mypy over every stub, then stubtest over each module that imports under CPython
         env:
           SDL_VIDEODRIVER: dummy

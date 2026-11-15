@@ -2,7 +2,7 @@
 # SPDX-FileCopyrightText: 2026 Brad Barnett
 #
 # SPDX-License-Identifier: MIT
-"""Check the type stubs under lib/, utils/ and packages/*/lib against each other and against the code.
+"""Check the type stubs under lib/, utils/ and the packages' lib folders against each other and against the code.
 
 From the repository root:
 
@@ -16,7 +16,7 @@ itself fails. Then it runs mypy's `stubtest` on each module in
 the stub and the code disagree about a name or a signature.
 
 The two lists, `tools/stubs/stubtest.txt` and `tools/stubs/mypy-only.txt`, must
-between them name every module that has a stub. A module whose import fails or
+between them name every module that has a stub (a listed package covers its submodules). A module whose import fails or
 blocks under CPython (a platform backend) goes in `mypy-only.txt`. Each stubtest
 run is its own process with a hard timeout, because one blocked import once hung
 a whole-package run.
@@ -41,6 +41,7 @@ SOURCES = [
     ROOT / "utils",
     ROOT / "packages" / "palettes" / "lib",
     ROOT / "packages" / "iconkit" / "lib",
+    ROOT / "packages" / "pdwidgets" / "lib",
 ]
 LISTS = ROOT / "tools" / "stubs"
 TIMEOUT = 120  # seconds, per module
@@ -90,7 +91,9 @@ def main():
     status = 0
     known = set(listed) | set(mypy_only)
     for name in stub_modules():
-        if name not in known:
+        # Testing a package walks its submodules, so a listed package covers them.
+        parents = [name.rsplit(".", n)[0] for n in range(name.count(".") + 1)]
+        if not known.intersection(parents):
             print("%s has a stub but is in neither tools/stubs/stubtest.txt nor mypy-only.txt" % name)
             status = 1
     for name in sorted(known - set(stub_modules())):
