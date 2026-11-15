@@ -46,7 +46,8 @@ with each kind of peripheral described honestly by its role.
 
 - A secret a panel must present before it can read or change the document, and
   encryption on the transports that can carry it, for networks you don't fully
-  trust.
+  trust. medialink's links use the same secret to encrypt their sound and
+  pictures.
 - Announce the device over mDNS, so a phone finds it without typing its address.
 - `hmilink.appkit`: an appkit launcher and its apps' models served over one
   transport, so a phone can see and switch apps. An app set that serves no
@@ -54,16 +55,12 @@ with each kind of peripheral described honestly by its role.
 
 ## medialink
 
-- Private links: peers prove they share a secret and their sound and pictures
-  are encrypted, so a link can run on a network you don't fully trust.
 - Talk both ways at once on a videophone, on boards whose speaker and
   microphone share one I2S port: that needs a duplex I2S path.
 - Decode pictures beside the sound rather than in the same loop, so a
   videophone keeps clean sound with 640x480 pictures both ways.
 - One camera watched from several screens at once; today the last watcher
   to connect gets the pictures.
-- Show progressive JPEGs on boards, whose firmware decoder reads only
-  baseline ones.
 - A BLE transport, using ADPCM to fit its bandwidth, for boards with no
   Wi-Fi between them.
 
