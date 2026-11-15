@@ -74,7 +74,9 @@ magic header; move ``NVM_OFFSET`` if your app keeps its own data in nvm.
 
 MicroPython on ESP32 keeps them in ``esp32.NVS`` namespace ``"wifi_manager"``.
 That survives a filesystem wipe, but not ``esptool erase_flash``.  Other
-MicroPython ports use ``/wifi_networks.json``.
+MicroPython ports use ``wifi_networks.json`` on the board's writable drive:
+``/wifi_networks.json``, or ``/flash/wifi_networks.json`` on an STM32 board
+such as the Arduino GIGA, whose ``/`` only holds the mounts.
 
 Passwords are stored in plain text, as they are in ``secrets.py``.
 """
@@ -89,8 +91,17 @@ _CP = sys.implementation.name == "circuitpython"
 AP_PREFIX = "PyDevices"
 # CircuitPython: where the record starts in microcontroller.nvm.
 NVM_OFFSET = 0
+
+
+def _cache_file(platform=None):
+    """Where MicroPython ports without esp32.NVS keep the networks: the top
+    of the writable drive, which is ``/flash`` on an STM32."""
+    root = "/flash" if (platform or sys.platform) == "pyboard" else ""
+    return root + "/wifi_networks.json"
+
+
 # MicroPython ports without esp32.NVS.
-CACHE_FILE = "/wifi_networks.json"
+CACHE_FILE = _cache_file()
 # Seconds to wait for one network to associate and hand out an address.
 JOIN_TIMEOUT_S = 20
 # Seconds between scans for a known network while setup mode waits.
