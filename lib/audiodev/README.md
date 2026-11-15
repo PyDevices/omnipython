@@ -562,6 +562,25 @@ Playback and capture are queued/pull (`GetBuffer` / `ReleaseBuffer`) with
 
 Keyword arguments are the shared set in [Buffering options](#buffering-options).
 
+### On MicroPython, the pump plays to the speaker itself
+
+On a `micropython.exe` whose audio pump can open a WASAPI speaker, `AudioOut`
+on the default device hands its sample graph to the pump, which writes each
+block to WASAPI from its own thread. Nothing passes through this transport, so
+neither its queue nor the interpreter's timer sits between the graph and the
+device. `audiodev.pump.speaker()` says whether the interpreter can.
+
+A change to the graph reached the speaker in about 60 ms, against about 125 ms
+through this transport at `latency="low"` and about 280 ms at the default,
+measured by recording the speaker in WASAPI loopback. That includes the
+loopback's own delay, so the difference between the two is what counts.
+
+The speaker plays the graph's samples untouched. At a volume below 100, or
+muted, the sample stays on this transport, which scales it; turning the volume
+down or muting while it plays moves it there, with a gap while this transport
+fills (about 200 ms at the default latency). A named `device` stays on this
+transport too.
+
 ### Writing a block straight to the device
 
 If you run your own short queue, a synth or mixer that renders a block at a

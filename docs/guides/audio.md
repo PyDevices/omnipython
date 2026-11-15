@@ -301,7 +301,9 @@ MicroPython. It uses queued SDL audio and provides the same sync and
 async contract as hardware devices.
 
 `audiodev.win_audio` is the Windows WASAPI backend (`uwin32`), selected ahead
-of `sdl2_audio` on Windows when available.
+of `sdl2_audio` on Windows when available. On `micropython.exe`, a sample
+player on the default speaker plays through the audio pump instead, which
+writes to WASAPI from its own thread ([how](https://github.com/PyDevices/pydevices/blob/main/lib/audiodev/README.md#on-micropython-the-pump-plays-to-the-speaker-itself)).
 
 `audiodev.alsa_audio` plays and records through ALSA on Linux, from CPython and
 unix MicroPython, with no SDL2 or pygame. `alsa_audio.devices()` lists the sound
