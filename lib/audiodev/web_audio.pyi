@@ -13,6 +13,9 @@ class WebPCMOutput(PCMOutput):
 
     poll_ms: int
     def __init__(self, fmt: AudioFormat, *, poll_ms: int = 4) -> None: ...
+    def locked(self) -> bool:
+        """True while the browser keeps the context suspended."""
+        ...
 
 class WebPCMInput(PCMInput):
     """Capture through `getUserMedia` and a `ScriptProcessorNode`."""

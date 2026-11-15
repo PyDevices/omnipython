@@ -95,7 +95,7 @@ def main():
         print("== mypy over %d stubs" % len(files))
         status |= run([sys.executable, "-m", "mypy", "--no-incremental", "--no-site-packages", *files])
 
-        env = dict(os.environ, MYPYPATH=str(scratch), PYTHONPATH=str(LIB))
+        env = dict(os.environ, MYPYPATH=str(scratch), PYTHONPATH=os.pathsep.join([str(LIB), str(ROOT / "utils"), str(ROOT / "board_configs" / "desktop")]))
         env.setdefault("SDL_VIDEODRIVER", "dummy")
         env.setdefault("SDL_AUDIODRIVER", "dummy")
         allowlist = LISTS / "allowlist.txt"

@@ -66,3 +66,4 @@ multimer
 omip
 orientation
 wifi_manager
+audiodev.alsa_audio

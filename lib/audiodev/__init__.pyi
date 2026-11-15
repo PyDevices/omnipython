@@ -15,6 +15,7 @@ __all__ = (
     "AudioFormat",
     "AudioFactory",
     "AudioCapability",
+    "AudioLocked",
     "I2SWire",
     "DACWire",
     "PDMWire",
@@ -33,6 +34,10 @@ __all__ = (
 )
 
 LATENCIES: tuple[str | None, ...]
+
+class AudioLocked(RuntimeError):
+    """The platform won't start audio until the user acts, as a browser doesn't until a click."""
+
 
 def check_latency(latency: Literal["low", "buffered"] | None) -> Literal["low", "buffered"] | None:
     """Validate a latency profile name, returning it unchanged."""
