@@ -360,5 +360,18 @@ class LvglScreenTest(_Patched):
         self.assertIsNone(ui.status_lbl)
 
 
+
+class CacheFileTest(unittest.TestCase):
+    """Where ports without esp32.NVS remember networks: a writable drive."""
+
+    def test_an_stm32_board_keeps_networks_on_flash(self):
+        # On an Arduino GIGA, / only holds the mounts and refuses writes.
+        self.assertEqual(wm._cache_file("pyboard"), "/flash/wifi_networks.json")
+
+    def test_other_ports_keep_networks_at_the_root(self):
+        self.assertEqual(wm._cache_file("rp2"), "/wifi_networks.json")
+        self.assertEqual(wm._cache_file("linux"), "/wifi_networks.json")
+
+
 if __name__ == "__main__":
     unittest.main()

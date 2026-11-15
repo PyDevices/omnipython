@@ -384,12 +384,37 @@ class CPythonInstall(Indexes):
         self.assertEqual(self.landed(), ["aioble/__init__.py", "aioble/core.py", "bledev/__init__.py", "gt911.py"])
 
     def test_a_target_that_isnt_a_library_folder_gets_the_app_inside_it(self):
+        # An Arduino GIGA's drive is /flash, its libraries in /flash/lib.
         drive = self.scratch / "flash"
         self.install(self.ours_url + "/repo/app", target=str(drive))
         landed = sorted(p.relative_to(drive).as_posix() for p in drive.rglob("*") if p.is_file())
-        self.assertIn("apps/app/app.json", landed)
-        self.assertIn("gt911.py", landed)
+        self.assertEqual(
+            landed,
+            ["apps/app/__init__.py", "apps/app/app.json", "lib/aioble/__init__.py", "lib/aioble/core.py",
+             "lib/bledev/__init__.py", "lib/gt911.py"],
+        )
         self.assertFalse((self.scratch / "apps").exists())
+
+    def test_with_no_target_an_app_goes_beside_the_library_folder_on_the_path(self):
+        # The same install with the target left off, as the GIGA's guide has it.
+        drive = self.scratch / "flash"
+        libs = drive / "lib"
+        libs.mkdir(parents=True)
+        sys.path.insert(0, str(libs))
+        self.addCleanup(sys.path.remove, str(libs))
+        self.install(self.ours_url + "/repo/app", target=None)
+        landed = sorted(p.relative_to(drive).as_posix() for p in drive.rglob("*") if p.is_file())
+        self.assertEqual(
+            landed,
+            ["apps/app/__init__.py", "apps/app/app.json", "lib/aioble/__init__.py", "lib/aioble/core.py",
+             "lib/bledev/__init__.py", "lib/gt911.py"],
+        )
+
+    def test_a_library_sent_to_a_target_that_isnt_a_library_folder_lands_in_it(self):
+        drive = self.scratch / "flash"
+        self.install("bledev", target=str(drive))
+        landed = sorted(p.relative_to(drive).as_posix() for p in drive.rglob("*") if p.is_file())
+        self.assertEqual(landed, ["aioble/__init__.py", "aioble/core.py", "bledev/__init__.py"])
 
     def test_own_folder_beside_the_library_folder(self):
         beside = self.omip._beside
