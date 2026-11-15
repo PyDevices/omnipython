@@ -387,6 +387,10 @@ def _store_write(data):
 # --------------------------------------------------------------------- radio
 
 
+# The channel each network was last joined on (CircuitPython), kept in RAM.
+_channels = {}
+
+
 def _radio():
     return _CPRadio() if _CP else _MPRadio()
 
@@ -422,8 +426,15 @@ def _join_known(radio, timeout):
         order += [n for n in known if n["ssid"] not in seen]
     # Two rounds: on a weak link esp32 fails a join ("wrong password",
     # "network not found") that works a moment later.
+    absent = set()
     for n in order + order:
+        if n["ssid"] in absent:
+            continue
         ip = _try_join(radio, n["ssid"], n.get("password", ""), timeout, seen)
+        if not ip and getattr(radio, "absent", False):
+            # CircuitPython searched every channel for it. The second round
+            # would hold the interpreter for as long again to say the same.
+            absent.add(n["ssid"])
         if ip:
             # A network from secrets.py lands in the cache here, which is what
             # lets secrets.py be deleted afterwards.
@@ -579,11 +590,23 @@ class _CPRadio:
         return best
 
     def join(self, ssid, password, timeout):
+        # A join with no channel scans all of them (about 5 s) before it
+        # looks for the network; with the channel it last joined on, it
+        # starts there and finds it in 1 to 3 s. The channel is a hint: the
+        # radio still searches the others when the network isn't on it.
+        self.absent = False
         try:
-            self.r.connect(ssid, password, timeout=timeout)
+            self.r.connect(ssid, password, channel=_channels.get(ssid, 0), timeout=timeout)
         except Exception as exc:  # ConnectionError carries the reason
-            return str(exc) or type(exc).__name__
-        return None if self.ip() else "no address"
+            msg = str(exc) or type(exc).__name__
+            self.absent = msg == "No network with that ssid"
+            return msg
+        if not self.ip():
+            return "no address"
+        info = self.r.ap_info
+        if info is not None:
+            _channels[ssid] = info.channel
+        return None
 
     def start_ap(self, ssid, password):
         self.r.start_ap(ssid, password)
