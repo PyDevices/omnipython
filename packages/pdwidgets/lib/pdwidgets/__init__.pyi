@@ -6,14 +6,15 @@
 Core names are always imported; widget classes load on first access.
 """
 
-import events as events
-from collections.abc import Iterator
-from palettes import get_palette as get_palette
+from collections.abc import Callable, Iterator
 from typing import Any
-from collections.abc import Callable
+
+import events as events
+from palettes import get_palette as get_palette
 
 from . import pct as pct
-from .display import Display as Display, tick as tick
+from .display import Display as Display
+from .display import tick as tick
 from .screen import Screen as Screen
 from .task import Task as Task
 from .widget import Widget as Widget

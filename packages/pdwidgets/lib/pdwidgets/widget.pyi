@@ -8,7 +8,11 @@ from typing import Any, TypeAlias
 
 import events
 
-from . import ALIGN as ALIGN, DEFAULT_PADDING as DEFAULT_PADDING, POSITION as POSITION, Area, ColorTheme as ColorTheme
+from . import ALIGN as ALIGN
+from . import DEFAULT_PADDING as DEFAULT_PADDING
+from . import POSITION as POSITION
+from . import Area
+from . import ColorTheme as ColorTheme
 from .display import Display
 from .pct import _Length
 
