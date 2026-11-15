@@ -1,4 +1,4 @@
-# The type stubs under lib/: mypy reads every .pyi, and stubtest imports each
+# The type stubs under lib/, utils/ and the palettes and iconkit packages: mypy reads every .pyi, and stubtest imports each
 # module under CPython and fails when its stub and the code disagree about a
 # name or a signature. Runs when a stub, the code it describes or this file changes.
 name: Stubs
@@ -8,12 +8,18 @@ on:
     branches: [main]
     paths:
       - 'lib/**'
+      - 'utils/**'
+      - 'packages/palettes/lib/**'
+      - 'packages/iconkit/lib/**'
       - 'tools/check_stubs.py'
       - 'tools/stubs/**'
       - '.github/workflows/stubs.yml'
   pull_request:
     paths:
       - 'lib/**'
+      - 'utils/**'
+      - 'packages/palettes/lib/**'
+      - 'packages/iconkit/lib/**'
       - 'tools/check_stubs.py'
       - 'tools/stubs/**'
       - '.github/workflows/stubs.yml'
@@ -35,7 +41,7 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y libsdl2-2.0-0
       # stubtest imports each module, and the libraries import these.
       - run: >
-          python -m pip install mypy pillow numpy ipython bleak
+          python -m pip install mypy pillow numpy ipython bleak zeroconf resvg-py
           -i https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/
           pydevices-lvgl
       - name: mypy over every stub, then stubtest over each module that imports under CPython
