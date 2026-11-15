@@ -1,0 +1,10 @@
+# Modules whose import fails or blocks under CPython: mypy reads their stubs, stubtest can't.
+audiodev.wasm_audio
+audiodev.win_audio
+bledev.cpble
+bledev.mpble
+displaydev.pgdisplay
+displaydev.psdisplay
+displaydev.wasmdisplay
+displaydev.windisplay
+wifi
