@@ -54,15 +54,18 @@ class HotspotTest(unittest.TestCase):
         self.rejoined = []
         module = types.ModuleType("wifi")
         module.radio = self.radio
-        module.connect_from_secrets = lambda **kw: self.rejoined.append(kw)
-        self.saved = sys.modules.get("wifi")
+        manager = types.ModuleType("wifi_manager")
+        manager.connect = lambda **kw: self.rejoined.append(kw)
+        self.saved = {name: sys.modules.get(name) for name in ("wifi", "wifi_manager")}
         sys.modules["wifi"] = module
+        sys.modules["wifi_manager"] = manager
 
     def tearDown(self):
-        if self.saved is None:
-            del sys.modules["wifi"]
-        else:
-            sys.modules["wifi"] = self.saved
+        for name, saved in self.saved.items():
+            if saved is None:
+                del sys.modules[name]
+            else:
+                sys.modules[name] = saved
 
     def test_the_name_that_sorts_first_hosts(self):
         finder = discovery.Hotspot("secret123")
@@ -132,7 +135,7 @@ class HotspotTest(unittest.TestCase):
         def refuse(**kw):
             raise OSError("house network gone")
 
-        sys.modules["wifi"].connect_from_secrets = refuse
+        sys.modules["wifi_manager"].connect = refuse
         finder = discovery.Hotspot("secret123")
         finder.advertise("kitchen", 47800)
         self.radio.joinable = {"garage"}

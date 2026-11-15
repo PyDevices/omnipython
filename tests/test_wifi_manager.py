@@ -10,11 +10,17 @@ and a join fails once and then works, so the join order and the two rounds
 are what keep a board on its network.
 """
 
+import sys
 import types
 import unittest
 
 import _env  # noqa: F401
 import wifi_manager as wm
+from fake_wlan import FakeWLAN
+from fake_wlan import clock as _fake_clock
+from fake_wlan import sleep_ms as _fake_sleep_ms
+from fake_wlan import ticks_diff as _fake_ticks_diff
+from fake_wlan import ticks_ms as _fake_ticks_ms
 
 _clock = [0]
 
@@ -93,7 +99,7 @@ class _Patched(unittest.TestCase):
         _clock[0] = 0
         self.sleeps = 0
         self.on_sleep = None
-        wm._known = lambda: list(self.known)
+        wm._known = lambda module="secrets": list(self.known)
         wm._remember = lambda ssid, password, hidden=False: self.remembered.append(ssid)
         wm._ticks_ms = lambda: _clock[0]
         wm._ticks_diff = lambda a, b: a - b
@@ -267,6 +273,159 @@ class CircuitPythonJoinTest(_Patched):
         again = self._radio([None])
         again.join("home", "pw", 5)
         self.assertEqual(again.r.calls, [("home", 6)])
+
+
+class ConnectLinkTest(unittest.TestCase):
+    """``connect()`` on an esp32-shaped station: an address without a link is
+    not a connection, so a static address joins at boot and rejoins after a
+    drop, and a join that is still waiting for ``isconnected()`` is waited out."""
+
+    def setUp(self):
+        self._saved = {
+            name: getattr(wm, name)
+            for name in ("_load", "_save", "_sleep_ms", "_ticks_ms", "_ticks_diff")
+        }
+        _fake_clock[0] = 0
+        self.stored = []
+        wm._load = lambda: list(self.stored)
+        wm._save = lambda nets: self.stored.__init__(nets) or True
+        wm._sleep_ms = _fake_sleep_ms
+        wm._ticks_ms = _fake_ticks_ms
+        wm._ticks_diff = _fake_ticks_diff
+        self.ntp_calls = 0
+
+        def settime():
+            self.ntp_calls += 1
+
+        secrets = types.ModuleType("_wm_test_secrets")
+        secrets.WIFI_SSID = "bench"
+        secrets.WIFI_PASSWORD = "pw"
+        ntp = types.ModuleType("ntptime")
+        ntp.settime = settime
+        self._modules = {"_wm_test_secrets": secrets, "ntptime": ntp}
+        self._before = {name: sys.modules.get(name) for name in ("network", "secrets", *self._modules)}
+        sys.modules.update(self._modules)
+        sys.modules["secrets"] = types.ModuleType("secrets")  # no network of its own
+
+    def tearDown(self):
+        for name, value in self._saved.items():
+            setattr(wm, name, value)
+        for name, value in self._before.items():
+            if value is None:
+                sys.modules.pop(name, None)
+            else:
+                sys.modules[name] = value
+
+    def _connect(self, wlan, **kwargs):
+        net = types.ModuleType("network")
+        net.STA_IF = 0
+        net.AP_IF = 1
+        net.WLAN = lambda _if: wlan
+        sys.modules["network"] = net
+        kwargs.setdefault("module", "_wm_test_secrets")
+        kwargs.setdefault("setup", False)
+        return wm.connect(**kwargs)
+
+    def test_static_address_without_link_connects(self):
+        wlan = FakeWLAN()
+        wlan.ifconfig(("10.0.0.42", "255.255.255.0", "10.0.0.1", "10.0.0.1"))
+        self.assertEqual(self._connect(wlan), "10.0.0.42")
+        self.assertEqual(wlan.connects, ["bench"])
+        self.assertTrue(wlan.linked)
+
+    def test_static_address_rejoins_after_drop(self):
+        wlan = FakeWLAN()
+        wlan.ifconfig(("10.0.0.42", "255.255.255.0", "10.0.0.1", "10.0.0.1"))
+        self.assertEqual(self._connect(wlan), "10.0.0.42")
+        wlan.drop()
+        self.assertEqual(wlan.ifconfig()[0], "10.0.0.42")
+        self.assertEqual(self._connect(wlan), "10.0.0.42")
+        self.assertEqual(len(wlan.connects), 2)
+        self.assertTrue(wlan.linked)
+
+    def test_dhcp_connect_waits_out_isconnected_lag(self):
+        wlan = FakeWLAN()
+        wlan.lag_ms = 800
+        self.assertEqual(self._connect(wlan), "10.0.0.77")
+        self.assertEqual(wlan.connects, ["bench"])
+
+    def test_dhcp_rejoins_after_drop(self):
+        wlan = FakeWLAN()
+        self.assertEqual(self._connect(wlan), "10.0.0.77")
+        wlan.drop()
+        self.assertEqual(self._connect(wlan), "10.0.0.77")
+        self.assertEqual(len(wlan.connects), 2)
+
+    def test_port_without_isconnected_falls_back_to_address(self):
+        wlan = FakeWLAN(ip="10.0.0.77", linked=True, has_isconnected=False)
+        self.assertEqual(self._connect(wlan), "10.0.0.77")
+        self.assertEqual(wlan.connects, [])
+
+    def test_a_live_link_is_left_alone_and_the_clock_too(self):
+        wlan = FakeWLAN(ip="10.0.0.77", linked=True)
+        self.assertEqual(self._connect(wlan, ntp=True), "10.0.0.77")
+        self.assertEqual(wlan.connects, [])
+        self.assertEqual(self.ntp_calls, 0)
+
+    def test_no_link_ever_returns_none(self):
+        wlan = FakeWLAN()
+        wlan.ifconfig(("10.0.0.42", "255.255.255.0", "10.0.0.1", "10.0.0.1"))
+        wlan.assoc_ms = 10**9
+        self.assertIsNone(self._connect(wlan, ntp=True))
+        self.assertEqual(wlan.connects, ["bench", "bench"])
+        self.assertEqual(self.ntp_calls, 0)
+
+    def test_the_clock_is_set_after_a_join_when_asked(self):
+        self.assertEqual(self._connect(FakeWLAN(), ntp=True), "10.0.0.77")
+        self.assertEqual(self.ntp_calls, 1)
+
+    def test_the_clock_is_left_alone_by_default(self):
+        self.assertEqual(self._connect(FakeWLAN()), "10.0.0.77")
+        self.assertEqual(self.ntp_calls, 0)
+
+    def test_a_failed_clock_set_still_returns_the_address(self):
+        def refuse():
+            raise OSError(113, "EHOSTUNREACH")
+
+        sys.modules["ntptime"].settime = refuse
+        self.assertEqual(self._connect(FakeWLAN(), ntp=True), "10.0.0.77")
+
+    def test_wait_false_starts_the_join_and_returns_at_once(self):
+        wlan = FakeWLAN()
+        self.assertIsNone(self._connect(wlan, wait=False))
+        self.assertEqual(wlan.connects, ["bench"])
+        self.assertFalse(wlan.linked)
+        self.assertEqual(_fake_clock[0], 0)
+        # the link comes up on its own, and the next call sees it
+        _fake_sleep_ms(2000)
+        self.assertEqual(self._connect(wlan, wait=False), "10.0.0.77")
+        self.assertEqual(wlan.connects, ["bench"])
+
+    def test_wait_false_with_a_static_address_and_no_link_rejoins(self):
+        wlan = FakeWLAN()
+        wlan.ifconfig(("10.0.0.42", "255.255.255.0", "10.0.0.1", "10.0.0.1"))
+        self.assertIsNone(self._connect(wlan, wait=False))
+        self.assertEqual(wlan.connects, ["bench"])
+
+    def test_wait_false_with_nothing_known_starts_nothing(self):
+        wlan = FakeWLAN()
+        self.assertIsNone(self._connect(wlan, wait=False, module="_wm_no_such_module"))
+        self.assertEqual(wlan.connects, [])
+
+    def test_a_remembered_network_is_tried_when_the_secrets_one_is_out_of_range(self):
+        wlan = FakeWLAN()
+        self.stored = [{"ssid": "kept", "password": "pw2"}]
+        joined = []
+        real_connect = wlan.connect
+
+        def connect(ssid, password):
+            joined.append(ssid)
+            if ssid == "kept":
+                real_connect(ssid, password)
+
+        wlan.connect = connect
+        self.assertEqual(self._connect(wlan), "10.0.0.77")
+        self.assertEqual(joined, ["bench", "kept"])
 
 
 class SetupModeTest(_Patched):

@@ -62,7 +62,9 @@ except ImportError:
     pass
 else:
     if not wifi.radio.connected:
-        wifi.connect_from_secrets()
+        import wifi_manager
+
+        wifi_manager.connect()
     try:
         import socketpool
 

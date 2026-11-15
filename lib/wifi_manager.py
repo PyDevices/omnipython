@@ -33,6 +33,14 @@ own.  To move to a new network on purpose, call ``wifi_manager.run()``, which
 waits for one.
 ``cancel()``, from a timer or another app, ends setup mode without a network.
 
+``connect(ntp=True)`` sets the clock from NTP once a network is joined.
+``connect(wait=False)`` starts the join and returns at once, for an app that
+can't stall: poll ``wifi.radio.connected``, or call it again after the link
+drops.  A board with a fixed address (``ifconfig()`` set before the join) counts
+as connected only once the station has a link, so it joins at boot and rejoins
+after a drop.  ``connect(module="mysecrets")`` reads the credentials from
+another module than ``secrets``.
+
 ``networks()`` lists the remembered SSIDs, ``forget(ssid)`` drops one and
 ``forget()`` drops them all.  A network that is still in ``secrets.py`` comes
 back the next time it is joined.
@@ -147,7 +155,16 @@ else:
 # --------------------------------------------------------------- public calls
 
 
-def connect(*, setup=True, hostname=None, display_drv=None, timeout=JOIN_TIMEOUT_S):
+def connect(
+    *,
+    setup=True,
+    hostname=None,
+    display_drv=None,
+    timeout=JOIN_TIMEOUT_S,
+    wait=True,
+    ntp=False,
+    module="secrets",
+):
     """Join a known network, or run setup mode when none is in range.
 
     Args:
@@ -157,11 +174,21 @@ def connect(*, setup=True, hostname=None, display_drv=None, timeout=JOIN_TIMEOUT
         display_drv: Display for setup mode.  Default:
             ``board_config.display_drv`` when there is one.
         timeout (int): Seconds to wait for each network.
+        wait (bool): ``False`` starts joining the first known network and
+            returns ``None`` at once, without a scan or setup mode; poll
+            ``wifi.radio.connected`` (or call again after a drop). For an app
+            that can't stall. On CircuitPython a join can't run in the
+            background, so it waits as usual.
+        ntp (bool): Set the clock from NTP once a network is joined. Skipped
+            when the board was already connected.
+        module (str): The module holding ``WIFI_SSID`` and ``WIFI_PASSWORD``
+            (or ``ssid`` and ``password``).  Default ``secrets``.
 
     Returns:
-        str | None: The IPv4 address, or ``None`` when no network was joined.
+        str | None: The IPv4 address, or ``None`` when no network was joined
+        (or, with ``wait=False``, when one was started).
     """
-    if setup and display_drv is None:
+    if setup and wait and display_drv is None:
         # Display first, then radio: on an S3 the panel needs a contiguous
         # block of internal RAM that a running radio no longer leaves.
         display_drv = _board_display()
@@ -172,12 +199,17 @@ def connect(*, setup=True, hostname=None, display_drv=None, timeout=JOIN_TIMEOUT
     if ip:
         print("wifi_manager: already connected,", ip)
         return ip
-    ip = _join_known(radio, timeout)
-    if ip or not setup:
-        if not ip:
-            print("wifi_manager: couldn't join a known network")
-        return ip
-    return _Setup(radio, display_drv, timeout, rescan=True).run()
+    if not wait and not _CP:
+        _start_join(radio, module)
+        return None
+    ip = _join_known(radio, timeout, module)
+    if not ip and setup and wait:
+        ip = _Setup(radio, display_drv, timeout, rescan=True).run()
+    elif not ip:
+        print("wifi_manager: couldn't join a known network")
+    if ip and ntp:
+        _sync_time()
+    return ip
 
 
 def run(*, hostname=None, display_drv=None, timeout=JOIN_TIMEOUT_S):
@@ -220,15 +252,15 @@ def forget(ssid=None):
 # ------------------------------------------------------------ known networks
 
 
-def _from_settings():
+def _from_settings(module="secrets"):
     """Networks from secrets.py and CircuitPython's settings.toml."""
     found = []
     try:
-        import secrets as s
+        s = __import__(module)
     except ImportError:
         s = None
     except Exception as exc:
-        print("wifi_manager: secrets.py failed to import:", exc)
+        print("wifi_manager:", module, "failed to import:", exc)
         s = None
     if s is not None:
         ssid = getattr(s, "WIFI_SSID", None) or getattr(s, "ssid", None)
@@ -244,11 +276,11 @@ def _from_settings():
     return found
 
 
-def _known():
+def _known(module="secrets"):
     """Every network we may join.  secrets.py wins over a remembered password."""
     nets = []
     seen = set()
-    for n in _from_settings() + _load():
+    for n in _from_settings(module) + _load():
         if n["ssid"] not in seen:
             seen.add(n["ssid"])
             nets.append(n)
@@ -402,8 +434,32 @@ def _set_hostname(radio, name):
         print("wifi_manager: can't set hostname:", exc)
 
 
-def _join_known(radio, timeout):
-    known = _known()
+def _start_join(radio, module):
+    """Begin joining the first known network and return without waiting."""
+    known = _known(module)
+    if not known:
+        print("wifi_manager: no networks known yet")
+        return
+    n = known[0]
+    print("wifi_manager: joining", n["ssid"], "in the background")
+    radio.start(n["ssid"], n.get("password", ""))
+
+
+def _sync_time():
+    """Set the clock from NTP.  Returns True when it worked."""
+    try:
+        import ntptime
+
+        ntptime.settime()
+        print("wifi_manager: ntp ok")
+        return True
+    except Exception as exc:
+        print("wifi_manager: ntp", type(exc).__name__, exc)
+        return False
+
+
+def _join_known(radio, timeout, module="secrets"):
+    known = _known(module)
     if not known:
         print("wifi_manager: no networks known yet")
         return None
@@ -467,9 +523,15 @@ class _MPRadio:
         self.ap = network.WLAN(network.AP_IF)
 
     def ip(self):
+        # An address alone isn't a link: a static address set with ifconfig()
+        # reads back before the station has associated and stays after a drop.
         try:
-            if not self.sta.isconnected():
-                return None
+            linked = self.sta.isconnected()
+        except Exception:
+            linked = True  # a port without a usable isconnected(): the address is all we have
+        if not linked:
+            return None
+        try:
             ip = self.sta.ifconfig()[0]
         except Exception:
             return None
@@ -492,6 +554,14 @@ class _MPRadio:
             if ssid and (ssid not in best or rec[3] > best[ssid]):
                 best[ssid] = rec[3]
         return best
+
+    def start(self, ssid, password):
+        """Begin joining and return; ``ip()`` says when it has."""
+        try:
+            self.sta.disconnect()
+        except OSError:
+            pass
+        self.sta.connect(ssid, password)
 
     def join(self, ssid, password, timeout):
         """None on success, else a short reason."""

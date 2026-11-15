@@ -62,13 +62,13 @@ SPEAKER_VOLUME = 0  # a board's own speaker, 0 to 100; the TV has its own volume
 kind, address = TV.split(":", 1)
 if sys.implementation.name != "cpython":
     import network
-    import wifi
+    import wifi_manager
 
     # Join Wi-Fi with power saving off: a board in power save answers late
     # enough to starve the stream.
     station = network.WLAN(network.STA_IF)
     if not station.isconnected():
-        wifi.connect_from_secrets()
+        wifi_manager.connect(ntp=True)
     station.config(pm=network.WLAN.PM_NONE)
 display = CastDisplay(address, WIDTH, HEIGHT, kind=kind, name="Porch camera", fps=FPS,
                       audio=True, audio_format=(RATE, 2))
