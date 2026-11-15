@@ -215,7 +215,8 @@ class Indexes(unittest.TestCase):
         self.ours_dir, self.upstream_dir = build_indexes(self.scratch)
         self.ours, self.ours_url = serve(self.ours_dir)
         self.upstream, self.upstream_url = serve(self.upstream_dir)
-        self.target = self.scratch / "target"
+        # Named lib, as on a board: a package's own folder goes beside it.
+        self.target = self.scratch / "lib"
         self.home = self.scratch / "cwd"
         self.home.mkdir()
         # omip.py alone on the path, as it is on a board that got this one file.
@@ -382,12 +383,29 @@ class CPythonInstall(Indexes):
         self.assertEqual(self.apps_landed(), ["app/__init__.py", "app/app.json"])
         self.assertEqual(self.landed(), ["aioble/__init__.py", "aioble/core.py", "bledev/__init__.py", "gt911.py"])
 
+    def test_a_target_that_isnt_a_library_folder_gets_the_app_inside_it(self):
+        drive = self.scratch / "flash"
+        self.install(self.ours_url + "/repo/app", target=str(drive))
+        landed = sorted(p.relative_to(drive).as_posix() for p in drive.rglob("*") if p.is_file())
+        self.assertIn("apps/app/app.json", landed)
+        self.assertIn("gt911.py", landed)
+        self.assertFalse((self.scratch / "apps").exists())
+
     def test_own_folder_beside_the_library_folder(self):
         beside = self.omip._beside
         self.assertEqual(beside("/lib", "apps/home"), "/apps/home")
         self.assertEqual(beside("/flash/lib", "apps/home"), "/flash/apps/home")
         self.assertEqual(beside("lib", "apps/home/"), "apps/home")
         self.assertEqual(beside("/lib", "/sd/apps/home/"), "/sd/apps/home")
+
+    def test_own_folder_inside_a_target_that_isnt_a_library_folder(self):
+        # An Arduino GIGA's writable drive is /flash; beside it is the
+        # read-only root, which refuses the write with ENODEV.
+        beside = self.omip._beside
+        self.assertEqual(beside("/flash", "apps/home"), "/flash/apps/home")
+        self.assertEqual(beside("/flash/", "apps/home"), "/flash/apps/home")
+        self.assertEqual(beside("/", "apps/home"), "/apps/home")
+        self.assertEqual(beside("/sd", "/apps/home"), "/apps/home")
 
     def test_url_base_is_where_relative_urls_are_found(self):
         site = self.ours_dir / "site"
