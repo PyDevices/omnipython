@@ -4,6 +4,7 @@
     ["vtterm/console.py", "github:PyDevices/pydevices/packages/vtterm/vtterm/console.py"],
     ["vtterm/keyboards.py", "github:PyDevices/pydevices/packages/vtterm/vtterm/keyboards.py"],
     ["vtterm/keys.py", "github:PyDevices/pydevices/packages/vtterm/vtterm/keys.py"],
+    ["vtterm/mouse.py", "github:PyDevices/pydevices/packages/vtterm/vtterm/mouse.py"],
     ["vtterm/parser.py", "github:PyDevices/pydevices/packages/vtterm/vtterm/parser.py"],
     ["vtterm/render.py", "github:PyDevices/pydevices/packages/vtterm/vtterm/render.py"],
     ["vtterm/screen.py", "github:PyDevices/pydevices/packages/vtterm/vtterm/screen.py"],

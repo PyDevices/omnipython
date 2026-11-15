@@ -5,6 +5,8 @@
 
 Each row is composed in a strip buffer with pygraphics, one fill and one text
 call per run of cells that share colors, then sent with one ``blit_rect``.
+Line-drawing cells aren't in the font: they're drawn as lines through the
+middle of the cell, so boxes join from cell to cell at any font height.
 When the display really scrolls (an SPI panel's scroll registers, or a desktop
 window that copies them), a whole-screen scroll moves the picture and only the
 new rows are drawn. Other displays redraw the rows that moved.
@@ -13,6 +15,10 @@ new rows are drawn. Other displays redraw the rows that moved.
 from pygraphics import RGB565, FrameBuffer
 
 from .screen import BOLD, REVERSE, UNDERLINE
+
+# Which arms each line-drawing cell code from 11 to 25 has: 1 up, 2 down,
+# 4 left, 8 right. The five horizontal scan lines have none.
+_ARMS = b"\x05\x06\x0a\x09\x0f\x00\x00\x0c\x00\x00\x0b\x07\x0d\x0e\x03"
 
 
 def scrolls_in_hardware(display):
@@ -128,6 +134,38 @@ class Renderer:
             self.display.show()
         return drawn
 
+    def _glyph(self, code, px, color):
+        # Draw one line-drawing cell into the strip at pixel column px.
+        fb = self._fb
+        cw = self.cw
+        ch = self.ch
+        cx = px + cw // 2
+        cy = ch // 2
+        if 11 <= code <= 25:
+            arms = _ARMS[code - 11]
+            if arms & 1:
+                fb.vline(cx, 0, cy + 1, color)
+            if arms & 2:
+                fb.vline(cx, cy, ch - cy, color)
+            if arms & 4:
+                fb.hline(px, cy, cx - px + 1, color)
+            if arms & 8:
+                fb.hline(cx, cy, px + cw - cx, color)
+            if not arms:
+                # Scan lines 1, 3, 7 and 9; scan line 5 is the horizontal line.
+                fb.hline(px, (0, ch // 4, 0, ch * 3 // 4, ch - 1)[code - 16], cw, color)
+        elif code == 1:
+            r = cw // 2 - 1
+            for dy in range(-r, r + 1):
+                w = r - abs(dy)
+                fb.hline(cx - w, cy + dy, 2 * w + 1, color)
+        elif code == 2:
+            for y in range(ch):
+                for x in range(px + (y & 1), px + cw, 2):
+                    fb.pixel(x, y, color)
+        elif code == 31:
+            fb.fill_rect(cx - 1, cy - 1, 2, 2, color)
+
     def _row(self, y, cursor_x):
         s = self.screen
         chars, fgs, bgs, fls = s.visible(y)
@@ -137,6 +175,7 @@ class Renderer:
         cw = self.cw
         ch = self.ch
         cols = s.cols
+        lines = min(chars) < 32
         x = 0
         while x < cols:
             fg = fgs[x]
@@ -156,7 +195,14 @@ class Renderer:
             px = x * cw
             w = (end - x) * cw
             fb.fill_rect(px, 0, w, ch, pal[bg])
-            font.text(fb, bytes(chars[x:end]).decode(), px, 0, fgc)
+            text = chars[x:end]
+            if lines:
+                for i in range(end - x):
+                    c = text[i]
+                    if c < 32:
+                        text[i] = 32
+                        self._glyph(c, px + i * cw, fgc)
+            font.text(fb, bytes(text).decode(), px, 0, fgc)
             if fl & UNDERLINE:
                 fb.hline(px, ch - 1, w, fgc)
             x = end

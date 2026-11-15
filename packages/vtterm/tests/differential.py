@@ -12,7 +12,9 @@ VT100 or are wrong are patched first: NEL (``ESC E``) is CR LF, DECSTBM homes
 the cursor even when it resets the margins, and DL clears a row whose
 replacement is blank, CUU, CUD and RI stop at the region's edge only from
 inside it, and ``ESC 8`` restores a copy of the saved cursor, unclamped, as often as asked. pyte has no SU or SD (``CSI S``, ``CSI T``), so the
-streams leave them out; the unit tests cover them.
+streams leave them out; the unit tests cover them. The streams switch G0 and
+G1 to the DEC line-drawing set and back, with pyte's UTF-8 reading off so it
+honours them, and with G1 starting as ASCII as it does in xterm.
 
 Run it from the repo root, with pyte installed (``pip install pyte``):
 
@@ -36,7 +38,7 @@ COLS, ROWS = 12, 6
 
 
 def piece(rng):
-    k = rng.randrange(20)
+    k = rng.randrange(22)
     n = rng.randrange(1, 5)
     if k < 6:
         return "".join(rng.choice("abcdefgh XYZ") for _ in range(rng.randrange(1, 6)))
@@ -67,6 +69,10 @@ def piece(rng):
         return "\x1b[r"
     if k == 18:
         return "\x1b[%dm" % rng.choice([0, 1, 4, 7, 31, 42, 93])
+    if k == 19:
+        return rng.choice(["\x1b(0", "\x1b(B", "\x1b)0", "\x1b)B", "\x0e", "\x0f"])
+    if k == 20:
+        return "".join(rng.choice("jklmnqtuvwx") for _ in range(rng.randrange(1, 6)))
     return "x"
 
 
@@ -84,6 +90,11 @@ class VT100Screen(pyte.Screen):
     """pyte with VT100 behaviours it lacks: NEL is CR LF, DECSTBM always homes,
     and DL clears a row whose replacement is blank. Moving up or down stops at
     the region's edge only from inside it, and ESC 8 can restore twice."""
+
+    def reset(self):
+        # G1 starts as ASCII, as in xterm, where pyte starts it as line drawing.
+        super().reset()
+        self.g1_charset = pyte.charsets.LAT1_MAP
 
     def _region(self):
         return self.margins or pyte.screens.Margins(0, self.lines - 1)
@@ -115,10 +126,16 @@ class VT100Screen(pyte.Screen):
 
     def restore_cursor(self):
         if not self.savepoints:
+            # With nothing saved, a VT100 also goes back to ASCII.
             super().restore_cursor()
+            self.g0_charset = self.g1_charset = pyte.charsets.LAT1_MAP
+            self.charset = 0
             return
         saved = self.savepoints[-1]
         self.cursor = copy.copy(saved.cursor)
+        self.g0_charset = saved.g0_charset
+        self.g1_charset = saved.g1_charset
+        self.charset = saved.charset
         if saved.origin:
             self.mode.add(pyte.modes.DECOM)
         else:
@@ -153,11 +170,17 @@ def _next_line(screen):
 VT100Screen.next_line = _next_line
 
 
+# The line-drawing set's symbols that vtterm shows as their nearest ASCII.
+# pyte draws the set's ``h`` as a light shade.
+_ASCII = str.maketrans("\u2409\u240c\u240d\u240a\u2591\u00b0\u00b1", "     '#")
+
+
 def theirs(stream):
     screen = VT100Screen(COLS, ROWS)
     stream_ = VT100Stream(screen)
+    stream_.use_utf8 = False  # or pyte ignores the character set choices
     stream_.feed(stream)
-    return [line for line in screen.display], (screen.cursor.y, screen.cursor.x)
+    return [line.translate(_ASCII) for line in screen.display], (screen.cursor.y, screen.cursor.x)
 
 
 def main():

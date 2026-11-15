@@ -9,6 +9,9 @@ moves rows in a list instead of copying bytes. Rows that change are marked in
 `Screen.dirty` for a renderer to redraw, and whole-screen scrolls are counted
 in `Screen.scrolled` so a display that can scroll in hardware only draws the
 new rows.
+
+A cell holds one byte. Printable ASCII is itself, and the line-drawing
+characters are the codes below 32 in `GLYPHS`, which a renderer draws as lines.
 """
 
 #: Style flag: bold, drawn as the bright version of colors 0 to 7.
@@ -19,6 +22,10 @@ UNDERLINE = 2
 REVERSE = 4
 
 _SPACE = 32
+
+#: The character each cell code below 32 stands for: the DEC line-drawing
+#: set's diamond, checkerboard, corners, tees, cross, lines and dot.
+GLYPHS = " \u25c6\u2592        \u2518\u2510\u250c\u2514\u253c\u23ba\u23bb\u2500\u23bc\u23bd\u251c\u2524\u2534\u252c\u2502     \u00b7"
 
 
 class Screen:
@@ -45,6 +52,12 @@ class Screen:
         flags (int): Pen style flags (`BOLD`, `UNDERLINE`, `REVERSE`).
         cursor_visible (bool): Whether the cursor is shown.
         app_cursor (bool): Cursor keys send application sequences (``ESC O A``).
+        g0 (bool): Character set G0 is the line-drawing set (``ESC ( 0``).
+        g1 (bool): Character set G1 is the line-drawing set (``ESC ) 0``).
+        shift (int): Which set is in use: ``0`` for G0, ``1`` for G1 (SO, SI).
+        mouse (int): The mouse reports the program asked for: ``0`` for none,
+            or ``9``, ``1000``, ``1002`` or ``1003``.
+        mouse_sgr (bool): Reports use the SGR form (``ESC [ ? 1006 h``).
         history (list): Rows that scrolled off the top, oldest first.
         view (int): How many rows the view is scrolled back; ``0`` is live.
         alt (bool): Whether the alternate screen is showing.
@@ -85,6 +98,11 @@ class Screen:
         self.newline = False
         self.cursor_visible = True
         self.app_cursor = False
+        self.g0 = False
+        self.g1 = False
+        self.shift = 0
+        self.mouse = 0
+        self.mouse_sgr = False
         self.wrap_pending = False
         self.saved = None
         self.scrolled = 0
@@ -154,8 +172,14 @@ class Screen:
         self.touch_all()
 
     def text(self, y):
-        """Return row ``y`` as a string, for tests and dumps."""
-        return bytes(self.lines[y][0]).decode()
+        """Return row ``y`` as a string, for tests and dumps.
+
+        Line-drawing cells come back as their box-drawing characters.
+        """
+        chars = self.lines[y][0]
+        if min(chars) >= _SPACE:
+            return bytes(chars).decode()
+        return "".join([GLYPHS[c] if c < _SPACE else chr(c) for c in chars])
 
     def dump(self):
         """Return the whole grid as a list of strings."""
@@ -324,17 +348,19 @@ class Screen:
         self.move_to(0, 0)
 
     def save_cursor(self):
-        """Remember the cursor, the pen and origin mode (``ESC 7``)."""
-        self.saved = (self.x, self.y, self.fg, self.bg, self.flags, self.origin, self.wrap_pending)
+        """Remember the cursor, the pen, origin mode and the character sets (``ESC 7``)."""
+        self.saved = (self.x, self.y, self.fg, self.bg, self.flags, self.origin, self.wrap_pending, self.g0, self.g1, self.shift)
 
     def restore_cursor(self):
         """Go back to what `save_cursor` remembered, or home with a default pen."""
         if self.saved is None:
             self.origin = False
+            self.g0 = self.g1 = False
+            self.shift = 0
             self.set_pen(self.default_fg, self.default_bg, 0)
             self.move_to(0, 0)
             return
-        x, y, fg, bg, flags, origin, pending = self.saved
+        x, y, fg, bg, flags, origin, pending, self.g0, self.g1, self.shift = self.saved
         self.set_pen(fg, bg, flags)
         self.origin = origin
         self.x = min(x, self.cols - 1)

@@ -5,15 +5,17 @@
 
 `Parser.feed` takes bytes as they arrive, in pieces of any size: a sequence
 split across two calls finishes on the second. Printable ASCII goes to the
-screen in runs. UTF-8 is decoded, and a character the fonts don't have is
-drawn as its nearest ASCII (box-drawing lines become ``-``, ``|`` and ``+``)
-or as ``?``. OSC, DCS and the other string sequences are read and ignored.
+screen in runs. UTF-8 is decoded: box-drawing characters become the screen's
+line-drawing cells, and another character the fonts don't have is drawn as
+its nearest ASCII or as ``?``. OSC, DCS and the other string sequences are
+read and ignored.
 
 What the parser understands:
 
-* Controls: BS, HT, LF, VT, FF, CR, CAN, SUB, ESC.
+* Controls: BS, HT, LF, VT, FF, CR, SO, SI, CAN, SUB, ESC.
 * ``ESC``: ``7`` ``8`` save and restore, ``D`` index, ``M`` reverse index,
-  ``E`` next line, ``c`` reset, ``# 8`` alignment fill.
+  ``E`` next line, ``c`` reset, ``# 8`` alignment fill, and ``( 0`` ``( B``
+  ``) 0`` ``) B`` to make G0 or G1 the DEC line-drawing set or ASCII.
 * CSI: cursor moves (``A`` to ``H``, ``f``, ``d``, ``e``, ``a``, `````),
   erases (``J``, ``K``, ``X``), inserts and deletes (``@``, ``P``, ``L``,
   ``M``), scrolls (``S``, ``T``), the scroll region (``r``), save and
@@ -22,7 +24,9 @@ What the parser understands:
 * SGR: bold, underline, reverse, the 8 and bright 8 colors, 256 colors,
   and 24-bit color fitted to the nearest of the 256.
 * Modes: insert (4), newline (20), and DEC private cursor keys (1),
-  origin (6), autowrap (7), cursor visible (25).
+  origin (6), autowrap (7), cursor visible (25), the alternate screen (47,
+  1047, 1049) and mouse reports (9, 1000, 1002, 1003, with 1006 for the SGR
+  form).
 """
 
 from .screen import BOLD, REVERSE, UNDERLINE
@@ -59,6 +63,20 @@ _LOOKALIKE = {
     0x2593: 35,
 }
 
+# The DEC line-drawing set, for the bytes 0x5F to 0x7E: a line-drawing cell
+# code, or the nearest ASCII for the symbols the renderer doesn't draw.
+_DEC = b" \x01\x02    '#  \x0b\x0c\x0d\x0e\x0f\x10\x11\x12\x13\x14\x15\x16\x17\x18\x19<>*!f\x1f"
+
+# Box-drawing characters by shape, light, heavy, double and rounded, and the
+# line-drawing cell code for each column.
+_BOXES = (
+    "\u2518\u2510\u250c\u2514\u253c\u2500\u251c\u2524\u2534\u252c\u2502",
+    "\u251b\u2513\u250f\u2517\u254b\u2501\u2523\u252b\u253b\u2533\u2503",
+    "\u255d\u2557\u2554\u255a\u256c\u2550\u2560\u2563\u2569\u2566\u2551",
+    "\u256f\u256e\u256d\u2570",
+)
+_BOX_CODES = b"\x0b\x0c\x0d\x0e\x0f\x12\x15\x16\x17\x18\x19"
+
 _PALETTE = None  # the 256 colors, made at the first 24-bit color
 
 
@@ -67,12 +85,20 @@ def _lookalike(cp):
     if c is not None:
         return c
     if 0x2500 <= cp <= 0x257F:
-        # Box drawing: horizontal lines, vertical lines, everything else a corner.
-        if cp in (0x2500, 0x2501, 0x2504, 0x2505, 0x2508, 0x2509, 0x254C, 0x254D, 0x2550):
-            return 45
-        if cp in (0x2502, 0x2503, 0x2506, 0x2507, 0x250A, 0x250B, 0x254E, 0x254F, 0x2551):
-            return 124
+        # Box drawing: a line-drawing cell of the same shape. Dashed lines
+        # are drawn solid, and a mixed-weight joint is a plus.
+        ch = chr(cp)
+        for row in _BOXES:
+            k = row.find(ch)
+            if k >= 0:
+                return _BOX_CODES[k]
+        if cp in (0x2504, 0x2505, 0x2508, 0x2509, 0x254C, 0x254D):
+            return 0x12
+        if cp in (0x2506, 0x2507, 0x250A, 0x250B, 0x254E, 0x254F):
+            return 0x19
         return 43
+    if cp == 0x25C6:
+        return 1
     return 63
 
 
@@ -121,7 +147,10 @@ class Parser:
                 while j < n and 32 <= data[j] < 127:
                     j += 1
                 if j > i:
-                    screen.put(data, i, j)
+                    if screen.g1 if screen.shift else screen.g0:
+                        self._put_graphics(data, i, j)
+                    else:
+                        screen.put(data, i, j)
                     i = j
                     continue
             b = data[i]
@@ -147,10 +176,24 @@ class Parser:
                     self._state = _GROUND
             elif state == _CHARSET:
                 self._state = _GROUND
+                # 0 is the line-drawing set; B and the national sets are ASCII here.
+                if self._inter == 0x28:
+                    screen.g0 = b == 0x30
+                elif self._inter == 0x29:
+                    screen.g1 = b == 0x30
             elif state == _HASH:
                 self._state = _GROUND
                 if b == 0x38:
                     screen.fill_e()
+
+    def _put_graphics(self, data, start, end):
+        # Printable bytes while the line-drawing set is in use.
+        out = bytearray(data[start:end])
+        for k in range(len(out)):
+            c = out[k]
+            if c >= 0x5F:
+                out[k] = _DEC[c - 0x5F]
+        self.screen.put(out, 0, len(out))
 
     def _put_code(self, c):
         self._one[0] = c
@@ -197,6 +240,10 @@ class Parser:
             s.backspace()
         elif b == 9:
             s.tab()
+        elif b == 0x0E:
+            s.shift = 1
+        elif b == 0x0F:
+            s.shift = 0
         elif b == 0x18 or b == 0x1A:
             self._state = _GROUND
 
@@ -213,6 +260,7 @@ class Parser:
             self._state = _STRING
         elif b in (0x28, 0x29, 0x2A, 0x2B):  # ( ) * +
             self._state = _CHARSET
+            self._inter = b
         elif b == 0x23:  # #
             self._state = _HASH
         elif b == 0x37:  # 7
@@ -366,6 +414,13 @@ class Parser:
             elif p == 25:
                 s.cursor_visible = on
                 s.dirty[s.y] = 1
+            elif p == 9 or p == 1000 or p == 1002 or p == 1003:
+                if on:
+                    s.mouse = p
+                elif s.mouse == p:
+                    s.mouse = 0
+            elif p == 1006:
+                s.mouse_sgr = on
 
     def _sgr(self, params):
         s = self.screen

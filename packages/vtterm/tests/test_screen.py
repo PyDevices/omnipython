@@ -137,8 +137,8 @@ def test_sequence_split_across_feeds():
 
 def test_utf8_lookalikes():
     s, p, _ = make()
-    p.feed("┌─┐│é…".encode())
-    assert s.text(0)[:6] == "+-+|?."
+    p.feed("┍é…←".encode())
+    assert s.text(0)[:4] == "+?.<"
 
 
 def test_utf8_split():
@@ -146,7 +146,7 @@ def test_utf8_split():
     data = "─x".encode()
     p.feed(data[:1])
     p.feed(data[1:])
-    assert s.text(0)[:2] == "-x"
+    assert s.text(0)[:2] == "─x"
 
 
 def test_osc_ignored():

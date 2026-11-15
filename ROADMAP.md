@@ -62,10 +62,6 @@ with each kind of peripheral described honestly by its role.
 
 ## vtterm
 
-- The DEC line-drawing characters, so boxes and tables drawn by remote
-  programs show as lines rather than letters.
-- Mouse and touch reporting: a touch on the display reaches the program as a
-  mouse click, for programs that ask for one.
 - CircuitPython's own console on the display. CircuitPython has no
   `os.dupterm`, so vtterm shows a session with another device there, not the
   board's own REPL.

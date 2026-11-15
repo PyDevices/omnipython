@@ -23,7 +23,7 @@ for _path in (_HERE + "/../../palettes/lib", _HERE + "/..", _HERE):
     if _path not in sys.path:
         sys.path.insert(0, _path)
 
-MODULES = ("test_screen", "test_render", "test_keys", "test_console")
+MODULES = ("test_screen", "test_render", "test_lines", "test_keys", "test_mouse", "test_console")
 
 
 def _run():

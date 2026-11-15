@@ -157,6 +157,32 @@ Programs that ask for the alternate screen (`ESC [ ? 1049 h`, or `?47` and
 `?1047`) get a blank grid, and the prompt comes back as it was, cursor
 included, when they leave. The alternate screen has no scrollback.
 
+## Draw boxes and tables
+
+Programs draw boxes with the DEC line-drawing set: after `ESC ( 0`, the
+letters `j` to `x` are corners, tees, a cross and lines, until `ESC ( B`
+brings the letters back. vtterm draws them as lines through the middle of each
+cell, so they join from cell to cell at any font height.
+
+```python
+terminal.write(b"\x1b(0lqqqqwqqqqk\x1b(B\r\n")
+terminal.write(b"\x1b(0x\x1b(B on \x1b(0x\x1b(B 21 \x1b(0x\x1b(B\r\n")
+terminal.write(b"\x1b(0mqqqqvqqqqj\x1b(B\r\n")
+print(terminal.screen.text(1))
+```
+
+The display shows a box with two cells, and the last line prints its middle
+row:
+
+```text
+│ on │ 21 │
+```
+
+The box-drawing characters of UTF-8 (`┌`, `─`, `┼` and the rest) draw the same
+lines; heavy, double and rounded ones are drawn as single lines with square
+corners. [Escape codes](../reference/vtterm-escape-codes.md#the-line-drawing-set)
+lists every character of the set.
+
 ## Type on a keyboard
 
 `vtterm.keyboards` reads a USB keyboard on the board's host port and a BLE
@@ -216,6 +242,45 @@ console = Console(term, KeyEvents(display_drv.get_events, term.screen))
 ```
 
 Letters and symbols follow a US layout.
+
+## Send touches and clicks to a program
+
+A full-screen program can ask the terminal where it was clicked, with
+`ESC [ ? 1000 h` and its relatives. `vtterm.mouse.Mouse` makes the reports a
+program expects from a display's touch and mouse events, and returns `None`
+until a program has asked, so you can feed it every event.
+
+On a desktop, give one to `KeyEvents` and clicks, drags and the wheel go to the
+program with the keys:
+
+```python
+from vtterm.keys import KeyEvents
+from vtterm.mouse import Mouse
+
+keys = KeyEvents(display_drv.get_events, term.screen, mouse=Mouse(term))
+console = Console(term, keys)
+```
+
+On a board, a touchscreen's events are mouse events with the left button, so
+a touch is a click and a slide is a drag. Pass each one to `mouse.event` and
+send what it returns the way you send keys:
+
+```python
+mouse = Mouse(term)
+
+report = mouse.event(event)
+if report:
+    console.push(report)
+```
+
+With a touch driver that returns points instead, call
+`mouse.touch(x, y, down)` with each reading. If the terminal doesn't start at
+the top left of the panel, give `Mouse` its corner: `Mouse(term, x=0, y=40)`.
+
+A program asks for presses and releases (`?1000`), drags too (`?1002`) or all
+movement (`?1003`), and for the SGR form of the reports (`?1006`);
+[Escape codes](../reference/vtterm-escape-codes.md#mouse-reports) has the bytes
+of each.
 
 ## The REPL app
 
