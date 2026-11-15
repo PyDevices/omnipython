@@ -1,3 +1,15 @@
+## v0.8.0.dev19 (2026-11-15)
+
+- omip: trust Android's CA certificates on CPython, so installs work in an Android app (#605)
+- USB guide: the P4X-EYE's sound card keeps playing through a flash write (#604)
+- Install docs: point at lib.omnipython.org (#603)
+- Browser displays: a finger move gives Motion(touch=True) (#602)
+- Wi-Fi guides: one recipe per interpreter for reaching a board, wifi_manager as the extra (#601)
+- wifi_manager: connect() takes wait, ntp and a secrets module (#600)
+- wifi_manager: a CircuitPython join starts on the channel it used last and skips a missing network's second round (#599)
+- omip: skip a package that stands in for a module the firmware has built in (#598)
+- omip and wifi_manager: an Arduino GIGA's /flash for app needs and saved networks (#597)
+
 ## v0.8.0.dev18 (2026-11-15)
 
 - lib-lock: a pinned package can name its micropython-lib and Adafruit dependencies (#595)
