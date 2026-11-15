@@ -355,7 +355,7 @@ class TestedAndUntested(unittest.TestCase):
 
 
 class ShapeCheck(unittest.TestCase):
-    UPSTREAM = frozenset({"sdcard", "bmi270", "ssd1306", "aioble", "usb-device", "usb-device-hid", "time"})
+    UPSTREAM = frozenset({"sdcard", "bmi270", "ssd1306", "aioble", "usb-device", "usb-device-hid", "time", "requests"})
 
     def copy_with_boards(self, tmp):
         """A stand-in repository: everything linked, board_configs and drivers copied."""
@@ -433,6 +433,27 @@ class SeveralPackages(unittest.TestCase):
         self.assertIn('require("icons", library="lib", opt=options.opt)', one)
         two = (self.tree.path / "two" / "manifest.py").read_text(encoding="utf-8")
         self.assertNotIn("icons", two)
+
+    def test_a_member_can_name_what_it_needs_from_each_interpreter_s_own_libraries(self):
+        pinned = libbuild.Pinned(
+            "both",
+            "Org/repo",
+            "v1.2.3",
+            "Both",
+            None,
+            {"one": "First", "two": "Second"},
+            member_upstream={"one": ("requests",)},
+            member_circuitpython={"one": ("adafruit_requests",)},
+        )
+        libbuild.assemble_pinned(pinned, self.scratch / "src", self.tree, "lib", self.local)
+        self.assertEqual(self.tree.upstream, {"one": ("requests",)})
+        self.assertEqual(self.tree.circuitpython, {"one": ("adafruit_requests",)})
+
+    def test_the_lock_gives_deskkit_a_client_on_each_interpreter(self):
+        # deskkit asks the network through appkit.net; touchkit gets the client by requiring deskkit.
+        pinned = libbuild.read_lock(ROOT).pinned["applibs"]
+        self.assertEqual(pinned.member_upstream["deskkit"], ("requests",))
+        self.assertEqual(pinned.member_circuitpython["deskkit"], ("adafruit_requests",))
 
     def test_a_missing_folder_fails_the_build(self):
         shutil.rmtree(self.scratch / "src" / "lib" / "two")

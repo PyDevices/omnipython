@@ -68,6 +68,12 @@
         "soundmodule": ["audioinstruments", "audioeffects"],
         "spectrum": ["pygraphics", "touchkit"],
         "touchkit": ["appkit", "deskkit"]
+      },
+      "upstream": {
+        "deskkit": ["requests"]
+      },
+      "circuitpython": {
+        "deskkit": ["adafruit_requests"]
       }
     }
   }
