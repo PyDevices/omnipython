@@ -19,11 +19,6 @@ with each kind of peripheral described honestly by its role.
   i.MX): they lack only `configuration_descriptor()` and the private
   `_release_all()` there. Audio, video and net need the usbhost engine.
 
-## MIDI
-
-- DIN MIDI on a Linux serial port in `midiports`, for boards whose MIDI jacks
-  are wired to a UART rather than showing up as an ALSA raw MIDI device.
-
 ## BLE
 
 - `bledev.hid` reads report descriptors of any length. Today a board reads
