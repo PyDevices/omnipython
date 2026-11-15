@@ -244,7 +244,11 @@ def enable(devs=None, boot_device=0, *, name=None):
     """Start the USB device with these HID devices beside the board's serial
     port, as CircuitPython's ``usb_hid.enable()`` in boot.py does. The
     computer lists it as ``name``, the board's name (``boarddev.name()``)
-    when None."""
+    when None.
+
+    Raises:
+        AttributeError: ``name`` is None and the board's boarddev, frozen
+            into older firmware, has no ``name()``."""
     import usb.device
 
     if boot_device:
@@ -267,5 +271,13 @@ def _product(name):
     if name is None:
         import boarddev
 
-        name = boarddev.name()
+        board_name = getattr(boarddev, "name", None)
+        if board_name is None:
+            raise AttributeError(
+                "usb_hid names the device after the board with boarddev.name(), which this "
+                "board's boarddev doesn't have: its firmware is older than usb_hid. Update the "
+                'firmware, install pydevices again with target="/" so a newer boarddev runs '
+                "ahead of the frozen one, or pass name= to enable()."
+            )
+        name = board_name()
     return name
