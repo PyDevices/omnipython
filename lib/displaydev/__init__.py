@@ -590,9 +590,17 @@ class DisplayDriver:
     Frame rate: `measure_fps` (or ``PYDEVICES_FPS=1``) counts frames and
     times presents; `fps` reads them. Off by default, and nothing is
     wrapped or timed while it is off.
+
+    ``can_rotate``: whether setting `rotation` turns what you draw. When it's
+    False, `rotation` only swaps `width` and `height`, and drawing still lands
+    in the panel's own layout, so a program that wants another orientation
+    keeps the display's own one instead (or rotates its frames itself).
     """
 
     needs_refresh = False
+    # The panel or window turns with ``rotation``; drivers over a fixed
+    # framebuffer say otherwise.
+    can_rotate = True
     # The frame-rate meter while measuring (measure_fps); None means off.
     _fps = None
     _fps_timer = None

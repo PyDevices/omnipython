@@ -10,7 +10,7 @@ framebuffer so the pixel-pushing paths can be checked byte-for-byte.
 import unittest
 
 import _env  # noqa: F401
-from _support import make_fbdisplay, make_u16_fbdisplay
+from _support import make_fbdisplay, make_u16_fbdisplay, quiet
 
 
 class TestFBDisplayDrawing(unittest.TestCase):
@@ -59,6 +59,22 @@ class TestFBDisplayDrawing(unittest.TestCase):
         d.show()
         d.show()
         self.assertEqual(fb.refresh_count, 2)
+
+
+class TestFBDisplayRotation(unittest.TestCase):
+    def test_says_it_cant_rotate(self):
+        d, _ = make_fbdisplay(4, 8)
+        self.assertFalse(d.can_rotate)
+
+    def test_rotation_swaps_the_size_but_not_the_framebuffer(self):
+        # Why it says so: turned to 90, a blit as wide as the new width runs
+        # past the framebuffer's own rows.
+        d, fb = make_fbdisplay(4, 8)
+        with quiet():
+            d.rotation = 90
+        self.assertEqual((d.width, d.height), (8, 4))
+        d.blit_rect(bytearray(b"\x01\x02" * 8), 0, 0, 8, 1)
+        self.assertEqual(bytes(fb.data[:16]), b"\x01\x02" * 8)  # two panel rows, not one
 
 
 class TestFBDisplayByteswap(unittest.TestCase):

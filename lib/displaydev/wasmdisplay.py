@@ -263,6 +263,9 @@ class WasmDisplay(DesktopDisplay, FBDisplay):
     # common case and the bridge does not yet report the real rate.
     refresh_period_ms = 16
     quit_chord = (keys.K_AC_BACK, 0)
+    # Unlike a panel's framebuffer, this one is the canvas: a rotation hands
+    # the browser the swapped size, so drawing at it works.
+    can_rotate = True
 
     def __init__(
         self, width=320, height=240, canvas_id="display_canvas", *, quiet=False
