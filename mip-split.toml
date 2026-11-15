@@ -137,6 +137,9 @@ pypi-desktop = true
 [hmilink]
 top-level = true
 
+[iconkit]
+top-level = true
+
 [mp4mux]
 top-level = true
 

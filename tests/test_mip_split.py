@@ -81,7 +81,9 @@ class TestTopLevelPackages(unittest.TestCase):
             "these directories have a package.json and a manifest.py but are not in mip-split.toml, "
             "so mip.install(<name>, index=...) can't find them",
         )
-        self.assertEqual(sorted(listed - on_disk), [])
+        # A folder may be listed too: iconkit reaches the library by lib-lock.json
+        # and the MIP index as a top-level package, from the one manifest.py.
+        self.assertEqual(sorted(listed - on_disk - folders), [])
 
     def test_every_require_of_a_sibling_names_a_listed_package(self):
         listed = set(top_level_sections(load_split()))

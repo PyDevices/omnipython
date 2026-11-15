@@ -17,5 +17,15 @@ if 0:
     def module(*args, **kwargs):
         pass
 
+    def metadata(*args, **kwargs):
+        pass
+
+
+metadata(
+    description="Material Design icons for LVGL and pygraphics, frozen in so they cost no RAM.",
+    version="0.1.0",
+    license="MIT",
+)
+
 
 package("iconkit", base_path="./lib", opt=3)  # type: ignore[name-defined]  # noqa: PGH003
