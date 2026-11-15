@@ -32,6 +32,8 @@ except NameError:  # pragma: no cover
 _sep = "\\" if "\\" in _here else "/"
 _dir = _here.rsplit(_sep, 1)[0] if _sep in _here else "."
 sys.path.insert(0, _dir + _sep + ".." + _sep + "packages" + _sep + "midiports")
+# The board's name, which midiports requires.
+sys.path.insert(0, _dir + _sep + ".." + _sep + "packages" + _sep + "_boardname")
 
 PLANT = None
 for _arg in sys.argv[1:]:
@@ -498,6 +500,59 @@ def c_usb_device_round_trip():
         got = round_trip(midi_in, midi_out, pump=loop_back)
         expect(got == 200, "%d of 200 notes through USB-MIDI events" % got)
     finally:
+        _remove_fake_usb()
+
+
+def c_usb_device_ports_names_the_board():
+    usb_device = _install_fake_usb()
+    inits = []
+    usbd = _Module()
+    usbd.init = lambda *itfs, **kw: inits.append(kw)
+    sys.modules["usb.device"].get = lambda: usbd
+    sys.modules["usb"].device = sys.modules["usb.device"]
+    boarddev = _Module()
+    boarddev.name = lambda: "studio-a"
+    saved = sys.modules.get("boarddev")
+    sys.modules["boarddev"] = boarddev
+    try:
+        usb_device.ports()
+        expect(inits[-1].get("product_str") == "studio-a", "the host lists %r" % (inits[-1],))
+        usb_device.ports(name="Drum pads")
+        expect(inits[-1].get("product_str") == "Drum pads", "a name given wins: %r" % (inits[-1],))
+    finally:
+        if saved is None:
+            sys.modules.pop("boarddev", None)
+        else:
+            sys.modules["boarddev"] = saved
+        _remove_fake_usb()
+
+
+def c_usb_device_ports_says_to_update_older_firmware():
+    # Firmware frozen before boarddev.name() existed runs its own boarddev
+    # ahead of a newer one in /lib.
+    usb_device = _install_fake_usb()
+    inits = []
+    usbd = _Module()
+    usbd.init = lambda *itfs, **kw: inits.append(kw)
+    sys.modules["usb.device"].get = lambda: usbd
+    sys.modules["usb"].device = sys.modules["usb.device"]
+    saved = sys.modules.get("boarddev")
+    sys.modules["boarddev"] = _Module()
+    try:
+        try:
+            usb_device.ports()
+            expect(False, "ports() started the device with no name to give it")
+        except AttributeError as e:
+            message = str(e)
+            expect("firmware" in message and "name=" in message, "the error says what to do: %r" % message)
+        expect(not inits, "the device started: %r" % (inits,))
+        usb_device.ports(name="Drum pads")
+        expect(inits[-1].get("product_str") == "Drum pads", "a name given still works: %r" % (inits[-1],))
+    finally:
+        if saved is None:
+            sys.modules.pop("boarddev", None)
+        else:
+            sys.modules["boarddev"] = saved
         _remove_fake_usb()
 
 
@@ -1678,6 +1733,8 @@ CHECKS = (
     ("usb_device: a full ring drops whole messages and counts", c_usb_device_overflow_drops_whole_messages),
     ("usb_device: a host not reading drops and counts, never stalls", c_usb_device_full_host_drops_and_counts),
     ("usb_device: 200 of 200 through events and back", c_usb_device_round_trip),
+    ("usb_device: ports() lists the board under its name", c_usb_device_ports_names_the_board),
+    ("usb_device: ports() on older firmware says to update it", c_usb_device_ports_says_to_update_older_firmware),
     ("usb_host: 200 of 200 over a fake usb.core, packets to whole messages", c_usb_host),
     ("usb_host all_ports: two devices merged whole, out to both, arrivals and departures", c_usb_host_all),
     ("usb_host all_ports: a SysEx that stops, or whose device leaves, is ended", c_usb_host_all_stalled_sysex),

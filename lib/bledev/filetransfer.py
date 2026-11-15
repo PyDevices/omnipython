@@ -612,8 +612,10 @@ def _truncate(path, size):
 # ---------------------------------------------------------------- the board side
 
 
-def start(password=None, name="mpy-files", *, console=True, window=WINDOW, **options):
+def start(password=None, name=None, *, console=True, window=WINDOW, **options):
     """Serve files (and, unless ``console=False``, the REPL) over BLE. MicroPython only.
+
+    The board advertises as ``name``, by default its own, ``boarddev.name()``.
 
     The radio, the password and the advertising are `bledev.repl`'s;
     this is ``bledev.repl.start(..., files=True)``. Returns at once;

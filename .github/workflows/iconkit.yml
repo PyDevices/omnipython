@@ -31,9 +31,10 @@ jobs:
       - uses: actions/setup-python@v7
         with:
           python-version: '3.13'
-      # Pillow is for the generator's tests; the package itself needs nothing.
-      - name: Install ruff and Pillow
-        run: pip install ruff pillow
+      # Pillow and resvg-py are for the generator's tests (resvg-py draws Material
+      # Symbols, which come as SVGs); the package itself needs nothing.
+      - name: Install ruff, Pillow and resvg-py
+        run: pip install ruff pillow resvg-py
       - name: Ruff
         run: ruff check lib tests tools
 

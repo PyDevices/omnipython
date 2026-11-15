@@ -26,6 +26,7 @@ on:
       - 'tests/**'
       - 'packages/vtterm/**'
       - 'packages/castdisplay/**'
+      - 'packages/_boardname/**'
       # The interpreters' pins and recipe, which tests/test_release_interpreters.py runs.
       - 'scripts/release_interpreters.sh'
       - 'scripts/release_interpreters/**'
@@ -54,6 +55,7 @@ on:
       - 'tests/**'
       - 'packages/vtterm/**'
       - 'packages/castdisplay/**'
+      - 'packages/_boardname/**'
       # The interpreters' pins and recipe, which tests/test_release_interpreters.py runs.
       - 'scripts/release_interpreters.sh'
       - 'scripts/release_interpreters/**'
@@ -169,6 +171,15 @@ jobs:
           PYDEVICES_REQUIRE_MICROPYTHON: '1'
         timeout-minutes: 5
         run: python -m unittest discover -s tests -p 'test_omip.py' -k MicroPythonRun -v
+
+      - name: the board's name on MicroPython
+        working-directory: pydevices
+        env:
+          PYDEVICES_MICROPYTHON: >-
+            ${{ github.workspace }}/micropython/ports/unix/build-standard/micropython
+          PYDEVICES_REQUIRE_MICROPYTHON: '1'
+        timeout-minutes: 5
+        run: python -m unittest discover -s tests -p 'test_board_name.py' -v
 
       # usb.host.net reads a CDC-ECM adapter's MAC string with code that runs on
       # a board, where a bytearray takes only step-1 slices.

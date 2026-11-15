@@ -128,6 +128,11 @@ import time
 
 __version__ = "0.0.1"
 
+#: The name of the Windows MIDI loopback port, whatever a program writes to
+#: its output comes out of its input. ``python -m midiports.loopback`` makes
+#: sure it exists.
+LOOPBACK = "PyDevices Loopback"
+
 IN = "in"
 OUT = "out"
 INOUT = "inout"

@@ -33,9 +33,11 @@ To use another transport, change the line that opens the ports:
 | USB, every MIDI device plugged into the board, merged | `usb_host.all_ports()` |
 | A UART (5-pin DIN, TRS, board to board) | `uart.ports(1, tx=17, rx=18)` |
 | Windows' MIDI ports (a keyboard, loopMIDI, a DAW) | `windows.ports("loopMIDI")` |
+| Windows' loopback, for trying MIDI with no hardware | `windows.ports(midiports.LOOPBACK)` |
 | Linux raw MIDI | `linux.ports("DMK25")` |
+| Linux, 5-pin DIN on a serial port (a Pi's UART) | `linux.serial_ports("/dev/ttyAMA0")` |
 | Web MIDI, in a browser page (Pyodide) | `await webmidi.open("DMK25")` |
-| Web MIDI, in a browser page (MicroPython) | `webmidi.page_in("DMK25")` |
+| Web MIDI, in a browser page (MicroPython) | `webmidi.page_in("DMK25")`, `webmidi.page_out("synth")` |
 | Web MIDI, in a Web Worker, relayed by the page | `webmidi.relay_ports(port)` |
 
 Import each from `midiports`. BLE MIDI ports come from
@@ -99,6 +101,55 @@ fetches both.
 On desktop Python, the Windows port needs `uwin32` from `pydevices-desktop`.
 `midiports` isn't on PyPI yet, so put this folder on your path. Adafruit
 publishes `adafruit_midi` there as `adafruit-circuitpython-midi`.
+
+## Try MIDI with no hardware
+
+On Windows, a loopback port lets two programs talk MIDI to each other with no
+keyboard, board or cable: what one writes to the port's output comes out of its
+input. `midiports.LOOPBACK` is its name, `"PyDevices Loopback"`. Make sure it
+exists with desktop Python:
+
+```text
+> python -m midiports.loopback
+PyDevices Loopback: created
+Windows didn't save it because it has no MIDI configuration yet, so it lasts until the MIDI service restarts or Windows reboots. Run midisettings.exe once as administrator and finish its first-run setup, then run python -m midiports.loopback again.
+```
+
+It makes the port with [Windows MIDI Services](https://aka.ms/midi) (Windows 11),
+and says so if `midi.exe` isn't installed. When Windows has no MIDI configuration yet, the port only lasts until the MIDI service restarts or Windows reboots; run Windows MIDI Services' settings app (`midisettings.exe`) once as administrator and finish its first-run setup, and the port is saved from then on. Run it again any time: it says
+`present` when the port is there and changes nothing. `--check` only reports,
+and exits 1 when the port is missing, for a script that wants to stop early.
+
+Then open it from CPython or from MicroPython on Windows:
+
+```python
+import time
+
+import midiports
+from midiports import windows
+
+midi_in, midi_out = windows.ports(midiports.LOOPBACK)
+buf = bytearray(16)
+midi_out.write(bytes([0x90, 60, 100]), 3)
+time.sleep(0.1)
+n = midi_in.readinto(buf)
+print("read", n, bytes(buf[:n]).hex())
+midi_out.close()
+midi_in.close()
+```
+
+```text
+read 3 903c64
+```
+
+Two programs work the same way: one opens the ports and writes, the other
+opens them and reads. Start the reader first.
+
+Other systems have their own loopback, and the command names it rather than
+making one. On Linux, `sudo modprobe snd-virmidi` adds virtual MIDI cards, and
+the "Midi Through" port that ALSA provides loops back too; open either with
+`linux.ports("Midi Through")`. On macOS, turn on the IAC Driver in Audio MIDI
+Setup.
 
 ## The ports
 
@@ -176,9 +227,12 @@ already hold a `MIDIAccess`, `webmidi.ports(access, "DMK25")` does the same
 without awaiting. Sending SysEx needs `sysex=True`.
 
 In MicroPython's WebAssembly port, `webmidi.page_in("DMK25")` opens an input
-without awaiting. It has no output and no timestamps. The browser asks for MIDI
-in the background, so `midi_in.names` stays empty until the person says yes, and
-`midi_in.why` says why if the answer was no.
+and `webmidi.page_out("synth")` an output, both without awaiting and with no
+timestamps. The browser asks for MIDI in the background, so `midi_in.names` and
+`midi_out.names` stay empty until the person says yes, and `why` says why if the
+answer was no. `midi_out.names` lists every output that matches, and
+`midi_out.name` is the one it sends to; until there is one, writes are dropped
+and counted in `midi_out.dropped`.
 
 Web MIDI doesn't exist in a Web Worker, so a worker gets its MIDI from the
 page over a `MessagePort`, and a few lines of JavaScript on the page relay
@@ -201,6 +255,11 @@ clock a worker's relayed times are on.
   has sent it, so a long one blocks for as long as it takes to send.
 - Linux: MicroPython's unix port can list ports but not open them, since its
   `os` has no `open` or `read`. CPython opens them.
+- Linux serial: `serial_ports()` sets MIDI's 31250 baud through the driver's
+  custom-rate call, and raises if the driver can't come within 1% of it. A
+  Pi whose UART clock was changed so that 38400 comes out as 31250 takes
+  `baudrate=38400`. The framing is tested over a pseudo-terminal; a real
+  5-pin jack on a serial port hasn't been tried yet.
 - USB: if the host stops reading, messages that don't fit within a few
   milliseconds are dropped and counted in `MIDIPortsInterface.dropped`, so
   your loop never stalls.

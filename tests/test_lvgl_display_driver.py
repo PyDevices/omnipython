@@ -717,7 +717,7 @@ class PointerHoverTest(unittest.TestCase):
 
         lv = types.SimpleNamespace(point_t=_Point,
                                    INDEV_STATE=types.SimpleNamespace(PRESSED="pressed", RELEASED="released"))
-        ns = {"lv": lv, "events": events}
+        ns = {"lv": lv, "events": events, "_PARKED": (-1, -1)}
         for name in ("_touch_state_for", "_make_touch_cb"):
             exec(compile(_function_source(name), str(DISPLAY_DRIVER), "exec"), ns)
         self.events = events
@@ -784,6 +784,42 @@ class PointerHoverTest(unittest.TestCase):
         self.read(e.Button(e.MOUSEBUTTONDOWN, (10, 10), 1, False, None))
         self.assertEqual(self.read(self.motion((15, 12), (1, 0, 0))), ((15, 12), "pressed"))
         self.assertEqual(self.read(e.Button(e.MOUSEBUTTONUP, (16, 12), 1, False, None)), ((16, 12), "released"))
+    def touch_lift(self, touch=True):
+        e = self.events
+        self.read(e.Button(e.MOUSEBUTTONDOWN, (10, 10), 1, touch, None))
+        return self.read(e.Button(e.MOUSEBUTTONUP, (10, 10), 1, touch, None))
+
+    def test_a_lifted_finger_leaves_the_pointer_off_every_widget(self):
+        # The lift itself still reports the touched point, so the click lands.
+        # Then the pointer steps one pixel (so LVGL notes what it hovers) and
+        # is parked, which ends the hover.
+        self.assertEqual(self.touch_lift(), ((10, 10), "released"))
+        self.assertEqual(self.read(None), ((10, 10), "released"))
+        self.assertEqual(self.read(None), ((11, 10), "released"))
+        self.assertEqual(self.read(None), ((-1, -1), "released"))
+        self.assertEqual(self.read(None), ((-1, -1), "released"))
+
+    def test_a_touch_screen_with_no_flag_is_parked_too(self):
+        # A pointer that has never moved with the button up is a touch screen.
+        self.touch_lift(touch=False)
+        for _ in range(2):
+            self.read(None)
+        self.assertEqual(self.read(None), ((-1, -1), "released"))
+
+    def test_a_mouse_stays_where_it_clicked(self):
+        e = self.events
+        self.read(self.motion((10, 10)))
+        self.read(e.Button(e.MOUSEBUTTONDOWN, (10, 10), 1, False, None))
+        self.read(e.Button(e.MOUSEBUTTONUP, (10, 10), 1, False, None))
+        self.read(None)
+        self.assertEqual(self.read(None), ((10, 10), "released"))
+
+    def test_a_new_press_cancels_the_park(self):
+        e = self.events
+        self.touch_lift()
+        self.read(e.Button(e.MOUSEBUTTONDOWN, (50, 60), 1, True, None))
+        self.assertEqual(self.read(None), ((50, 60), "pressed"))
+
 
 if __name__ == "__main__":
     unittest.main()

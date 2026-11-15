@@ -68,12 +68,29 @@ def ensure_graphics(*, install: bool) -> None:
     import pygraphics  # noqa: F401
 
 
+STUB = """# SPDX-FileCopyrightText: 2026 Brad Barnett
+#
+# SPDX-License-Identifier: MIT
+
+WIDTH: int
+HEIGHT: int
+FORMAT: int
+BITMAP: bytearray
+"""
+
+
+def write_stub(py_path: Path) -> None:
+    """Write the type stub that goes beside an icon module."""
+    py_path.with_suffix(".pyi").write_text(STUB, encoding="utf-8")
+
+
 def convert_one(path: Path) -> Path:
     from pygraphics import FrameBuffer
 
     fb = FrameBuffer.from_file(str(path))
     out = path.with_suffix(".py")
     FrameBuffer.export(fb, str(out))
+    write_stub(out)
     return out
 
 
@@ -88,6 +105,7 @@ def convert_existing_py(py_path: Path) -> None:
     spec.loader.exec_module(mod)
     fb = FrameBuffer.from_bitmap(mod.BITMAP, mod.WIDTH, mod.HEIGHT, mod.FORMAT)
     FrameBuffer.export(fb, str(py_path))
+    write_stub(py_path)
 
 
 def verify_one(src_bin: Path, py_path: Path) -> None:

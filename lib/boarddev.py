@@ -314,3 +314,248 @@ def _env_raw(name):
         return getenv(name)
     except Exception:
         return None
+
+
+# --- the board's name ------------------------------------------------------
+#
+# One name for everything a board shows: its hostname, its BLE and Bluetooth
+# names, its mDNS services and its setup access point. A saved name lives
+# where wifi_manager keeps networks, so the two survive the same things.
+
+#: The environment variable (a desktop, a browser) and the ``settings.toml``
+#: key (CircuitPython) that hold a saved name.
+NAME_KEY = "OMNIPYTHON_BOARD_NAME"
+#: What a board's default name starts with, before the last three bytes of
+#: its unique ID in hex.
+NAME_PREFIX = "omnipython-"
+#: The longest name `name` takes.
+NAME_MAX = 20
+
+_NVS_NAMESPACE = "omnipython"
+_NVS_KEY = "board_name"
+_NAME_CHARS = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-"
+_DESKTOPS = ("linux", "darwin", "win32", "cygwin", "freebsd", "openbsd", "netbsd")
+_BROWSERS = ("webassembly", "emscripten")
+_GET = object()  # name() with no argument
+_random_name = None  # a browser's, made once per page load
+
+
+def name(new=_GET):
+    """The board's name, or give it a new one.
+
+    Every stack that shows a name and is given none uses this one: the
+    hostname `wifi_manager` sets before it joins (so DHCP, mDNS and
+    Bluetooth Classic see it), the setup access point, bledev's services,
+    medialink and hmilink.
+
+    With no saved name, a board is ``omnipython-`` plus the last three bytes
+    of its unique ID in hex (``omnipython-a1b2c3``), a desktop is the
+    computer's name, and a browser is ``omnipython-`` plus six random hex
+    digits, new on each page load.
+
+    A new name is saved where `wifi_manager` keeps networks: ``esp32.NVS``
+    on an ESP32, ``OMNIPYTHON_BOARD_NAME`` in ``settings.toml`` on
+    CircuitPython, ``/omnipython.json`` on other boards (``/flash`` on an
+    STM32). On a desktop or in a browser it sets the
+    ``OMNIPYTHON_BOARD_NAME`` environment variable for this process only;
+    it never renames the computer. Stacks that already started keep the old
+    name until the next start.
+
+    Example::
+
+        import boarddev
+
+        boarddev.name()            # "omnipython-a1b2c3"
+        boarddev.name("kitchen")   # saved; the board is "kitchen" from the next start
+        boarddev.name(None)        # back to the default
+
+    Args:
+        new (str): The new name: one label of letters, digits and hyphens,
+            not starting or ending with a hyphen, 1 to 20 characters, so it
+            works unchanged as a hostname and as a BLE name. None forgets a
+            saved name.
+
+    Returns:
+        str: The name, when called with no argument. Otherwise None.
+
+    Raises:
+        ValueError: The new name breaks one of the rules above.
+        OSError: CircuitPython can't write ``settings.toml`` while a
+            computer has the CIRCUITPY drive mounted.
+    """
+    import sys
+
+    store = _name_store(sys.implementation.name, sys.platform)
+    if new is _GET:
+        return _name_read(store) or _name_default(sys.implementation.name, sys.platform)
+    if new is not None:
+        check_name(new)
+    _name_write(store, new)
+    return None
+
+
+def check_name(text):
+    """Raise `ValueError` unless ``text`` can be a board's name (see `name`)."""
+    if not isinstance(text, str):
+        raise ValueError("a board name is a string, not %r" % (text,))
+    if not text:
+        raise ValueError("a board name can't be empty")
+    if len(text) > NAME_MAX:
+        raise ValueError("a board name is at most %d characters: %r has %d" % (NAME_MAX, text, len(text)))
+    for c in text:
+        if c not in _NAME_CHARS:
+            raise ValueError("a board name holds only letters, digits and hyphens: %r has %r" % (text, c))
+    if text[0] == "-" or text[-1] == "-":
+        raise ValueError("a board name can't start or end with a hyphen: %r" % (text,))
+
+
+def _name_store(impl, platform):
+    """Where a saved name lives here: "env", "toml", "nvs" or "file"."""
+    if impl == "circuitpython":
+        return "toml"
+    if platform in _BROWSERS or platform.startswith(_DESKTOPS):
+        return "env"
+    try:
+        import esp32
+
+        if hasattr(esp32, "NVS"):
+            return "nvs"
+    except ImportError:
+        pass
+    return "file"
+
+
+def _name_file():
+    import sys
+
+    return ("/flash" if sys.platform == "pyboard" else "") + "/omnipython.json"
+
+
+def _name_read(store):
+    if store == "env":
+        return env_get(NAME_KEY) or None
+    if store == "toml":
+        import os
+
+        return os.getenv(NAME_KEY) or None
+    if store == "nvs":
+        import esp32
+
+        buf = bytearray(NAME_MAX)
+        try:
+            n = esp32.NVS(_NVS_NAMESPACE).get_blob(_NVS_KEY, buf)
+        except OSError:  # ESP_ERR_NVS_NOT_FOUND: nothing saved
+            return None
+        return bytes(buf[:n]).decode() or None
+    import json
+
+    try:
+        with open(_name_file()) as f:
+            return json.load(f).get("board_name") or None
+    except (OSError, ValueError, AttributeError):
+        return None
+
+
+def _name_write(store, new):
+    if store == "env":
+        env_set(NAME_KEY, new)
+        return
+    if store == "toml":
+        _toml_write("/settings.toml", NAME_KEY, new)
+        return
+    if store == "nvs":
+        import esp32
+
+        nvs = esp32.NVS(_NVS_NAMESPACE)
+        if new is None:
+            try:
+                nvs.erase_key(_NVS_KEY)
+            except OSError:
+                pass
+        else:
+            nvs.set_blob(_NVS_KEY, new.encode())
+        nvs.commit()
+        return
+    import json
+
+    path = _name_file()
+    if new is None:
+        import os
+
+        try:
+            os.remove(path)
+        except OSError:
+            pass
+        return
+    with open(path, "w") as f:
+        json.dump({"board_name": new}, f)
+
+
+def _toml_write(path, key, value):
+    """Set or remove ``key = "value"`` in a settings.toml, keeping every other line."""
+    try:
+        with open(path) as f:
+            lines = f.read().split("\n")
+    except OSError:
+        lines = []
+    kept = [line for line in lines if line.split("=", 1)[0].strip() != key]
+    while kept and not kept[-1].strip():
+        kept.pop()
+    if value is not None:
+        kept.append('%s = "%s"' % (key, value))
+    try:
+        with open(path, "w") as f:
+            f.write("\n".join(kept) + "\n")
+    except OSError as e:
+        raise OSError("can't save the board name in %s: is CIRCUITPY mounted on a computer? (%s)" % (path, e))
+
+
+def _name_default(impl, platform):
+    if impl == "circuitpython":
+        import microcontroller
+
+        return _name_from_id(microcontroller.cpu.uid)
+    if platform in _BROWSERS:
+        return _name_random()
+    if platform.startswith(_DESKTOPS):
+        return _computer_name() or _name_random()
+    import machine
+
+    return _name_from_id(machine.unique_id())
+
+
+def _name_from_id(uid):
+    return NAME_PREFIX + "".join("%02x" % b for b in bytes(uid)[-3:])
+
+
+def _name_random():
+    global _random_name
+    if _random_name is None:
+        import random
+
+        _random_name = NAME_PREFIX + "%06x" % random.getrandbits(24)
+    return _random_name
+
+
+def _computer_name():
+    """The computer's name without its domain, or None where it can't be read."""
+    text = None
+    try:
+        import socket
+
+        text = socket.gethostname()
+    except (ImportError, AttributeError, OSError):
+        pass
+    if not text:
+        # MicroPython's unix and Windows ports have no gethostname().
+        text = env_get("COMPUTERNAME") or env_get("HOSTNAME")
+    if not text:
+        for path in ("/proc/sys/kernel/hostname", "/etc/hostname"):
+            try:
+                with open(path) as f:
+                    text = f.read().strip()
+            except OSError:
+                continue
+            if text:
+                break
+    return text.split(".")[0] if text else None

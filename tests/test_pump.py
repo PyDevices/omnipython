@@ -32,7 +32,7 @@ if str(_TESTS) not in sys.path:
     sys.path.insert(0, str(_TESTS))
 import _env  # noqa: E402, F401
 
-from audiodev import AudioFormat, PCMOutput            # noqa: E402
+from audiodev import AudioFormat, AudioLocked, PCMOutput  # noqa: E402
 from audiodev import pump as pump_mod                  # noqa: E402
 from audiodev import sample_out                        # noqa: E402
 
@@ -958,6 +958,75 @@ class AFaultIsASentence(PumpFixture):
         self.assertIn("error 99", owner.died())
 
 
+class APlayerWaitsForTheBrowserToUnlockAudio(PumpFixture):
+    """A transport that is locked until the user acts keeps the sample.
+
+    ``play()`` returns, the player reads as playing, and the first tick after
+    the unlock opens the transport and writes: the app never retries.
+    """
+
+    class Locked(Recorder):
+        def __init__(self):
+            super().__init__()
+            self.unlocked = False
+
+        def _open(self):
+            if not self.unlocked:
+                raise AudioLocked("click the page first")
+
+    class Suspended(Recorder):
+        """Opens at once, like a context that starts suspended."""
+
+        unlocked = False
+
+        def locked(self):
+            return not self.unlocked
+
+    def test_play_does_not_raise_and_nothing_is_written_while_locked(self):
+        transport = self.Locked()
+        out = sample_out.AudioOut(transport, chunk_ms=10)
+        self.addCleanup(out.close)
+        out.play(FakeSample())
+        for _ in range(3):
+            out.service()
+        self.assertTrue(out.playing)
+        self.assertEqual(bytes(transport.data), b"")
+
+    def test_the_first_tick_after_the_unlock_starts_playing(self):
+        transport = self.Locked()
+        out = sample_out.AudioOut(transport, chunk_ms=10)
+        self.addCleanup(out.close)
+        out.play(FakeSample())
+        out.service()
+        transport.unlocked = True
+        out.service()
+        out.service()
+        self.assertTrue(len(transport.data) > 0)
+
+    def test_a_context_that_opens_suspended_is_held_the_same_way(self):
+        transport = self.Suspended()
+        out = sample_out.AudioOut(transport, chunk_ms=10)
+        self.addCleanup(out.close)
+        out.play(FakeSample())
+        out.service()
+        self.assertEqual(bytes(transport.data), b"")
+        transport.unlocked = True
+        out.service()
+        out.service()
+        self.assertTrue(len(transport.data) > 0)
+
+    def test_stop_cancels_the_wait(self):
+        transport = self.Locked()
+        out = sample_out.AudioOut(transport, chunk_ms=10)
+        self.addCleanup(out.close)
+        out.play(FakeSample())
+        out.stop()
+        transport.unlocked = True
+        out.service()
+        self.assertFalse(out.playing)
+        self.assertEqual(bytes(transport.data), b"")
+
+
 class ATransportThatRefusesToOpenLeavesNothingBehind(PumpFixture):
     """``play()`` opens the transport LAST, and a refusal has to unwind.
 
@@ -1376,6 +1445,95 @@ class FakeAudioOut(FakeI2SOut):
         super().__init__(None, None, left_channel, sample_rate=sample_rate)
         self.right_channel = right_channel
         self.buffer_ms = buffer_ms
+
+
+class Speaker(Recorder):
+    """``win_audio``'s output on the default device: it names a speaker."""
+
+    speaker_sink = "wasapi"
+
+
+class WindowsPlaysToTheSpeakerItself(PumpFixture):
+    """Windows: the pump writes the graph to WASAPI on its own thread.
+
+    ``audiobusio.I2SOut(..., sink="wasapi")`` opens the default speaker, so a
+    transport that names it hands the graph over and is never written to.
+    Feeding WASAPI from Python costs a ring, a coalescing queue and the
+    interpreter's ticks between the graph and the device.
+    """
+
+    def setUp(self):
+        super().setUp()
+
+        class Driver:                     # `speaker()` asks for this name
+            def sink_stats(self):
+                return None
+
+        pump_mod._driver = Driver()
+        pump_mod._driver_looked = True
+        FakeI2SOut.built = []
+        FakeI2SOut.live = None
+        self._saved_busio = (pump_mod._busio, pump_mod._busio_looked)
+        pump_mod._busio = FakeBusio()
+        pump_mod._busio_looked = True
+        self.addCleanup(self._put_busio_back)
+
+    def _put_busio_back(self):
+        pump_mod._busio, pump_mod._busio_looked = self._saved_busio
+        FakeI2SOut.live = None
+
+    def test_the_driver_can_play_to_a_speaker_and_is_not_a_board(self):
+        self.assertTrue(pump_mod.speaker())
+        self.assertFalse(pump_mod.on_board())
+
+    def test_the_graph_goes_to_the_speaker_and_the_transport_stays_shut(self):
+        transport = Speaker()
+        out = self.player(transport)
+        self.assertTrue(out.pumped)
+        self.assertEqual(len(FakeI2SOut.built), 1,
+                         "the graph was not handed to I2SOut")
+        i2s = FakeI2SOut.built[0]
+        self.assertEqual(i2s.sink, "wasapi")
+        self.assertEqual(i2s.sample_rate, RATE)
+        self.assertIsNone(i2s.port, "a speaker has no I2S port to name")
+        out.service()
+        self.assertEqual(transport.opened, 0,
+                         "the transport opened a second WASAPI stream")
+        self.assertEqual(bytes(transport.data), b"")
+
+    def test_a_transport_with_no_speaker_stays_on_the_ring(self):
+        out = self.player(Recorder())
+        self.assertTrue(out.pumped)
+        self.assertEqual(FakeI2SOut.built, [])
+        self.assertIsInstance(pump_mod.owner()._driver, pump_mod.RingDriver)
+
+    def test_a_lowered_volume_keeps_the_transport_that_applies_it(self):
+        transport = Speaker()
+        transport.set_volume(50)
+        self.player(transport)
+        self.assertEqual(FakeI2SOut.built, [],
+                         "the speaker would play at full volume")
+
+    def test_muting_while_it_plays_moves_the_sample_to_the_transport(self):
+        transport = Speaker()
+        out = self.player(transport, loop=True)
+        i2s = FakeI2SOut.built[0]
+        out.mute(True)
+        self.assertTrue(i2s.deinited, "the speaker went on playing")
+        self.assertTrue(out.playing)
+        out.service()
+        self.assertTrue(transport.data, "nothing carried the sample on")
+
+    def test_turning_it_down_while_it_plays_does_the_same(self):
+        transport = Speaker()
+        out = self.player(transport, loop=True)
+        out.set_volume(100)
+        self.assertFalse(FakeI2SOut.built[0].deinited,
+                         "full volume is the speaker's to play")
+        out.set_volume(20)
+        self.assertTrue(FakeI2SOut.built[0].deinited)
+        out.service()
+        self.assertTrue(transport.data)
 
 
 class FakeAudioio:

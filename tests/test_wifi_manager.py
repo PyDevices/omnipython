@@ -13,6 +13,7 @@ are what keep a board on its network.
 import sys
 import types
 import unittest
+from unittest import mock
 
 import _env  # noqa: F401
 import wifi_manager as wm
@@ -426,6 +427,74 @@ class ConnectLinkTest(unittest.TestCase):
         wlan.connect = connect
         self.assertEqual(self._connect(wlan), "10.0.0.77")
         self.assertEqual(joined, ["bench", "kept"])
+
+
+class BoardNameTest(unittest.TestCase):
+    """The board's name is its hostname and its setup access point's name."""
+
+    def setUp(self):
+        # The board's name itself is test_board_name's; here, what wifi_manager does with it.
+        named = mock.patch.object(wm, "boarddev", types.SimpleNamespace(name=lambda: "kitchen"))
+        named.start()
+        self.addCleanup(named.stop)
+        self.hostnames = []
+        self._before = sys.modules.get("network")
+        net = types.ModuleType("network")
+        net.STA_IF = 0
+        net.AP_IF = 1
+        net.hostname = self.hostnames.append
+
+        class Wlan:
+            def active(self, *a):
+                return True
+
+            def isconnected(self):
+                return True
+
+            def ifconfig(self):
+                return ("10.0.0.9", "255.255.255.0", "10.0.0.1", "10.0.0.1")
+
+        net.WLAN = lambda _if: Wlan()
+        sys.modules["network"] = net
+
+    def tearDown(self):
+        if self._before is None:
+            sys.modules.pop("network", None)
+        else:
+            sys.modules["network"] = self._before
+
+    def test_connect_makes_the_board_name_the_hostname(self):
+        self.assertEqual(wm.connect(setup=False), "10.0.0.9")
+        self.assertEqual(self.hostnames, ["kitchen"])
+
+    def test_a_hostname_given_wins(self):
+        wm.connect(setup=False, hostname="panel")
+        self.assertEqual(self.hostnames, ["panel"])
+
+    def test_run_makes_the_board_name_the_hostname(self):
+        saved = wm._Setup
+        wm._Setup = lambda *a, **k: types.SimpleNamespace(run=lambda: None)
+        try:
+            wm.run(display_drv=object())
+        finally:
+            wm._Setup = saved
+        self.assertEqual(self.hostnames, ["kitchen"])
+
+    def test_the_access_point_is_named_after_the_board(self):
+        radio = FakeRadio(seen={})
+        ui = FakeUI()
+        saved = wm._make_ui, wm._sleep_ms
+        wm._make_ui = lambda display_drv: ui
+        wm._sleep_ms = lambda ms: wm.cancel()
+        s = wm._Setup(radio, None, 5, rescan=False)
+        for name in ("_open_sockets", "_close_sockets", "_serve_dns", "_serve_http"):
+            setattr(s, name, lambda *a: None)
+        try:
+            s.run()
+        finally:
+            wm._make_ui, wm._sleep_ms = saved
+            wm._cancelled = False
+        self.assertEqual(ui.shown[0], "kitchen")
 
 
 class SetupModeTest(_Patched):

@@ -24,6 +24,12 @@ port's ``os`` has no ``open`` or ``read``. It
 doesn't see ALSA sequencer-only ports; a DAW's virtual ports usually are, so
 on Linux load ``snd-virmidi`` to get a raw device a DAW can also open.
 
+A 5-pin DIN socket wired to a serial port (a Raspberry Pi's UART, a USB
+serial adapter) isn't an ALSA device. ``serial_ports(path)`` opens it at
+MIDI's 31250 baud, raw, and wraps its input the same way::
+
+    midi_in, midi_out = linux.serial_ports("/dev/ttyAMA0")
+
 Ids are ``"in:CARD:DEVICE"`` and ``"out:CARD:DEVICE"``, the ALSA address
 with the direction first.
 
@@ -38,11 +44,22 @@ it in ``WholeMessages`` too.
 """
 
 import os
+import struct
 
 from . import IN, INOUT, OUT, PortIn, PortInfo, PortOut, WholeMessages, _count
 
 PROC_ASOUND = "/proc/asound"
 DEV_SND = "/dev/snd"
+BAUDRATE = 31250
+
+# struct termios2 and its ioctls, as x86, ARM and RISC-V Linux lay them out:
+# the only way to ask a serial driver for a rate termios has no constant for.
+_TERMIOS2 = "=4IB19s2I"
+_TCGETS2 = 0x802C542A
+_TCSETS2 = 0x402C542B
+_CBAUD = 0o010017
+_BOTHER = 0o010000
+_IBSHIFT = 16
 
 
 def _read_text(path):
@@ -136,6 +153,72 @@ def ports(name="", proc=PROC_ASOUND, dev=DEV_SND):
             open_port(outs[0], dev) if outs else None)
 
 
+def serial_ports(path, baudrate=BAUDRATE):
+    """``(midi_in, midi_out)`` over a serial port wired to MIDI jacks.
+
+    The port is set raw, 8N1 with no flow control, at ``baudrate``. MIDI's
+    31250 isn't one of termios' rates, so it's asked for through the
+    driver's custom-rate call; a driver that can't come within 1% of it
+    raises ``OSError``. A Raspberry Pi set up the older way, with its UART
+    clock changed so that 38400 comes out as 31250, takes
+    ``baudrate=38400``. Needs CPython's ``termios``.
+
+    Args:
+        path (str): The serial device, such as ``"/dev/ttyAMA0"`` or
+            ``"/dev/ttyUSB0"``.
+        baudrate (int): The rate to set.
+
+    Returns:
+        tuple: A `WholeMessages` input and an output port.
+    """
+    try:
+        import fcntl
+        import termios
+    except ImportError:
+        raise OSError("serial MIDI needs the termios module, which this Python lacks") from None
+    info = PortInfo(id=path, name=path, direction=OUT)
+    midi_out = LinuxMidiOut(info, path, os.O_NOCTTY)
+    try:
+        try:
+            _set_serial(midi_out._fd, baudrate, fcntl, termios)
+        except termios.error as error:
+            raise OSError(error.args[0], "%s can't be set up as a serial port: %s" % (path, error.args[1])) from None
+        midi_in = LinuxMidiIn(PortInfo(id=path, name=path, direction=IN), path, os.O_NOCTTY)
+    except BaseException:
+        midi_out.close()
+        raise
+    termios.tcflush(midi_in._fd, termios.TCIFLUSH)
+    return WholeMessages(midi_in), midi_out
+
+
+def _set_serial(fd, baudrate, fcntl, termios):
+    """Make ``fd`` raw 8N1 with no flow control, at ``baudrate``."""
+    iflag, oflag, cflag, lflag, ispeed, ospeed, cc = termios.tcgetattr(fd)
+    iflag &= ~(termios.IGNBRK | termios.BRKINT | termios.PARMRK | termios.ISTRIP | termios.INLCR
+               | termios.IGNCR | termios.ICRNL | termios.IXON | termios.IXOFF | termios.IXANY)
+    oflag &= ~termios.OPOST
+    lflag &= ~(termios.ECHO | termios.ECHONL | termios.ICANON | termios.ISIG | termios.IEXTEN)
+    cflag &= ~(termios.CSIZE | termios.PARENB | termios.CSTOPB | termios.CRTSCTS)
+    cflag |= termios.CS8 | termios.CLOCAL | termios.CREAD
+    cc[termios.VMIN] = 0
+    cc[termios.VTIME] = 0
+    speed = getattr(termios, "B%d" % baudrate, None)
+    if speed is not None:
+        ispeed = ospeed = speed
+    termios.tcsetattr(fd, termios.TCSANOW, [iflag, oflag, cflag, lflag, ispeed, ospeed, cc])
+    if speed is not None:
+        return
+    raw = fcntl.ioctl(fd, _TCGETS2, bytes(struct.calcsize(_TERMIOS2)))
+    iflag, oflag, cflag, lflag, line, cc, _, _ = struct.unpack(_TERMIOS2, raw)
+    cflag &= ~(_CBAUD | (_CBAUD << _IBSHIFT))
+    cflag |= _BOTHER | (_BOTHER << _IBSHIFT)
+    fcntl.ioctl(fd, _TCSETS2, struct.pack(_TERMIOS2, iflag, oflag, cflag, lflag, line, cc, baudrate, baudrate))
+    raw = fcntl.ioctl(fd, _TCGETS2, bytes(struct.calcsize(_TERMIOS2)))
+    got = struct.unpack(_TERMIOS2, raw)[-1]
+    if abs(got - baudrate) * 100 > baudrate:
+        raise OSError("this serial port runs at %d baud when asked for %d" % (got, baudrate))
+
+
 def _split_id(port_id):
     parts = str(port_id).split(":")
     if len(parts) != 3 or parts[0] not in (IN, OUT) \
@@ -164,7 +247,7 @@ def _closed():
 class LinuxMidiIn(PortIn):
     """The input half of an ALSA raw MIDI endpoint."""
 
-    def __init__(self, info, path):
+    def __init__(self, info, path, flags=0):
         PortIn.__init__(self)
         self.info = info
         # Without O_NONBLOCK a read on a silent instrument blocks your loop.
@@ -174,7 +257,7 @@ class LinuxMidiIn(PortIn):
             raise OSError(
                 "os.O_NONBLOCK is missing on this build, so a MIDI read could "
                 "block forever; output ports still work")
-        self._fd = os.open(path, os.O_RDONLY | nonblock)
+        self._fd = os.open(path, os.O_RDONLY | nonblock | flags)
 
     def readinto(self, buf, nbytes=None):
         if self._fd is None:
@@ -200,9 +283,9 @@ class LinuxMidiIn(PortIn):
 class LinuxMidiOut(PortOut):
     """The output half of an ALSA raw MIDI endpoint."""
 
-    def __init__(self, info, path):
+    def __init__(self, info, path, flags=0):
         self.info = info
-        self._fd = os.open(path, os.O_WRONLY)
+        self._fd = os.open(path, os.O_WRONLY | flags)
 
     def write(self, buf, nbytes=None):
         if self._fd is None:

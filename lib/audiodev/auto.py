@@ -58,6 +58,21 @@ def _pygame_probe():
     return not _is_micropython() and _module_available("pygame")
 
 
+def _alsa_cards():
+    try:
+        from audiodev import alsa_audio
+
+        return alsa_audio.has_cards()
+    except Exception:
+        return False
+
+
+def _alsa_probe():
+    if not sys.platform.startswith("linux") or _wasm_probe() or _web_probe():
+        return False
+    return _alsa_cards()
+
+
 # The transports in the box, in the order they are tried. A spec names a module
 # that provides ``pcm_out`` and ``pcm_in``.
 for _name, _spec, _probe in (
@@ -66,6 +81,7 @@ for _name, _spec, _probe in (
     ("win_audio", "audiodev.win_audio", lambda: _uwin32_available()),
     ("sdl2_audio", "audiodev.sdl2_audio", lambda: _module_available("usdl2")),
     ("pygame_audio", "audiodev.pygame_audio", _pygame_probe),
+    ("alsa_audio", "audiodev.alsa_audio", _alsa_probe),
 ):
     backends.register("audio", _name, _spec, probe=_probe, _builtin=True)
 
@@ -75,13 +91,14 @@ def select_backend():
 
     Search order: ``PYDEVICES_AUDIO`` if set, then the backends a
     board config asked for with ``require`` (see `backends`), then the ones in the box
-    in the documented probe order: wasm, Web Audio, Windows, SDL2, pygame.
+    in the documented probe order: wasm, Web Audio, Windows, SDL2, pygame, then
+    ALSA on a Linux machine with a sound card and neither SDL2 nor pygame.
     """
     for name, _spec, _builtin in backends.candidates("audio", backends._env("PYDEVICES_AUDIO")):
         return name
     raise ImportError(
         "no usable audio transport: install pygame-ce, install/provide usdl2, "
-        "or explicitly wrap an SDL, WASAPI, Web Audio, I2S, wasm, or emulated transport"
+        "or explicitly wrap an SDL, WASAPI, ALSA, Web Audio, I2S, wasm, or emulated transport"
     )
 
 

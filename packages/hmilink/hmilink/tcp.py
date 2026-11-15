@@ -13,6 +13,20 @@ A panel in Python::
 
     panel = hmilink.Panel(tcp.connect("192.168.1.42", 9000))
 
+A device that announces itself over mDNS needs no address typed in. It
+answers under the board's name (``boarddev.name()``, or the name given)::
+
+    device.add(tcp.serve(9000, page="index.html", announce=True))
+
+A panel in Python finds it by that name::
+
+    name, (host, port) = tcp.find("kitchen")[0]
+    panel = hmilink.Panel(tcp.connect(host, port))
+
+A phone opens ``http://kitchen.local:9000/`` when the board's hostname is
+its name, as ``wifi_manager`` makes it, and an mDNS browser app lists it as a
+web page.
+
 A panel in a browser opens ``http://192.168.1.42:9000/`` and gets the page,
 and the page opens ``ws://192.168.1.42:9000/ws``. The port decides per
 connection from its first bytes: a line that starts with ``GET`` is HTTP,
@@ -27,11 +41,14 @@ Nothing blocks: a listener's ``accept()`` and a link's ``recv()`` return
 won't take yet, to go out on the next ``flush()`` or ``poll()``.
 
 Runs on MicroPython and CPython with ``socket``. On CircuitPython pass
-``pool=socketpool.SocketPool(wifi.radio)``.
+``pool=socketpool.SocketPool(wifi.radio)``. Announcing and finding need the
+``mdns`` module: CircuitPython's, the one in PyDevices firmware, or on a
+computer pydevices-desktop's (``pip install pydevices-desktop``).
 """
 
 import binascii
 import hashlib
+import sys
 
 try:
     import socket as _socket
@@ -41,6 +58,9 @@ except ImportError:
 # What a non-blocking socket raises when nothing is waiting: EAGAIN,
 # EINPROGRESS, BSD's EWOULDBLOCK, Windows' WSAEWOULDBLOCK and WSAEINPROGRESS.
 _AGAIN = (11, 115, 35, 10035, 10036)
+
+#: The DNS-SD service a device announces, over ``_tcp``.
+SERVICE_TYPE = "_hmilink"
 
 _WS_GUID = b"258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
 _RECV = 1024
@@ -295,8 +315,10 @@ class Link:
 class Listener:
     """A listening port. ``accept()`` returns a Link or None, never blocks."""
 
-    def __init__(self, port, bind="0.0.0.0", page=None, backlog=4, pool=None):
+    def __init__(self, port, bind="0.0.0.0", page=None, backlog=4, pool=None, announce=False):
         self.page = page
+        self.name = None
+        self._mdns = None
         mod = pool or _socket
         if mod is None:
             raise ImportError("no socket module; pass pool=socketpool.SocketPool(wifi.radio)")
@@ -310,6 +332,32 @@ class Listener:
         s.setblocking(False)
         self.sock = s
         self.port = port
+        if announce:
+            try:
+                self._announce(None if announce is True else announce)
+            except BaseException:
+                s.close()
+                raise
+
+    def _announce(self, name):
+        if name is None:
+            import _boardname
+
+            try:
+                name = _boardname.name("announce=True names the link", "hmilink", 'pass announce="a-name"')
+            except ImportError:
+                raise ImportError("announce=True needs pydevices' boarddev for the board's name; or pass announce=\"a-name\"")
+        server = _mdns_server()
+        try:
+            server.instance_name = name
+            server.advertise_service(service_type=SERVICE_TYPE, protocol="_tcp", port=self.port)
+            if self.page is not None:
+                server.advertise_service(service_type="_http", protocol="_tcp", port=self.port, txt_records=["path=/"])
+        except BaseException:
+            server.deinit()
+            raise
+        self._mdns = server
+        self.name = name
 
     def accept(self):
         try:
@@ -321,15 +369,60 @@ class Listener:
         return Link(client, page=self.page)
 
     def close(self):
+        if self._mdns is not None:
+            self._mdns.deinit()
+            self._mdns = None
         try:
             self.sock.close()
         except OSError:
             pass
 
 
-def serve(port, bind="0.0.0.0", page=None, pool=None):
-    """Listen on ``port``. ``page`` (bytes, a path or a callable) answers ``GET /``."""
-    return Listener(port, bind=bind, page=page, pool=pool)
+def serve(port, bind="0.0.0.0", page=None, pool=None, announce=False):
+    """Listen on ``port``. ``page`` (bytes, a path or a callable) answers ``GET /``.
+
+    ``announce=True`` answers over mDNS as an ``_hmilink._tcp`` service
+    under the board's name, ``boarddev.name()``, and with a ``page`` as an
+    ``_http._tcp`` one too; ``announce="kitchen"`` picks the name. `find`
+    finds it. The announcement ends at ``close()``. Only one ``mdns.Server``
+    can run at a time, so a program that announces something else over mDNS
+    can't also announce here.
+    """
+    return Listener(port, bind=bind, page=page, pool=pool, announce=announce)
+
+
+def _mdns_server():
+    try:
+        import mdns
+    except ImportError:
+        raise ImportError(
+            "announcing needs the mdns module: CircuitPython's, PyDevices firmware's, "
+            "or on a computer pip install pydevices-desktop"
+        )
+    if sys.implementation.name == "circuitpython":
+        import wifi
+
+        return mdns.Server(wifi.radio)
+    return mdns.Server(None)
+
+
+def find(name=None, timeout=2):
+    """``[(name, (host, port)), ...]`` of the devices announcing themselves
+    with ``serve(..., announce=...)``. With ``name``, only that device: a
+    list of one, or empty. Blocks for ``timeout`` seconds.
+    """
+    server = _mdns_server()
+    try:
+        found = []
+        for service in server.find(service_type=SERVICE_TYPE, protocol="_tcp", timeout=timeout):
+            if service.ipv4_address is None:
+                continue
+            if name is not None and service.instance_name != name:
+                continue
+            found.append((service.instance_name, (str(service.ipv4_address), service.port)))
+        return found
+    finally:
+        server.deinit()
 
 
 def connect(host, port, pool=None):

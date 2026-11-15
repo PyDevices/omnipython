@@ -232,7 +232,8 @@ class BuiltRepository(unittest.TestCase):
         # aioble is micropython-lib's. In deps, mip would stop at it; in the
         # manifest, a CircuitPython firmware freezing bledev would look for it.
         self.assertNotIn("aioble/core.py", self.paths("bledev"))
-        self.assertEqual(self.deps("bledev"), [])
+        # pydevices, for boarddev.name(); aioble never.
+        self.assertEqual(self.deps("bledev"), ["pydevices"])
         manifest = (self.out / "library" / "bledev" / "manifest.py").read_text(encoding="utf-8")
         self.assertNotIn('require("aioble")', manifest)
         for kind in ("py", "6"):
@@ -281,6 +282,12 @@ class BuiltRepository(unittest.TestCase):
         with redirect_stdout(StringIO()) as out:
             self.assertEqual(libbuild.main(["compare", str(index), str(changed), "--package", "pydevices"]), 1)
         self.assertIn("different content", out.getvalue())
+
+
+class TypeStubs(unittest.TestCase):
+    def test_stubs_stay_out_of_what_a_board_installs(self):
+        names = ["__init__.py", "__init__.pyi", "py.typed", "pump.py", "pump.pyi", "__pycache__"]
+        self.assertEqual(libbuild._ignore_debris("lib/audiodev", names), {"__init__.pyi", "py.typed", "pump.pyi", "__pycache__"})
 
 
 class Manifests(unittest.TestCase):

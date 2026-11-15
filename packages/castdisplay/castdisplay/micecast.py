@@ -147,7 +147,7 @@ HID_TYPES = {0: "keyboard", 1: "mouse", 2: "single_touch", 3: "multi_touch", 4: 
 
 
 class Session:
-    def __init__(self, sink_ip, name="PyDevices P4", source_id=b"PyDevicesP4cast!", rtsp_port=7236,
+    def __init__(self, sink_ip, name=None, source_id=b"PyDevicesP4cast!", rtsp_port=7236,
                  server_port=15550, video_m4="28 00 01 01 00000020 00000000 00000000 00 0000 0000 11 none none",
                  audio_m4="LPCM 00000002 00", log=print, uibc_port=7239, on_input=None):
         self.sink = sink_ip
@@ -157,6 +157,9 @@ class Session:
         self.session_request = None   # None, or a Security Options byte to send a Session Request first
         self.uibc_packets = 0
         self.sink_uibc = None
+        if name is None:              # what the sink lists: the board's name
+            import _boardname
+            name = _boardname.name("Session() names the cast source", "castdisplay", "pass name= to Session()")
         self.name = name
         self.source_id = source_id
         self.rtsp_port = rtsp_port

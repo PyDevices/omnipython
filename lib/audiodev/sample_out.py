@@ -49,6 +49,8 @@ software queue interprets the raw bytes it's given, so a format mismatch
 there would misread every sample rather than merely mis-pitch it.
 """
 
+from audiodev import AudioLocked
+
 try:
     from multimer import ticks_diff, ticks_ms
 except ImportError:  # pragma: no cover - CPython fallback, no multimer
@@ -165,6 +167,8 @@ class AudioOut:
         self._max_catchup_chunks = int(max_catchup_chunks)
         self._sample = None
         self._loop = False
+        # (sample, loop) of a play() the platform has not unlocked yet.
+        self._waiting = None
         self._paused = False
         self._sched_start_ms = None
         self._played_frames = 0
@@ -208,6 +212,7 @@ class AudioOut:
         self._drain = None       # where the ring's bytes land
         self._pumped = 0         # bytes a prefetcher's file has handed over
         self._sinking = False    # esp32: the pump owns I2S, we write nothing
+        self._on_speaker = False  # Windows: the pump writes to WASAPI itself
         self._engine_seen = False  # sticky: this player has used the pump
         self._block = 0          # bytes in one pull of the graph
         self._drain_len = 0
@@ -265,14 +270,18 @@ class AudioOut:
         return self.transport.volume
 
     def set_volume(self, percent):
-        return self.transport.set_volume(percent)
+        volume = self.transport.set_volume(percent)
+        self._leave_speaker()
+        return volume
 
     @property
     def muted(self):
         return self.transport.muted
 
     def mute(self, value=True):
-        return self.transport.mute(value)
+        muted = self.transport.mute(value)
+        self._leave_speaker()
+        return muted
 
     @property
     def codec(self):
@@ -286,6 +295,7 @@ class AudioOut:
         # fix for the kit change. See stop() for what happens without it.
         # The latch beside it is the same fix for every OTHER player's tick.
         self._pumping = True
+        self._waiting = None
         with _REARRANGING:
             try:
                 self._detach_pump()
@@ -304,7 +314,15 @@ class AudioOut:
                 self._attach_pump(sample)
                 if not self._sinking:
                     try:
-                        self.open()
+                        self._open_unlocked()
+                    except AudioLocked:
+                        # A browser that wants a click first. Not a failure:
+                        # keep the sample, and service() starts it on the
+                        # first tick after the click.
+                        self._detach_pump()
+                        self._sample = None
+                        self._waiting = (sample, bool(loop))
+                        return
                     except Exception:
                         # AND PUT THE PLAYER BACK, because `_sample` is
                         # already set above and `service()` is already on
@@ -325,6 +343,32 @@ class AudioOut:
                 self._pumping = False
         self._pump()  # kick an immediate chunk: lowest note-to-sound latency,
         #                same reason AudioEngine.note_on() does this
+
+    def _open_unlocked(self):
+        """Open the transport, raising `AudioLocked` while it is still locked.
+
+        A transport says so by raising from ``open()``, or by answering true
+        from an optional ``locked()`` once it is open (a browser context that
+        opens suspended).
+        """
+        self.transport.open()
+        locked = getattr(self.transport, "locked", None)
+        if locked is not None and locked():
+            raise AudioLocked("audio is locked until the page gets a click or key press")
+
+    def _retry_waiting(self):
+        """Start a play() that was waiting for the platform to unlock."""
+        try:
+            self._open_unlocked()
+        except AudioLocked:
+            return
+        except Exception:
+            # Anything else is a real failure: say it once and stop waiting.
+            self._waiting = None
+            raise
+        sample, loop = self._waiting
+        self._waiting = None
+        self.play(sample, loop=loop)
 
     # --- the pump --------------------------------------------------------
 
@@ -449,6 +493,8 @@ class AudioOut:
         self._pump_refused = None
         self._pumped = 0
         self._sinking = not driver.needs_service
+        self._on_speaker = isinstance(
+            getattr(driver, "wire", None), _pump_mod.SpeakerWire)
         if driver.needs_service:
             # The block is the unit the OLD path hands the transport, because
             # that is what get_buffer() returns, and the schedule's "pull until
@@ -501,6 +547,10 @@ class AudioOut:
                       "board's board_peripherals publishes no `wire=` on its "
                       "audio transport - playing on machine.I2S instead")
             return None
+        if pump_mod.speaker():
+            driver = self._speaker_driver(pump_mod)
+            if driver is not None:
+                return driver
         if not pump_mod.threaded():
             # WebAssembly and CPython: no pump thread, so the loop runs inside
             # this player's own service tick and the ring has to hold a tick's
@@ -515,10 +565,56 @@ class AudioOut:
             chunk_bytes=self._chunk_bytes(),
             max_block=pump_mod.block_size(tail))
 
+    def _speaker_driver(self, pump_mod):
+        """Windows: the pump plays to the speaker itself, or None.
+
+        Only for a transport that names a speaker the firmware can open
+        (``speaker_sink``, which `win_audio` sets for the default device),
+        and only at full volume and unmuted: the speaker takes the graph's
+        samples as they are, and a lower level is the transport's to apply
+        in software, on the interpreter thread.
+        """
+        if not self._full_level():
+            return None
+        inner = self.transport
+        for _ in range(4):
+            sink = getattr(inner, "speaker_sink", None)
+            if sink:
+                return pump_mod.BusioDriver(
+                    pump_mod.SpeakerWire(sink), self.transport.format,
+                    volume=self.transport.volume, transport=inner)
+            inner = getattr(inner, "_inner", None)
+            if inner is None:
+                break
+        return None
+
+    def _full_level(self):
+        return self.transport.volume >= 100 and not self.transport.muted
+
+    def _leave_speaker(self):
+        """Carry on from the interpreter thread, where the volume applies.
+
+        The speaker plays the graph's samples untouched, so a volume below
+        full or a mute is a reason to stop writing to it directly. The sample
+        continues from wherever the pump left it; the join is not
+        sample-exact, which is the price of a level change while it plays.
+        """
+        engine = self._engine
+        if (engine is None or not self._on_speaker
+                or self._full_level()):
+            return
+        self._pumping = True
+        try:
+            with _REARRANGING:
+                self._detach_pump()
+        finally:
+            self._pumping = False
+
     def _detach_pump(self):
         engine = self._engine
         self._engine = None
         self._sinking = False
+        self._on_speaker = False
         if engine is not None:
             engine.stop(self)
         self._release_prefetch()
@@ -579,6 +675,7 @@ class AudioOut:
         # methods that REARRANGE the player -- this one and play() -- is the
         # whole fix. It costs one attribute write on each.
         self._pumping = True
+        self._waiting = None
         with _REARRANGING:
             try:
                 self._detach_pump()
@@ -614,7 +711,7 @@ class AudioOut:
 
     @property
     def playing(self):
-        return self._sample is not None
+        return self._sample is not None or self._waiting is not None
 
     @property
     def paused(self):
@@ -628,6 +725,9 @@ class AudioOut:
 
     def _pump(self):
         if self._pumping:
+            return
+        if self._waiting is not None:
+            self._retry_waiting()
             return
         mod = _pump_module()
         if mod is not None and mod.rearranging():

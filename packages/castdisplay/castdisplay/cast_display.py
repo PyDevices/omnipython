@@ -62,7 +62,8 @@ class CastDisplay(FBDisplay):
         canvas: (w, h) of the stream, at least the picture, which is centred
             on black (default: the picture's own size).
         fps, bitrate: the stream's.
-        name: what the sink lists the cast as.
+        name: what the sink lists the cast as (default: the board's name,
+            ``boarddev.name()``).
         log: where session messages go (default: nowhere).
         audio: None for a silent cast. True carries the app's sound: on the
             P4 what the audio pump plays (24 kHz, unless ``audio_format`` says
@@ -77,7 +78,7 @@ class CastDisplay(FBDisplay):
     """
 
     def __init__(self, sink, width=720, height=720, kind="windows", canvas=None,
-                 fps=30, bitrate=3_000_000, name="PyDevices P4", log=None,
+                 fps=30, bitrate=3_000_000, name=None, log=None,
                  audio=None, audio_format=(24000, 2), audio_loop=False):
         if kind not in ("windows", "roku"):
             raise ValueError("kind is 'windows' or 'roku'")

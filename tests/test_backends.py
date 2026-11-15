@@ -390,7 +390,7 @@ class TestAudioRegistry(RegistryCase):
         self.assertEqual(audio_auto.select_backend(), "sdl2_audio")
         self.assertEqual(
             [e[0] for e in backends._entries["audio"] if e[3]],
-            ["wasm_audio", "web_audio", "win_audio", "sdl2_audio", "pygame_audio"],
+            ["wasm_audio", "web_audio", "win_audio", "sdl2_audio", "pygame_audio", "alsa_audio"],
         )
 
     def test_unrequired_third_party_is_not_picked(self):

@@ -305,6 +305,10 @@ link = await bledev.repl.connect(ble, "correct horse", name="rack")
 print(await bledev.repl.run(link, "1 + 1"))    # "2"
 ```
 
+Leave `name` out on both sides and the board advertises under
+[its own name](board-name.md), and `connect()` finds the first board serving
+the REPL.
+
 Any terminal that speaks Nordic UART works too: send an empty line, and the
 board answers `Password: `. A wrong password gets `Access denied` and a
 disconnect, and nothing sent with it reaches the REPL. The link isn't
@@ -432,7 +436,8 @@ rack`, or Settings > Bluetooth > Remove device), then pair again. A phone is the
 same: forget the device, then pair.
 
 A board's name, and the services it serves, follow from what you start: the
-name you pass is both the advertised name and the one a paired computer lists
+name you pass, or [the board's name](board-name.md) when you pass none, is both
+the advertised name and the one a paired computer lists
 (the GAP name, which would otherwise be MicroPython's "MPY ESP32"), and the
 same `console` and `files` give the same table every time, whatever the lock,
 because hosts cache a paired device's table. Serving something else on the same

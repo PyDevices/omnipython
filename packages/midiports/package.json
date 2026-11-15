@@ -25,6 +25,10 @@
       "github:PyDevices/pydevices/packages/midiports/midiports/linux.py"
     ],
     [
+      "midiports/loopback.py",
+      "github:PyDevices/pydevices/packages/midiports/midiports/loopback.py"
+    ],
+    [
       "midiports/webmidi.py",
       "github:PyDevices/pydevices/packages/midiports/midiports/webmidi.py"
     ],
@@ -101,6 +105,6 @@
       "https://raw.githubusercontent.com/adafruit/Adafruit_CircuitPython_MIDI/1.6.0/adafruit_midi/timing_clock.py"
     ]
   ],
-  "deps": [],
+  "deps": [["github:PyDevices/pydevices/packages/_boardname", "main"]],
   "version": "0.0.1"
 }

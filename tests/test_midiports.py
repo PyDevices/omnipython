@@ -18,9 +18,11 @@ import asyncio
 import json
 import os
 import shutil
+import struct
 import subprocess
 import sys
 import tempfile
+import time
 import types
 import unittest
 from unittest import mock
@@ -35,6 +37,7 @@ ADAFRUIT_PREFIX = "https://raw.githubusercontent.com/adafruit/Adafruit_CircuitPy
 OURS_PREFIX = "github:PyDevices/pydevices/"
 
 sys.path.insert(0, str(PACKAGE))
+sys.path.insert(0, str(ROOT / "packages" / "_boardname"))
 
 import midiports  # noqa: E402
 from midiports import IN, OUT, WholeMessages, linux, webmidi  # noqa: E402
@@ -244,6 +247,116 @@ class LinuxPort(unittest.TestCase):
     def test_no_matching_port_says_so(self):
         _make_asound(self.proc, {})
         self.assertRaises(OSError, linux.ports, "nothing", proc=self.proc, dev=self.dev)
+
+
+@unittest.skipUnless(sys.platform.startswith("linux"), "Linux serial ports")
+class LinuxSerialPort(unittest.TestCase):
+    """DIN MIDI on a serial port, with a pty pair standing in for the cable:
+    what's written to the master arrives at the port as a UART's bytes would."""
+
+    # Running status, data bytes a cooked tty would eat (CR, LF, ^C, XON,
+    # XOFF), a clock inside a note, one inside a SysEx, active sensing
+    # between two control changes, then start and a clock.
+    WIRE = (b"\x90\x3c\x0d", b"\x0a\x03\x90", b"\x11\xf8\x13",
+            b"\xf0\x7d\x0d\x0a\xf8", b"\x11\x13\xf7\xb0\x07", b"\x7f\xfe\x07\x00\xfa\xf8")
+    WHOLE = (b"\x90\x3c\x0d" b"\x90\x0a\x03" b"\xf8" b"\x90\x11\x13"
+             b"\xf0\x7d\x0d\x0a\x11\x13\xf7" b"\xf8" b"\xb0\x07\x7f" b"\xfe" b"\xb0\x07\x00" b"\xfa" b"\xf8")
+    MESSAGES = 11
+
+    def setUp(self):
+        self.master, slave = os.openpty()
+        self.path = os.ttyname(slave)
+        os.close(slave)
+        self.midi_in, self.midi_out = linux.serial_ports(self.path)
+
+    def tearDown(self):
+        self.midi_in.close()
+        self.midi_out.close()
+        os.close(self.master)
+
+    def _read(self, want):
+        got = b""
+        deadline = time.monotonic() + 2
+        while len(got) < want and time.monotonic() < deadline:
+            chunk = self.midi_in.read(64)
+            if chunk:
+                got += chunk
+        return got
+
+    def test_the_port_is_raw_at_31250_baud(self):
+        import fcntl
+        import termios
+
+        fd = self.midi_out._fd
+        raw = fcntl.ioctl(fd, linux._TCGETS2, bytes(44))
+        self.assertEqual(struct.unpack(linux._TERMIOS2, raw)[-2:], (31250, 31250))
+        iflag, oflag, cflag, lflag, _, _, cc = termios.tcgetattr(fd)
+        self.assertEqual(lflag & (termios.ICANON | termios.ECHO | termios.ISIG), 0)
+        self.assertEqual(iflag & (termios.ICRNL | termios.IXON), 0)
+        self.assertEqual(oflag & termios.OPOST, 0)
+        self.assertEqual(cflag & (termios.CSIZE | termios.PARENB | termios.CSTOPB), termios.CS8)
+        self.assertEqual((cc[termios.VMIN], cc[termios.VTIME]), (0, 0))
+
+    def test_a_rate_termios_names_is_set_directly(self):
+        import termios
+
+        midi_in, midi_out = linux.serial_ports(self.path, baudrate=38400)
+        try:
+            self.assertEqual(termios.tcgetattr(midi_out._fd)[4:6], [termios.B38400, termios.B38400])
+        finally:
+            midi_in.close()
+            midi_out.close()
+
+    def test_bytes_off_the_wire_come_out_as_whole_messages(self):
+        self.assertIsInstance(self.midi_in, WholeMessages)
+        self.assertIsNone(self.midi_in.read(64))
+        got = b""
+        for piece in self.WIRE:
+            os.write(self.master, piece)
+            got += self._read(1)
+        got += self._read(len(self.WHOLE) - len(got))
+        self.assertEqual(got.hex(" "), self.WHOLE.hex(" "))
+        self.assertEqual(self.midi_in.desync, 0)
+        stamps = [self.midi_in.take_timestamp() for _ in range(self.MESSAGES + 1)]
+        self.assertNotIn(None, stamps[:-1])
+        self.assertIsNone(stamps[-1])
+
+    def test_adafruit_midi_reads_every_message(self):
+        sys.path.insert(0, adafruit_dir(self))
+        try:
+            import adafruit_midi
+            # Each message type is known once its module is imported.
+            import adafruit_midi.control_change  # noqa: F401
+            import adafruit_midi.note_on  # noqa: F401
+            import adafruit_midi.start  # noqa: F401
+            import adafruit_midi.system_exclusive  # noqa: F401
+            import adafruit_midi.timing_clock  # noqa: F401
+        finally:
+            sys.path.pop(0)
+        midi = adafruit_midi.MIDI(midi_in=self.midi_in, midi_out=self.midi_out)
+        os.write(self.master, b"".join(self.WIRE))
+        names = []
+        deadline = time.monotonic() + 2
+        while len(names) < self.MESSAGES and time.monotonic() < deadline:
+            msg = midi.receive()
+            if msg is not None:
+                names.append(type(msg).__name__)
+        self.assertEqual(names, ["NoteOn", "NoteOn", "TimingClock", "NoteOn", "SystemExclusive",
+                                 "TimingClock", "ControlChange", "MIDIUnknownEvent", "ControlChange",
+                                 "Start", "TimingClock"])
+
+    def test_what_is_written_reaches_the_wire_unchanged(self):
+        sent = b"\x80\x0a\x0d\xb0\x03\x11\xf0\x13\x7f\xf7\xf8"
+        self.assertEqual(self.midi_out.write(sent), len(sent))
+        got = b""
+        deadline = time.monotonic() + 2
+        while len(got) < len(sent) and time.monotonic() < deadline:
+            got += os.read(self.master, 64)
+        self.assertEqual(got, sent)
+
+    def test_a_path_that_is_not_a_serial_port_is_refused(self):
+        with tempfile.NamedTemporaryFile() as plain:
+            self.assertRaises(OSError, linux.serial_ports, plain.name)
 
 
 class _Obj:
@@ -515,6 +628,124 @@ Object.defineProperty(globalThis, 'navigator', {value: {requestMIDIAccess: async
         out = subprocess.run(["node", "-e", script], capture_output=True, text=True, check=True, timeout=30).stdout
         self.assertIn("no Web MIDI", out)
 
+    def _page_out(self, connected=True, accepts=True):
+        """page_out() over a stand-in for the page's side of it."""
+        page = _Obj(pending=[], sent=[], closed=[])
+
+        def send():
+            data, page.pending[:] = bytes(page.pending), []
+            if not (connected and accepts):
+                return False
+            page.sent.append(data)
+            return True
+
+        page.put = page.pending.append
+        page.send = send
+        page.name = lambda: "Synth" if connected else None
+        page.names = lambda: "Synth\nSynth 2" if connected else ""
+        page.why = lambda: None if accepts else "InvalidAccessError"
+        page.close = lambda: page.closed.append(True)
+        js = types.ModuleType("js")
+        js.eval = lambda source: lambda name: page
+        with mock.patch.dict(sys.modules, {"js": js}):
+            return webmidi.page_out("synth"), page
+
+    def test_page_out_sends_whole_messages_to_the_page(self):
+        midi_out, page = self._page_out()
+        self.assertEqual(midi_out.name, "Synth")
+        self.assertEqual(midi_out.names, ["Synth", "Synth 2"])
+        self.assertEqual(midi_out.write(b"\x90\x3c"), 2)  # half a note waits
+        self.assertEqual(page.sent, [])
+        midi_out.write(b"\x64\xb0\x07\x7f")
+        self.assertEqual(page.sent, [b"\x90\x3c\x64\xb0\x07\x7f"])
+        midi_out.write(bytearray(b"\xf8"))
+        self.assertEqual(page.sent[-1], b"\xf8")
+        self.assertEqual(midi_out.dropped, 0)
+        midi_out.close()
+        self.assertEqual(page.closed, [True])
+        self.assertRaises(OSError, midi_out.write, b"\xf8")
+        midi_out.close()  # twice is fine
+        self.assertEqual(page.closed, [True])
+
+    def test_page_out_counts_what_has_nowhere_to_go(self):
+        midi_out, page = self._page_out(connected=False)
+        self.assertIsNone(midi_out.name)
+        self.assertEqual(midi_out.names, [])
+        midi_out.write(b"\x90\x3c\x64\x80\x3c\x00")
+        self.assertEqual((page.sent, page.pending, midi_out.dropped), ([], [], 1))
+        refused, _ = self._page_out(accepts=False)
+        refused.write(b"\xf0\x7d\x01\xf7")
+        self.assertEqual((refused.dropped, refused.why), (1, "InvalidAccessError"))
+
+    @unittest.skipUnless(shutil.which("node"), "needs node")
+    def test_page_out_javascript_follows_the_ports(self):
+        script = """
+const port = (name) => {
+    const p = {type: 'output', id: name, name, state: 'connected', sent: []};
+    p.send = (data) => { if (name === 'Picky') throw new TypeError('no SysEx'); p.sent.push(Array.from(data)); };
+    return p;
+};
+const keys = port('Keys Out'), synth = port('Synth A'), spare = port('Synth B'), late = port('Synth C');
+const outputs = new Map([['Keys Out', keys], ['Synth A', synth], ['Synth B', spare]]);
+let listener = null;
+const access = {
+    outputs,
+    addEventListener: (kind, fn) => { listener = fn; },
+    removeEventListener: (kind, fn) => { if (fn === listener) listener = null; },
+};
+Object.defineProperty(globalThis, 'navigator', {value: {requestMIDIAccess: async () => access}});
+const write = (page, bytes) => { for (const b of bytes) page.put(b); return page.send(); };
+(async () => {
+    const page = (%s)('SYNTH');
+    const out = {before: [page.name(), page.names(), write(page, [0x90, 60, 100])]};
+    await null; await null;
+    out.name = page.name();
+    out.names = page.names();
+    out.sent = write(page, [0x90, 60, 100, 0xb0, 7, 127]);
+    out.synth = synth.sent;
+    out.keys = keys.sent;
+    synth.state = 'disconnected';
+    listener({port: synth});
+    out.moved = [page.name(), page.names()];
+    spare.state = 'disconnected';
+    listener({port: spare});
+    out.gone = [page.name(), write(page, [0xf8])];
+    outputs.set('Synth C', late);
+    listener({port: late});
+    out.joined = page.name();
+    write(page, [0xfa]);
+    out.late = late.sent;
+    page.close();
+    out.closed = [page.name(), listener];
+    const picky = (%s)('picky');
+    outputs.set('Picky', port('Picky'));
+    await null; await null;
+    out.refused = [write(picky, [0xf0, 0x7d, 0xf7]), picky.why()];
+    console.log(JSON.stringify(out));
+})();
+""" % (webmidi._PAGE_OUT, webmidi._PAGE_OUT)
+        got = json.loads(subprocess.run(
+            ["node", "-e", script], capture_output=True, text=True, check=True, timeout=30).stdout)
+        self.assertEqual(got["before"], [None, "", False])  # nothing until the person says yes
+        self.assertEqual(got["name"], "Synth A")  # "SYNTH" matched, ignoring case; Keys Out didn't
+        self.assertEqual(got["names"], "Synth A\nSynth B")
+        self.assertTrue(got["sent"])
+        self.assertEqual(got["synth"], [[0x90, 60, 100, 0xB0, 7, 127]])
+        self.assertEqual(got["keys"], [])
+        self.assertEqual(got["moved"], ["Synth B", "Synth B"])  # another match takes the lost one's place
+        self.assertEqual(got["gone"], [None, False])
+        self.assertEqual(got["joined"], "Synth C")
+        self.assertEqual(got["late"], [[0xFA]])
+        self.assertEqual(got["closed"], [None, None])
+        self.assertEqual(got["refused"], [False, "TypeError: no SysEx"])
+
+    @unittest.skipUnless(shutil.which("node"), "needs node")
+    def test_page_out_javascript_reports_a_browser_without_web_midi(self):
+        script = "Object.defineProperty(globalThis, 'navigator', {value: {}});" \
+            "console.log((%s)('').why())" % webmidi._PAGE_OUT
+        out = subprocess.run(["node", "-e", script], capture_output=True, text=True, check=True, timeout=30).stdout
+        self.assertIn("no Web MIDI", out)
+
     def test_relay_input_takes_page_messages_with_their_timestamps(self):
         port = _MessagePort()
         midi_in, _ = webmidi.relay_ports(port)
@@ -679,6 +910,166 @@ class UsbHostPort(unittest.TestCase):
         self.assertFalse(self.usb_host.is_midi(dev))
         with self.assertRaises(ValueError):
             self.usb_host.ports(dev)
+
+
+
+class LoopbackName(unittest.TestCase):
+    def test_the_name_is_one_constant(self):
+        self.assertEqual(midiports.LOOPBACK, "PyDevices Loopback")
+
+    def test_windows_finds_the_port_by_that_name(self):
+        fake = types.SimpleNamespace(
+            midiOutGetNumDevs=lambda: 2, midiInGetNumDevs=lambda: 2,
+            midiOutGetDevName=lambda i: ("Microsoft GS Wavetable Synth", midiports.LOOPBACK)[i],
+            midiInGetDevName=lambda i: ("DMK25", midiports.LOOPBACK.lower())[i],
+        )
+        with mock.patch.dict(sys.modules, {"uwin32": fake}):
+            sys.modules.pop("midiports.windows", None)
+            try:
+                from midiports import windows
+                found = windows.find(midiports.LOOPBACK)
+                self.assertEqual([(p.id, p.direction) for p in found], [("out:1", OUT), ("in:1", IN)])
+            finally:
+                sys.modules.pop("midiports.windows", None)
+                midiports.__dict__.pop("windows", None)
+
+    def test_a_missing_loopback_says_how_to_make_it(self):
+        fake = types.SimpleNamespace(
+            midiOutGetNumDevs=lambda: 0, midiInGetNumDevs=lambda: 0,
+            midiOutGetDevName=None, midiInGetDevName=None,
+        )
+        with mock.patch.dict(sys.modules, {"uwin32": fake}):
+            sys.modules.pop("midiports.windows", None)
+            try:
+                from midiports import windows
+                with self.assertRaises(OSError) as caught:
+                    windows.ports(midiports.LOOPBACK)
+                self.assertIn("python -m midiports.loopback", str(caught.exception))
+                with self.assertRaises(OSError) as other:
+                    windows.ports("loopMIDI")
+                self.assertNotIn("midiports.loopback", str(other.exception))
+            finally:
+                sys.modules.pop("midiports.windows", None)
+                midiports.__dict__.pop("windows", None)
+
+
+TABLE_WITH = (
+    "\r\nWindows MIDI Services Console\r\n\r\nBasic MIDI 1.0 Loopback Endpoints\r\n"
+    "\u2500\u2500\u2500\r\n"
+    "\u256d\u2500\u2500\u252c\u2500\u2500\u256e\r\n"
+    "\u2502 Association Id                         \u2502 Name               \u2502\r\n"
+    "\u251c\u2500\u2500\u253c\u2500\u2500\u2524\r\n"
+    "\u2502 {ff66db7e-6ea0-4745-ae42-413f79032ac3} \u2502 PyDevices Loopback \u2502\r\n"
+    "\u2502 {00000000-0000-0000-0000-000000000000} \u2502 Other              \u2502\r\n"
+    "\u2570\u2500\u2500\u2534\u2500\u2500\u256f\r\n"
+)
+TABLE_WITHOUT = "\r\nWindows MIDI Services Console\r\n\r\nNo basic loopback endpoints.\r\n"
+
+
+class FakeMidiExe:
+    """Stands in for ``subprocess.run`` on midi.exe: a list that ``create`` grows."""
+
+    def __init__(self, present=False, saves=False, fail=None):
+        self.present = present
+        self.saves = saves
+        self.fail = fail
+        self.calls = []
+
+    def __call__(self, argv, cwd=None, capture_output=None, check=None):
+        self.calls.append((argv[1:], cwd))
+        if self.fail:
+            return subprocess.CompletedProcess(argv, 1, b"", self.fail.encode())
+        if argv[1:3] == ["basic-loopback", "list"]:
+            text = TABLE_WITH if self.present else TABLE_WITHOUT
+        else:
+            assert argv[1:3] == ["basic-loopback", "create"], argv
+            assert argv[3:] == ["--name", midiports.LOOPBACK, "--save-to-config"], argv
+            self.present = True
+            text = ("\r\nWindows MIDI Services Console\r\n\r\nLoopback created.\r\n"
+                    "  > Association Id                       {a0d834f0-d2fd-4d94-8861-b4b4f94a20a3}\r\n"
+                    "  > Saved to Config                      " + ("Yes" if self.saves else "No") + "\r\n")
+        return subprocess.CompletedProcess(argv, 0, text.encode("utf-8"), b"")
+
+
+class LoopbackCommand(unittest.TestCase):
+    def setUp(self):
+        from midiports import loopback
+        self.loopback = loopback
+        self.programs = tempfile.TemporaryDirectory()
+        self.addCleanup(self.programs.cleanup)
+        tools = Path(self.programs.name, "Windows MIDI Services", "Tools")
+        tools.mkdir(parents=True)
+        (tools / "midi.exe").write_bytes(b"")
+        self.said = []
+
+    def _run(self, fake, **kw):
+        kw.setdefault("platform", "win32")
+        with mock.patch.object(self.loopback.subprocess, "run", fake):
+            code = self.loopback.run(program_files=self.programs.name, out=self.said.append, **kw)
+        return code
+
+    def test_the_table_is_read_by_its_name_column(self):
+        self.assertEqual(self.loopback.listed_names(TABLE_WITH), ["PyDevices Loopback", "Other"])
+        self.assertEqual(self.loopback.listed_names(TABLE_WITHOUT), [])
+
+    def test_a_present_port_is_left_alone(self):
+        fake = FakeMidiExe(present=True)
+        self.assertEqual(self._run(fake), 0)
+        self.assertEqual(self.said, ["PyDevices Loopback: present"])
+        self.assertEqual([c[0][1] for c in fake.calls], ["list"])
+
+    def test_a_missing_port_is_created_and_the_unsaved_config_is_said(self):
+        fake = FakeMidiExe()
+        self.assertEqual(self._run(fake), 0)
+        self.assertEqual([c[0][1] for c in fake.calls], ["list", "create", "list"])
+        self.assertEqual(self.said[0], "PyDevices Loopback: created")
+        self.assertEqual(len(self.said), 2)
+        self.assertIn("midisettings.exe", self.said[1])
+        self.assertIn("administrator", self.said[1])
+
+    def test_a_saved_port_has_no_hint(self):
+        self.assertEqual(self._run(FakeMidiExe(saves=True)), 0)
+        self.assertEqual(self.said, ["PyDevices Loopback: created"])
+
+    def test_check_reports_and_creates_nothing(self):
+        fake = FakeMidiExe()
+        self.assertEqual(self._run(fake, check=True), 1)
+        self.assertEqual([c[0][1] for c in fake.calls], ["list"])
+        self.assertIn("missing", self.said[0])
+        self.assertEqual(self._run(FakeMidiExe(present=True), check=True), 0)
+
+    def test_midi_exe_is_started_from_its_own_folder(self):
+        fake = FakeMidiExe(present=True)
+        self._run(fake)
+        self.assertTrue(fake.calls[0][1].endswith("Tools"))
+
+    def test_no_midi_exe_says_what_to_install(self):
+        with tempfile.TemporaryDirectory() as empty:
+            with self.assertRaises(self.loopback.LoopbackError) as caught:
+                self.loopback.midi_exe(empty)
+        self.assertIn("aka.ms/midi", str(caught.exception))
+        code = self.loopback.run(platform="win32", program_files=tempfile.gettempdir() + "/nowhere", out=self.said.append)
+        self.assertEqual(code, 2)
+        self.assertIn("Install Windows MIDI Services", self.said[0])
+
+    def test_a_midi_exe_failure_is_loud(self):
+        self.assertEqual(self._run(FakeMidiExe(fail="service not running")), 2)
+        self.assertIn("service not running", self.said[0])
+
+    def test_other_systems_get_their_own_advice_and_nothing_is_run(self):
+        for platform, word in (("linux", "snd-virmidi"), ("darwin", "IAC Driver")):
+            self.said.clear()
+            fake = FakeMidiExe()
+            self.assertEqual(self._run(fake, platform=platform), 2)
+            self.assertIn(word, self.said[0])
+            self.assertEqual(fake.calls, [])
+
+    def test_the_command_line_takes_check(self):
+        with mock.patch.object(self.loopback, "run", return_value=1) as run:
+            self.assertEqual(self.loopback.main(["--check"]), 1)
+            run.assert_called_once_with(check=True)
+            self.loopback.main([])
+            self.assertFalse(run.call_args.kwargs["check"])
 
 
 if __name__ == "__main__":

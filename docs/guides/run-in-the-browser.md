@@ -35,35 +35,22 @@ bin/wasm.py --no-open -m paint
 The launcher only stages URL intent, serves those checkouts, prints the URL, and
 opens a browser. Playwright is maintained as a separate test harness.
 
-Audio and microphone use require the host page's Enable Audio/Microphone
-control. Backends raise a clear permission error until the relevant control
-has been used.
+Microphone use requires the host page's Enable Microphone control, and the
+backend raises a clear permission error until it has been used. Audio output
+unlocks on the page's first click, tap or key press.
 
 ## Audio in the browser
 
-A browser blocks sound until the person has used the page. Until then
-`play()` raises `RuntimeError("audio output is disabled; use the host Enable
-Audio control")`, and the output is left as it was, so you can try again. The
-gallery host page unlocks audio on the first click, tap or key press; a page
-of your own has to do the same with its Enable Audio control. Try at start,
-and retry on the next input event:
+A browser blocks sound until the person has used the page. Call `play()` as
+usual: until the first click, tap or key press the output is locked, `play()`
+returns and keeps the sample, and the first tick of `service()` after the
+click starts it. The bridge turns audio on at that first gesture itself, so a
+page needs no Enable Audio control and a program needs no retry of its own.
 
-```python
-import events
-
-def start_sound(out, sample, app):
-    def attempt(event=None):
-        try:
-            out.play(sample, loop=True)
-        except RuntimeError:
-            return              # still locked; wait for the next input
-        for kind in (events.MOUSEBUTTONDOWN, events.KEYDOWN):
-            app.off(kind, attempt)
-
-    attempt()
-    if not out.playing:
-        app.on([events.MOUSEBUTTONDOWN, events.KEYDOWN], attempt)
-```
+`AudioOut` does this for any transport that raises `audiodev.AudioLocked` from
+`open()`, a `RuntimeError` that existing handlers still catch. Raw `pcm_out()`
+output still raises it until the page is unlocked, since it has nothing to
+keep.
 
 Execution stays on the browser main thread; running the VM in a worker is
 not part of this backend contract.

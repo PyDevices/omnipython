@@ -23,6 +23,7 @@ The module's ``NAMES`` is sorted, and icon *i* is
 
 import argparse
 import difflib
+import io
 import os
 import shutil
 import sys
@@ -121,8 +122,20 @@ def check_source(source, size):
         )
 
 
+def symbol_path(source, name, size):
+    """Where the checkout keeps *name* as a filled Material Symbol at *size* px."""
+    return os.path.join(
+        source, "symbols", "web", name, "materialsymbolsoutlined", "%s_fill1_%dpx.svg" % (name, size)
+    )
+
+
 def find_icon(source, name, size):
-    """The PNG path of filled icon *name* at *size* px, in whichever category holds it."""
+    """The path of filled icon *name* at *size* px.
+
+    A Material Icons PNG, in whichever category holds it. Newer icons, such as
+    ``instant_mix``, exist only as Material Symbols, so a name with no PNG at
+    all falls back to its filled Outlined symbol's SVG.
+    """
     png = os.path.join(source, "png")
     found = []
     others = set()
@@ -138,6 +151,9 @@ def find_icon(source, name, size):
         raise IconError("icon %r is in several categories: %s" % (name, ", ".join(found)))
     if found:
         return found[0]
+    symbol = symbol_path(source, name, size)
+    if os.path.isfile(symbol):
+        return symbol
     if others:
         raise IconError(
             "icon %r has no %ddp PNG here (sizes present: %s). Add the %ddp folders to the sparse "
@@ -151,14 +167,26 @@ def find_icon(source, name, size):
     close = difflib.get_close_matches(name, sorted(every), n=5)
     raise IconError(
         "icon %r not found in the source. Closest names: %s. Names are the folder names under "
-        "png/<category>/; if the checkout is a sparse one, add the icon to it."
+        "png/<category>/ and symbols/web/; if the checkout is a sparse one, add the icon to it."
         % (name, ", ".join(close) or "none")
     )
 
 
+def _open(path, size):
+    if not path.endswith(".svg"):
+        return Image.open(path)
+    try:
+        import resvg_py
+    except ImportError:
+        raise IconError(
+            "%s is a Material Symbol, an SVG, and drawing it needs resvg-py: pip install resvg-py" % path
+        ) from None
+    return Image.open(io.BytesIO(bytes(resvg_py.svg_to_bytes(svg_path=path, width=size, height=size))))
+
+
 def alpha_mask(path, size):
-    """The antialiased shape of the PNG at *path* as ``size * size`` bytes."""
-    with Image.open(path) as im:
+    """The antialiased shape of the PNG or SVG at *path* as ``size * size`` bytes."""
+    with _open(path, size) as im:
         if im.size != (size, size):
             raise IconError("%s is %dx%d, expected %dx%d" % (path, im.size[0], im.size[1], size, size))
         if im.mode not in ("LA", "RGBA", "PA", "La", "RGBa"):

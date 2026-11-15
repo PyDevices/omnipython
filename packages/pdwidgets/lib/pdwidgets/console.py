@@ -110,8 +110,8 @@ class Console(io.IOBase, Widget):
         Returns:
             int | None: Number of bytes read, or ``None`` if no reader is set.
         """
-        if self._readobj is not None:
-            return self._readobj.readinto(buf, nbytes)
+        if self._read_obj is not None:
+            return self._read_obj.readinto(buf, nbytes)
         else:
             return None
 

@@ -32,13 +32,19 @@ The relay's messages are plain objects:
 - worker to page: ``{data: Uint8Array}``, whole messages for the page to
   ``send()`` to its output.
 
-In MicroPython's WebAssembly port, open an input without awaiting::
+In MicroPython's WebAssembly port, open an input or an output without
+awaiting::
 
     midi_in = webmidi.page_in("keystation")
+    midi_out = webmidi.page_out("synth")
 
-It reads as any other input does, with no timestamps and no output. Asking
-for MIDI happens in the background, so ``midi_in.names`` is empty until the
-person has said yes, and ``midi_in.why`` says why if the answer was no.
+They read and write as any other ports do, with no timestamps. Asking for
+MIDI happens in the background, so ``midi_in.names`` and ``midi_out.names``
+are empty and ``midi_out.name`` is ``None`` until the person has said yes,
+and ``why`` says why if the answer was no. ``midi_out.names`` lists every
+output that matches, so a program can offer them; ``midi_out.name`` is the
+one it sends to. Until an output is there, writes are dropped
+and counted in ``midi_out.dropped``.
 
 Timestamps
 ----------
@@ -531,6 +537,120 @@ def page_in(name=""):
     input. Ports that match later join while it's open. Never blocks.
     """
     return _PagePolledIn(name)
+
+
+_PAGE_OUT = """(name) => {
+    const pending = [];
+    let access = null, output = null, why = null;
+    name = name.toLowerCase();
+    const matches = (port) => port.type === 'output' && String(port.name).toLowerCase().includes(name);
+    const update = (event) => {
+        const port = event.port;
+        if (!matches(port)) return;
+        if (port.state === 'connected') {
+            if (output === null) output = port;
+        } else if (output !== null && output.id === port.id) {
+            output = null;
+            for (const other of access.outputs.values()) {
+                if (other.state === 'connected' && matches(other)) { output = other; break; }
+            }
+        }
+    };
+    if (typeof navigator === 'undefined' || !navigator.requestMIDIAccess) {
+        why = 'this browser has no Web MIDI here';
+    } else {
+        navigator.requestMIDIAccess().then((granted) => {
+            access = granted;
+            for (const port of access.outputs.values()) {
+                if (matches(port)) { output = port; break; }
+            }
+            access.addEventListener('statechange', update);
+        }, (error) => { why = String(error); });
+    }
+    return {
+        put: (byte) => { pending.push(byte); },
+        send: () => {
+            const data = new Uint8Array(pending);
+            pending.length = 0;
+            if (output === null) return false;
+            try {
+                output.send(data);
+            } catch (error) {
+                why = String(error);
+                return false;
+            }
+            return true;
+        },
+        name: () => (output === null ? null : output.name),
+        names: () => (access === null ? '' : Array.from(access.outputs.values())
+            .filter((port) => port.state === 'connected' && matches(port))
+            .map((port) => port.name).join('\\n')),
+        why: () => why,
+        close: () => {
+            if (access) access.removeEventListener('statechange', update);
+            output = null;
+            pending.length = 0;
+        },
+    };
+}"""
+
+
+class _PageSentOut(_WholeOut):
+    """An output that hands whole messages to the page, a byte at a time.
+
+    Plain integers cross from MicroPython to JavaScript without a proxy, so
+    the page builds each write's messages from them and sends them. A send the
+    browser refuses (SysEx it wasn't granted, say) is dropped and counted,
+    and ``why`` says what the browser said.
+    """
+
+    def __init__(self, name):
+        _WholeOut.__init__(self)
+        import js
+
+        self._page = js.eval(_PAGE_OUT)(name)
+        self._put = self._page.put
+        self._send = self._page.send
+
+    @property
+    def name(self):
+        """The name of the output this port sends to, or ``None``."""
+        return self._page.name()
+
+    @property
+    def names(self):
+        """Every connected output that matches, which this port could send to."""
+        names = self._page.names()
+        return names.split("\n") if names else []
+
+    @property
+    def why(self):
+        """Why there's no MIDI, in a sentence, or ``None``."""
+        return self._page.why()
+
+    def _deliver(self, data):
+        put = self._put
+        for b in data:
+            put(b)
+        if not self._send():
+            self.dropped += 1
+
+    def close(self):
+        if not self._closed:
+            _WholeOut.close(self)
+            self._page.close()
+
+    deinit = close
+
+
+def page_out(name=""):
+    """An output to the first matching port, for MicroPython's WebAssembly port.
+
+    ``name`` matches part of a port's name, ignoring case; ``""`` takes the
+    first output. If that port goes away, another that matches takes its
+    place, and one plugged in later is picked up. Never blocks.
+    """
+    return _PageSentOut(name)
 
 
 # -- in a worker: the page relays over a MessagePort ------------------------------

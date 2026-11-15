@@ -27,6 +27,7 @@ ROOT = Path(__file__).resolve().parents[1]
 TESTS = Path(__file__).resolve().parent
 PACKAGES = sorted(p for p in (ROOT / "packages" / "usb").glob("usb-*") if (p / "package.json").is_file())
 PREFIX = "github:PyDevices/pydevices/packages/usb/"
+BOARDNAME = "github:PyDevices/pydevices/packages/_boardname"
 
 # The package files that front the C module, and the only ones allowed to
 # import it.
@@ -68,6 +69,10 @@ class PackageFileTests(unittest.TestCase):
         for pkg in PACKAGES:
             spec = json.loads((pkg / "package.json").read_text())
             for dep, _ref in spec.get("deps", []):
+                # The one outside packages/usb: the board's name for usb-hid's
+                # product string (tests/test_boardname.py).
+                if dep == BOARDNAME:
+                    continue
                 if dep.startswith("github:"):
                     with self.subTest(pkg=pkg.name, dep=dep):
                         self.assertTrue(dep.startswith(PREFIX), dep)

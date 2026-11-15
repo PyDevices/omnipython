@@ -8,7 +8,7 @@
 # is right and is not what this file is about: the question here is only what
 # gets *shipped* to a device. Installing a board config onto an ESP32-S3 used to
 # pull `windisplay`, `jndisplay`, `wasmdisplay`, `pgdisplay`, `sdldisplay`,
-# `androidsdl`, `win_audio`, `pygame_audio`, `wasm_audio`, `web_audio`,
+# `androidsdl`, `alsa_audio`, `win_audio`, `pygame_audio`, `wasm_audio`, `web_audio`,
 # `sdl2_audio`, `android_audio`, `win32`, `sdl2`, `threading` and `wasm` — about
 # half of what landed, none of it able to execute, all of it minutes of install
 # time over WiFi and flash that could hold something (pydevices#30).
@@ -54,6 +54,7 @@ host-only = [
 # with them: it is never selected by `auto`, is imported explicitly, and builds
 # on audiodev's own PCM classes with no host dependency.
 host-only = [
+    "alsa_audio",
     "android_audio",
     "pygame_audio",
     "sdl2_audio",
@@ -91,6 +92,8 @@ host-only = [
 # aioble needs no step. On CircuitPython it needs Adafruit's asyncio instead,
 # named as repo.bledev.circuitpython for omip the same way.
 own-package = true
+# The services advertise the board's name, boarddev.name(), from pydevices.
+requires = ["pydevices"]
 # The central-only host backends go in pydevices-desktop, as for the other
 # packages here. A name listed before its file exists fails the sync.
 host-only = ["bleak", "webble"]
@@ -102,9 +105,11 @@ pypi-extras = { ble = ["bleak>=1.0"] }
 # Board-to-board audio and video is its own MIP package, as BLE is, so a
 # board that never streams doesn't carry it:
 #     omip.install("medialink")
-# It needs no other package. Discovery uses the firmware's mdns module, and
-# the intercom takes any audiodev microphone and speaker it is handed.
+# Discovery uses the firmware's mdns module and advertises the board's name,
+# boarddev.name(), from pydevices; the intercom takes any audiodev microphone
+# and speaker it is handed.
 own-package = true
+requires = ["pydevices"]
 
 # midiports and the USB packages are directories at the top of the repository,
 # not in lib/, each with its own manifest.py. `top-level = true` publishes that
@@ -129,6 +134,9 @@ own-package = true
 # for the people who have no mip: the wheel carries the files its package.json
 # lists, adafruit_midi at its pinned tag among them. The only key a top-level
 # section may add.
+
+[_boardname]
+top-level = true
 
 [midiports]
 top-level = true

@@ -938,9 +938,15 @@ def _touch_state_for(device):
     """Per-pointer touch state (must not be module-global — multi-display)."""
     st = getattr(device, "_lv_touch", None)
     if st is None:
-        st = {"x": 0, "y": 0, "pressed": False}
+        st = {"x": 0, "y": 0, "pressed": False, "mouse": False, "park": 0}
         device._lv_touch = st
     return st
+
+
+#: Where a lifted finger leaves the pointer: off every widget, so LVGL ends
+#: the hover the press began. A finger has no hover, and a pointer left at the
+#: spot it touched keeps that widget in the hovered state until the next tap.
+_PARKED = (-1, -1)
 
 
 def _make_touch_cb(device):
@@ -948,19 +954,36 @@ def _make_touch_cb(device):
 
     def _touch_cb(event, indev, data):
         st = _touch_state_for(device)
-        if event is not None:
-            if event.type == events.MOUSEBUTTONDOWN and event.button == 1:
-                st["x"], st["y"] = event.pos
-                st["pressed"] = True
-            elif event.type == events.MOUSEMOTION:
-                # Moves with the button up count too: LVGL hovers a released
-                # pointer (HOVER_OVER / HOVER_LEAVE, the HOVERED state), as its
-                # own desktop drivers do. A finger is a separate event type
-                # and still moves only while it touches.
-                st["x"], st["y"] = event.pos
-            elif event.type == events.MOUSEBUTTONUP and event.button == 1:
-                st["x"], st["y"] = event.pos
-                st["pressed"] = False
+        if event is None:
+            # Idle reads after a lift. The first leaves the pointer where the
+            # finger was, so the click lands. The second moves it one pixel:
+            # LVGL only remembers the widget it hovered when the pointer moves
+            # while released, and without that it never ends the hover. The
+            # third parks it off the screen.
+            if st["park"] and not st["pressed"]:
+                st["park"] -= 1
+                if st["park"] == 1:
+                    st["x"] += 1
+                elif not st["park"]:
+                    st["x"], st["y"] = _PARKED
+        elif event.type == events.MOUSEBUTTONDOWN and event.button == 1:
+            st["x"], st["y"] = event.pos
+            st["pressed"] = True
+            st["park"] = 0
+        elif event.type == events.MOUSEMOTION:
+            # Moves with the button up count too: LVGL hovers a released
+            # pointer (HOVER_OVER / HOVER_LEAVE, the HOVERED state), as its
+            # own desktop drivers do. A finger is a separate event type
+            # and still moves only while it touches.
+            st["x"], st["y"] = event.pos
+            if not st["pressed"] and not getattr(event, "touch", False):
+                st["mouse"] = True
+        elif event.type == events.MOUSEBUTTONUP and event.button == 1:
+            st["x"], st["y"] = event.pos
+            st["pressed"] = False
+            # A pointer that has never moved with the button up is a touch
+            # screen, and so is any lift the OS says came from a finger.
+            st["park"] = 3 if (getattr(event, "touch", False) or not st["mouse"]) else 0
         data.point = lv.point_t({"x": st["x"], "y": st["y"]})
         data.state = lv.INDEV_STATE.PRESSED if st["pressed"] else lv.INDEV_STATE.RELEASED
 

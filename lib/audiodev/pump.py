@@ -49,6 +49,11 @@ whether there is a thread to land them from:
     PCM, opens no peripheral, and is left holding the policy -- the codec, two
     clients, a file, the fault sentence.
 
+    Windows uses it too, when the interpreter can play to the computer's
+    speaker itself (`speaker`). The output is then built on a `SpeakerWire`,
+    and the pump writes every block straight into WASAPI on its own thread,
+    with no Python between the graph and the device.
+
 A fault in the pump is a sentence, not a traceback and not a dead speaker:
 `Pump.died` turns the status block's error and fault words into one,
 and the caller that notices is `AudioOut`, which falls back to the old
@@ -317,6 +322,43 @@ def on_board():
     mod = driver()
     return mod is not None and (hasattr(mod, "i2s_start")
                                 or hasattr(mod, "dac_stats"))
+
+
+def speaker():
+    """True when the pump can play to the computer's speaker itself.
+
+    Windows: ``audiobusio.I2SOut(..., sink="wasapi")`` opens the default
+    speaker in WASAPI shared mode and the pump writes each block to it from
+    its own thread. Asked of the driver, which has ``sink_stats`` only where
+    a sink can be a speaker.
+    """
+    mod = driver()
+    return (mod is not None and hasattr(mod, "sink_stats")
+            and busio() is not None)
+
+
+class SpeakerWire:
+    """The wire `BusioDriver` builds a desktop speaker output on.
+
+    A board's `I2SWire <audiodev.I2SWire>` names pins; a speaker has none,
+    so the pin numbers are placeholders the desktop ``I2SOut`` ignores and
+    ``sink`` is what picks the device: ``"wasapi"`` is the default speaker,
+    and the firmware's README gives the full path syntax.
+    """
+
+    port = -1
+    sck = 0
+    ws = 1
+    sd = 2
+    mck = None
+    mck_fs = None
+    sd_in = None
+
+    def __init__(self, sink="wasapi"):
+        self.sink = sink
+
+    def __repr__(self):
+        return "SpeakerWire(sink=%r)" % (self.sink,)
 
 
 def duplex():

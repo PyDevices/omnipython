@@ -7,7 +7,8 @@
 pydevices' ``keys`` module) to bytes: letters and symbols on a US layout,
 Ctrl+letter as a control code, and the arrows, Home, End, Page Up, Page Down,
 Insert, Delete and F1 to F4 as escape sequences. `KeyEvents` reads key-down
-events from a function such as a desktop display's ``get_events``.
+events from a function such as a desktop display's ``get_events``, and mouse
+events too when you give it a `Mouse <vtterm.mouse.Mouse>`.
 """
 
 # Key codes and modifier bits, the same values as pydevices' keys module.
@@ -59,6 +60,9 @@ _SPECIAL = {
     1073741885: b"\x1bOS",
 }
 
+_PAGE_UP = 1073741899
+_PAGE_DOWN = 1073741902
+
 # Up, Down, Right, Left: the final byte of their sequences.
 _ARROWS = {1073741906: b"A", 1073741905: b"B", 1073741903: b"C", 1073741904: b"D"}
 
@@ -105,6 +109,24 @@ def key_bytes(key, mod=0, app_cursor=False):
     return out
 
 
+def scroll_key(screen, key, mod):
+    """Page the scrollback for Shift+Page Up or Shift+Page Down.
+
+    Args:
+        screen (Screen): The screen whose view moves.
+        key (int): An SDL-style key code.
+        mod (int): Modifier mask.
+
+    Returns:
+        bool: ``True`` if the key was a scrollback key, so it shouldn't be
+        sent to the program. On the alternate screen it never is.
+    """
+    if not mod & _KMOD_SHIFT or screen.alt or (key != _PAGE_UP and key != _PAGE_DOWN):
+        return False
+    screen.scroll_view((screen.rows - 1) * (1 if key == _PAGE_UP else -1))
+    return True
+
+
 class KeyEvents:
     """Reads key presses from an event function and returns their bytes.
 
@@ -115,22 +137,33 @@ class KeyEvents:
             go to ``other`` if given.
         screen (Screen): Its ``app_cursor`` mode picks the arrow sequences.
         other (callable): Called with each event that isn't a key-down.
+        mouse (Mouse): A `Mouse <vtterm.mouse.Mouse>` whose reports for mouse
+            events are returned with the keys' bytes, in order.
     """
 
-    def __init__(self, get_events, screen=None, other=None):
+    def __init__(self, get_events, screen=None, other=None, mouse=None):
         self.get_events = get_events
         self.screen = screen
         self.other = other
+        self.mouse = mouse
 
     def read(self):
         """Return the bytes for the keys pressed since the last call, or ``None``."""
         out = None
         app = self.screen is not None and self.screen.app_cursor
+        scr = self.screen
         for e in self.get_events() or ():
             if getattr(e, "type", None) == _KEYDOWN:
+                if scr is not None and scroll_key(scr, e.key, e.mod):
+                    continue
                 b = key_bytes(e.key, e.mod, app)
                 if b:
                     out = b if out is None else out + b
-            elif self.other is not None:
-                self.other(e)
+            else:
+                if self.mouse is not None:
+                    b = self.mouse.event(e)
+                    if b:
+                        out = b if out is None else out + b
+                if self.other is not None:
+                    self.other(e)
         return out
