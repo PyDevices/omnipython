@@ -100,6 +100,11 @@ def build_indexes(scratch):
     # micropython is built into every unix MicroPython: beside a frozen module it counts, alone it doesn't.
     write_package(ours, "frozen-and-built-in", {"asyncio/__init__.py": "COPY = True\n", "micropython.py": "COPY = True\n"})
     write_package(ours, "built-in-only", {"micropython.py": "COPY = True\n"})
+    # The stand-in for a module: skipped where the firmware has it, installed where it doesn't.
+    write_package(ours, "stand-in-built-in", {"micropython.py": "COPY = True\n"}, stands_in_for="micropython")
+    write_package(ours, "stand-in-frozen", {"asyncio/__init__.py": "COPY = True\n"}, stands_in_for="asyncio")
+    write_package(ours, "stand-in-absent", {"absent.py": "COPY = True\n"}, stands_in_for="no_such_module")
+    write_package(ours, "needs-stand-in", {"needs.py": "N = True\n"}, deps=[["stand-in-built-in", "latest"]])
     write_package(ours, "on-frozen", {"on_frozen.py": "F = True\n"}, deps=[["frozen-core", "latest"], ["gt911", "latest"]])
     # An app that needs a frozen package twice over: once itself, once through another of its needs.
     write_package(
@@ -744,6 +749,35 @@ class MicroPythonRun(Indexes):
     def test_a_package_of_built_in_modules_alone_still_installs(self):
         # A package may extend a built-in module, as micropython-lib's time does.
         out = self.frozen("built-in-only")
+        self.assertNotIn("Skipping", out)
+        self.assertEqual(self.landed(), ["micropython.py"])
+
+    def test_a_stand_in_for_a_built_in_module_is_skipped(self):
+        out = self.frozen("stand-in-built-in")
+        self.assertIn("Skipping stand-in-built-in: it stands in for micropython, which this firmware has built-in", out)
+        self.assertIn("RESULT True", out)
+        self.assertEqual(self.landed(), [])
+
+    def test_a_stand_in_is_skipped_as_a_dep_and_the_rest_lands(self):
+        out = self.frozen("needs-stand-in")
+        self.assertIn("Skipping stand-in-built-in", out)
+        self.assertEqual(self.landed(), ["needs.py"])
+
+    def test_a_stand_in_for_a_frozen_module_is_skipped_where_frozen_wins(self):
+        out = self.frozen("stand-in-frozen")
+        self.assertIn("which this firmware has frozen", out)
+        self.assertEqual(self.landed(), [])
+        out = self.frozen("stand-in-frozen", before="sys.path.insert(0, %r)" % str(self.target))
+        self.assertNotIn("Skipping", out)
+        self.assertEqual(self.landed(), ["asyncio/__init__.py"])
+
+    def test_a_stand_in_for_a_module_the_firmware_lacks_installs(self):
+        out = self.frozen("stand-in-absent")
+        self.assertNotIn("Skipping", out)
+        self.assertEqual(self.landed(), ["absent.py"])
+
+    def test_force_installs_a_stand_in_anyway(self):
+        out = self.frozen("stand-in-built-in", extra=", force=True")
         self.assertNotIn("Skipping", out)
         self.assertEqual(self.landed(), ["micropython.py"])
 
