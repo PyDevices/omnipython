@@ -1,41 +1,60 @@
 # SPDX-FileCopyrightText: 2026 Brad Barnett
 #
 # SPDX-License-Identifier: MIT
-from _typeshed import Incomplete
-from medialink._compat import sleep_ms as sleep_ms, ticks_diff as ticks_diff, ticks_ms as ticks_ms
+"""Finding peers: by mDNS on a shared network, or over a hotspot."""
+
+from typing import Any
 
 SERVICE_TYPE: str
 PROTOCOL: str
 
 class MDNS:
-    def __init__(self, interface=None) -> None: ...
+    """Advertise this peer and find others on the local network."""
+
+    def __init__(self, interface: Any = None) -> None: ...
     @property
-    def hostname(self): ...
-    def advertise(self, name, port) -> None: ...
-    def find(self, name=None, timeout: int = 2): ...
+    def hostname(self) -> str: ...
+    def advertise(self, name: str, port: int) -> None:
+        """Answer for `name` on UDP `port` until `deinit`."""
+    def find(self, name: str | None = None, timeout: int | float = 2) -> list[tuple[str, tuple[str, int]]]:
+        """`[(name, (ip, port)), ...]` of the peers that answer."""
     def deinit(self) -> None: ...
 
 class Hotspot:
-    password: Incomplete
-    ssid: Incomplete
-    host: Incomplete
-    timeout: Incomplete
-    name: Incomplete
-    port: Incomplete
-    def __init__(self, password, *, ssid=None, host=None, timeout: int = 20) -> None: ...
-    def advertise(self, name, port) -> None: ...
-    def find(self, name=None, timeout=None): ...
-    def start(self, ssid): ...
-    def join(self, ssid, timeout=None): ...
+    """Two boards on a Wi-Fi network of their own: one hosts, one joins."""
+
+    password: str
+    ssid: str | None
+    host: bool | None
+    timeout: int | float
+    name: str | None
+    port: int | None
+    def __init__(
+        self, password: str, *, ssid: str | None = None, host: bool | None = None, timeout: int | float = 20
+    ) -> None: ...
+    def advertise(self, name: str, port: int) -> None:
+        """Remember this side's name and port; the hotspot starts at `find()`."""
+    def find(self, name: str | None = None, timeout: int | float | None = None) -> list[tuple[str, tuple[str, int | None]]]:
+        """`[(name, (ip, port))]` of the host, or `[]` on the host itself."""
+    def start(self, ssid: str) -> str:
+        """Start an access point named `ssid`. Returns this board's address on it."""
+    def join(self, ssid: str, timeout: int | float | None = None) -> str:
+        """Join the access point `ssid`. Returns the host's address on it."""
     def deinit(self) -> None: ...
 
 COMPANY: int
 
-def pack_beacon(address, port): ...
-def unpack_beacon(data): ...
+def pack_beacon(address: str, port: int) -> bytes:
+    """The manufacturer data a medialink advertisement carries."""
+
+def unpack_beacon(data: bytes | bytearray | memoryview) -> tuple[str, int] | None:
+    """`(ip, port)` from a medialink advertisement's data, or `None`."""
 
 class BLE:
-    def __init__(self, ble=None) -> None: ...
-    def advertise(self, name, port, address=None) -> None: ...
-    def find(self, name=None, timeout: int = 2): ...
+    """Find a peer nearby by Bluetooth LE, then talk to it over IP."""
+
+    def __init__(self, ble: Any = None) -> None: ...
+    def advertise(self, name: str, port: int, address: str | None = None) -> None: ...
+    def find(self, name: str | None = None, timeout: int | float = 2) -> list[tuple[str, tuple[str, int]]]:
+        """`[(name, (ip, port)), ...]` of the peers heard."""
     def deinit(self) -> None: ...

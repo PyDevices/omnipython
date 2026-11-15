@@ -1,13 +1,14 @@
 # SPDX-FileCopyrightText: 2026 Brad Barnett
 #
 # SPDX-License-Identifier: MIT
+"""Heart Rate Service (0x180D): a heart rate monitor that fitness apps can read."""
 from . import Characteristic as Characteristic, Service as Service, UUID as UUID
-from _typeshed import Incomplete
+from collections.abc import Iterable
 
-SERVICE: Incomplete
-HEART_RATE_MEASUREMENT: Incomplete
-BODY_SENSOR_LOCATION: Incomplete
-HEART_RATE_CONTROL_POINT: Incomplete
+SERVICE: UUID
+HEART_RATE_MEASUREMENT: UUID
+BODY_SENSOR_LOCATION: UUID
+HEART_RATE_CONTROL_POINT: UUID
 OTHER: int
 CHEST: int
 WRIST: int
@@ -16,12 +17,17 @@ HAND: int
 EAR_LOBE: int
 FOOT: int
 
-def encode_measurement(bpm, rr_ms=(), energy_kj=None, contact=None): ...
+def encode_measurement(bpm: int, rr_ms: Iterable[float] = (), energy_kj: int | None = None, contact: bool | None = None) -> bytes:
+    """The Heart Rate Measurement bytes: flags, rate, energy, RR-intervals."""
 
 class HeartRate:
+    """A Heart Rate Service."""
+
     SERVICE = SERVICE
-    service: Incomplete
-    characteristic: Incomplete
-    def __init__(self, location=None, energy_expended: bool = False) -> None: ...
-    def update(self, bpm, rr_ms=(), energy_kj=None, contact=None) -> None: ...
-    async def reset_requested(self) -> None: ...
+    service: Service
+    characteristic: Characteristic
+    def __init__(self, location: int | None = None, energy_expended: bool = False) -> None: ...
+    def update(self, bpm: int, rr_ms: Iterable[float] = (), energy_kj: int | None = None, contact: bool | None = None) -> None:
+        """Send a measurement to every central subscribed to it."""
+    async def reset_requested(self) -> None:
+        """Wait until a central asks to reset the energy count, then return."""

@@ -1,46 +1,41 @@
 # SPDX-FileCopyrightText: 2026 Brad Barnett
 #
 # SPDX-License-Identifier: MIT
-from . import BLEError as BLEError, BLETimeoutError as BLETimeoutError, BusyError as BusyError, Characteristic as Characteristic, DisconnectedError as DisconnectedError, MAX_MTU as MAX_MTU, Service as Service, UUID as UUID, UnsupportedError as UnsupportedError, connect_and_set_up as connect_and_set_up, is_adapter as is_adapter, sleep_ms as sleep_ms
-from _typeshed import Incomplete
+"""Nordic UART Service: a two-way byte stream over BLE."""
+from . import BLE, Device, Connection, UUID as UUID
+from collections.abc import Iterable
+from typing import Any
+from typing_extensions import Self
 
-SERVICE: Incomplete
-RX: Incomplete
-TX: Incomplete
+SERVICE: UUID
+RX: UUID
+TX: UUID
 MTU: int
 
 class Link:
-    connection: Incomplete
+    """One end of a NUS byte stream. Made by `serve` or `connect`."""
+
+    connection: Connection
     bytes_in: int
     bytes_out: int
-    def __init__(self, connection) -> None: ...
+    def __init__(self, connection: Connection) -> None: ...
     @property
-    def closed(self): ...
-    async def read(self, n: int = -1): ...
-    async def readexactly(self, n): ...
-    async def readline(self): ...
-    def __aiter__(self): ...
-    async def __anext__(self): ...
-    async def write(self, data) -> None: ...
+    def closed(self) -> bool: ...
+    async def read(self, n: int = -1) -> bytes:
+        """Up to `n` bytes (all that's buffered when `n` < 0), waiting for at least one."""
+    async def readexactly(self, n: int) -> bytes:
+        """Exactly `n` bytes. Raises `DisconnectedError` if the link closes first."""
+    async def readline(self) -> bytes:
+        """Bytes up to and including `b"\\n"`; at end of stream, whatever is left."""
+    def __aiter__(self) -> Self: ...
+    async def __anext__(self) -> bytes: ...
+    async def write(self, data: bytes | bytearray | memoryview | Iterable[int]) -> None:
+        """Send all of `data`, split to the link's MTU."""
     async def drain(self) -> None: ...
-    async def close(self) -> None: ...
+    async def close(self) -> None:
+        """Disconnect. Anything already received stays readable."""
 
-class _ServerLink(Link):
-    def __init__(self, connection, server) -> None: ...
-
-class _Server:
-    ble: Incomplete
-    service: Incomplete
-    rx: Incomplete
-    tx: Incomplete
-    links: Incomplete
-    def __init__(self, ble) -> None: ...
-    def add(self, link) -> None: ...
-    def wake(self) -> None: ...
-
-async def serve(ble, name: str = 'bledev', *, timeout_ms=None, interval_us: int = 100000, mtu=...): ...
-
-class _ClientLink(Link):
-    def __init__(self, connection, rx, tx) -> None: ...
-
-async def connect(ble, name=None, *, device=None, timeout_ms: int = 10000, mtu=..., **connect_options): ...
+async def serve(ble: BLE | object, name: str = 'bledev', *, timeout_ms: int | None = None, interval_us: int = 100000, mtu: int = ...) -> Link:
+    """Advertise the Nordic UART service as `name` and return a `Link` when a central connects."""
+async def connect(ble: BLE | object, name: str | None = None, *, device: Device | None = None, timeout_ms: int = 10000, mtu: int = ..., **connect_options: Any) -> Link:
+    """Find a NUS peripheral (by `name`, or the first one advertising the service), connect, and return a `Link`."""

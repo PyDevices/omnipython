@@ -1,10 +1,13 @@
 # SPDX-FileCopyrightText: 2026 Brad Barnett
 #
 # SPDX-License-Identifier: MIT
-from . import UnsupportedError as UnsupportedError
-from _typeshed import Incomplete
+"""Optional backend selection."""
+from . import UnsupportedError as UnsupportedError, BLE
+from typing import Any
 
-BACKENDS: Incomplete
+BACKENDS: dict[str, tuple[str, str]]
 
-def backend_name(): ...
-def adapter(backend=None, **kwargs): ...
+def backend_name() -> str | None:
+    """The backend this host would get, or `None` if it has no BLE."""
+def adapter(backend: str | None = None, **kwargs: Any) -> BLE:
+    """Construct the adapter for this host (or for `backend`)."""

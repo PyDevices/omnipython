@@ -1,8 +1,11 @@
 # SPDX-FileCopyrightText: 2026 Brad Barnett
 #
 # SPDX-License-Identifier: MIT
-from . import BLEError as BLEError, GattError as GattError, NEEDS_PAIRING as NEEDS_PAIRING, PairingError as PairingError, STALE_BOND as STALE_BOND, nus as nus, pack_advertisement as pack_advertisement, wait_ms as wait_ms
-from _typeshed import Incomplete
+"""The MicroPython REPL over Bluetooth, behind a password."""
+from . import BLE, BLEError, Device, PairingError, nus as nus, _Passkey
+from .security import _Store
+from collections.abc import Callable
+from typing import Any, Literal, Protocol
 
 PROMPT: bytes
 PAIR_WITHIN_MS: int
@@ -11,88 +14,68 @@ DENIED: bytes
 BUSY: bytes
 MAX_PASSWORD: int
 
-class AuthError(BLEError): ...
+class AuthError(BLEError):
+    """The board refused the password."""
 
 class Login:
-    verdict: Incomplete
-    def __init__(self, password) -> None: ...
-    def feed(self, data): ...
+    """The password exchange, without a radio, so it can be tested anywhere."""
 
-def take_slot(dupterm, stream, want=None): ...
-def give_slot(dupterm, stream, index) -> None: ...
-def start(password=None, name: str = 'mpy-repl', *, interval_us: int = 100000, dupterm_index=None, files: bool = False, console: bool = True, window=None, pairing=None, show=None, hide=None, confirm=None, bond_store=None): ...
-def stop() -> None: ...
-def is_running(): ...
+    verdict: bool | None
+    def __init__(self, password: str | bytes | bytearray | memoryview) -> None: ...
+    def feed(self, data: bytes | bytearray | memoryview) -> tuple[bytes, bool | None, bytes]:
+        """`(reply, verdict, rest)` for a chunk the client wrote."""
 
-class _Stream(_IOBase):
-    def __init__(self, server) -> None: ...
-    def readinto(self, buf): ...
-    def write(self, buf): ...
-    def ioctl(self, op, arg): ...
+def take_slot(dupterm: Callable[..., Any], stream: object, want: int | None = None) -> int | None:
+    """Put `stream` on a free `os.dupterm` slot and return its index, or `None` when none is free."""
+def give_slot(dupterm: Callable[..., Any], stream: object, index: int) -> None:
+    """Free slot `index` if `stream` still holds it."""
 
-class _Server:
-    TX_CAP: int
-    RX_CAP: int
-    password: Incomplete
-    pairing: Incomplete
-    console: Incomplete
-    files: Incomplete
-    ft_flushing: bool
-    ft_in: Incomplete
-    ft_scheduled: bool
-    ft_reset: bool
-    rx_handle: Incomplete
-    ft_handle: Incomplete
-    name: Incomplete
-    interval_us: Incomplete
-    dupterm_index: Incomplete
+class _ReplServer(Protocol):
+    password: bytes | str | None
+    pairing: str | None
+    console: bool
+    files: bool
+    name: str
+    interval_us: int
     running: bool
-    conn: Incomplete
-    login: Incomplete
     authed: bool
-    greeted: bool
     mtu: int
-    rx: Incomplete
-    rx_pos: int
-    tx: Incomplete
-    flushing: bool
-    dropped_out: int
-    slot: Incomplete
-    dupterm: Incomplete
-    stream: Incomplete
-    timer: Incomplete
-    hang_up_at: Incomplete
-    early_mtu: Incomplete
-    def __init__(self, password, name, interval_us, dupterm_index, files: bool = False, console: bool = True, window=None, pairing=None) -> None: ...
-    ble: Incomplete
-    adv: Incomplete
     def start(self) -> None: ...
     def advertise(self) -> None: ...
     def stop(self) -> None: ...
-    def on_connect(self, conn) -> None: ...
-    def request_security(self, conn) -> None: ...
-    def secure(self, conn): ...
-    def on_security(self, conn, encrypted, authenticated, bonded, key_size) -> None: ...
-    def on_disconnect(self, conn) -> None: ...
-    def on_write(self, conn, data) -> None: ...
-    def on_files(self, conn, data) -> None: ...
-    def on_auth(self, conn, data) -> None: ...
-    def on_mtu(self, conn, mtu) -> None: ...
-    def feed_repl(self, data) -> None: ...
-    def notify_now(self, data) -> None: ...
-    def send(self, data) -> None: ...
-    def flush(self) -> None: ...
-    def ft_flush(self) -> None: ...
 
-class _Open:
-    refused: bool
-    verdict: Incomplete
-    def feed(self, data): ...
-
-class _Gate(Login):
-    refused: bool
-    def feed(self, data): ...
-
-def refused(pair, passkey): ...
-async def connect(ble, password=None, name: str = 'mpy-repl', *, device=None, timeout_ms: int = 10000, pair: bool = False, passkey=None, **connect_options): ...
-async def run(link, code, timeout_ms: int = 10000): ...
+def start(
+    password: str | Literal[False] | None = None,
+    name: str = 'mpy-repl',
+    *,
+    interval_us: int = 100000,
+    dupterm_index: int | None = None,
+    files: bool = False,
+    console: bool = True,
+    window: int | None = None,
+    pairing: Literal["justworks", "passkey", "numeric", "auto"] | None = None,
+    show: Callable[[int], Any] | None = None,
+    hide: Callable[[], Any] | None = None,
+    confirm: Callable[[int], bool | None] | None = None,
+    bond_store: _Store | str | None = None,
+) -> _ReplServer:
+    """Serve the REPL over BLE until `stop` or a reset. MicroPython only."""
+def stop() -> None:
+    """Stop serving: drop the client, give the REPL back, stop advertising."""
+def is_running() -> bool: ...
+def refused(pair: bool, passkey: object) -> PairingError:
+    """The `bledev.PairingError` for a board that refused a link."""
+async def connect(
+    ble: BLE | object,
+    password: str | bytes | bytearray | memoryview | None = None,
+    name: str = 'mpy-repl',
+    *,
+    device: Device | None = None,
+    timeout_ms: int = 10000,
+    pair: bool = False,
+    passkey: _Passkey | None = None,
+    **connect_options: Any,
+) -> nus.Link:
+    """Log in to a board's BLE REPL and return the `bledev.nus.Link`, at `>>>`."""
+async def run(link: nus.Link, code: str | bytes | bytearray | memoryview, timeout_ms: int = 10000) -> str:
+    """Type `code` at the prompt and return what it printed, up to the next `>>>`."""

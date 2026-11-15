@@ -283,6 +283,12 @@ class BuiltRepository(unittest.TestCase):
         self.assertIn("different content", out.getvalue())
 
 
+class TypeStubs(unittest.TestCase):
+    def test_stubs_stay_out_of_what_a_board_installs(self):
+        names = ["__init__.py", "__init__.pyi", "py.typed", "pump.py", "pump.pyi", "__pycache__"]
+        self.assertEqual(libbuild._ignore_debris("lib/audiodev", names), {"__init__.pyi", "py.typed", "pump.pyi", "__pycache__"})
+
+
 class Manifests(unittest.TestCase):
     def setUp(self):
         self.library = Path(tempfile.mkdtemp(prefix="libbuild-manifest-"))

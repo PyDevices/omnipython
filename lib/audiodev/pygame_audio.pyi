@@ -1,7 +1,10 @@
 # SPDX-FileCopyrightText: 2026 Brad Barnett
 #
 # SPDX-License-Identifier: MIT
-from _typeshed import Incomplete
+"""pygame-ce playback and capture backend for the portable `audiodev` contract."""
+
+from typing import Literal
+
 from audiodev import AudioFormat as AudioFormat, PCMInput as PCMInput, PCMOutput as PCMOutput, check_latency as check_latency
 
 DEFAULT_PLAY_SAMPLES: int
@@ -15,28 +18,69 @@ RECOVER_GRACE_MS: int
 RECOVER_SETTLE_MS: int
 
 class PygamePCMOutput(PCMOutput):
-    samples: Incomplete
-    poll_ms: Incomplete
-    coalesce_ms: Incomplete
+    """PCM playback via pygame's SDL `QueueAudio` (no mixer, no Python callback)."""
+
+    samples: int
+    poll_ms: int
+    coalesce_ms: int
     device: int
-    channel: Incomplete
+    channel: None
     mode: str
     recycles: int
     lost_bytes: int
     requeued_bytes: int
-    def __init__(self, fmt, *, samples=..., poll_ms: int = 2, queue_ms=..., coalesce_ms=...) -> None: ...
-    def queued_size(self): ...
-    def is_active(self): ...
+    def __init__(
+        self,
+        fmt: AudioFormat,
+        *,
+        samples: int = ...,
+        poll_ms: int = 2,
+        queue_ms: int = ...,
+        coalesce_ms: int = ...,
+    ) -> None: ...
+    def queued_size(self) -> int: ...
+    def is_active(self) -> bool: ...
     def service(self) -> None: ...
-    def drain(self, timeout_ms=None): ...
-    async def adrain(self, timeout_ms=None): ...
+    def drain(self, timeout_ms: int | None = None) -> bool:
+        """Block until queued PCM has played out. `False` if it timed out."""
+    async def adrain(self, timeout_ms: int | None = None) -> bool:
+        """Async `drain`."""
     def clear(self) -> None: ...
 
 class PygamePCMInput(PCMInput):
-    device_name: Incomplete
-    samples: Incomplete
-    poll_ms: Incomplete
-    def __init__(self, fmt, *, device=None, samples: int = 512, poll_ms: int = 2, queue_ms: int = 500) -> None: ...
+    """Capture through pygame's `_sdl2.AudioDevice`."""
 
-def pcm_out(format=None, *, latency=None, samples=None, poll_ms: int = 2, queue_ms=None, coalesce_ms=None): ...
-def pcm_in(format=None, *, device=None, latency=None, samples=None, poll_ms: int = 2, queue_ms=None): ...
+    device_name: str | None
+    samples: int
+    poll_ms: int
+    def __init__(
+        self,
+        fmt: AudioFormat,
+        *,
+        device: str | None = None,
+        samples: int = 512,
+        poll_ms: int = 2,
+        queue_ms: int = 500,
+    ) -> None: ...
+
+def pcm_out(
+    format: AudioFormat | None = None,
+    *,
+    latency: Literal["low", "buffered"] | None = None,
+    samples: int | None = None,
+    poll_ms: int = 2,
+    queue_ms: int | None = None,
+    coalesce_ms: int | None = None,
+) -> PygamePCMOutput:
+    """Create a pygame-ce-backed PCM playback device."""
+
+def pcm_in(
+    format: AudioFormat | None = None,
+    *,
+    device: str | None = None,
+    latency: Literal["low", "buffered"] | None = None,
+    samples: int | None = None,
+    poll_ms: int = 2,
+    queue_ms: int | None = None,
+) -> PygamePCMInput:
+    """Create a pygame-ce-backed PCM capture device."""

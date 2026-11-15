@@ -1,8 +1,22 @@
 # SPDX-FileCopyrightText: 2026 Brad Barnett
 #
 # SPDX-License-Identifier: MIT
+"""HID report descriptors, and the reports they describe, as PyDevices events."""
+import events
 import keys
-from _typeshed import Incomplete
+from collections.abc import Iterable
+from typing import TypeAlias
+
+_Event: TypeAlias = (
+    events.Key
+    | events.Motion
+    | events.Button
+    | events.Wheel
+    | events.JoyAxisMotion
+    | events.JoyHatMotion
+    | events.JoyButtonDown
+    | events.JoyButtonUp
+)
 
 INPUT: int
 OUTPUT: int
@@ -27,71 +41,107 @@ APP_MULTI_AXIS: int
 APP_CONSUMER: int
 ERROR_ROLLOVER: int
 
-class HIDParseError(ValueError): ...
+class HIDParseError(ValueError):
+    """The descriptor is malformed: truncated, unbalanced, or impossible."""
 
 class Field:
-    kind: Incomplete
-    report_id: Incomplete
-    offset: Incomplete
-    size: Incomplete
-    count: Incomplete
-    flags: Incomplete
-    usages: Incomplete
-    logical_min: Incomplete
-    logical_max: Incomplete
-    physical_min: Incomplete
-    physical_max: Incomplete
-    unit: Incomplete
-    unit_exponent: Incomplete
-    application: Incomplete
-    def __init__(self, kind, report_id, offset, size, count, flags, usages, logical_min, logical_max, physical_min, physical_max, unit, unit_exponent, application) -> None: ...
+    """One main item: `count` values of `size` bits at bit `offset`."""
+
+    kind: int
+    report_id: int
+    offset: int
+    size: int
+    count: int
+    flags: int
+    usages: list[int | tuple[int, int]]
+    logical_min: int
+    logical_max: int
+    physical_min: int
+    physical_max: int
+    unit: int
+    unit_exponent: int
+    application: int
+    def __init__(
+        self,
+        kind: int,
+        report_id: int,
+        offset: int,
+        size: int,
+        count: int,
+        flags: int,
+        usages: list[int | tuple[int, int]],
+        logical_min: int,
+        logical_max: int,
+        physical_min: int,
+        physical_max: int,
+        unit: int,
+        unit_exponent: int,
+        application: int,
+    ) -> None: ...
     @property
-    def constant(self): ...
+    def constant(self) -> bool: ...
     @property
-    def variable(self): ...
+    def variable(self) -> bool: ...
     @property
-    def relative(self): ...
-    def usage(self, n): ...
-    def raw(self, data, n: int = 0): ...
-    def values(self, data): ...
+    def relative(self) -> bool: ...
+    def usage(self, n: int) -> int | None:
+        """The `n`-th usage in the list, ranges expanded; past the end, the last one."""
+    def raw(self, data: bytes | bytearray | memoryview, n: int = 0) -> int:
+        """Element `n`'s raw value from report `data` (without its ID), sign-extended if signed."""
+    def values(self, data: bytes | bytearray | memoryview) -> list[int]:
+        """Every element's raw value, as a list."""
 
 class Report:
-    kind: Incomplete
-    report_id: Incomplete
-    fields: Incomplete
+    """The fields of one report: its `kind`, its `report_id` (0 if unnumbered) and its size."""
+
+    kind: int
+    report_id: int
+    fields: list[Field]
     bits: int
-    def __init__(self, kind, report_id) -> None: ...
+    def __init__(self, kind: int, report_id: int) -> None: ...
     @property
-    def size(self): ...
+    def size(self) -> int:
+        """Bytes, without the report ID."""
 
 class ReportMap:
-    descriptor: Incomplete
-    reports: Incomplete
+    """A parsed report descriptor."""
+
+    descriptor: bytes
+    reports: dict[tuple[int, int], Report]
     numbered: bool
-    applications: Incomplete
-    def __init__(self, descriptor) -> None: ...
-    def report(self, kind, report_id: int = 0): ...
-    def inputs(self): ...
+    applications: list[int]
+    def __init__(self, descriptor: bytes | bytearray | memoryview) -> None: ...
+    def report(self, kind: int, report_id: int = 0) -> Report | None: ...
+    def inputs(self) -> list[Report]:
+        """The input reports, in report ID order."""
+
 keycode = keys.hid_keycode
 modifier_mask = keys.hid_modifiers
 
-def consumer_keycode(usage): ...
+def consumer_keycode(usage: int) -> int | None:
+    """The `keys.K_*` code for a consumer-page usage (`0xE9`, not extended), or `None`."""
 
 class Decoder:
-    map: Incomplete
-    instance_id: Incomplete
-    bounds: Incomplete
-    num_axes: Incomplete
-    num_hats: Incomplete
+    """Turns one device's input reports into PyDevices events."""
+
+    map: ReportMap
+    instance_id: int
+    bounds: tuple[int, int] | None
+    num_axes: int
+    num_hats: int
     num_buttons: int
-    def __init__(self, report_map, instance_id: int = 0, bounds=None) -> None: ...
+    def __init__(self, report_map: ReportMap, instance_id: int = 0, bounds: tuple[int, int] | None = None) -> None: ...
     @property
-    def held(self): ...
+    def held(self) -> frozenset[int]:
+        """Keyboard usages held now."""
     @property
-    def modifiers(self): ...
-    def axis(self, n): ...
-    def button(self, n): ...
-    def hat(self, n): ...
-    def feed(self, data, report_id=None): ...
+    def modifiers(self) -> int: ...
+    def axis(self, n: int) -> float:
+        """Axis `n`'s last value, -1.0..1.0 (0.0 before any report)."""
+    def button(self, n: int) -> bool: ...
+    def hat(self, n: int) -> tuple[int, int]: ...
+    def feed(self, data: bytes | bytearray | memoryview | Iterable[int], report_id: int | None = None) -> tuple[_Event, ...]:
+        """Decode one input report and return its events, as a tuple."""
     @property
-    def pointer(self): ...
+    def pointer(self) -> tuple[int, int]:
+        """Where the mouse pointer is, `(x, y)`: the sum of its motion, from (0, 0)."""

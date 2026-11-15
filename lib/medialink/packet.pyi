@@ -1,6 +1,8 @@
 # SPDX-FileCopyrightText: 2026 Brad Barnett
 #
 # SPDX-License-Identifier: MIT
+"""The 14-byte header every medialink datagram starts with."""
+
 MAGIC: int
 VERSION: int
 HEADER: str
@@ -20,6 +22,12 @@ EVENT: int
 PING_ASK: int
 PING_ANSWER: int
 
-def pack_into(buf, kind, sub, flags, frag, frags, seq, stamp) -> None: ...
-def pack(kind, sub, flags, frag, frags, seq, stamp, payload: bytes = b''): ...
-def unpack(buf, count): ...
+def pack_into(
+    buf: bytearray | memoryview, kind: int, sub: int, flags: int, frag: int, frags: int, seq: int, stamp: int
+) -> None: ...
+def pack(
+    kind: int, sub: int, flags: int, frag: int, frags: int, seq: int, stamp: int,
+    payload: bytes | bytearray | memoryview = b"",
+) -> bytearray: ...
+def unpack(buf: bytes | bytearray | memoryview, count: int) -> tuple[int, int, int, int, int, int, int] | None:
+    """`(kind, sub, flags, frag, frags, seq, stamp)`, or `None` if not ours."""

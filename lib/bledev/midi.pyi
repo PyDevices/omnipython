@@ -1,14 +1,14 @@
 # SPDX-FileCopyrightText: 2026 Brad Barnett
 #
 # SPDX-License-Identifier: MIT
-import types
-from . import BLEError as BLEError, BLETimeoutError as BLETimeoutError, BusyError as BusyError, Characteristic as Characteristic, DisconnectedError as DisconnectedError, MAX_MTU as MAX_MTU, Service as Service, UUID as UUID, UnsupportedError as UnsupportedError, connect_and_set_up as connect_and_set_up, is_adapter as is_adapter, sleep_ms as sleep_ms, wait_ms as wait_ms
-from .midi_codec import Decoder as Decoder, Encoder as Encoder, Splitter as Splitter, TIMESTAMP_MASK as TIMESTAMP_MASK
-from _typeshed import Incomplete
-from typing import NamedTuple
+"""MIDI over Bluetooth LE (BLE-MIDI 1.0), as a MIDI port."""
+from . import BLE, Connection, Device, UUID
+from types import TracebackType
+from typing import Any, NamedTuple
+from typing_extensions import Self
 
-SERVICE: Incomplete
-CHARACTERISTIC: Incomplete
+SERVICE: UUID
+CHARACTERISTIC: UUID
 MTU: int
 QUEUE_LIMIT: int
 IN: str
@@ -16,54 +16,71 @@ OUT: str
 INOUT: str
 
 class PortInfo(NamedTuple):
-    id: Incomplete
-    name: Incomplete
-    direction: Incomplete
+    id: str
+    name: str
+    direction: str
 
-def now_ms(): ...
+def now_ms() -> int:
+    """This host's BLE-MIDI clock: milliseconds, 13 bits."""
 
 class Port:
-    info: Incomplete
-    direction: Incomplete
+    """One BLE-MIDI link, as a MIDI port. Made by `serve` or `connect`."""
+
+    info: PortInfo
+    direction: str
     is_open: bool
-    connection: Incomplete
-    queue_limit: Incomplete
+    connection: Connection
+    queue_limit: int
     dropped: int
     decode_errors: int
     messages_in: int
     messages_out: int
-    def __init__(self, connection, name, *, queue_limit=..., running_status: bool = True) -> None: ...
+    def __init__(self, connection: Connection, name: str, *, queue_limit: int = ..., running_status: bool = True) -> None: ...
     @property
-    def overflowed(self): ...
-    def readinto(self, buf, nbytes=None): ...
-    def read(self, nbytes=None): ...
-    def any(self): ...
-    async def receive(self, timeout_ms=None): ...
-    def __aiter__(self): ...
-    async def __anext__(self): ...
-    def write(self, buf, nbytes=None): ...
-    def send(self, message, timestamp=None) -> None: ...
-    async def drain(self) -> None: ...
-    def close(self) -> None: ...
+    def overflowed(self) -> bool: ...
+    def readinto(self, buf: bytearray | memoryview, nbytes: int | None = None) -> int | None:
+        """Waiting MIDI bytes into `buf` (at most `nbytes`); how many, or `None` when nothing has arrived."""
+    def read(self, nbytes: int | None = None) -> bytes | None:
+        """Up to `nbytes` waiting MIDI bytes (everything waiting when `None`), or `None`."""
+    def any(self) -> int:
+        """How many MIDI bytes are waiting to be read."""
+    async def receive(self, timeout_ms: int | None = None) -> tuple[int, bytes]:
+        """The next `(timestamp, message)`. Raises `DisconnectedError` once the link has closed and everything that arrived is read."""
+    def __aiter__(self) -> Self: ...
+    async def __anext__(self) -> tuple[int, bytes]: ...
+    def write(self, buf: bytes | bytearray | memoryview, nbytes: int | None = None) -> int:
+        """Send the first `nbytes` of `buf` (all of it when `None`); returns how many bytes it took."""
+    def send(self, message: bytes | bytearray | memoryview, timestamp: int | None = None) -> None:
+        """Queue one complete message, optionally with its own timestamp."""
+    async def drain(self) -> None:
+        """Wait until everything written has been handed to the radio."""
+    def close(self) -> None:
+        """Close the port and drop the link."""
     deinit = close
-    def __enter__(self): ...
-    def __exit__(self, exc_type: type[BaseException] | None, exc: BaseException | None, traceback: types.TracebackType | None) -> None: ...
-    async def aclose(self) -> None: ...
+    def __enter__(self) -> Self: ...
+    def __exit__(self, exc_type: type[BaseException] | None, exc: BaseException | None, traceback: TracebackType | None) -> None: ...
+    async def aclose(self) -> None:
+        """Close the port and wait for the disconnect."""
 
-class _ServerPort(Port):
-    def __init__(self, connection, server, **options) -> None: ...
-
-class _ClientPort(Port):
-    def __init__(self, connection, char, name, **options) -> None: ...
-
-class _Server:
-    ble: Incomplete
-    name: Incomplete
-    service: Incomplete
-    char: Incomplete
-    ports: Incomplete
-    def __init__(self, ble, name) -> None: ...
-    def add(self, port) -> None: ...
-
-async def serve(ble, name: str = 'bledev-midi', *, timeout_ms=None, interval_us: int = 100000, mtu=..., **options): ...
-async def connect(ble, name=None, *, device=None, timeout_ms: int = 10000, mtu=..., queue_limit=..., running_status: bool = True, **connect_options): ...
+async def serve(
+    ble: BLE | object,
+    name: str = 'bledev-midi',
+    *,
+    timeout_ms: int | None = None,
+    interval_us: int = 100000,
+    mtu: int = ...,
+    **options: Any,
+) -> Port:
+    """Advertise BLE-MIDI as `name` and return a `Port` when a central connects."""
+async def connect(
+    ble: BLE | object,
+    name: str | None = None,
+    *,
+    device: Device | None = None,
+    timeout_ms: int = 10000,
+    mtu: int = ...,
+    queue_limit: int = ...,
+    running_status: bool = True,
+    **connect_options: Any,
+) -> Port:
+    """Find a BLE-MIDI device (by `name`, or the first one advertising the service), connect, subscribe, and return a `Port`."""

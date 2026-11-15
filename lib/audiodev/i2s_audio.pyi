@@ -1,22 +1,41 @@
 # SPDX-FileCopyrightText: 2026 Brad Barnett
 #
 # SPDX-License-Identifier: MIT
-from _typeshed import Incomplete
-from audiodev import PCMInput as PCMInput, PCMOutput as PCMOutput
+"""MCU I2S adapter: wrap `machine.I2S` as `audiodev.PCMOutput` / `PCMInput`."""
+
+from typing import Any
+
+from audiodev import AudioFormat, I2SWire, PCMInput as PCMInput, PCMOutput as PCMOutput
 
 class I2SPCMOutput(PCMOutput):
-    wire: Incomplete
-    audio_power: Incomplete
-    def __init__(self, i2s, format, *, wire=None, audio_power=None, **kwargs) -> None: ...
+    """Playback through `machine.I2S` (or any object with `write`)."""
+
+    wire: I2SWire | None
+    audio_power: Any
+    def __init__(
+        self,
+        i2s: Any,
+        format: AudioFormat,
+        *,
+        wire: I2SWire | None = None,
+        audio_power: Any = None,
+        **kwargs: Any,
+    ) -> None: ...
     @property
-    def i2s(self): ...
-    def queued_size(self): ...
+    def i2s(self) -> Any: ...
+    def queued_size(self) -> int:
+        """Estimate the bytes still queued for the DAC."""
     def service(self) -> None: ...
 
 class I2SPCMInput(PCMInput):
-    def __init__(self, i2s, format, **kwargs) -> None: ...
-    @property
-    def i2s(self): ...
+    """Capture through `machine.I2S` (or any object with `readinto`)."""
 
-def pcm_out(i2s, format, **kwargs): ...
-def pcm_in(i2s, format, **kwargs): ...
+    def __init__(self, i2s: Any, format: AudioFormat, **kwargs: Any) -> None: ...
+    @property
+    def i2s(self) -> Any: ...
+
+def pcm_out(i2s: Any, format: AudioFormat, **kwargs: Any) -> I2SPCMOutput:
+    """Build an `I2SPCMOutput` around `i2s` (instance or factory)."""
+
+def pcm_in(i2s: Any, format: AudioFormat, **kwargs: Any) -> I2SPCMInput:
+    """Build an `I2SPCMInput` around `i2s` (instance or factory)."""

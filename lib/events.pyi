@@ -1,100 +1,109 @@
 # SPDX-FileCopyrightText: 2026 Brad Barnett
 #
 # SPDX-License-Identifier: MIT
-from _typeshed import Incomplete
+"""SDL2/PyGame-style event types and namedtuple event classes."""
+
 from typing import NamedTuple
 
-QUIT: Incomplete
-KEYDOWN: Incomplete
-KEYUP: Incomplete
-MOUSEMOTION: Incomplete
-MOUSEBUTTONDOWN: Incomplete
-MOUSEBUTTONUP: Incomplete
-MOUSEWHEEL: Incomplete
-JOYAXISMOTION: Incomplete
-JOYBALLMOTION: Incomplete
-JOYHATMOTION: Incomplete
-JOYBUTTONDOWN: Incomplete
-JOYBUTTONUP: Incomplete
-FINGERDOWN: Incomplete
-FINGERUP: Incomplete
-FINGERMOTION: Incomplete
-filter: Incomplete
+QUIT: int
+KEYDOWN: int
+KEYUP: int
+MOUSEMOTION: int
+MOUSEBUTTONDOWN: int
+MOUSEBUTTONUP: int
+MOUSEWHEEL: int
+JOYAXISMOTION: int
+JOYBALLMOTION: int
+JOYHATMOTION: int
+JOYBUTTONDOWN: int
+JOYBUTTONUP: int
+FINGERDOWN: int
+FINGERUP: int
+FINGERMOTION: int
+filter: list[int]
 
 class Unknown(NamedTuple):
-    type: Incomplete
+    type: int
 
 class Motion(NamedTuple):
-    type: Incomplete
-    pos: Incomplete
-    rel: Incomplete
-    buttons: Incomplete
-    touch: Incomplete
-    window: Incomplete
+    type: int
+    pos: tuple[int, int]
+    rel: tuple[int, int]
+    buttons: tuple[int, int, int]
+    touch: bool
+    window: int | None
 
 class Button(NamedTuple):
-    type: Incomplete
-    pos: Incomplete
-    button: Incomplete
-    touch: Incomplete
-    window: Incomplete
+    type: int
+    pos: tuple[int, int]
+    button: int
+    touch: bool
+    window: int | None
 
 class Wheel(NamedTuple):
-    type: Incomplete
-    flipped: Incomplete
-    x: Incomplete
-    y: Incomplete
-    precise_x: Incomplete
-    precise_y: Incomplete
-    touch: Incomplete
-    window: Incomplete
+    type: int
+    flipped: bool
+    x: int
+    y: int
+    precise_x: float
+    precise_y: float
+    touch: bool
+    window: int | None
 
 class Key(NamedTuple):
-    type: Incomplete
-    name: Incomplete
-    key: Incomplete
-    mod: Incomplete
-    scancode: Incomplete
-    window: Incomplete
+    type: int
+    name: str
+    key: int
+    mod: int
+    scancode: int
+    window: int | None
 
 class Quit(NamedTuple):
-    type: Incomplete
+    type: int
 
 class Any(NamedTuple):
-    type: Incomplete
+    type: int
 
 class JoyAxisMotion(NamedTuple):
-    type: Incomplete
-    instance_id: Incomplete
-    axis: Incomplete
-    value: Incomplete
+    type: int
+    instance_id: int
+    axis: int
+    value: float
 
 class JoyButtonUp(NamedTuple):
-    type: Incomplete
-    instance_id: Incomplete
-    button: Incomplete
+    type: int
+    instance_id: int
+    button: int
 
 class JoyButtonDown(NamedTuple):
-    type: Incomplete
-    instance_id: Incomplete
-    button: Incomplete
+    type: int
+    instance_id: int
+    button: int
 
 class JoyHatMotion(NamedTuple):
-    type: Incomplete
-    instance_id: Incomplete
-    hat: Incomplete
-    value: Incomplete
+    type: int
+    instance_id: int
+    hat: int
+    value: tuple[int, int]
 
 class JoyBallMotion(NamedTuple):
-    type: Incomplete
-    instance_id: Incomplete
-    ball: Incomplete
-    rel: Incomplete
+    type: int
+    instance_id: int
+    ball: int
+    rel: tuple[int, int]
 
 class Finger(NamedTuple):
-    type: Incomplete
-    pos: Incomplete
-    finger_id: Incomplete
-    window: Incomplete
+    type: int
+    pos: tuple[float, float]
+    finger_id: int
+    window: int | None
 
-def register_event(name=None, value=None, *, fields=None, types=None, classes=None) -> None: ...
+def register_event(
+    name: str | None = None,
+    value: int | None = None,
+    *,
+    fields: str | None = None,
+    types: dict[str, int] | list[tuple[str, int]] | None = None,
+    classes: dict[str, str] | None = None,
+) -> None:
+    """Register custom event type(s) and optional namedtuple class(es)."""

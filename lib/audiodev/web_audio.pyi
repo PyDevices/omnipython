@@ -1,18 +1,42 @@
 # SPDX-FileCopyrightText: 2026 Brad Barnett
 #
 # SPDX-License-Identifier: MIT
-from _typeshed import Incomplete
+"""Browser Web Audio backend for PyScript (`audiodev` PCM devices)."""
+
+from typing import Literal
+
 from audiodev import AudioFormat as AudioFormat, PCMInput as PCMInput, PCMOutput as PCMOutput, check_latency as check_latency
 from audiodev.bytequeue import ByteQueue as ByteQueue
 
 class WebPCMOutput(PCMOutput):
-    poll_ms: Incomplete
-    def __init__(self, fmt, *, poll_ms: int = 4) -> None: ...
+    """Playback scheduled onto a Web Audio `AudioContext` timeline."""
+
+    poll_ms: int
+    def __init__(self, fmt: AudioFormat, *, poll_ms: int = 4) -> None: ...
 
 class WebPCMInput(PCMInput):
-    poll_ms: Incomplete
-    samples: Incomplete
-    def __init__(self, fmt, *, poll_ms: int = 4, queue_ms: int = 500, samples: int = 2048) -> None: ...
+    """Capture through `getUserMedia` and a `ScriptProcessorNode`."""
 
-def pcm_out(format=None, *, latency=None, poll_ms: int = 4): ...
-def pcm_in(format=None, *, latency=None, poll_ms: int = 4, queue_ms: int = 500, samples=None): ...
+    poll_ms: int
+    samples: int
+    def __init__(
+        self, fmt: AudioFormat, *, poll_ms: int = 4, queue_ms: int = 500, samples: int = 2048
+    ) -> None: ...
+
+def pcm_out(
+    format: AudioFormat | None = None,
+    *,
+    latency: Literal["low", "buffered"] | None = None,
+    poll_ms: int = 4,
+) -> WebPCMOutput:
+    """Create a Web Audio-backed `PCMOutput` (PyScript)."""
+
+def pcm_in(
+    format: AudioFormat | None = None,
+    *,
+    latency: Literal["low", "buffered"] | None = None,
+    poll_ms: int = 4,
+    queue_ms: int = 500,
+    samples: int | None = None,
+) -> WebPCMInput:
+    """Create a Web Audio-backed `PCMInput` via `getUserMedia` (PyScript)."""

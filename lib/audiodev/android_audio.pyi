@@ -1,19 +1,21 @@
 # SPDX-FileCopyrightText: 2026 Brad Barnett
 #
 # SPDX-License-Identifier: MIT
-from _typeshed import Incomplete
+"""Android media session for `audiodev.PCMOutput`."""
 
-__all__ = ['AndroidMediaSession', 'get_session', '_FocusListener@69']
+from typing import Literal
+
+__all__ = ["AndroidMediaSession", "get_session"]
 
 class AndroidMediaSession:
-    codec: Incomplete
+    """Duck-typed `audiodev.AudioSession` for Android media hardening."""
+
+    codec: None
     duplex: bool
     def __init__(self) -> None: ...
-    def get_codec(self): ...
-    def acquire(self, owner, direction): ...
-    def release(self, owner) -> None: ...
+    def get_codec(self) -> None: ...
+    def acquire(self, owner: object, direction: Literal["in", "out"]) -> None: ...
+    def release(self, owner: object) -> None: ...
 
-def get_session(): ...
-
-# Names in __all__ with no definition:
-#   _FocusListener@69
+def get_session() -> AndroidMediaSession:
+    """Return the process-wide Android media session (created once)."""

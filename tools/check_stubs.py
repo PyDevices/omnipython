@@ -102,7 +102,7 @@ def main():
         for name in args.modules or listed:
             print("== stubtest %s" % name)
             command = ["timeout", "-s", "KILL", str(TIMEOUT), sys.executable, "-m", "mypy.stubtest"]
-            command += ["--allowlist", str(allowlist), name]
+            command += ["--allowlist", str(allowlist), "--ignore-unused-allowlist", name]
             status |= run(command, env)
     return status
 

@@ -1,64 +1,100 @@
 # SPDX-FileCopyrightText: 2026 Brad Barnett
 #
 # SPDX-License-Identifier: MIT
-from _typeshed import Incomplete
-from medialink._compat import sleep_ms as sleep_ms, ticks_add as ticks_add, ticks_diff as ticks_diff, ticks_ms as ticks_ms, token as token
+"""A link to one peer: media frames, a reliable control channel, the floor."""
+
+from typing import Any
+
+from medialink.transport import Transport
 
 IDLE: int
 TALKING: int
 LISTENING: int
-FLOOR_NAMES: Incomplete
+FLOOR_NAMES: tuple[str, str, str]
 
-class PeerUnreachable(OSError): ...
+class PeerUnreachable(OSError):
+    """A control message went unanswered after every retry."""
 
 class Frame:
-    kind: Incomplete
-    codec: Incomplete
-    seq: Incomplete
-    stamp: Incomplete
-    flags: Incomplete
-    payload: Incomplete
-    age: Incomplete
-    arrived: Incomplete
-    def __init__(self, kind, codec, seq, stamp, flags, payload, age, arrived=None) -> None: ...
+    """One media frame as it arrived."""
 
-class _Reassembly:
+    kind: int
+    codec: int
     seq: int
-    seen: Incomplete
-    buf: Incomplete
-    room: int
-    tail: Incomplete
-    have: int
-    def __init__(self) -> None: ...
+    stamp: int
+    flags: int
+    payload: bytes | bytearray
+    age: int | None
+    arrived: int | None
+    def __init__(
+        self,
+        kind: int,
+        codec: int,
+        seq: int,
+        stamp: int,
+        flags: int,
+        payload: bytes | bytearray,
+        age: int | None,
+        arrived: int | None = None,
+    ) -> None: ...
 
 class Link:
-    transport: Incomplete
-    retries: Incomplete
-    ack_timeout_ms: Incomplete
-    keepalive_ms: Incomplete
-    dead_ms: Incomplete
-    floor_timeout_ms: Incomplete
-    token: Incomplete
-    peer: Incomplete
-    peer_token: Incomplete
-    floor: Incomplete
-    rtt_ms: Incomplete
-    best_rtt_ms: Incomplete
-    stats: Incomplete
-    def __init__(self, transport, peer=None, *, retries: int = 0, ack_timeout_ms: int = 300, keepalive_ms: int = 1000, dead_ms: int = 3000, floor_timeout_ms: int = 1500, inbox: int = 32, video_inbox: int = 2) -> None: ...
+    """A transport tied to one peer."""
+
+    transport: Transport
+    retries: int
+    ack_timeout_ms: int
+    keepalive_ms: int
+    dead_ms: int
+    floor_timeout_ms: int
+    token: int
+    peer: Any
+    peer_token: int | None
+    floor: int
+    rtt_ms: int | None
+    best_rtt_ms: int | None
+    stats: dict[str, int]
+    def __init__(
+        self,
+        transport: Transport,
+        peer: Any = None,
+        *,
+        retries: int = 0,
+        ack_timeout_ms: int = 300,
+        keepalive_ms: int = 1000,
+        dead_ms: int = 3000,
+        floor_timeout_ms: int = 1500,
+        inbox: int = 32,
+        video_inbox: int = 2,
+    ) -> None: ...
     @property
-    def alive(self): ...
-    def connect(self, address, retries=None): ...
-    def close(self) -> None: ...
-    def request_floor(self, retries=None): ...
-    def release_floor(self) -> None: ...
-    def send_event(self, data, retries=None) -> None: ...
-    def events(self): ...
-    def send_audio(self, payload, codec: int = 0, flags: int = 0, stamp=None): ...
-    def send_video(self, payload, codec: int = 0, flags: int = 0, stamp=None): ...
+    def alive(self) -> bool:
+        """True while the peer has been heard from within `dead_ms`."""
+    def connect(self, address: Any, retries: int | None = None) -> Link:
+        """Say hello to the peer at `address` and wait for its answer."""
+    def close(self) -> None:
+        """Say goodbye, best effort, and close the transport."""
+    def request_floor(self, retries: int | None = None) -> bool:
+        """Ask to talk. `True` when granted, `False` when the peer has it."""
+    def release_floor(self) -> None:
+        """Stop talking. The peer hears it now, or times the floor out."""
+    def send_event(self, data: str | bytes | bytearray | memoryview, retries: int | None = None) -> None:
+        """Hand the peer a few bytes and wait for it to acknowledge them."""
+    def events(self) -> list[bytes]:
+        """The events that have arrived since the last call, oldest first."""
+    def send_audio(
+        self, payload: bytes | bytearray | memoryview, codec: int = 0, flags: int = 0, stamp: int | None = None
+    ) -> int: ...
+    def send_video(
+        self, payload: bytes | bytearray | memoryview, codec: int = 0, flags: int = 0, stamp: int | None = None
+    ) -> int: ...
     @property
-    def room(self): ...
-    def frames(self, kind=None): ...
-    def poll(self) -> None: ...
+    def room(self) -> int:
+        """The most bytes of a frame that one datagram carries."""
+    def frames(self, kind: int | None = None) -> list[Frame]:
+        """The media frames that have arrived since the last call, in order."""
+    def poll(self) -> None:
+        """Read whatever has arrived, answer it, and keep the link alive."""
     @property
-    def offset_ms(self): ...
+    def offset_ms(self) -> int | None:
+        """The peer's clock minus ours, in ms, once a ping has measured it."""

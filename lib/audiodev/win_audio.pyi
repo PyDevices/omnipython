@@ -1,8 +1,11 @@
 # SPDX-FileCopyrightText: 2026 Brad Barnett
 #
 # SPDX-License-Identifier: MIT
-from _typeshed import Incomplete
-from audiodev import AudioFormat as AudioFormat, PCMInput as PCMInput, PCMOutput as PCMOutput, check_latency as check_latency
+"""WASAPI queued PCM backend for Windows CPython (via `uwin32`)."""
+
+from typing import Literal
+
+from audiodev import AudioFormat as AudioFormat, AudioSession, PCMInput as PCMInput, PCMOutput as PCMOutput, check_latency as check_latency
 from audiodev.bytequeue import ByteQueue as ByteQueue
 
 DEFAULT_PLAY_SAMPLES: int
@@ -17,32 +20,81 @@ RECOVER_SETTLE_MS: int
 WRITE_WAIT_MS: int
 
 class WinPCMOutput(PCMOutput):
-    device_name: Incomplete
-    samples: Incomplete
-    queue_ms: Incomplete
-    poll_ms: Incomplete
-    coalesce_ms: Incomplete
+    """WASAPI shared-mode playback with a software coalescing queue."""
+
+    device_name: str | None
+    samples: int
+    queue_ms: int
+    poll_ms: int
+    coalesce_ms: int
     recycles: int
     lost_bytes: int
     requeued_bytes: int
-    def __init__(self, fmt, *, device=None, samples=..., queue_ms=..., poll_ms: int = 2, coalesce_ms=..., prebuffer_ms=None, session=None) -> None: ...
-    def queued_size(self): ...
-    def is_active(self): ...
+    def __init__(
+        self,
+        fmt: AudioFormat,
+        *,
+        device: str | None = None,
+        samples: int = ...,
+        queue_ms: int = ...,
+        poll_ms: int = 2,
+        coalesce_ms: int = ...,
+        prebuffer_ms: int | None = None,
+        session: AudioSession | None = None,
+    ) -> None: ...
+    def queued_size(self) -> int: ...
+    def is_active(self) -> bool: ...
     def clear(self) -> None: ...
     @property
-    def buffer_frames(self): ...
-    def device_frames(self): ...
-    def write_now(self, buf, *, start: bool = True): ...
-    def start(self): ...
-    def service(self): ...
+    def buffer_frames(self) -> int:
+        """Frames in the WASAPI buffer, or 0 while closed."""
+    def device_frames(self) -> int:
+        """Frames queued in the device now."""
+    def write_now(self, buf: bytes | bytearray | memoryview, *, start: bool = True) -> int:
+        """Write `buf` straight into the WASAPI buffer, now, and return the bytes written."""
+    def start(self) -> bool:
+        """Start playing what `write_now` has written; `True` once playing."""
+    def service(self) -> int: ...
 
 class WinPCMInput(PCMInput):
-    device_name: Incomplete
-    samples: Incomplete
-    queue_ms: Incomplete
-    poll_ms: Incomplete
-    def __init__(self, fmt, *, device=None, samples: int = 512, queue_ms: int = 500, poll_ms: int = 2, session=None) -> None: ...
-    def queued_size(self): ...
+    """WASAPI shared-mode capture."""
 
-def pcm_out(format=None, *, device=None, latency=None, samples=None, queue_ms=None, coalesce_ms=None, prebuffer_ms=None, poll_ms: int = 2): ...
-def pcm_in(format=None, *, device=None, latency=None, samples=None, queue_ms=None, poll_ms: int = 2): ...
+    device_name: str | None
+    samples: int
+    queue_ms: int
+    poll_ms: int
+    def __init__(
+        self,
+        fmt: AudioFormat,
+        *,
+        device: str | None = None,
+        samples: int = 512,
+        queue_ms: int = 500,
+        poll_ms: int = 2,
+        session: AudioSession | None = None,
+    ) -> None: ...
+    def queued_size(self) -> int: ...
+
+def pcm_out(
+    format: AudioFormat | None = None,
+    *,
+    device: str | None = None,
+    latency: Literal["low", "buffered"] | None = None,
+    samples: int | None = None,
+    queue_ms: int | None = None,
+    coalesce_ms: int | None = None,
+    prebuffer_ms: int | None = None,
+    poll_ms: int = 2,
+) -> WinPCMOutput:
+    """Create a WASAPI-backed `PCMOutput`."""
+
+def pcm_in(
+    format: AudioFormat | None = None,
+    *,
+    device: str | None = None,
+    latency: Literal["low", "buffered"] | None = None,
+    samples: int | None = None,
+    queue_ms: int | None = None,
+    poll_ms: int = 2,
+) -> WinPCMInput:
+    """Create a WASAPI-backed `PCMInput`."""

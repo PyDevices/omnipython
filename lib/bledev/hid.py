@@ -571,6 +571,6 @@ async def connect(ble, name=None, *, device=None, timeout_ms=10000, bond=True, i
 
 
 __all__ = [
-    "Host", "Peripheral", "Keyboard", "Consumer", "Gamepad", "connect", "report_map", "identity",
-    "US_LAYOUT", "ticks_us", "ticks_diff",
+    "Host", "Peripheral", "connect", "report_map", "identity",
+    "ticks_us", "ticks_diff",
 ]

@@ -1,13 +1,15 @@
 # SPDX-FileCopyrightText: 2026 Brad Barnett
 #
 # SPDX-License-Identifier: MIT
-from . import BLEError as BLEError, BLETimeoutError as BLETimeoutError, DisconnectedError as DisconnectedError, GattError as GattError, NEEDS_PAIRING as NEEDS_PAIRING, UUID as UUID, UnsupportedError as UnsupportedError, connect_and_set_up as connect_and_set_up, wait_ms as wait_ms
-from _typeshed import Incomplete
+"""Files over Bluetooth: CircuitPython's BLE file-transfer protocol, both sides."""
+from . import BLE, BLEError, ClientCharacteristic, Connection, Device, UUID, _Passkey
+from .repl import _ReplServer
+from typing import Any
 
-SERVICE: Incomplete
-VERSION: Incomplete
-TRANSFER: Incomplete
-AUTH: Incomplete
+SERVICE: UUID
+VERSION: UUID
+TRANSFER: UUID
+AUTH: UUID
 PROTOCOL_VERSION: int
 READ: int
 READ_DATA: int
@@ -34,48 +36,76 @@ WINDOW: int
 MAX_PATH: int
 
 class FileTransferError(BLEError):
-    status: Incomplete
-    def __init__(self, status, message) -> None: ...
+    """The board answered with an error status (`.status`)."""
 
-class AuthError(BLEError): ...
+    status: int
+    def __init__(self, status: int, message: str) -> None: ...
 
-class _Out:
-    head: Incomplete
-    f: Incomplete
-    pos: Incomplete
-    size: Incomplete
-    close: Incomplete
-    def __init__(self, head, f=None, pos: int = 0, size: int = 0, close: bool = False) -> None: ...
+class AuthError(BLEError):
+    """The board refused the password, or wants one and none was given."""
 
 class FileServer:
-    root: Incomplete
-    window: Incomplete
+    """The protocol, without a radio, so it runs and is tested anywhere."""
+
+    root: str
+    window: int
     authed: bool
     changed: int
-    def __init__(self, root: str = '', window=...) -> None: ...
-    def reset(self) -> None: ...
-    def feed(self, data) -> None: ...
-    def has_output(self): ...
-    def packet(self, size): ...
+    def __init__(self, root: str = '', window: int = ...) -> None: ...
+    def reset(self) -> None:
+        """Forget the transfer in progress and everything queued (the connection closed)."""
+    def feed(self, data: bytes | bytearray | memoryview) -> None:
+        """Take what the client wrote to the transfer characteristic, in any split."""
+    def has_output(self) -> bool: ...
+    def packet(self, size: int) -> bytes | None:
+        """The next notification's payload (`None` when nothing is waiting)."""
     def sent(self) -> None: ...
 
-def start(password=None, name: str = 'mpy-files', *, console: bool = True, window=..., **options): ...
+def start(
+    password: str | bool | None = None,
+    name: str = 'mpy-files',
+    *,
+    console: bool = True,
+    window: int = ...,
+    **options: Any,
+) -> _ReplServer:
+    """Serve files (and, unless `console=False`, the REPL) over BLE. MicroPython only."""
 def stop() -> None: ...
 
 class Client:
-    connection: Incomplete
-    version: Incomplete
-    chunk: Incomplete
+    """A connection to a board's file service. Made by `connect`."""
+
+    connection: Connection | None
+    version: int | None
+    chunk: int
     timeout_ms: int
     bytes_in: int
     bytes_out: int
-    def __init__(self, connection, transfer, version, *, chunk=...) -> None: ...
-    async def read(self, path, offset: int = 0): ...
-    async def write(self, path, data, offset: int = 0, modification_time=None): ...
-    async def delete(self, path) -> None: ...
-    async def mkdir(self, path, modification_time=None): ...
-    async def listdir(self, path): ...
-    async def move(self, old, new) -> None: ...
+    def __init__(self, connection: Connection | None, transfer: ClientCharacteristic | None, version: int | None, *, chunk: int = ...) -> None: ...
+    async def read(self, path: str, offset: int = 0) -> bytes:
+        """The file's contents from `offset` on."""
+    async def write(self, path: str, data: bytes | bytearray | memoryview, offset: int = 0, modification_time: int | None = None) -> int:
+        """Write `data` at `offset` (the file ends after it). Returns the stored time in ns."""
+    async def delete(self, path: str) -> None:
+        """Delete a file, or a directory and everything in it."""
+    async def mkdir(self, path: str, modification_time: int | None = None) -> int:
+        """Make a directory and any missing parents. Returns the stored time in ns."""
+    async def listdir(self, path: str) -> list[tuple[str, int, bool, int]]:
+        """`[(name, size, is_directory, modification_time_ns), ...]`."""
+    async def move(self, old: str, new: str) -> None:
+        """Rename or move a file or directory (protocol version 4)."""
     async def close(self) -> None: ...
 
-async def connect(ble, password=None, name=None, *, device=None, timeout_ms: int = 10000, mtu: int = 247, pair=None, passkey=None, **connect_options): ...
+async def connect(
+    ble: BLE | object,
+    password: str | bytes | bytearray | memoryview | None = None,
+    name: str | None = None,
+    *,
+    device: Device | None = None,
+    timeout_ms: int = 10000,
+    mtu: int = 247,
+    pair: bool | None = None,
+    passkey: _Passkey | None = None,
+    **connect_options: Any,
+) -> Client:
+    """Find a board serving files (by `name`, or the first advertising the service), connect, log in, and return a `Client`."""
