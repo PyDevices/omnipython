@@ -14,4 +14,5 @@ metadata(
     license="MIT",
 )
 
+require("_boardname")
 package("midiports", files=("__init__.py", "uart.py", "usb_device.py", "usb_host.py"))

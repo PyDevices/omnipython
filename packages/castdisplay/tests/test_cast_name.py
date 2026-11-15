@@ -10,6 +10,7 @@ import unittest
 HERE = os.path.dirname(__file__)
 sys.path.insert(0, os.path.join(HERE, ".."))
 sys.path.insert(0, os.path.join(HERE, "..", "..", "..", "lib"))
+sys.path.insert(0, os.path.join(HERE, "..", "..", "_boardname"))
 
 import boarddev  # noqa: E402
 from castdisplay.micecast import Session  # noqa: E402

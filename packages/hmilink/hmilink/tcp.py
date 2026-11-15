@@ -341,11 +341,12 @@ class Listener:
 
     def _announce(self, name):
         if name is None:
+            import _boardname
+
             try:
-                import boarddev
+                name = _boardname.name("announce=True names the link", "hmilink", 'pass announce="a-name"')
             except ImportError:
                 raise ImportError("announce=True needs pydevices' boarddev for the board's name; or pass announce=\"a-name\"")
-            name = boarddev.name()
         server = _mdns_server()
         try:
             server.instance_name = name

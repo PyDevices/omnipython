@@ -282,17 +282,9 @@ def ports(ring=256, stamps=None, name=None):
     import usb.device
 
     if name is None:
-        import boarddev
+        import _boardname
 
-        board_name = getattr(boarddev, "name", None)
-        if board_name is None:
-            raise AttributeError(
-                "ports() names the device after the board with boarddev.name(), which this "
-                "board's boarddev doesn't have: its firmware is older than midiports. Update the "
-                'firmware, install pydevices again with target="/" so a newer boarddev runs '
-                "ahead of the frozen one, or pass name= to ports()."
-            )
-        name = board_name()
+        name = _boardname.name("ports() names the USB device", "midiports", "pass name= to ports()")
     itf = MIDIPortsInterface(ring=ring, stamps=stamps)
     usb.device.get().init(itf, builtin_driver=True, product_str=name)
     return itf.ports

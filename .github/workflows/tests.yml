@@ -26,6 +26,7 @@ on:
       - 'tests/**'
       - 'packages/vtterm/**'
       - 'packages/castdisplay/**'
+      - 'packages/_boardname/**'
       # The interpreters' pins and recipe, which tests/test_release_interpreters.py runs.
       - 'scripts/release_interpreters.sh'
       - 'scripts/release_interpreters/**'
@@ -54,6 +55,7 @@ on:
       - 'tests/**'
       - 'packages/vtterm/**'
       - 'packages/castdisplay/**'
+      - 'packages/_boardname/**'
       # The interpreters' pins and recipe, which tests/test_release_interpreters.py runs.
       - 'scripts/release_interpreters.sh'
       - 'scripts/release_interpreters/**'
