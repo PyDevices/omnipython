@@ -55,7 +55,7 @@ STDIO_PORT_DEFAULT = 18765
 RUNNER_REPO = "PyDevices/android-runner"
 DEFAULT_APK_CACHE_DIR = pathlib.Path.home() / ".pydevices" / "apk"
 DEFAULT_APK_FILENAME = "pydevices-runner-debug.apk"
-MIP_INDEX_DEFAULT = "https://pydevices.github.io/mip"
+MIP_INDEX_DEFAULT = "https://lib.omnipython.org"
 DEFAULT_DEPS_CACHE_DIR = pathlib.Path.home() / ".pydevices" / "mip"
 # Packages the Runner APK carries: a --deps package that depends on one of
 # these gets it from the APK, never a staged copy that would shadow it.

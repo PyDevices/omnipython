@@ -63,7 +63,7 @@ Plain `mip` takes every file of a package from the one index you give it, so wit
 ```python
 import mip
 mip.install("aioble")
-mip.install("bledev", index="https://PyDevices.github.io/mip")
+mip.install("bledev", index="https://lib.omnipython.org")
 ```
 
 Firmware that freezes aioble doesn't need it installed.

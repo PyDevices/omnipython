@@ -8,7 +8,7 @@ From the repository root:
 
     python tools/libbuild.py build --out build/lib
     python -m http.server -d build/lib/index 8000
-    python tools/libbuild.py compare build/lib/index https://pydevices.github.io/mip
+    python tools/libbuild.py compare build/lib/index https://lib.omnipython.org
 
 ``build`` assembles every package this repository publishes (the ones
 ``mip-split.toml`` names, plus ``pydevices`` and ``pydevices-desktop``, all at

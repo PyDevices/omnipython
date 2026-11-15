@@ -72,7 +72,7 @@ micropython-lib checkout instead.
 To check a build against another index, file hash by file hash:
 
 ```bash
-python tools/libbuild.py compare build/lib/index https://pydevices.github.io/mip
+python tools/libbuild.py compare build/lib/index https://lib.omnipython.org
 ```
 
 `--base-url` writes an `index.html` that shows the address the index is served

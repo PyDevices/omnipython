@@ -419,7 +419,7 @@ and Android.
   Get it: open in a browser. Runs on: Web.
 - [`lib`](https://lib.omnipython.org): Browse the `mip` index for the libraries, board configs and drivers.\
   Get it: open in a browser. Runs on: Web.
-- [`mip`](https://pydevices.github.io/mip/): Browse the generated package mirror: micropython-lib and the project's releases.\
+- [`mip`](https://pydevices.github.io/mip/): Read the old package mirror, which no longer takes releases: install from lib instead.\
   Get it: open in a browser. Runs on: Web.
 
 ## A to Z

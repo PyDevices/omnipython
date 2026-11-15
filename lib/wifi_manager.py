@@ -53,8 +53,8 @@ Install
 It is part of the ``pydevices`` package, so a firmware that freezes
 pydevices already has it.  Otherwise, on MicroPython::
 
-    import mip
-    mip.install("pydevices", index="https://PyDevices.github.io/mip")
+    import omip
+    omip.install("pydevices")
 
 CircuitPython: copy this file to ``/lib``.
 

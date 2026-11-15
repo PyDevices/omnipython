@@ -24,7 +24,7 @@ Run from the directory that should own `./lib`:
 ```bash
 # Shared with CircuitPython (source .py)
 micropython -m mip install --no-mpy -t lib \
-  -i https://PyDevices.github.io/mip \
+  -i https://lib.omnipython.org \
   github:PyDevices/pydevices/board_configs/desktop
 
 # MicroPython-only (precompiled .mpy) — omit --no-mpy

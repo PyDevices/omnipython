@@ -110,7 +110,7 @@ Then create a ready-to-use workspace in the default user library location:
 # Linux / macOS
 mkdir -p ~/.micropython && cd ~/.micropython
 micropython -m mip install --target lib \
-  --index https://PyDevices.github.io/mip \
+  --index https://lib.omnipython.org \
   github:PyDevices/pydevices/board_configs/desktop
 ```
 
@@ -118,7 +118,7 @@ micropython -m mip install --target lib \
 REM Windows (cmd.exe)
 mkdir "%USERPROFILE%\.micropython" && cd "%USERPROFILE%\.micropython"
 micropython.exe -m mip install --target lib ^
-  --index https://PyDevices.github.io/mip ^
+  --index https://lib.omnipython.org ^
   github:PyDevices/pydevices/board_configs/desktop
 ```
 
@@ -127,7 +127,7 @@ package. Installing into an arbitrary directory instead works the same way:
 
 ```bash
 micropython -m mip install \
-  --index https://PyDevices.github.io/mip \
+  --index https://lib.omnipython.org \
   github:PyDevices/pydevices/board_configs/desktop
 ```
 
@@ -179,7 +179,7 @@ on the device:
 
 ```bash
 mpremote mip install \
-  --index https://PyDevices.github.io/mip \
+  --index https://lib.omnipython.org \
   github:PyDevices/pydevices/board_configs/busdisplay/i80/t-display-s3
 ```
 
