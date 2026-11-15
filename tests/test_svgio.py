@@ -104,6 +104,39 @@ class Decode(unittest.TestCase):
         with self.assertRaises(ValueError):
             svgio.SvgDecoder(memory=100)
 
+    def test_the_compact_form(self):
+        import struct
+
+        import svgio
+
+        for f, size in (("f", 4), ("d", 8)):
+            drawing = b"".join(
+                (
+                    b"\x01SVG" + bytes((size,)),
+                    struct.pack("<B4" + f, 10, 0, 0, 24, 12),
+                    b"\x0d",
+                    struct.pack("<B5" + f + "II2" + f + "H", 3, 2, 2, 20, 8, 0, 0xFF0000, 0xFFFFFFFE, 1, 1, 0),
+                    struct.pack("<B4" + f + "B", 8, 1.5, 2, 0, 1, 0),
+                    struct.pack("<BI", 4, 1 + 2 * size + 6) + struct.pack("<B2" + f, 77, 0, 0) + struct.pack("<BH", 84, 3) + b"h4z",
+                    struct.pack("<II2" + f + "H", 0xFFFFFFFF, 0x00FF00, 0.5, 0.25, 0),
+                    b"\x07\x0e",
+                )
+            )
+            self.assertEqual(
+                svgio.expand(drawing),
+                b'<svg xmlns="http://www.w3.org/2000/svg" width="24" height="12" viewBox="0 0 24 12"><defs></defs>'
+                b'<rect x="2" y="2" width="20" height="8" fill="#ff0000"/><g transform="translate(1.5 2)">'
+                b'<path d="M0 0h4z" fill="none" stroke="#00ff00" stroke-width="0.5" stroke-linecap="round"'
+                b' stroke-linejoin="round" opacity="0.25"/></g></svg>',
+            )
+            w, h = self.d.open(drawing)
+            pixels, alpha = bytearray(w * h * 2), bytearray(w * h)
+            self.d.decode(pixels, alpha)
+            self.assertEqual((w, h, px(pixels, 5 * w + 10)), (24, 12, 0xF800))
+        for bad in (b"<svg/>", drawing[:-9], drawing[:5] + b"\x63", b"\x01SVG\x02"):
+            with self.assertRaises(ValueError):
+                svgio.expand(bad)
+
     def test_errors(self):
         import svgio
 
