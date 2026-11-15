@@ -790,17 +790,20 @@ class PointerHoverTest(unittest.TestCase):
         return self.read(e.Button(e.MOUSEBUTTONUP, (10, 10), 1, touch, None))
 
     def test_a_lifted_finger_leaves_the_pointer_off_every_widget(self):
-        # The lift itself still reports the touched point, so the click lands;
-        # two idle reads later the pointer is parked and LVGL ends the hover.
+        # The lift itself still reports the touched point, so the click lands.
+        # Then the pointer steps one pixel (so LVGL notes what it hovers) and
+        # is parked, which ends the hover.
         self.assertEqual(self.touch_lift(), ((10, 10), "released"))
         self.assertEqual(self.read(None), ((10, 10), "released"))
+        self.assertEqual(self.read(None), ((11, 10), "released"))
         self.assertEqual(self.read(None), ((-1, -1), "released"))
         self.assertEqual(self.read(None), ((-1, -1), "released"))
 
     def test_a_touch_screen_with_no_flag_is_parked_too(self):
         # A pointer that has never moved with the button up is a touch screen.
         self.touch_lift(touch=False)
-        self.read(None)
+        for _ in range(2):
+            self.read(None)
         self.assertEqual(self.read(None), ((-1, -1), "released"))
 
     def test_a_mouse_stays_where_it_clicked(self):

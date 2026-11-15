@@ -955,11 +955,16 @@ def _make_touch_cb(device):
     def _touch_cb(event, indev, data):
         st = _touch_state_for(device)
         if event is None:
-            # Two idle reads after a lift: the one that reported the release
-            # at the touched point goes first, so the click still lands.
+            # Idle reads after a lift. The first leaves the pointer where the
+            # finger was, so the click lands. The second moves it one pixel:
+            # LVGL only remembers the widget it hovered when the pointer moves
+            # while released, and without that it never ends the hover. The
+            # third parks it off the screen.
             if st["park"] and not st["pressed"]:
                 st["park"] -= 1
-                if not st["park"]:
+                if st["park"] == 1:
+                    st["x"] += 1
+                elif not st["park"]:
                     st["x"], st["y"] = _PARKED
         elif event.type == events.MOUSEBUTTONDOWN and event.button == 1:
             st["x"], st["y"] = event.pos
@@ -978,7 +983,7 @@ def _make_touch_cb(device):
             st["pressed"] = False
             # A pointer that has never moved with the button up is a touch
             # screen, and so is any lift the OS says came from a finger.
-            st["park"] = 2 if (getattr(event, "touch", False) or not st["mouse"]) else 0
+            st["park"] = 3 if (getattr(event, "touch", False) or not st["mouse"]) else 0
         data.point = lv.point_t({"x": st["x"], "y": st["y"]})
         data.state = lv.INDEV_STATE.PRESSED if st["pressed"] else lv.INDEV_STATE.RELEASED
 
