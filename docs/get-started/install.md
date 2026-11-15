@@ -167,6 +167,11 @@ From then on `import omip` finds the copy in the root. Asking a frozen `omip`
 to install itself skips it, since the copy it would put in `lib` would never
 run.
 
+The same goes for a Python package that stands in for a module some firmware builds in.
+pygraphics is one: boards whose firmware has the C module skip the Python package, and
+`omip.install("pygraphics")` says so, while a board without it gets the package. Pass
+`force=True` to install it anyway.
+
 ## Connected-device installation
 
 `mpremote` can perform the same hardware-board install without running `mip`

@@ -24,6 +24,11 @@ always have: `mip` takes every file of a package from the one index it was given
 What a package needs from Adafruit's bundle on CircuitPython goes under
 `circuitpython`, and only omip on CircuitPython reads it.
 
+A package that is the pure-Python stand-in for a module some firmware has built in, as
+pygraphics is for its C module, names that module under `stands_in_for`. `omip` skips it
+on a firmware that has the module, since the firmware's copy would win the import
+anyway, and installs it everywhere else. `force=True` installs it regardless.
+
 A package that isn't a library names its own folder under `target`, as an app
 does with `"target": "apps/home"`. That folder sits beside the one libraries go
 in, so it's `/apps/home` on a board whose libraries are in `/lib`, and what the
@@ -385,6 +390,22 @@ def _skip_frozen(plan, spec, paths):
     return True
 
 
+def _skip_stand_in(plan, spec, module):
+    """Whether spec is the Python stand-in for module, and the firmware has module already.
+
+    A package names the module it stands in for when it exists for boards that lack that
+    module: pygraphics' pure-Python package beside the firmware's C one. A built-in module
+    always wins the import, so the copy would only take up flash.
+    """
+    if not module or plan.force:
+        return False
+    found = _in_firmware(module)
+    if found is None or (found == "frozen" and not _frozen_wins(plan)):
+        return False
+    print("Skipping %s: it stands in for %s, which this firmware has %s." % (spec, module, found))
+    return True
+
+
 def _walk(plan, spec, version, indexes, owner=None):
     """Read spec's JSON and everything it needs into plan. Returns the index it was found on.
 
@@ -432,7 +453,9 @@ def _walk(plan, spec, version, indexes, owner=None):
         entry[3] = _beside(plan.target, folder)
         if entry is plan.roots[0]:
             plan.libs = _libs_for_app(plan.target)
-    elif _skip_frozen(plan, spec, [path for path, _ in hashes] + [path for path, _ in urls]):
+    elif _skip_stand_in(plan, spec, body.get("stands_in_for")) or _skip_frozen(
+        plan, spec, [path for path, _ in hashes] + [path for path, _ in urls]
+    ):
         hashes = urls = ()
     for path, short in hashes:
         plan.files.append((path, entry[1], short, owner))

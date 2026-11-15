@@ -121,7 +121,7 @@ class BuiltRepository(unittest.TestCase):
                 for kind in ("py", "6"):
                     for stem in ("latest", version):
                         body = json.loads((self.untested / "package" / kind / name / f"{stem}.json").read_text())
-                        self.assertLessEqual(set(body), {"v", "hashes", "version", "deps", "upstream", "circuitpython"})
+                        self.assertLessEqual(set(body), {"v", "hashes", "version", "deps", "upstream", "circuitpython", "stands_in_for"})
                         self.assertEqual(body["version"], version)
                 py = self.paths(name)
                 self.assertTrue(py or self.deps(name))
@@ -448,6 +448,21 @@ class SeveralPackages(unittest.TestCase):
         libbuild.assemble_pinned(pinned, self.scratch / "src", self.tree, "lib", self.local)
         self.assertEqual(self.tree.upstream, {"one": ("requests",)})
         self.assertEqual(self.tree.circuitpython, {"one": ("adafruit_requests",)})
+
+    def test_a_repository_that_stands_in_for_a_module_says_so(self):
+        source = self.scratch / "stand"
+        (source / "lib" / "gfx").mkdir(parents=True)
+        (source / "lib" / "gfx" / "__init__.py").write_text("X = 1\n", encoding="utf-8")
+        (source / "package.json").write_text('{"stands_in_for": "gfx"}', encoding="utf-8")
+        pinned = libbuild.Pinned("gfx", "Org/gfx", "v1.0.0", "Gfx", None)
+        libbuild.assemble_pinned(pinned, source, self.tree, "lib", self.local)
+        self.assertEqual(self.tree.stands_in_for, {"gfx": "gfx"})
+        # One without the key, or without a package.json, says nothing.
+        (source / "package.json").write_text("{}", encoding="utf-8")
+        other = libbuild.Pinned("gfx2", "Org/gfx", "v1.0.0", "Gfx", None)
+        shutil.copytree(source / "lib" / "gfx", source / "lib" / "gfx2")
+        libbuild.assemble_pinned(other, source, self.tree, "lib", self.local)
+        self.assertNotIn("gfx2", self.tree.stands_in_for)
 
     def test_the_lock_gives_deskkit_a_client_on_each_interpreter(self):
         # deskkit asks the network through appkit.net; touchkit gets the client by requiring deskkit.

@@ -407,6 +407,7 @@ class Tree:
     packages: dict[str, str] = field(default_factory=dict)  # name -> where it came from
     upstream: dict[str, tuple[str, ...]] = field(default_factory=dict)  # lib-lock.json's repo.<name>.upstream
     circuitpython: dict[str, tuple[str, ...]] = field(default_factory=dict)  # lib-lock.json's repo.<name>.circuitpython
+    stands_in_for: dict[str, str] = field(default_factory=dict)  # a pinned repository's package.json "stands_in_for"
 
 
 def assemble_repo_packages(root: Path, lock: Lock, version: str, tree: Tree, library: str, local: frozenset[str]) -> None:
@@ -600,6 +601,13 @@ def assemble_pinned(pinned: Pinned, source_root: Path, tree: Tree, library: str,
     tree.packages[pinned.name] = f"{pinned.repository}@{pinned.ref}"
     destination = tree.path / pinned.name
     shutil.copytree(source, destination / pinned.name, ignore=_ignore_debris)
+    # A repository's own package.json can say its package is the Python stand-in for a module
+    # some firmware builds in; omip reads that from the index JSON and skips it there.
+    own_json = source_root / "package.json"
+    if own_json.is_file():
+        stands_in = json.loads(own_json.read_text(encoding="utf-8")).get("stands_in_for")
+        if stands_in:
+            tree.stands_in_for[pinned.name] = stands_in
     (destination / "manifest.py").write_text(
         render_manifest(
             description=pinned.description,
@@ -1158,6 +1166,8 @@ def compile_index(
                 # place of those. Only omip on CircuitPython reads this key.
                 if tree.circuitpython.get(name):
                     body["circuitpython"] = [[dep, "latest"] for dep in tree.circuitpython[name]]
+                if tree.stands_in_for.get(name):
+                    body["stands_in_for"] = tree.stands_in_for[name]
                 for stem in ("latest", version):
                     _write_json(body, out / "package" / kind / name / f"{stem}.json", minify=True)
             entries.append(
