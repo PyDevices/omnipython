@@ -12,3 +12,6 @@ displaydev\.wasmdisplay
 displaydev\.windisplay
 bledev\.cpble
 bledev\.mpble
+# pdwidgets.Area is pygraphics' C type: its constructor takes a rectangle in several
+# shapes, and introspection only sees `(self)`.
+pdwidgets\.Area\.__init__

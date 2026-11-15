@@ -11,6 +11,7 @@ from typing import Any
 
 import events as events
 from palettes import get_palette as get_palette
+from typing_extensions import disjoint_base
 
 from . import pct as pct
 from .display import Display as Display
@@ -68,12 +69,86 @@ from .widgets.toast import Toast as Toast
 from .widgets.toggle import Toggle as Toggle
 from .widgets.toggle_button import ToggleButton as ToggleButton
 
+__all__ = [
+    "ALIGN",
+    "DEBUG",
+    "DEFAULT_PADDING",
+    "ICON_SIZE",
+    "MARK_UPDATES",
+    "pct",
+    "PAD",
+    "POSITION",
+    "TEXT_SIZE",
+    "TEXT_WIDTH",
+    "Area",
+    "ColorTheme",
+    "Display",
+    "IconTheme",
+    "Screen",
+    "Task",
+    "Widget",
+    "events",
+    "get_palette",
+    "icon_theme",
+    "tick",
+    "Accordion",
+    "AppBar",
+    "Badge",
+    "BottomSheet",
+    "Button",
+    "Card",
+    "Chart",
+    "CheckBox",
+    "Chip",
+    "ColorPicker",
+    "Column",
+    "DatePicker",
+    "Dialog",
+    "DigitalClock",
+    "Divider",
+    "Drawer",
+    "Dropdown",
+    "Form",
+    "FormRow",
+    "Gauge",
+    "Grid",
+    "Icon",
+    "IconButton",
+    "Image",
+    "Keyboard",
+    "Label",
+    "ListView",
+    "Menu",
+    "Navigator",
+    "NumberStepper",
+    "Page",
+    "PasswordField",
+    "PinPad",
+    "ProgressBar",
+    "RadioButton",
+    "RadioGroup",
+    "Row",
+    "ScrollBar",
+    "ScrollView",
+    "SegmentedControl",
+    "Slider",
+    "Spinner",
+    "Switch",
+    "TabView",
+    "TextBox",
+    "TextInput",
+    "Toast",
+    "Toggle",
+    "ToggleButton",
+]
+
 DEBUG: bool
 MARK_UPDATES: bool
 PAD: int
 TEXT_WIDTH: int
 DEFAULT_PADDING: tuple[int, int, int, int]
 
+@disjoint_base
 class Area:
     """Integer rectangle `(x, y, w, h)` in display coordinates."""
 
@@ -81,17 +156,18 @@ class Area:
     y: int
     w: int
     h: int
-    def __init__(self, *args: Any) -> None: ...
+    def __init__(self, /, *args: Any, **kwargs: Any) -> None: ...
     def __iter__(self) -> Iterator[int]: ...
-    def __add__(self, other: Area | tuple[int, int, int, int]) -> Area: ...
-    def clip(self, other: Area | tuple[int, int, int, int]) -> Area: ...
+    def __add__(self, value: Area | tuple[int, int, int, int], /) -> Area: ...
+    def __radd__(self, value: Area | tuple[int, int, int, int], /) -> Area: ...
+    def clip(self, other: Area | tuple[int, int, int, int], /) -> Area: ...
     def inset(self, *args: int) -> Area: ...
     def offset(self, *args: int) -> Area: ...
     def shift(self, *args: int) -> Area: ...
     def contains(self, point: Any) -> bool: ...
-    def contains_area(self, other: Area | tuple[int, int, int, int]) -> bool: ...
-    def intersects(self, other: Area | tuple[int, int, int, int]) -> bool: ...
-    def touches_or_intersects(self, other: Area | tuple[int, int, int, int]) -> bool: ...
+    def contains_area(self, other: Area | tuple[int, int, int, int], /) -> bool: ...
+    def intersects(self, other: Area | tuple[int, int, int, int], /) -> bool: ...
+    def touches_or_intersects(self, other: Area | tuple[int, int, int, int], /) -> bool: ...
 
 class _IconSize:
     SMALL: int

@@ -76,6 +76,7 @@ palettes.ansi
 palettes.cube
 palettes.material_design
 palettes.wheel
+pdwidgets
 pdwidgets.console
 pdwidgets.display
 pdwidgets.icons
@@ -83,6 +84,7 @@ pdwidgets.pct
 pdwidgets.screen
 pdwidgets.task
 pdwidgets.widget
+pdwidgets.widgets
 pdwidgets.widgets.accordion
 pdwidgets.widgets.app_bar
 pdwidgets.widgets.badge
