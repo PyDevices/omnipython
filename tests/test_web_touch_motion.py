@@ -6,6 +6,7 @@
 SDL does both, so drag code written against the mouse works on a touch screen.
 """
 
+import importlib
 import pathlib
 import sys
 import types
@@ -48,7 +49,7 @@ class TestWebInputTouchMotion(unittest.TestCase):
         self._path = mock.patch.object(sys, "path", [str(_LIB)] + sys.path)
         self._path.start()
         sys.modules.pop("displaydev._webinput", None)
-        from displaydev import _webinput
+        _webinput = importlib.import_module("displaydev._webinput")
 
         self.input = _webinput.WebInput()
         self.input.canvas = _Canvas()
