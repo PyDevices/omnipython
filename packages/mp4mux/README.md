@@ -69,8 +69,9 @@ Windows read. `add_audio` takes bytes, a bytearray, a memoryview or an
 `array("h")`. A track that starts after the other gets an edit list, so
 players start it at the right moment.
 
-ffprobe reads the files and ffmpeg decodes them with no errors; the tests
-check every frame's time, the keyframes, and the silence in a gap. Playback
+ffprobe reads the files and ffmpeg decodes them with no errors, plain,
+fragmented and past 4 GB; the tests check every frame's time, the
+keyframes, and the silence in a gap. Playback
 in VLC and Windows' own player hasn't been checked.
 
 ## Memory, power loss and limits
@@ -80,8 +81,24 @@ of sound, preallocated for `max_seconds` (10 minutes by default) and grown
 past it. Ten minutes at 25 fps with 20 ms blocks of sound is about 420 KB.
 
 If power is lost before `close()`, the file holds its media but no index,
-and players refuse it. Recording in slices of a few minutes, each its own
-file, bounds what a power loss costs. One file holds up to 4 GB; the writer
-raises `OSError` before it would pass that, so start a new file there.
+and players refuse it. Pass `fragment_ms` to write a fragmented MP4
+instead, and a recording cut off anywhere still plays up to its last whole
+fragment:
+
+```python
+mp4 = mp4mux.Writer("/sd/clip.mp4", 1280, 720, fps_hint=25, fragment_ms=2000)
+```
+
+Each fragment is written once that many milliseconds have gathered, at the
+next keyframe, so make the encoder's keyframe interval no longer than the
+fragment. The fragment being gathered stays in RAM, media and all: about
+two seconds of video and sound at that setting. Start both tracks
+before the first fragment is written: the file's tracks are the ones that
+had started by then, and a frame or a block for a track that hadn't raises
+`ValueError`.
+
+A file may pass 4 GB: its media goes into a second `mdat` box and its
+offsets into `co64`. A FAT card stops any file at
+4 GB, so the write raises `OSError` there; exFAT goes past it.
 
 This is a preview: it isn't released yet, and the names may still change.

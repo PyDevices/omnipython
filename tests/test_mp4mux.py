@@ -10,6 +10,7 @@ on unix MicroPython with frame times that vary and a hole in the sound.
 
 import hashlib
 import json
+import struct
 import os
 import shutil
 import subprocess
@@ -86,6 +87,29 @@ def _run(*args):
     return subprocess.run(args, capture_output=True, text=True, timeout=120, check=True)
 
 
+def _boxes(path):
+    """The file's top-level boxes, as (offset, kind, size)."""
+    out = []
+    with open(path, "rb") as f:
+        end = f.seek(0, 2)
+        pos = 0
+        while pos < end:
+            f.seek(pos)
+            size, kind = struct.unpack(">I4s", f.read(8))
+            out.append((pos, kind, size))
+            pos += size
+    return out
+
+
+def _moov(path):
+    for pos, kind, size in _boxes(path):
+        if kind == b"moov":
+            with open(path, "rb") as f:
+                f.seek(pos)
+                return f.read(size)
+    raise AssertionError("no moov")
+
+
 @unittest.skipUnless(shutil.which("ffmpeg") and shutil.which("ffprobe"), "needs ffmpeg and ffprobe")
 class TestMp4mux(unittest.TestCase):
     @classmethod
@@ -107,15 +131,17 @@ class TestMp4mux(unittest.TestCase):
     def tearDownClass(cls):
         shutil.rmtree(cls.tmp, ignore_errors=True)
 
-    def _check(self, interpreter, profile):
-        out = os.path.join(self.tmp, "%s-%s.mp4" % (os.path.basename(interpreter), profile))
-        _run(interpreter, MUX, self.h264[profile], self.pcm, out)
+    def _check(self, interpreter, profile, *options):
+        name = "-".join((os.path.basename(interpreter), profile) + options)
+        out = os.path.join(self.tmp, name + ".mp4")
+        _run(interpreter, MUX, self.h264[profile], self.pcm, out, *options)
 
         probe = json.loads(_run("ffprobe", "-v", "error", "-show_streams", "-of", "json", out).stdout)
         video, audio = probe["streams"]
         self.assertEqual(video["codec_name"], "h264")
         self.assertEqual((video["width"], video["height"]), (320, 240))
-        self.assertEqual(int(video["nb_frames"]), FRAMES)
+        if not options:
+            self.assertEqual(int(video["nb_frames"]), FRAMES)
         self.assertEqual(audio["codec_name"], "pcm_s16le")
         self.assertEqual((int(audio["sample_rate"]), audio["channels"]), (RATE, 1))
         self.assertAlmostEqual(float(audio["start_time"]), 0.1, places=3)
@@ -127,6 +153,7 @@ class TestMp4mux(unittest.TestCase):
         for i in range(FRAMES):
             want.append(t)
             t += FRAME_MS[i % 3]
+        self.assertEqual(len(frames), FRAMES)
         self.assertEqual([round(float(p["pts_time"]) * 1000) for p in frames], want)
         self.assertEqual([i for i, p in enumerate(frames) if "K" in p["flags"]], list(range(0, FRAMES, 25)))
 
@@ -144,6 +171,50 @@ class TestMp4mux(unittest.TestCase):
         self.assertGreater(max(abs(s) for s in samples[at(900) : at(995)]), 2000)  # ffmpeg's sine peaks at 4095
         self.assertGreater(max(abs(s) for s in samples[at(1205) : at(1300)]), 2000)  # ffmpeg's sine peaks at 4095
         self.assertEqual(len(samples), at(4000))  # 20 ms blocks from 100 ms while t < 3990
+        return out
+
+    def _check_fragmented(self, interpreter):
+        out = self._check(interpreter, "baseline", "500")
+        kinds = [kind for _, kind, _ in _boxes(out)]
+        # A moov with no samples, then a moof and its mdat per keyframe.
+        self.assertEqual(kinds, [b"ftyp", b"moov"] + [b"moof", b"mdat"] * 4)
+        moov = _moov(out)
+        self.assertIn(b"mvex", moov)
+        self.assertEqual(moov.count(b"trex"), 2)
+
+        # Cut short anywhere in its last fragment, as by a power loss, the
+        # file still plays up to the fragment before. Until its mdat is
+        # written, a fragment's moof is a free box.
+        with open(out, "rb") as f:
+            data = bytearray(f.read())
+        last_moof = [pos for pos, kind, _ in _boxes(out) if kind == b"moof"][-1]
+        data[last_moof + 4 : last_moof + 8] = b"free"
+        cut = os.path.join(self.tmp, "cut.mp4")
+        for keep in (8, 100, len(data) - last_moof - 1):
+            with self.subTest(keep=keep):
+                with open(cut, "wb") as f:
+                    f.write(data[: last_moof + keep])
+                frames = _run("ffprobe", "-v", "error", "-select_streams", "v", "-show_entries",
+                              "packet=pts_time", "-of", "csv=p=0", cut).stdout.split()
+                self.assertEqual(len(frames), 75)
+                decode = subprocess.run(["ffmpeg", "-v", "error", "-i", cut, "-f", "null", "-"],
+                                        capture_output=True, text=True, timeout=120)
+                self.assertEqual((decode.returncode, decode.stderr), (0, ""))
+
+    def _check_past_4gb(self, interpreter):
+        # A sparse hole puts the media's end past 4 GB without writing it.
+        skip = (1 << 32) - 30000
+        try:
+            out = self._check(interpreter, "baseline", "0", str(skip))
+            mdats = [(pos, size) for pos, kind, size in _boxes(out) if kind == b"mdat"]
+            self.assertEqual(len(mdats), 2)  # one mdat box holds up to 4 GB
+            self.assertGreater(mdats[1][0] + mdats[1][1], 1 << 32)
+            moov = _moov(out)
+            self.assertEqual((moov.count(b"co64"), moov.count(b"stco")), (2, 0))
+        finally:
+            for name in os.listdir(self.tmp):
+                if name.endswith(".mp4"):
+                    os.remove(os.path.join(self.tmp, name))
 
     def test_cpython(self):
         for profile in self.h264:
@@ -155,6 +226,20 @@ class TestMp4mux(unittest.TestCase):
         for profile in self.h264:
             with self.subTest(profile=profile):
                 self._check(_mprun.micropython(), profile)
+
+    def test_fragmented_cpython(self):
+        self._check_fragmented(sys.executable)
+
+    def test_fragmented_micropython(self):
+        _mprun.need_micropython(self)
+        self._check_fragmented(_mprun.micropython())
+
+    def test_past_4gb_cpython(self):
+        self._check_past_4gb(sys.executable)
+
+    def test_past_4gb_micropython(self):
+        _mprun.need_micropython(self)
+        self._check_past_4gb(_mprun.micropython())
 
 
 class TestDefaultBytes(unittest.TestCase):
@@ -207,6 +292,19 @@ class TestWriter(unittest.TestCase):
         with self.mp4mux.Writer(self.path, 16, 16) as mp4:
             mp4.add_audio(array("h", bytes(640)), 0)
             self.assertEqual(mp4.duration_ms, 20)
+
+    def test_a_track_must_start_in_the_first_fragment(self):
+        with self.mp4mux.Writer(self.path, 16, 16, fragment_ms=100) as mp4:
+            for k in range(10):
+                mp4.add_audio(bytes(640), 20 * k)
+            with self.assertRaises(ValueError):
+                mp4.add_video(_access_unit(0, _SPS_BASELINE, True), 200, True)
+
+    def test_fragments_write_no_index_at_close(self):
+        with self.mp4mux.Writer(self.path, 16, 16, fragment_ms=100) as mp4:
+            for k in range(10):
+                mp4.add_audio(bytes(640), 20 * k)
+        self.assertEqual([kind for _, kind, _ in _boxes(self.path)], [b"ftyp", b"moov"] + [b"moof", b"mdat"] * 2)
 
     def test_pcm_must_be_whole_frames(self):
         with self.mp4mux.Writer(self.path, 16, 16, audio_channels=2) as mp4:
