@@ -14,7 +14,7 @@ class MDNS:
     def __init__(self, interface: Any = None) -> None: ...
     @property
     def hostname(self) -> str: ...
-    def advertise(self, name: str, port: int) -> None:
+    def advertise(self, name: str | None, port: int) -> None:
         """Answer for `name` on UDP `port` until `deinit`."""
     def find(self, name: str | None = None, timeout: int | float = 2) -> list[tuple[str, tuple[str, int]]]:
         """`[(name, (ip, port)), ...]` of the peers that answer."""
@@ -32,7 +32,7 @@ class Hotspot:
     def __init__(
         self, password: str, *, ssid: str | None = None, host: bool | None = None, timeout: int | float = 20
     ) -> None: ...
-    def advertise(self, name: str, port: int) -> None:
+    def advertise(self, name: str | None, port: int) -> None:
         """Remember this side's name and port; the hotspot starts at `find()`."""
     def find(self, name: str | None = None, timeout: int | float | None = None) -> list[tuple[str, tuple[str, int | None]]]:
         """`[(name, (ip, port))]` of the host, or `[]` on the host itself."""
@@ -54,7 +54,7 @@ class BLE:
     """Find a peer nearby by Bluetooth LE, then talk to it over IP."""
 
     def __init__(self, ble: Any = None) -> None: ...
-    def advertise(self, name: str, port: int, address: str | None = None) -> None: ...
+    def advertise(self, name: str | None, port: int, address: str | None = None) -> None: ...
     def find(self, name: str | None = None, timeout: int | float = 2) -> list[tuple[str, tuple[str, int]]]:
         """`[(name, (ip, port)), ...]` of the peers heard."""
     def deinit(self) -> None: ...

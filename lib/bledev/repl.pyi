@@ -46,7 +46,7 @@ class _ReplServer(Protocol):
 
 def start(
     password: str | Literal[False] | None = None,
-    name: str = 'mpy-repl',
+    name: str | None = None,
     *,
     interval_us: int = 100000,
     dupterm_index: int | None = None,
@@ -68,7 +68,7 @@ def refused(pair: bool, passkey: object) -> PairingError:
 async def connect(
     ble: BLE | object,
     password: str | bytes | bytearray | memoryview | None = None,
-    name: str = 'mpy-repl',
+    name: str | None = None,
     *,
     device: Device | None = None,
     timeout_ms: int = 10000,

@@ -35,7 +35,7 @@ class Link:
     async def close(self) -> None:
         """Disconnect. Anything already received stays readable."""
 
-async def serve(ble: BLE | object, name: str = 'bledev', *, timeout_ms: int | None = None, interval_us: int = 100000, mtu: int = ...) -> Link:
+async def serve(ble: BLE | object, name: str | None = None, *, timeout_ms: int | None = None, interval_us: int = 100000, mtu: int = ...) -> Link:
     """Advertise the Nordic UART service as `name` and return a `Link` when a central connects."""
 async def connect(ble: BLE | object, name: str | None = None, *, device: Device | None = None, timeout_ms: int = 10000, mtu: int = ..., **connect_options: Any) -> Link:
     """Find a NUS peripheral (by `name`, or the first one advertising the service), connect, and return a `Link`."""
