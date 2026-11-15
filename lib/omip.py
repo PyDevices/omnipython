@@ -28,7 +28,8 @@ A package that isn't a library names its own folder under `target`, as an app
 does with `"target": "apps/home"`. That folder sits beside the one libraries go
 in, so it's `/apps/home` on a board whose libraries are in `/lib`, and what the
 package needs still goes in `/lib`. Given a target that isn't a `lib` folder,
-such as `/flash`, the package's folder goes inside it: `/flash/apps/home`.
+such as `/flash`, the package's folder goes inside it, `/flash/apps/home`, and
+what it needs goes in `/flash/lib`.
 """
 
 import gc
@@ -242,6 +243,9 @@ class _Plan:
     def __init__(self, channel, target, force, url_base=None):
         self.channel = channel
         self.target = target
+        # Where libraries go: the target, unless the package asked for names
+        # its own folder and the target isn't a library folder (see _walk).
+        self.libs = target
         self.force = force
         self.url_base = url_base
         self.seen = []
@@ -252,7 +256,7 @@ class _Plan:
 
     def folder(self, root):
         """The folder root's files land in."""
-        return root[3] or self.target
+        return root[3] or self.libs
 
 
 def _beside(target, folder):
@@ -271,6 +275,18 @@ def _beside(target, folder):
     # "/flash" gives "/flash/apps/home" and "/" gives "/apps/home": the package
     # stays on the drive it was sent to.
     return target.rstrip("/") + "/" + folder
+
+
+def _libs_for_app(target):
+    """The library folder for what an app needs, given the target it was sent to.
+
+    A target named `lib` is one; any other holds one, so `/flash` gives
+    `/flash/lib` and `/` gives `/lib`, where the app's `/flash/apps/...` or
+    `/apps/...` finds them on the path.
+    """
+    if target.rpartition("/")[2] == "lib":
+        return target
+    return target.rstrip("/") + "/lib"
 
 
 def _module_names(paths):
@@ -339,7 +355,7 @@ def _ahead_of_frozen(folder):
 
 def _frozen_wins(plan):
     """Whether a frozen module would run ahead of a copy in the target folder."""
-    return not plan.force and not _ahead_of_frozen(plan.target)
+    return not plan.force and not _ahead_of_frozen(plan.libs)
 
 
 def _how_to_replace():
@@ -364,7 +380,7 @@ def _skip_frozen(plan, spec, paths):
     # wifi, say, beside a frozen library. Built in alone doesn't, as a package may extend one.
     if None in found or "frozen" not in found:
         return False
-    print("Skipping %s: it's frozen into this firmware, and that copy runs ahead of one in %s." % (spec, plan.target))
+    print("Skipping %s: it's frozen into this firmware, and that copy runs ahead of one in %s." % (spec, plan.libs))
     print(_how_to_replace())
     return True
 
@@ -414,6 +430,8 @@ def _walk(plan, spec, version, indexes, owner=None):
             plan.roots.append(entry)
             owner = entry
         entry[3] = _beside(plan.target, folder)
+        if entry is plan.roots[0]:
+            plan.libs = _libs_for_app(plan.target)
     elif _skip_frozen(plan, spec, [path for path, _ in hashes] + [path for path, _ in urls]):
         hashes = urls = ()
     for path, short in hashes:
@@ -754,7 +772,7 @@ def install(package, index=None, target=None, version=None, mpy=True, prompt=Tru
             `sys.path`. A package that names its own folder, as an app does,
             goes in that folder beside this one when it's a `lib` folder, and
             inside it otherwise: `target="/flash"` puts an app in
-            `/flash/apps/<name>`.
+            `/flash/apps/<name>` and what it needs in `/flash/lib`.
         version (str): A version on an index, or a branch or tag for a URL.
         mpy (bool): Take compiled `.mpy` files on MicroPython. Other platforms
             always take `.py`.
@@ -784,6 +802,8 @@ def install(package, index=None, target=None, version=None, mpy=True, prompt=Tru
     indexes = [index.rstrip("/")] if index else _indexes()
     _walk(plan, package, version, indexes)
     gc.collect()
+    if plan.libs != target:
+        _check_writable(plan.libs)
     for root in plan.roots:
         if root[3]:
             _check_writable(root[3])
