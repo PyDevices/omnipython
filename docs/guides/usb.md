@@ -159,10 +159,12 @@ The sound card wants TinyUSB 0.19 or later, which re-arms its endpoint in the
 USB interrupt. The ESP32-P4, S3 and S2 builds all carry 0.21.
 
 On an ESP32-P4 at high speed, writing to the board's own flash while the sound
-card plays costs about 90 ms of audio per write: the write pauses the USB
-interrupt, and the packets that arrive meanwhile are lost
-([#451](https://github.com/PyDevices/micropython-pydevices/issues/451)). Keep
-what you record in RAM and write it out after the stream stops.
+card plays costs about 80 ms of audio per 8 KB written: an erase keeps the
+cache off for about 35 ms a sector, and the USB interrupt can't run until it
+ends ([#451](https://github.com/PyDevices/micropython-pydevices/issues/451)).
+The ESP32-P4X-EYE's image lets the flash controller pause an erase when the
+CPU reads flash, and it loses nothing. On the other P4 boards, keep what you
+record in RAM and write it out after the stream stops.
 
 ## The board as a USB host
 
