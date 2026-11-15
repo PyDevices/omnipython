@@ -7,6 +7,7 @@
 "https://raw.githubusercontent.com/PyDevices/pydevices/main/lib/appdev/devices.py" = "/lib/appdev/devices.py"
 "https://raw.githubusercontent.com/PyDevices/pydevices/main/lib/audiodev/__init__.py" = "/lib/audiodev/__init__.py"
 "https://raw.githubusercontent.com/PyDevices/pydevices/main/lib/audiodev/accel.py" = "/lib/audiodev/accel.py"
+"https://raw.githubusercontent.com/PyDevices/pydevices/main/lib/audiodev/alsa_audio.py" = "/lib/audiodev/alsa_audio.py"
 "https://raw.githubusercontent.com/PyDevices/pydevices/main/lib/audiodev/android_audio.py" = "/lib/audiodev/android_audio.py"
 "https://raw.githubusercontent.com/PyDevices/pydevices/main/lib/audiodev/auto.py" = "/lib/audiodev/auto.py"
 "https://raw.githubusercontent.com/PyDevices/pydevices/main/lib/audiodev/bytequeue.py" = "/lib/audiodev/bytequeue.py"

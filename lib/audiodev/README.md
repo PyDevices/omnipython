@@ -19,6 +19,7 @@ still directly usable for raw `write()`/`readinto()`.
 | `audiodev.sdl2_audio` | desktop MicroPython, CircuitPython, CPython, Jupyter | SDL2 queued PCM transport through `usdl2` |
 | `audiodev.pygame_audio` | CPython desktop with pygame-ce installed | Queued PCM transport on pygame-ce's bundled SDL |
 | `audiodev.win_audio` | Windows | WASAPI shared-mode queued PCM transport through `uwin32` |
+| `audiodev.alsa_audio` | Linux, CPython and unix MicroPython | ALSA PCM straight to `libasound`: no SDL2 or pygame needed. Chosen when a sound card is present and neither of those is |
 | `audiodev.web_audio` | PyScript / browser | Web Audio playback and `getUserMedia` capture |
 | `audiodev.worklet_audio` | Pyodide Web Worker | AudioWorklet output over a `MessagePort`; import it explicitly |
 | `audiodev.i2s_audio` | MCU | `machine.I2S` transport adapter |
@@ -641,6 +642,38 @@ queues whole buffers and never hit that, and DirectSound keeps a deeper
 buffer: measured on `micropython.exe` at `latency="low"`, DirectSound sits at
 185 ms against WASAPI's 55 ms. An explicit `SDL_AUDIODRIVER` in the
 environment still wins.
+
+## `alsa_audio.py`
+
+ALSA backend for Linux, through `ctypes` on CPython and `ffi` on unix MicroPython.
+Import fails unless `libasound` loads. A Raspberry Pi, or any Linux box with a
+sound card, plays and records without SDL2 or pygame installed.
+
+The card's own ring buffer is the queue: a write takes what fits and waits up to
+half a second for room, and `queued_size()` is what the card still holds.
+`pcm_out(latency="low")` asks for a 40 ms ring and the others for 200 ms. The
+card starts once a little audio is queued (10 ms low, 50 ms otherwise), which is
+`prebuffer_bytes`. `xruns` counts underruns (output) and overruns (input) since
+the stream opened; a healthy run has none.
+
+`device` is any name `snd_pcm_open` takes. Leave it out for `"default"`, the
+sound server's plug-in, or give a card from `alsa_audio.devices()`, such as
+`"plughw:2,0"`: `plughw` converts format and rate for you. A Raspberry Pi's
+`default` can be an HDMI output with no screen on it, which refuses to open.
+
+```python
+from audiodev import AudioFormat, alsa_audio
+
+for card in alsa_audio.devices():
+    print(card["name"], card["description"], card["playback"], card["capture"])
+
+out = alsa_audio.pcm_out(AudioFormat(48000, 2, 16), device="plughw:2,0")
+out.write(pcm_bytes)
+out.drain()
+```
+
+`audiodev.auto` picks this last: after SDL2 and pygame, and only on Linux with a
+sound card. Name it yourself with `PYDEVICES_AUDIO=alsa_audio` to use it over the others.
 
 ## `web_audio.py`
 

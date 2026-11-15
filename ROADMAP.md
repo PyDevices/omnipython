@@ -11,9 +11,6 @@ with each kind of peripheral described honestly by its role.
 - audiodev on Windows plays through the firmware's C WASAPI speaker when the
   interpreter has it, instead of feeding WASAPI from Python, which cuts about
   50 ms from live input to output.
-- audiodev on Linux through ALSA directly, from CPython and unix MicroPython,
-  so a Raspberry Pi or another Linux board gets low-latency audio without SDL2
-  or pygame installed.
 - `AudioOut` retries by itself once the browser unlocks audio, or shows a
   ready flag, so an app in a web page doesn't need its own catch-and-retry
   around `play()`.

@@ -8,7 +8,7 @@
 # is right and is not what this file is about: the question here is only what
 # gets *shipped* to a device. Installing a board config onto an ESP32-S3 used to
 # pull `windisplay`, `jndisplay`, `wasmdisplay`, `pgdisplay`, `sdldisplay`,
-# `androidsdl`, `win_audio`, `pygame_audio`, `wasm_audio`, `web_audio`,
+# `androidsdl`, `alsa_audio`, `win_audio`, `pygame_audio`, `wasm_audio`, `web_audio`,
 # `sdl2_audio`, `android_audio`, `win32`, `sdl2`, `threading` and `wasm` — about
 # half of what landed, none of it able to execute, all of it minutes of install
 # time over WiFi and flash that could hold something (pydevices#30).
@@ -54,6 +54,7 @@ host-only = [
 # with them: it is never selected by `auto`, is imported explicitly, and builds
 # on audiodev's own PCM classes with no host dependency.
 host-only = [
+    "alsa_audio",
     "android_audio",
     "pygame_audio",
     "sdl2_audio",
