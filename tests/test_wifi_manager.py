@@ -10,6 +10,7 @@ and a join fails once and then works, so the join order and the two rounds
 are what keep a board on its network.
 """
 
+import types
 import unittest
 
 import _env  # noqa: F401
@@ -219,6 +220,53 @@ class JoinKnownTest(_Patched):
         radio = FakeRadio(seen={"home": -50})
         self.assertIsNone(wm._join_known(radio, 5))
         self.assertEqual(radio.joins, [])
+
+
+class CircuitPythonJoinTest(_Patched):
+    """CircuitPython's radio searches every channel for a network it can't see."""
+
+    def _radio(self, outcomes):
+        class Radio:
+            def __init__(self):
+                self.calls = []
+                self.ipv4_address = None
+                self.ap_info = types.SimpleNamespace(channel=6)
+
+            def connect(self, ssid, password, channel=0, timeout=None):
+                self.calls.append((ssid, channel))
+                outcome = outcomes.pop(0)
+                if outcome is not None:
+                    raise ConnectionError(outcome)
+                self.ipv4_address = "10.0.0.5"
+
+        radio = wm._CPRadio.__new__(wm._CPRadio)
+        radio.r = Radio()
+        return radio
+
+    def setUp(self):
+        super().setUp()
+        wm._channels.clear()
+
+    def test_a_network_that_isnt_there_is_not_searched_for_twice(self):
+        self.known = [_net("home")]
+        radio = self._radio(["No network with that ssid", "No network with that ssid"])
+        self.assertIsNone(wm._join_known(radio, 5))
+        self.assertEqual(len(radio.r.calls), 1)
+
+    def test_another_failure_still_gets_the_second_round(self):
+        self.known = [_net("home")]
+        radio = self._radio(["Authentication failure", None])
+        self.assertEqual(wm._join_known(radio, 5), "10.0.0.5")
+        self.assertEqual(len(radio.r.calls), 2)
+
+    def test_the_next_join_starts_on_the_channel_that_worked(self):
+        self.known = [_net("home")]
+        radio = self._radio([None])
+        self.assertEqual(wm._join_known(radio, 5), "10.0.0.5")
+        self.assertEqual(radio.r.calls, [("home", 0)])
+        again = self._radio([None])
+        again.join("home", "pw", 5)
+        self.assertEqual(again.r.calls, [("home", 6)])
 
 
 class SetupModeTest(_Patched):
