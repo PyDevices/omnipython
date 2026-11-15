@@ -56,6 +56,8 @@ doesn't break the screen.
 | `CSI ? 6 h`, `CSI ? 6 l` | Origin mode: rows count from the top of the region |
 | `CSI ? 7 h`, `CSI ? 7 l` | Autowrap on or off |
 | `CSI ? 25 h`, `CSI ? 25 l` | Show or hide the cursor |
+| `CSI ? 47 h`, `CSI ? 1047 h`, and the matching `l` | Show or leave the alternate screen: blank on entry, the main screen kept as it was |
+| `CSI ? 1049 h`, `CSI ? 1049 l` | The same, and the cursor and pen saved on entry and restored on exit |
 | `CSI 5 n` | Status report: answers `CSI 0 n` |
 | `CSI 6 n` | Cursor position report: answers `CSI y ; x R` |
 | `CSI c` | Device attributes: answers `CSI ? 1 ; 2 c`, a VT100 with advanced video |

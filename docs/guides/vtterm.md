@@ -144,6 +144,19 @@ CircuitPython has no `os.dupterm`, so there vtterm can show a
 [session with another device](#connect-to-another-device) but not the
 board's own REPL.
 
+## Scroll back and use the alternate screen
+
+A terminal keeps the rows that scroll off the top, up to a budget in bytes you
+set with `Terminal(display, scrollback=...)` (16 KB by default, about 100 rows
+of 40 columns; `0` keeps none). `terminal.scroll_back(10)` shows ten rows
+back, `terminal.scroll_back(-10)` comes forward, and Shift+Page Up and Shift+Page
+Down page through it on a keyboard. New output brings the view back to the live
+screen.
+
+Programs that ask for the alternate screen (`ESC [ ? 1049 h`, or `?47` and
+`?1047`) get a blank grid, and the prompt comes back as it was, cursor
+included, when they leave. The alternate screen has no scrollback.
+
 ## Type on a keyboard
 
 `vtterm.keyboards` reads a USB keyboard on the board's host port and a BLE

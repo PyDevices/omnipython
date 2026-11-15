@@ -75,10 +75,6 @@ with each kind of peripheral described honestly by its role.
 
 ## vtterm
 
-- Scrollback: page back through what scrolled off the top, within a memory
-  budget you set, so a long traceback stays readable on a small panel.
-- An alternate screen, so full-screen programs (an editor, a pager) leave the
-  prompt as it was when they exit.
 - The DEC line-drawing characters, so boxes and tables drawn by remote
   programs show as lines rather than letters.
 - Mouse and touch reporting: a touch on the display reaches the program as a

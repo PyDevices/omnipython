@@ -111,7 +111,7 @@ class Renderer:
                     self._cursor = (cy - n, cx) if cy >= n else None
             else:
                 s.touch_all()
-        cursor = (s.y, s.x) if s.cursor_visible else None
+        cursor = (s.y, s.x) if s.cursor_visible and not s.view else None
         if cursor != self._cursor:
             if self._cursor is not None:
                 dirty[self._cursor[0]] = 1
@@ -130,7 +130,7 @@ class Renderer:
 
     def _row(self, y, cursor_x):
         s = self.screen
-        chars, fgs, bgs, fls = s.lines[y]
+        chars, fgs, bgs, fls = s.visible(y)
         fb = self._fb
         pal = self.palette
         font = self.font

@@ -31,6 +31,8 @@ class Screen:
         rows (int): Rows.
         fg (int): Default foreground, an ANSI palette index.
         bg (int): Default background, an ANSI palette index.
+        scrollback (int): Bytes to spend on rows that scroll off the top, four
+            per cell; ``0`` keeps none.
 
     Attributes:
         lines (list): One ``[chars, fg, bg, flags]`` list of bytearrays per row.
@@ -43,9 +45,12 @@ class Screen:
         flags (int): Pen style flags (`BOLD`, `UNDERLINE`, `REVERSE`).
         cursor_visible (bool): Whether the cursor is shown.
         app_cursor (bool): Cursor keys send application sequences (``ESC O A``).
+        history (list): Rows that scrolled off the top, oldest first.
+        view (int): How many rows the view is scrolled back; ``0`` is live.
+        alt (bool): Whether the alternate screen is showing.
     """
 
-    def __init__(self, cols, rows, fg=7, bg=0):
+    def __init__(self, cols, rows, fg=7, bg=0, scrollback=0):
         if cols < 2 or rows < 1:
             raise ValueError("a screen needs at least 2 columns and 1 row, not %dx%d" % (cols, rows))
         self.cols = cols
@@ -54,6 +59,11 @@ class Screen:
         self.default_bg = bg
         self.lines = [self._new_line() for _ in range(rows)]
         self.dirty = bytearray(rows)
+        self.max_history = scrollback // (4 * cols)
+        self.history = []
+        self.view = 0
+        self.alt = False
+        self._main = None
         self.reset()
 
     def _new_line(self):
@@ -79,6 +89,10 @@ class Screen:
         self.saved = None
         self.scrolled = 0
         self._pen = None
+        if self.alt:
+            self.leave_alt()
+        self.history = []
+        self.view = 0
         for line in self.lines:
             self._blank(line, 0, self.cols)
         self.touch_all()
@@ -88,6 +102,56 @@ class Screen:
         d = self.dirty
         for i in range(self.rows):
             d[i] = 1
+
+    def visible(self, y):
+        """Return the row drawn at screen row ``y``, which may come from the history."""
+        if not self.view:
+            return self.lines[y]
+        i = len(self.history) - self.view + y
+        return self.history[i] if i < len(self.history) else self.lines[i - len(self.history)]
+
+    def scroll_view(self, n):
+        """Scroll the view back ``n`` rows into the history; negative comes forward.
+
+        Returns:
+            int: How many rows back the view is now (``0`` is live).
+        """
+        view = max(0, min(len(self.history), self.view + n))
+        if view != self.view:
+            self.view = view
+            self.touch_all()
+        return view
+
+    def snap(self):
+        """Return the view to the live screen."""
+        if self.view:
+            self.view = 0
+            self.touch_all()
+
+    def enter_alt(self, clear=True):
+        """Show a separate blank screen, keeping the main one to come back to."""
+        if self.alt:
+            return
+        self.snap()
+        self._main = (self.lines, self.top, self.bottom)
+        self.alt = True
+        self.lines = [self._new_line() for _ in range(self.rows)]
+        if clear:
+            for line in self.lines:
+                self._blank(line, 0, self.cols)
+        self.top = 0
+        self.bottom = self.rows - 1
+        self.touch_all()
+
+    def leave_alt(self):
+        """Go back to the main screen as it was, and free the alternate one."""
+        if not self.alt:
+            return
+        self.lines, self.top, self.bottom = self._main
+        self._main = None
+        self.alt = False
+        self.scrolled = 0
+        self.touch_all()
 
     def text(self, y):
         """Return row ``y`` as a string, for tests and dumps."""
@@ -290,6 +354,17 @@ class Screen:
             return
         lines = self.lines
         gone = lines[top : top + n]
+        if self.max_history and top == 0 and bottom == self.rows - 1 and not self.alt:
+            # Keep the rows; once the budget is spent, the oldest row's
+            # storage becomes the new blank one.
+            hist = self.history
+            gone = []
+            for line in lines[0:n]:
+                hist.append(line)
+                if len(hist) > self.max_history:
+                    gone.append(hist.pop(0))
+                else:
+                    gone.append(self._new_line())
         lines[top : bottom + 1] = lines[top + n : bottom + 1] + gone
         for line in gone:
             self._blank(line, 0, self.cols)
