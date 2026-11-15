@@ -49,6 +49,8 @@ software queue interprets the raw bytes it's given, so a format mismatch
 there would misread every sample rather than merely mis-pitch it.
 """
 
+from audiodev import AudioLocked
+
 try:
     from multimer import ticks_diff, ticks_ms
 except ImportError:  # pragma: no cover - CPython fallback, no multimer
@@ -165,6 +167,8 @@ class AudioOut:
         self._max_catchup_chunks = int(max_catchup_chunks)
         self._sample = None
         self._loop = False
+        # (sample, loop) of a play() the platform has not unlocked yet.
+        self._waiting = None
         self._paused = False
         self._sched_start_ms = None
         self._played_frames = 0
@@ -286,6 +290,7 @@ class AudioOut:
         # fix for the kit change. See stop() for what happens without it.
         # The latch beside it is the same fix for every OTHER player's tick.
         self._pumping = True
+        self._waiting = None
         with _REARRANGING:
             try:
                 self._detach_pump()
@@ -304,7 +309,15 @@ class AudioOut:
                 self._attach_pump(sample)
                 if not self._sinking:
                     try:
-                        self.open()
+                        self._open_unlocked()
+                    except AudioLocked:
+                        # A browser that wants a click first. Not a failure:
+                        # keep the sample, and service() starts it on the
+                        # first tick after the click.
+                        self._detach_pump()
+                        self._sample = None
+                        self._waiting = (sample, bool(loop))
+                        return
                     except Exception:
                         # AND PUT THE PLAYER BACK, because `_sample` is
                         # already set above and `service()` is already on
@@ -325,6 +338,32 @@ class AudioOut:
                 self._pumping = False
         self._pump()  # kick an immediate chunk: lowest note-to-sound latency,
         #                same reason AudioEngine.note_on() does this
+
+    def _open_unlocked(self):
+        """Open the transport, raising `AudioLocked` while it is still locked.
+
+        A transport says so by raising from ``open()``, or by answering true
+        from an optional ``locked()`` once it is open (a browser context that
+        opens suspended).
+        """
+        self.transport.open()
+        locked = getattr(self.transport, "locked", None)
+        if locked is not None and locked():
+            raise AudioLocked("audio is locked until the page gets a click or key press")
+
+    def _retry_waiting(self):
+        """Start a play() that was waiting for the platform to unlock."""
+        try:
+            self._open_unlocked()
+        except AudioLocked:
+            return
+        except Exception:
+            # Anything else is a real failure: say it once and stop waiting.
+            self._waiting = None
+            raise
+        sample, loop = self._waiting
+        self._waiting = None
+        self.play(sample, loop=loop)
 
     # --- the pump --------------------------------------------------------
 
@@ -579,6 +618,7 @@ class AudioOut:
         # methods that REARRANGE the player -- this one and play() -- is the
         # whole fix. It costs one attribute write on each.
         self._pumping = True
+        self._waiting = None
         with _REARRANGING:
             try:
                 self._detach_pump()
@@ -614,7 +654,7 @@ class AudioOut:
 
     @property
     def playing(self):
-        return self._sample is not None
+        return self._sample is not None or self._waiting is not None
 
     @property
     def paused(self):
@@ -628,6 +668,9 @@ class AudioOut:
 
     def _pump(self):
         if self._pumping:
+            return
+        if self._waiting is not None:
+            self._retry_waiting()
             return
         mod = _pump_module()
         if mod is not None and mod.rearranging():
