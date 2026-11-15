@@ -21,6 +21,7 @@ settings_remote
 security
 queue_music
 tune
+instant_mix
 piano
 settings
 mic

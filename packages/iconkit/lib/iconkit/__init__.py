@@ -8,7 +8,7 @@ constant in a frozen module, so an icon costs no RAM. Draw the mask with
 `iconkit.lvicons` in LVGL or `iconkit.gfx` in pygraphics. This module imports
 neither.
 
-Two sets ship: 128 icons at 24 px and 32 app-tile icons at 48 px. An app with
+Two sets ship: 129 icons at 24 px and 33 app-tile icons at 48 px. An app with
 icons of its own builds a module with ``tools/make_icons.py`` and registers it
 with `add`.
 

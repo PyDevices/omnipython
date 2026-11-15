@@ -1,4 +1,4 @@
-![The 32 app-tile icons at 48 px, twice as large](docs/reference/icons/iconkit-48.png)
+![The 33 app-tile icons at 48 px, twice as large](docs/reference/icons/iconkit-48.png)
 
 # iconkit
 
@@ -28,7 +28,7 @@ for y in range(0, h, 2):
 ```
 
 ```text
-128 icons at 24 px, 32 at 48 px
+129 icons at 24 px, 33 at 48 px
                         
                         
           :##:          
@@ -56,8 +56,8 @@ Two sets ship, filled style, from Google's
 [Material Design Icons](https://github.com/google/material-design-icons) (Apache
 License 2.0, [LICENSE-ICONS](LICENSE-ICONS)):
 
-- 24 px: 128 general-purpose icons (72 KB), listed in [icons_24.txt](lib/iconkit/icons_24.txt).
-- 48 px: 32 app-tile icons (72 KB), listed in [icons_48.txt](lib/iconkit/icons_48.txt). All 32 are in the 24 px set too.
+- 24 px: 129 general-purpose icons (72.6 KB), listed in [icons_24.txt](lib/iconkit/icons_24.txt).
+- 48 px: 33 app-tile icons (74.3 KB), listed in [icons_48.txt](lib/iconkit/icons_48.txt). All 33 are in the 24 px set too.
 
 Names are Material's own (`home`, `wifi`, `battery_charging_full`). WiFi
 strength comes as `network_wifi_1_bar`, `network_wifi_2_bar`,
@@ -127,6 +127,14 @@ git clone --filter=blob:none --depth 1 --no-checkout https://github.com/google/m
 cd material-design-icons
 git sparse-checkout set --no-cone /LICENSE '/png/*/*/materialicons/24dp/1x/'
 git checkout
+```
+
+Some newer icons, such as `instant_mix`, exist only as Material Symbols. For a
+name with no PNG, the generator draws the filled Outlined symbol's SVG instead,
+which needs `pip install resvg-py`. Add each one to the checkout by name:
+
+```bash
+git sparse-checkout add '/symbols/web/instant_mix/materialsymbolsoutlined/'
 ```
 
 That downloads about 125 MB (git's pack of the file listing, plus the 2,170 icons
