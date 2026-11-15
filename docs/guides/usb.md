@@ -67,7 +67,9 @@ usb.device.get().init(spk, builtin_driver=True)  # the REPL stays on the cable
 ```
 
 `init()` re-enumerates the board, because a USB device can't change what it
-is in place. Put several interfaces in one `init()` to present them together.
+is in place. Pass `product_str=boarddev.name()` and the computer lists the
+board under [its name](board-name.md); `usb_hid.enable()` and
+`midiports.usb_device.ports()` do that for you. Put several interfaces in one `init()` to present them together.
 A controller has a fixed number of endpoints (the ESP32-S3 drives IN
 endpoints 1 to 4, and the REPL's serial port takes two), and `init()` refuses
 a set that doesn't fit before anything changes:

@@ -175,5 +175,43 @@ class DeviceShapeTests(unittest.TestCase):
             usb_hid.Device.GAMEPAD.send_report(bytes(6))
 
 
+class NameTests(unittest.TestCase):
+    """The computer lists the USB device under the board's name."""
+
+    def setUp(self):
+        self.usb_hid = _load()
+        self.inits = []
+        usbd = types.SimpleNamespace(init=lambda *itfs, **kw: self.inits.append(kw))
+        device = types.ModuleType("usb.device")
+        device.get = lambda: usbd
+        usb = types.ModuleType("usb")
+        usb.device = device
+        boarddev = types.SimpleNamespace(name=lambda: "den-pad")
+        fakes = {"usb": usb, "usb.device": device, "boarddev": boarddev}
+        saved = {k: sys.modules.get(k) for k in fakes}
+        sys.modules.update(fakes)
+
+        def restore():
+            for key, value in saved.items():
+                if value is None:
+                    sys.modules.pop(key, None)
+                else:
+                    sys.modules[key] = value
+
+        self.addCleanup(restore)
+
+    def test_enable_names_the_device_after_the_board(self):
+        self.usb_hid.enable((self.usb_hid.Device.GAMEPAD,))
+        self.assertEqual(self.inits[-1]["product_str"], "den-pad")
+
+    def test_a_name_given_wins(self):
+        self.usb_hid.enable((self.usb_hid.Device.GAMEPAD,), name="Arcade stick")
+        self.assertEqual(self.inits[-1]["product_str"], "Arcade stick")
+
+    def test_disable_keeps_the_board_name(self):
+        self.usb_hid.disable()
+        self.assertEqual(self.inits[-1], {"builtin_driver": True, "product_str": "den-pad"})
+
+
 if __name__ == "__main__":
     unittest.main()

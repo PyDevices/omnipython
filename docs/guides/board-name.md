@@ -63,6 +63,7 @@ OMNIPYTHON_BOARD_NAME=kitchen python my_app.py
 | [medialink](medialink.md) | `MDNS`, `Hotspot` and `BLE` advertise it |
 | hmilink | `tcp.serve(port, announce=True)` announces it over mDNS |
 | [castdisplay](cast-to-a-tv.md) | the TV or laptop lists the cast under it |
+| [usb_hid and midiports](usb.md) | `usb_hid.enable()` and `midiports.usb_device.ports()` give it to the computer as the USB product name |
 
 Passing a name to any of these still wins: `wifi_manager.connect(hostname="garage")`
 uses `garage` for that connection and saves nothing.
