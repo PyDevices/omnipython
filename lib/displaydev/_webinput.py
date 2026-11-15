@@ -63,6 +63,9 @@ class WebInput:
         self._display = display
         self._queue = []
         self._pressed = set()
+        # Last panel position per touch pointer, for Motion.rel (touch pointer
+        # events carry no movementX).
+        self._touch_pos = {}
         # Gamepad state keyed by gamepad index: (axes list, pressed-bool list).
         self._gp_axes = {}
         self._gp_buttons = {}
@@ -131,6 +134,10 @@ class WebInput:
                 pass
         return self._map_pos(x, y)
 
+    def _css_pos(self, e):
+        """Element-local CSS pixels, for the mouse-style events (scaled by the host)."""
+        return self._map_pos(*self._local_xy(e))
+
     def _finger_id(self, e):
         try:
             return int(e.pointerId)
@@ -145,14 +152,15 @@ class WebInput:
             pass
         pos = self._pointer_pos(e)
         if self._is_touch(e):
+            self._touch_pos[self._finger_id(e)] = self._css_pos(e)
             # Multipoint path for LVGL gestures (VirtualDevices tracks fingers).
             self._queue.append(events.Finger(events.FINGERDOWN, pos, self._finger_id(e), None))
         self._queue.append(
             events.Button(
                 events.MOUSEBUTTONDOWN,
-                pos,
+                self._css_pos(e),
                 getattr(e, "button", 0) + 1,  # DOM 0/1/2 -> SDL 1/2/3
-                False,
+                self._is_touch(e),
                 None,
             )
         )
@@ -160,29 +168,38 @@ class WebInput:
     def _on_pointer_up(self, e):
         pos = self._pointer_pos(e)
         if self._is_touch(e):
+            self._touch_pos.pop(self._finger_id(e), None)
             self._queue.append(events.Finger(events.FINGERUP, pos, self._finger_id(e), None))
         self._queue.append(
             events.Button(
                 events.MOUSEBUTTONUP,
-                pos,
+                self._css_pos(e),
                 getattr(e, "button", 0) + 1,
-                False,
+                self._is_touch(e),
                 None,
             )
         )
 
     def _on_pointer_move(self, e):
-        pos = self._pointer_pos(e)
-        if self._is_touch(e):
-            self._queue.append(events.Finger(events.FINGERMOTION, pos, self._finger_id(e), None))
-            return
+        pos = self._css_pos(e)
+        touch = self._is_touch(e)
+        if touch:
+            fid = self._finger_id(e)
+            old = self._touch_pos.get(fid, pos)
+            self._touch_pos[fid] = pos
+            rel = (pos[0] - old[0], pos[1] - old[1])
+            self._queue.append(
+                events.Finger(events.FINGERMOTION, self._pointer_pos(e), fid, None)
+            )
+        else:
+            rel = self._map_rel(e.movementX, e.movementY)
         self._queue.append(
             events.Motion(
                 events.MOUSEMOTION,
                 pos,
-                self._map_rel(e.movementX, e.movementY),
+                rel,
                 _buttons_tuple(e.buttons),
-                False,
+                touch,
                 None,
             )
         )

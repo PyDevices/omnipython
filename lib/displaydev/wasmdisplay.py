@@ -28,10 +28,42 @@ class WasmDevices:
         self._canvas_id = canvas_id
         self._pressed = set()
         self._pointer_pos = {}
+        self._finger_pos = {}
         self._gamepad_axes = {}
         self._gamepad_buttons = {}
 
     def read(self):
+        result = self._read()
+        if result:
+            result = self._touch_motion(result)
+        return result
+
+    def _touch_motion(self, batch):
+        """Follow each FINGERMOTION with a Motion(touch=True), as SDL does.
+
+        The bridge turns a finger move into FINGERMOTION alone; code written
+        against the mouse (a drag handler listening for Motion) needs the
+        Motion too. The finger is down while it moves, so the left button is
+        held.
+        """
+        out = []
+        for event in batch:
+            out.append(event)
+            kind = getattr(event, "type", None)
+            if kind == events.FINGERDOWN:
+                self._finger_pos[event.finger_id] = event.pos
+            elif kind == events.FINGERUP:
+                self._finger_pos.pop(event.finger_id, None)
+            elif kind == events.FINGERMOTION:
+                old = self._finger_pos.get(event.finger_id, event.pos)
+                self._finger_pos[event.finger_id] = event.pos
+                rel = (event.pos[0] - old[0], event.pos[1] - old[1])
+                out.append(
+                    events.Motion(events.MOUSEMOTION, event.pos, rel, (1, 0, 0), True, event.window)
+                )
+        return out
+
+    def _read(self):
         result = []
         batch, raw_count = _wasm_bridge.poll_events(self._canvas_id, _POINTER_EVENT_TYPES)
         if batch is None:
@@ -119,6 +151,7 @@ class WasmDevices:
         _wasm_bridge.clear_events(self._canvas_id)
         self._pressed.clear()
         self._pointer_pos.clear()
+        self._finger_pos.clear()
 
     def _convert(self, item):
         kind = item.get("type")
