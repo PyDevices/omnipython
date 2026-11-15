@@ -135,6 +135,11 @@ class Pinned:
     # What one of those packages requires beyond itself, by member name: appkit
     # draws with iconkit, which is a package of its own in this repository.
     member_requires: dict[str, tuple[str, ...]] = field(default_factory=dict)
+    # What a member needs from micropython-lib, and from Adafruit's bundle on
+    # CircuitPython in its place: the same two keys a package of this
+    # repository carries in ``repo``, by member name.
+    member_upstream: dict[str, tuple[str, ...]] = field(default_factory=dict)
+    member_circuitpython: dict[str, tuple[str, ...]] = field(default_factory=dict)
 
     @property
     def version(self) -> str:
@@ -180,18 +185,28 @@ def read_lock(root: Path) -> Lock:
             raise BuildError(f"{LOCKFILE} repo.{name} has no description")
     pinned = {}
     for name, entry in data.get("pinned", {}).items():
-        extra = sorted(set(entry) - {"repository", "ref", "description", "pypi", "packages", "requires"})
+        extra = sorted(set(entry) - {"repository", "ref", "description", "pypi", "packages", "requires", "upstream", "circuitpython"})
         if extra:
             raise BuildError(f"{LOCKFILE} pinned.{name} has unknown keys: {', '.join(extra)}")
         for key in ("repository", "ref", "description"):
             if not entry.get(key):
                 raise BuildError(f"{LOCKFILE} pinned.{name} has no {key}")
-        member_requires = {member: tuple(needed) for member, needed in entry.get("requires", {}).items()}
-        for member in member_requires:
-            if member not in entry.get("packages", {}):
-                raise BuildError(f"{LOCKFILE} pinned.{name}.requires names {member!r}, which is not one of its packages")
+        by_member = {}
+        for key in ("requires", "upstream", "circuitpython"):
+            by_member[key] = {member: tuple(needed) for member, needed in entry.get(key, {}).items()}
+            for member in by_member[key]:
+                if member not in entry.get("packages", {}):
+                    raise BuildError(f"{LOCKFILE} pinned.{name}.{key} names {member!r}, which is not one of its packages")
         pinned[name] = Pinned(
-            name, entry["repository"], entry["ref"], entry["description"], entry.get("pypi"), entry.get("packages", {}), member_requires
+            name,
+            entry["repository"],
+            entry["ref"],
+            entry["description"],
+            entry.get("pypi"),
+            entry.get("packages", {}),
+            by_member["requires"],
+            by_member["upstream"],
+            by_member["circuitpython"],
         )
     folders = {}
     for name, entry in data.get("folders", {}).items():
@@ -536,6 +551,10 @@ def assemble_several(pinned: Pinned, source_root: Path, tree: Tree, library: str
         if name in tree.packages:
             raise BuildError(f"two packages are named {name!r}: {tree.packages[name]} and {pinned.repository}")
         tree.packages[name] = f"{pinned.repository}@{pinned.ref}"
+        if name in pinned.member_upstream:
+            tree.upstream[name] = pinned.member_upstream[name]
+        if name in pinned.member_circuitpython:
+            tree.circuitpython[name] = pinned.member_circuitpython[name]
         destination = tree.path / name
         shutil.copytree(source, destination / name, ignore=_ignore_member_extras)
         (destination / "manifest.py").write_text(
@@ -1572,6 +1591,11 @@ def check_shape(root: Path, upstream: frozenset[str] | None, library: str = DEFA
             for missing in entry.get("upstream", ()):
                 if upstream is not None and missing not in upstream:
                     problems.append(f"{LOCKFILE} repo.{name}: upstream {missing!r} is no package in micropython-lib")
+        for name, pinned in sorted(lock.pinned.items()):
+            for member, needed in sorted(pinned.member_upstream.items()):
+                for missing in needed:
+                    if upstream is not None and missing not in upstream:
+                        problems.append(f"{LOCKFILE} pinned.{name}.upstream.{member}: {missing!r} is no package in micropython-lib")
 
         for name, manifest in sorted(manifests.items()):
             source = tree.packages[name]
