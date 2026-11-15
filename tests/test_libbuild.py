@@ -232,7 +232,8 @@ class BuiltRepository(unittest.TestCase):
         # aioble is micropython-lib's. In deps, mip would stop at it; in the
         # manifest, a CircuitPython firmware freezing bledev would look for it.
         self.assertNotIn("aioble/core.py", self.paths("bledev"))
-        self.assertEqual(self.deps("bledev"), [])
+        # pydevices, for boarddev.name(); aioble never.
+        self.assertEqual(self.deps("bledev"), ["pydevices"])
         manifest = (self.out / "library" / "bledev" / "manifest.py").read_text(encoding="utf-8")
         self.assertNotIn('require("aioble")', manifest)
         for kind in ("py", "6"):

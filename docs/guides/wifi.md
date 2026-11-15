@@ -177,8 +177,8 @@ power saving off.
 When setup mode starts, the board shows how to reach it, on its display when
 it has one and always on the REPL:
 
-1. Join `PyDevices-1A2B` (the last four hex digits of the board's MAC) with
-   the password shown. A phone camera can join from the QR code.
+1. Join the network named after the board, such as `omnipython-a1b2c3`
+   ([the board's name](board-name.md)), with the password shown. A phone camera can join from the QR code.
 2. The phone opens the setup page by itself. If it doesn't, browse to
    http://192.168.4.1.
 3. Pick your network, type its password, press Join.
@@ -241,8 +241,9 @@ It keeps 16 at most.
 | `networks()` | The remembered SSIDs. |
 | `forget(ssid=None)` | Forgets one remembered network, or all of them. A network still in `secrets.py` comes back the next time it's joined. |
 
-`display_drv` defaults to `board_config.display_drv` when there is one. Set
-`hostname` before the join so DHCP and mDNS see it.
+`display_drv` defaults to `board_config.display_drv` when there is one.
+`hostname` is set before the join so DHCP and mDNS see it, and defaults to
+[the board's name](board-name.md).
 `ntp=True` sets the clock once a network is joined. `wait=False` starts
 joining the first known network and returns `None` at once, for an app that
 can't stall: poll `wifi.radio.connected`, or call it again after a drop (on
@@ -251,7 +252,7 @@ the module that holds `WIFI_SSID` and `WIFI_PASSWORD` when it isn't `secrets`.
 
 | Setting | Default | Meaning |
 |---|---|---|
-| `AP_PREFIX` | `"PyDevices"` | The setup access point's name, before the MAC digits |
+| `AP_NAME` | `None` | The setup access point's name; `None` is the board's name |
 | `JOIN_TIMEOUT_S` | `20` | Seconds to wait for one network |
 | `RESCAN_S` | `60` | Seconds between looks for a known network while `connect()`'s setup mode waits |
 | `NVM_OFFSET` | `0` | CircuitPython: where the record starts in `microcontroller.nvm` |

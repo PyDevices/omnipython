@@ -501,6 +501,30 @@ def c_usb_device_round_trip():
         _remove_fake_usb()
 
 
+def c_usb_device_ports_names_the_board():
+    usb_device = _install_fake_usb()
+    inits = []
+    usbd = _Module()
+    usbd.init = lambda *itfs, **kw: inits.append(kw)
+    sys.modules["usb.device"].get = lambda: usbd
+    sys.modules["usb"].device = sys.modules["usb.device"]
+    boarddev = _Module()
+    boarddev.name = lambda: "studio-a"
+    saved = sys.modules.get("boarddev")
+    sys.modules["boarddev"] = boarddev
+    try:
+        usb_device.ports()
+        expect(inits[-1].get("product_str") == "studio-a", "the host lists %r" % (inits[-1],))
+        usb_device.ports(name="Drum pads")
+        expect(inits[-1].get("product_str") == "Drum pads", "a name given wins: %r" % (inits[-1],))
+    finally:
+        if saved is None:
+            sys.modules.pop("boarddev", None)
+        else:
+            sys.modules["boarddev"] = saved
+        _remove_fake_usb()
+
+
 # -- a hosted MIDI device, over a fake usb.core -----------------------------------------------
 
 # One MIDIStreaming interface (class 1, subclass 3) with bulk IN 0x81 and OUT
@@ -1678,6 +1702,7 @@ CHECKS = (
     ("usb_device: a full ring drops whole messages and counts", c_usb_device_overflow_drops_whole_messages),
     ("usb_device: a host not reading drops and counts, never stalls", c_usb_device_full_host_drops_and_counts),
     ("usb_device: 200 of 200 through events and back", c_usb_device_round_trip),
+    ("usb_device: ports() lists the board under its name", c_usb_device_ports_names_the_board),
     ("usb_host: 200 of 200 over a fake usb.core, packets to whole messages", c_usb_host),
     ("usb_host all_ports: two devices merged whole, out to both, arrivals and departures", c_usb_host_all),
     ("usb_host all_ports: a SysEx that stops, or whose device leaves, is ended", c_usb_host_all_stalled_sysex),

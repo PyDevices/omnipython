@@ -376,7 +376,7 @@ def make_caster(w, h, canvas=(1280, 720), fps=30, bitrate=3_000_000, audio=False
 
 
 def cast(fb, sink_ip, w, h, canvas=(1280, 720), fps=30, bitrate=3_000_000,
-         seconds=60, session_request=0, name="PyDevices P4", log=print, cast_obj=None,
+         seconds=60, session_request=0, name=None, log=print, cast_obj=None,
          scene=None, audio=None):
     c = cast_obj or make_caster(w, h, canvas=canvas, fps=fps, bitrate=bitrate, audio=audio is not None)
 

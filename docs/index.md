@@ -21,6 +21,7 @@ boards, a desktop, a browser and an Android phone.
 - [Portable audio](guides/audio.md)
 - [USB, both ways round](guides/usb.md)
 - [bledev: Bluetooth Low Energy](guides/bluetooth-le.md)
+- [The board's name](guides/board-name.md)
 - [wifi_manager](guides/wifi.md)
 - [mdns](guides/mdns.md)
 - [medialink: audio between devices](guides/medialink.md)

@@ -21,8 +21,9 @@ When none of those is in range, the board starts its own access point and
 says how to reach it, on the display from ``board_config.display_drv`` when
 there is one and always on the REPL:
 
-1. Join ``PyDevices-1A2B`` (the last four hex digits of the board's MAC) with
-   the password shown.  A phone camera can join from the QR code.
+1. Join the access point named after the board (``omnipython-a1b2c3``, or
+   the name given with ``boarddev.name()``) with the password shown.  A phone
+   camera can join from the QR code.
 2. The phone opens the setup page by itself.  If it doesn't, browse to
    http://192.168.4.1.
 3. Pick your network, type its password, press Join.
@@ -32,6 +33,10 @@ every minute, so a board that booted before the router came back joins on its
 own.  To move to a new network on purpose, call ``wifi_manager.run()``, which
 waits for one.
 ``cancel()``, from a timer or another app, ends setup mode without a network.
+
+Before it joins, ``connect()`` and ``run()`` make the board's name
+(``boarddev.name()``) its hostname, so DHCP, mDNS and Bluetooth Classic see
+it, unless they're given ``hostname=``.
 
 ``connect(ntp=True)`` sets the clock from NTP once a network is joined.
 ``connect(wait=False)`` starts the join and returns at once, for an app that
@@ -93,10 +98,12 @@ import json
 import sys
 import time
 
+import boarddev
+
 _CP = sys.implementation.name == "circuitpython"
 
-# Name prefix for the setup access point; the MAC's last four hex digits follow.
-AP_PREFIX = "PyDevices"
+# The setup access point's name. None: the board's name, ``boarddev.name()``.
+AP_NAME = None
 # CircuitPython: where the record starts in microcontroller.nvm.
 NVM_OFFSET = 0
 
@@ -171,6 +178,7 @@ def connect(
         setup (bool): Start setup mode when no known network is in range.
             ``False`` returns ``None`` instead.
         hostname (str): Set before joining, so DHCP and mDNS see it.
+            Default: the board's name, ``boarddev.name()``.
         display_drv: Display for setup mode.  Default:
             ``board_config.display_drv`` when there is one.
         timeout (int): Seconds to wait for each network.
@@ -193,8 +201,7 @@ def connect(
         # block of internal RAM that a running radio no longer leaves.
         display_drv = _board_display()
     radio = _radio()
-    if hostname:
-        _set_hostname(radio, hostname)
+    _set_hostname(radio, hostname or boarddev.name())
     ip = radio.ip()
     if ip:
         print("wifi_manager: already connected,", ip)
@@ -215,6 +222,7 @@ def connect(
 def run(*, hostname=None, display_drv=None, timeout=JOIN_TIMEOUT_S):
     """Start setup mode now, even when a known network is in range.  It waits
     for a new network (or ``cancel()``) rather than going back to a known one.
+    ``hostname`` and ``display_drv`` are as in `connect`.
 
     Returns:
         str | None: The IPv4 address of the network joined, or ``None`` when
@@ -223,8 +231,7 @@ def run(*, hostname=None, display_drv=None, timeout=JOIN_TIMEOUT_S):
     if display_drv is None:
         display_drv = _board_display()
     radio = _radio()
-    if hostname:
-        _set_hostname(radio, hostname)
+    _set_hostname(radio, hostname or boarddev.name())
     return _Setup(radio, display_drv, timeout, rescan=False).run()
 
 
@@ -718,8 +725,7 @@ class _Setup:
             self.seen = radio.scan()  # before the AP is up: a cleaner scan
         except Exception as exc:
             print("wifi_manager: scan failed:", exc)
-        mac = radio.mac()
-        ap_name = "%s-%02X%02X" % (AP_PREFIX, mac[-2], mac[-1])
+        ap_name = AP_NAME or boarddev.name()
         ap_pass = "".join(_PW_CHARS[b % len(_PW_CHARS)] for b in _random_bytes(8))
         ap_ip = radio.start_ap(ap_name, ap_pass)
         self._open_sockets(ap_ip)

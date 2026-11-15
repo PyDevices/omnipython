@@ -64,7 +64,7 @@ class Port:
 
 async def serve(
     ble: BLE | object,
-    name: str = 'bledev-midi',
+    name: str | None = None,
     *,
     timeout_ms: int | None = None,
     interval_us: int = 100000,

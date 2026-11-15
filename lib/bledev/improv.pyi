@@ -73,7 +73,7 @@ class Server:
     def __init__(
         self,
         ble: BLE,
-        name: str = 'improv',
+        name: str | None = None,
         *,
         join: Callable[[str, str], Awaitable[str | None]] | None = None,
         redirect: str | None = 'http://{ip}/',
@@ -92,7 +92,7 @@ class Server:
 
 async def serve(
     ble: BLE,
-    name: str = 'improv',
+    name: str | None = None,
     *,
     timeout_ms: int | None = None,
     join: Callable[[str, str], Awaitable[str | None]] | None = None,

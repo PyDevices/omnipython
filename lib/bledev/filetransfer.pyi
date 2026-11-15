@@ -63,7 +63,7 @@ class FileServer:
 
 def start(
     password: str | bool | None = None,
-    name: str = 'mpy-files',
+    name: str | None = None,
     *,
     console: bool = True,
     window: int = ...,

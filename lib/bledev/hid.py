@@ -52,6 +52,8 @@ testing with the PC you are testing from, or it will type into it.
 
 import asyncio
 
+import boarddev
+
 try:
     from time import ticks_diff, ticks_us
 except ImportError:  # CPython and CircuitPython: monotonic_ns is on both
@@ -160,19 +162,13 @@ def report_map(keyboard=True, mouse=True, consumer=True, gamepad=False):
 
 
 def identity(keyboard=True, mouse=True, consumer=True, gamepad=False):
-    """``(name, appearance, product_id)`` for a set of functions, derived the same way every time."""
-    parts = []
-    if keyboard:
-        parts.append("Keyboard")
-    if mouse:
-        parts.append("Mouse")
-    if gamepad:
-        parts.append("Gamepad")
-    if consumer and not keyboard:
-        parts.append("Remote")
-    name = "PyDevices " + "+".join(parts) if parts else "PyDevices HID"
-    if len(name) > 29:  # longer won't fit even a scan response
-        name = "PyDevices HID"
+    """``(name, appearance, product_id)`` for a set of functions.
+
+    The name is the board's, ``boarddev.name()``: the appearance already
+    tells a host it's a keyboard, a mouse or a gamepad. The appearance and
+    product ID are derived from the functions the same way every time.
+    """
+    name = boarddev.name()
     if keyboard and not (mouse or gamepad):
         appearance = APPEARANCE_KEYBOARD
     elif mouse and not (keyboard or gamepad or consumer):
@@ -275,6 +271,8 @@ class Peripheral:
     ``service_uuid=INSPECT_SERVICE`` serves the same characteristics under a
     vendor UUID instead of 0x1812, so a laptop can read them (no host will
     treat the board as a keyboard then).
+
+    It advertises as ``name``, by default the board's, ``boarddev.name()``.
     """
 
     def __init__(self, ble, *, keyboard=True, mouse=True, consumer=True, gamepad=False,

@@ -4,7 +4,7 @@
 """Lazy end-device binding for board_peripherals -> board_config, host-or-board audio, portable env helpers."""
 
 from types import ModuleType
-from typing import Any
+from typing import Any, overload
 
 def bind_lazy(ns: dict[str, Any], peripherals_mod: ModuleType) -> None:
     """Install module `__getattr__` / `__dir__` on `ns` for lazy roles."""
@@ -48,4 +48,29 @@ def env_int(name: str, default: int = 0) -> int:
 
 def env_float(name: str, default: float = 0.0) -> float:
     """Read a floating-point environment variable portably."""
+    ...
+
+NAME_KEY: str
+NAME_PREFIX: str
+NAME_MAX: int
+
+@overload
+def name() -> str: ...
+@overload
+def name(new: str | None) -> None:
+    """The board's name, or give it a new one.
+
+    With no argument, the name: a saved one, else `omnipython-` and the last
+    three bytes of the unique ID on a board, the computer's name on a desktop,
+    or `omnipython-` and six random hex digits in a browser. With a string,
+    save it as the new name; with None, forget a saved one.
+
+    Raises:
+        ValueError: The new name isn't one label of letters, digits and hyphens, 1 to 20 characters.
+        OSError: CircuitPython can't write settings.toml while CIRCUITPY is mounted.
+    """
+    ...
+
+def check_name(text: object) -> None:
+    """Raise `ValueError` unless `text` can be a board's name."""
     ...

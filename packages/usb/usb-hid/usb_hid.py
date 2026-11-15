@@ -16,7 +16,8 @@
 #     kb.send(Keycode.A)
 #
 # enable() starts the USB device with the board's own serial port kept, as
-# CircuitPython's boot.py does. To put HID beside other functions (MIDI, a
+# CircuitPython's boot.py does. The computer lists it under the board's name,
+# boarddev.name() from pydevices. To put HID beside other functions (MIDI, a
 # drive), make the interface and start them together:
 #
 #     itf = usb_hid.interface((usb_hid.Device.KEYBOARD, usb_hid.Device.MOUSE))
@@ -239,20 +240,32 @@ def interface(devs=None, *, interval_ms=1):
     return itf
 
 
-def enable(devs=None, boot_device=0):
+def enable(devs=None, boot_device=0, *, name=None):
     """Start the USB device with these HID devices beside the board's serial
-    port, as CircuitPython's ``usb_hid.enable()`` in boot.py does."""
+    port, as CircuitPython's ``usb_hid.enable()`` in boot.py does. The
+    computer lists it as ``name``, the board's name (``boarddev.name()``)
+    when None."""
     import usb.device
 
     if boot_device:
         raise ValueError("boot devices are not supported")
-    usb.device.get().init(interface(devs), builtin_driver=True)
+    usb.device.get().init(interface(devs), builtin_driver=True, product_str=_product(name))
 
 
 def disable():
-    """Stop serving HID: the USB device goes back to the board's serial port."""
+    """Stop serving HID: the USB device goes back to the board's serial port,
+    still listed under the board's name."""
     global devices
     import usb.device
 
-    usb.device.get().init(builtin_driver=True)
+    usb.device.get().init(builtin_driver=True, product_str=_product(None))
     devices = ()
+
+
+def _product(name):
+    """The USB product string: *name*, else the board's name."""
+    if name is None:
+        import boarddev
+
+        name = boarddev.name()
+    return name

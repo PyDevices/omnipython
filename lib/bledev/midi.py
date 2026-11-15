@@ -41,6 +41,8 @@ import sys
 
 import asyncio
 
+import boarddev
+
 from . import (
     BLEError,
     BLETimeoutError,
@@ -463,14 +465,17 @@ def _server_for(ble, name, mtu):
     return server
 
 
-async def serve(ble, name="bledev-midi", *, timeout_ms=None, interval_us=100000, mtu=MTU, **options):
-    """Advertise BLE-MIDI as ``name`` and return a `Port` when a
-    central connects. Call it again for the next connection.
+async def serve(ble, name=None, *, timeout_ms=None, interval_us=100000, mtu=MTU, **options):
+    """Advertise BLE-MIDI as ``name`` (default: the board's name,
+    ``boarddev.name()``) and return a `Port` when a central connects. Call it
+    again for the next connection.
 
     The service is registered once per adapter, the first time; don't register
     other services on the same adapter afterwards.
     """
     ble = _adapter(ble)
+    if name is None:
+        name = boarddev.name()
     server = _server_for(ble, name, mtu)
     # Hosts that pair (Windows, macOS) name the MIDI port after the GAP device
     # name, not the advertised one; without this Windows lists "MPY ESP32".

@@ -24,6 +24,7 @@ guides/upgrade-multimer-from-0.5
 guides/audio
 guides/usb
 guides/bluetooth-le
+guides/board-name
 guides/wifi
 guides/mdns
 guides/medialink

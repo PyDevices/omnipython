@@ -5,7 +5,7 @@
 
 from typing import Any
 
-AP_PREFIX: str
+AP_NAME: str | None
 NVM_OFFSET: int
 CACHE_FILE: str
 JOIN_TIMEOUT_S: int
@@ -25,7 +25,7 @@ def connect(
 
     Args:
         setup: Start setup mode when no known network is in range. `False` returns `None` instead.
-        hostname: Set before joining, so DHCP and mDNS see it.
+        hostname: Set before joining, so DHCP and mDNS see it. Default: the board's name, `boarddev.name()`.
         display_drv: Display for setup mode. Default: `board_config.display_drv` when there is one.
         timeout: Seconds to wait for each network.
         wait: `False` starts joining the first known network and returns `None` at once.
