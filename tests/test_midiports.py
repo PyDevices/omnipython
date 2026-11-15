@@ -793,7 +793,8 @@ class LoopbackCommand(unittest.TestCase):
         self.assertEqual([c[0][1] for c in fake.calls], ["list", "create", "list"])
         self.assertEqual(self.said[0], "PyDevices Loopback: created")
         self.assertEqual(len(self.said), 2)
-        self.assertIn("restarts", self.said[1])
+        self.assertIn("midisettings.exe", self.said[1])
+        self.assertIn("administrator", self.said[1])
 
     def test_a_saved_port_has_no_hint(self):
         self.assertEqual(self._run(FakeMidiExe(saves=True)), 0)

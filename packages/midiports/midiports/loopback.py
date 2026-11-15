@@ -16,9 +16,10 @@ MIDI Services) whether the port exists and creates it when it doesn't. It
 exits 0 when the port is there, 1 when ``--check`` finds it missing, and 2
 when it can't tell: ``midi.exe`` isn't installed, or this isn't Windows.
 
-Windows can't always save the port to its configuration. When it can't, the
-port lasts until the MIDI service restarts or the PC reboots, and the command
-says so; run it again then.
+Windows saves the port to its configuration so it survives a restart. When
+it prints "Saved to Config: No" there is no configuration yet: the port lasts
+until the MIDI service restarts or the PC reboots, and the command says how to
+make one (run Windows MIDI Services' settings app once as administrator).
 
 Linux and macOS have their own loopbacks, and the command names them instead
 of pretending to make one.
@@ -37,8 +38,9 @@ EXIT_MISSING = 1
 EXIT_CANNOT_TELL = 2
 
 NOT_SAVED_HINT = (
-    "It lasts until the MIDI service restarts or Windows reboots; "
-    "run python -m midiports.loopback again then."
+    "Windows didn't save it because it has no MIDI configuration yet, so it lasts until the MIDI service "
+    "restarts or Windows reboots. Run midisettings.exe once as administrator and finish its first-run "
+    "setup, then run python -m midiports.loopback again."
 )
 
 NOT_WINDOWS = {

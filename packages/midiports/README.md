@@ -111,11 +111,11 @@ exists with desktop Python:
 ```text
 > python -m midiports.loopback
 PyDevices Loopback: created
-It lasts until the MIDI service restarts or Windows reboots; run python -m midiports.loopback again then.
+Windows didn't save it because it has no MIDI configuration yet, so it lasts until the MIDI service restarts or Windows reboots. Run midisettings.exe once as administrator and finish its first-run setup, then run python -m midiports.loopback again.
 ```
 
 It makes the port with [Windows MIDI Services](https://aka.ms/midi) (Windows 11),
-and says so if `midi.exe` isn't installed. Run it again any time: it says
+and says so if `midi.exe` isn't installed. When Windows has no MIDI configuration yet, the port only lasts until the MIDI service restarts or Windows reboots; run Windows MIDI Services' settings app (`midisettings.exe`) once as administrator and finish its first-run setup, and the port is saved from then on. Run it again any time: it says
 `present` when the port is there and changes nothing. `--check` only reports,
 and exits 1 when the port is missing, for a script that wants to stop early.
 
