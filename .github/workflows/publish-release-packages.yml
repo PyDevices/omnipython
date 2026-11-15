@@ -23,7 +23,7 @@ jobs:
     # pydevices' own vX.Y.Z releases. palettes-v, pdwidgets-v and iconkit-v releases are
     # publish-package-release.yml's.
     if: github.event_name == 'workflow_dispatch' || startsWith(github.event.release.tag_name, 'v')
-    uses: PyDevices/.github/.github/workflows/reusable-publish-release-packages.yml@publishing-v22
+    uses: PyDevices/.github/.github/workflows/reusable-publish-release-packages.yml@publishing-v25
     with:
       build-kind: pydevices-multi
       distribution-name: pydevices
