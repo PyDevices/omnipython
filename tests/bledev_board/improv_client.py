@@ -10,7 +10,7 @@ exist, and passes only if the board answers "unable to connect" and goes back
 to "authorized".
 
 Without it, the network comes from this board's own ``secrets.py``
-(``WIFI_SSID``/``WIFI_PASSWORD``, as ``wifi.connect_from_secrets()`` reads
+(``WIFI_SSID``/``WIFI_PASSWORD``, as ``wifi_manager.connect()`` reads
 it), imported here and never printed, and it passes when the board reports
 "provisioned" with a redirect URL. That mode is for a board: on a laptop there
 is no ``secrets`` module to read.

@@ -102,9 +102,9 @@ def _rejoin_house(timeout):
         if ssid:
             wifi.radio.connect(ssid, os.getenv("CIRCUITPY_WIFI_PASSWORD") or "", timeout=timeout)
         return
-    import wifi
+    import wifi_manager
 
-    wifi.connect_from_secrets(ntp=False, timeout=timeout)
+    wifi_manager.connect(setup=False, timeout=timeout)
 
 
 class Hotspot:

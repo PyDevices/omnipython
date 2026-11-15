@@ -187,8 +187,13 @@ network goes without it. Then it goes round once more. Each attempt waits up to
 `timeout` seconds (20 by default), but a missing network ends it after about
 six seconds and a wrong password after about fourteen.
 
-`wifi.connect_from_secrets()` uses the same remembered networks when the one
-in `secrets.py` can't be joined.
+A board with a fixed address (`ifconfig()` set before the join) counts as
+connected only once the station has a link, so it joins at boot and rejoins
+after a drop.
+
+`wifi.connect_from_secrets()` is deprecated. It calls `connect()` with
+`setup=False` and `ntp=True`, and only exists for boards whose `boot.py` still
+calls it. Use `connect()` in new code.
 
 Remembered networks live here, with their passwords in plain text, as in
 `secrets.py`:
@@ -205,7 +210,7 @@ It keeps 16 at most.
 
 | Call | Does |
 |---|---|
-| `connect(*, setup=True, hostname=None, display_drv=None, timeout=20)` | Joins a known network and returns its IPv4 address. With none in range, runs setup mode, or returns `None` when `setup=False`. |
+| `connect(*, setup=True, hostname=None, display_drv=None, timeout=20, wait=True, ntp=False, module="secrets")` | Joins a known network and returns its IPv4 address. With none in range, runs setup mode, or returns `None` when `setup=False`. |
 | `run(*, hostname=None, display_drv=None, timeout=20)` | Starts setup mode now and returns the address of the network joined, or `None` after `cancel()`. |
 | `cancel()` | Ends a waiting setup mode without a network. Call it from a timer or another app. |
 | `networks()` | The remembered SSIDs. |
@@ -213,6 +218,11 @@ It keeps 16 at most.
 
 `display_drv` defaults to `board_config.display_drv` when there is one. Set
 `hostname` before the join so DHCP and mDNS see it.
+`ntp=True` sets the clock once a network is joined. `wait=False` starts
+joining the first known network and returns `None` at once, for an app that
+can't stall: poll `wifi.radio.connected`, or call it again after a drop (on
+CircuitPython a join can't run in the background, so it waits). `module` names
+the module that holds `WIFI_SSID` and `WIFI_PASSWORD` when it isn't `secrets`.
 
 | Setting | Default | Meaning |
 |---|---|---|
