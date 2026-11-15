@@ -13,6 +13,7 @@ are what keep a board on its network.
 import sys
 import types
 import unittest
+from unittest import mock
 
 import _env  # noqa: F401
 import wifi_manager as wm
@@ -432,10 +433,10 @@ class BoardNameTest(unittest.TestCase):
     """The board's name is its hostname and its setup access point's name."""
 
     def setUp(self):
-        import boarddev
-
-        self.boarddev = boarddev
-        boarddev.name("kitchen")
+        # The board's name itself is test_board_name's; here, what wifi_manager does with it.
+        named = mock.patch.object(wm, "boarddev", types.SimpleNamespace(name=lambda: "kitchen"))
+        named.start()
+        self.addCleanup(named.stop)
         self.hostnames = []
         self._before = sys.modules.get("network")
         net = types.ModuleType("network")
@@ -457,7 +458,6 @@ class BoardNameTest(unittest.TestCase):
         sys.modules["network"] = net
 
     def tearDown(self):
-        self.boarddev.name(None)
         if self._before is None:
             sys.modules.pop("network", None)
         else:

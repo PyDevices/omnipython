@@ -11,6 +11,7 @@ scan, over bledev's in-process fake radio.
 import sys
 import types
 import unittest
+from unittest import mock
 
 import _env  # noqa: F401  (puts lib/ on sys.path)
 
@@ -105,16 +106,13 @@ class HotspotTest(unittest.TestCase):
         self.assertEqual(self.rejoined, [])
 
     def test_no_name_is_the_board_name(self):
-        import boarddev
-
-        boarddev.name("attic")
-        try:
-            finder = discovery.Hotspot("secret123")
-            finder.advertise(None, 47800)
-            self.assertEqual(finder.find("kitchen"), [])
-            self.assertEqual(self.radio.calls, [("start_ap", "attic", "secret123")])
-        finally:
-            boarddev.name(None)
+        named = mock.patch.object(discovery, "boarddev", types.SimpleNamespace(name=lambda: "attic"))
+        named.start()
+        self.addCleanup(named.stop)
+        finder = discovery.Hotspot("secret123")
+        finder.advertise(None, 47800)
+        self.assertEqual(finder.find("kitchen"), [])
+        self.assertEqual(self.radio.calls, [("start_ap", "attic", "secret123")])
 
     def test_a_host_not_up_yet_is_an_empty_answer(self):
         finder = discovery.Hotspot("secret123")
@@ -198,13 +196,10 @@ class MDNSTest(unittest.TestCase):
             sys.modules["mdns"] = self.saved
 
     def test_no_name_is_the_board_name(self):
-        import boarddev
-
-        boarddev.name("hall")
-        try:
-            discovery.MDNS().advertise(None, 47800)
-        finally:
-            boarddev.name(None)
+        named = mock.patch.object(discovery, "boarddev", types.SimpleNamespace(name=lambda: "hall"))
+        named.start()
+        self.addCleanup(named.stop)
+        discovery.MDNS().advertise(None, 47800)
         self.assertEqual(self.advertised, ("hall", {"service_type": "_medialink", "protocol": "_udp", "port": 47800}))
 
 
@@ -242,9 +237,9 @@ class BLETest(unittest.TestCase):
             other.deinit()
 
     def test_no_name_advertises_the_board_name(self):
-        import boarddev
-
-        boarddev.name("porch")
+        named = mock.patch.object(discovery, "boarddev", types.SimpleNamespace(name=lambda: "porch"))
+        named.start()
+        self.addCleanup(named.stop)
         board = discovery.BLE(self.board)
         try:
             board.advertise(None, 47800, address="192.168.1.40")
@@ -252,7 +247,6 @@ class BLETest(unittest.TestCase):
             self.assertEqual(finder.find("porch", timeout=0.5), [("porch", ("192.168.1.40", 47800))])
         finally:
             board.deinit()
-            boarddev.name(None)
 
     def test_deinit_stops_advertising(self):
         board = discovery.BLE(self.board)
