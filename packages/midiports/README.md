@@ -33,6 +33,7 @@ To use another transport, change the line that opens the ports:
 | USB, every MIDI device plugged into the board, merged | `usb_host.all_ports()` |
 | A UART (5-pin DIN, TRS, board to board) | `uart.ports(1, tx=17, rx=18)` |
 | Windows' MIDI ports (a keyboard, loopMIDI, a DAW) | `windows.ports("loopMIDI")` |
+| Windows' loopback, for trying MIDI with no hardware | `windows.ports(midiports.LOOPBACK)` |
 | Linux raw MIDI | `linux.ports("DMK25")` |
 | Web MIDI, in a browser page (Pyodide) | `await webmidi.open("DMK25")` |
 | Web MIDI, in a browser page (MicroPython) | `webmidi.page_in("DMK25")` |
@@ -99,6 +100,55 @@ fetches both.
 On desktop Python, the Windows port needs `uwin32` from `pydevices-desktop`.
 `midiports` isn't on PyPI yet, so put this folder on your path. Adafruit
 publishes `adafruit_midi` there as `adafruit-circuitpython-midi`.
+
+## Try MIDI with no hardware
+
+On Windows, a loopback port lets two programs talk MIDI to each other with no
+keyboard, board or cable: what one writes to the port's output comes out of its
+input. `midiports.LOOPBACK` is its name, `"PyDevices Loopback"`. Make sure it
+exists with desktop Python:
+
+```text
+> python -m midiports.loopback
+PyDevices Loopback: created
+It lasts until the MIDI service restarts or Windows reboots; run python -m midiports.loopback again then.
+```
+
+It makes the port with [Windows MIDI Services](https://aka.ms/midi) (Windows 11),
+and says so if `midi.exe` isn't installed. Run it again any time: it says
+`present` when the port is there and changes nothing. `--check` only reports,
+and exits 1 when the port is missing, for a script that wants to stop early.
+
+Then open it from CPython or from MicroPython on Windows:
+
+```python
+import time
+
+import midiports
+from midiports import windows
+
+midi_in, midi_out = windows.ports(midiports.LOOPBACK)
+buf = bytearray(16)
+midi_out.write(bytes([0x90, 60, 100]), 3)
+time.sleep(0.1)
+n = midi_in.readinto(buf)
+print("read", n, bytes(buf[:n]).hex())
+midi_out.close()
+midi_in.close()
+```
+
+```text
+read 3 903c64
+```
+
+Two programs work the same way: one opens the ports and writes, the other
+opens them and reads. Start the reader first.
+
+Other systems have their own loopback, and the command names it rather than
+making one. On Linux, `sudo modprobe snd-virmidi` adds virtual MIDI cards, and
+the "Midi Through" port that ALSA provides loops back too; open either with
+`linux.ports("Midi Through")`. On macOS, turn on the IAC Driver in Audio MIDI
+Setup.
 
 ## The ports
 

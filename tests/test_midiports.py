@@ -681,5 +681,164 @@ class UsbHostPort(unittest.TestCase):
             self.usb_host.ports(dev)
 
 
+
+class LoopbackName(unittest.TestCase):
+    def test_the_name_is_one_constant(self):
+        self.assertEqual(midiports.LOOPBACK, "PyDevices Loopback")
+
+    def test_windows_finds_the_port_by_that_name(self):
+        fake = types.SimpleNamespace(
+            midiOutGetNumDevs=lambda: 2, midiInGetNumDevs=lambda: 2,
+            midiOutGetDevName=lambda i: ("Microsoft GS Wavetable Synth", midiports.LOOPBACK)[i],
+            midiInGetDevName=lambda i: ("DMK25", midiports.LOOPBACK.lower())[i],
+        )
+        with mock.patch.dict(sys.modules, {"uwin32": fake}):
+            sys.modules.pop("midiports.windows", None)
+            try:
+                from midiports import windows
+                found = windows.find(midiports.LOOPBACK)
+                self.assertEqual([(p.id, p.direction) for p in found], [("out:1", OUT), ("in:1", IN)])
+            finally:
+                sys.modules.pop("midiports.windows", None)
+                midiports.__dict__.pop("windows", None)
+
+    def test_a_missing_loopback_says_how_to_make_it(self):
+        fake = types.SimpleNamespace(
+            midiOutGetNumDevs=lambda: 0, midiInGetNumDevs=lambda: 0,
+            midiOutGetDevName=None, midiInGetDevName=None,
+        )
+        with mock.patch.dict(sys.modules, {"uwin32": fake}):
+            sys.modules.pop("midiports.windows", None)
+            try:
+                from midiports import windows
+                with self.assertRaises(OSError) as caught:
+                    windows.ports(midiports.LOOPBACK)
+                self.assertIn("python -m midiports.loopback", str(caught.exception))
+                with self.assertRaises(OSError) as other:
+                    windows.ports("loopMIDI")
+                self.assertNotIn("midiports.loopback", str(other.exception))
+            finally:
+                sys.modules.pop("midiports.windows", None)
+                midiports.__dict__.pop("windows", None)
+
+
+TABLE_WITH = (
+    "\r\nWindows MIDI Services Console\r\n\r\nBasic MIDI 1.0 Loopback Endpoints\r\n"
+    "\u2500\u2500\u2500\r\n"
+    "\u256d\u2500\u2500\u252c\u2500\u2500\u256e\r\n"
+    "\u2502 Association Id                         \u2502 Name               \u2502\r\n"
+    "\u251c\u2500\u2500\u253c\u2500\u2500\u2524\r\n"
+    "\u2502 {ff66db7e-6ea0-4745-ae42-413f79032ac3} \u2502 PyDevices Loopback \u2502\r\n"
+    "\u2502 {00000000-0000-0000-0000-000000000000} \u2502 Other              \u2502\r\n"
+    "\u2570\u2500\u2500\u2534\u2500\u2500\u256f\r\n"
+)
+TABLE_WITHOUT = "\r\nWindows MIDI Services Console\r\n\r\nNo basic loopback endpoints.\r\n"
+
+
+class FakeMidiExe:
+    """Stands in for ``subprocess.run`` on midi.exe: a list that ``create`` grows."""
+
+    def __init__(self, present=False, saves=False, fail=None):
+        self.present = present
+        self.saves = saves
+        self.fail = fail
+        self.calls = []
+
+    def __call__(self, argv, cwd=None, capture_output=None, check=None):
+        self.calls.append((argv[1:], cwd))
+        if self.fail:
+            return subprocess.CompletedProcess(argv, 1, b"", self.fail.encode())
+        if argv[1:3] == ["basic-loopback", "list"]:
+            text = TABLE_WITH if self.present else TABLE_WITHOUT
+        else:
+            assert argv[1:3] == ["basic-loopback", "create"], argv
+            assert argv[3:] == ["--name", midiports.LOOPBACK, "--save-to-config"], argv
+            self.present = True
+            text = ("\r\nWindows MIDI Services Console\r\n\r\nLoopback created.\r\n"
+                    "  > Association Id                       {a0d834f0-d2fd-4d94-8861-b4b4f94a20a3}\r\n"
+                    "  > Saved to Config                      " + ("Yes" if self.saves else "No") + "\r\n")
+        return subprocess.CompletedProcess(argv, 0, text.encode("utf-8"), b"")
+
+
+class LoopbackCommand(unittest.TestCase):
+    def setUp(self):
+        from midiports import loopback
+        self.loopback = loopback
+        self.programs = tempfile.TemporaryDirectory()
+        self.addCleanup(self.programs.cleanup)
+        tools = Path(self.programs.name, "Windows MIDI Services", "Tools")
+        tools.mkdir(parents=True)
+        (tools / "midi.exe").write_bytes(b"")
+        self.said = []
+
+    def _run(self, fake, **kw):
+        kw.setdefault("platform", "win32")
+        with mock.patch.object(self.loopback.subprocess, "run", fake):
+            code = self.loopback.run(program_files=self.programs.name, out=self.said.append, **kw)
+        return code
+
+    def test_the_table_is_read_by_its_name_column(self):
+        self.assertEqual(self.loopback.listed_names(TABLE_WITH), ["PyDevices Loopback", "Other"])
+        self.assertEqual(self.loopback.listed_names(TABLE_WITHOUT), [])
+
+    def test_a_present_port_is_left_alone(self):
+        fake = FakeMidiExe(present=True)
+        self.assertEqual(self._run(fake), 0)
+        self.assertEqual(self.said, ["PyDevices Loopback: present"])
+        self.assertEqual([c[0][1] for c in fake.calls], ["list"])
+
+    def test_a_missing_port_is_created_and_the_unsaved_config_is_said(self):
+        fake = FakeMidiExe()
+        self.assertEqual(self._run(fake), 0)
+        self.assertEqual([c[0][1] for c in fake.calls], ["list", "create", "list"])
+        self.assertEqual(self.said[0], "PyDevices Loopback: created")
+        self.assertEqual(len(self.said), 2)
+        self.assertIn("restarts", self.said[1])
+
+    def test_a_saved_port_has_no_hint(self):
+        self.assertEqual(self._run(FakeMidiExe(saves=True)), 0)
+        self.assertEqual(self.said, ["PyDevices Loopback: created"])
+
+    def test_check_reports_and_creates_nothing(self):
+        fake = FakeMidiExe()
+        self.assertEqual(self._run(fake, check=True), 1)
+        self.assertEqual([c[0][1] for c in fake.calls], ["list"])
+        self.assertIn("missing", self.said[0])
+        self.assertEqual(self._run(FakeMidiExe(present=True), check=True), 0)
+
+    def test_midi_exe_is_started_from_its_own_folder(self):
+        fake = FakeMidiExe(present=True)
+        self._run(fake)
+        self.assertTrue(fake.calls[0][1].endswith("Tools"))
+
+    def test_no_midi_exe_says_what_to_install(self):
+        with tempfile.TemporaryDirectory() as empty:
+            with self.assertRaises(self.loopback.LoopbackError) as caught:
+                self.loopback.midi_exe(empty)
+        self.assertIn("aka.ms/midi", str(caught.exception))
+        code = self.loopback.run(platform="win32", program_files=tempfile.gettempdir() + "/nowhere", out=self.said.append)
+        self.assertEqual(code, 2)
+        self.assertIn("Install Windows MIDI Services", self.said[0])
+
+    def test_a_midi_exe_failure_is_loud(self):
+        self.assertEqual(self._run(FakeMidiExe(fail="service not running")), 2)
+        self.assertIn("service not running", self.said[0])
+
+    def test_other_systems_get_their_own_advice_and_nothing_is_run(self):
+        for platform, word in (("linux", "snd-virmidi"), ("darwin", "IAC Driver")):
+            self.said.clear()
+            fake = FakeMidiExe()
+            self.assertEqual(self._run(fake, platform=platform), 2)
+            self.assertIn(word, self.said[0])
+            self.assertEqual(fake.calls, [])
+
+    def test_the_command_line_takes_check(self):
+        with mock.patch.object(self.loopback, "run", return_value=1) as run:
+            self.assertEqual(self.loopback.main(["--check"]), 1)
+            run.assert_called_once_with(check=True)
+            self.loopback.main([])
+            self.assertFalse(run.call_args.kwargs["check"])
+
+
 if __name__ == "__main__":
     unittest.main()

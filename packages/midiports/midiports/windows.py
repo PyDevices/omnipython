@@ -17,6 +17,10 @@ contain ``name`` (case doesn't matter); either is ``None`` if Windows has no
 such port in that direction. ``available()`` lists every port, and
 ``open_port()`` opens one.
 
+To try MIDI with no hardware, open the loopback port with
+``windows.ports(midiports.LOOPBACK)``: what a program writes to its output
+comes out of its input. ``python -m midiports.loopback`` creates it.
+
 It needs ``uwin32``, which ships in ``pydevices-desktop``.
 
 Ids carry the direction: ``"out:1"`` and ``"in:1"``. winmm numbers inputs
@@ -49,7 +53,7 @@ import time
 import uwin32 as win
 
 from . import (
-    IN, OUT, PortIn, PortInfo, PortOut, Stamps, _count, _stamp, message_length, ticks_diff, ticks_us,
+    IN, LOOPBACK, OUT, PortIn, PortInfo, PortOut, Stamps, _count, _stamp, message_length, ticks_diff, ticks_us,
 )
 
 HWND_MESSAGE = -3
@@ -94,7 +98,10 @@ def ports(name=""):
     ins = find(name, IN)
     outs = find(name, OUT)
     if not ins and not outs:
-        raise OSError("no MIDI port matching {!r}".format(name))
+        hint = ""
+        if name == LOOPBACK:
+            hint = "; run python -m midiports.loopback to create it"
+        raise OSError("no MIDI port matching {!r}{}".format(name, hint))
     return (open_port(ins[0]) if ins else None,
             open_port(outs[0]) if outs else None)
 
