@@ -32,6 +32,8 @@ except NameError:  # pragma: no cover
 _sep = "\\" if "\\" in _here else "/"
 _dir = _here.rsplit(_sep, 1)[0] if _sep in _here else "."
 sys.path.insert(0, _dir + _sep + ".." + _sep + "packages" + _sep + "midiports")
+# The board's name, which midiports requires.
+sys.path.insert(0, _dir + _sep + ".." + _sep + "packages" + _sep + "_boardname")
 
 PLANT = None
 for _arg in sys.argv[1:]:

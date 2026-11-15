@@ -158,8 +158,8 @@ class Session:
         self.uibc_packets = 0
         self.sink_uibc = None
         if name is None:              # what the sink lists: the board's name
-            import boarddev
-            name = boarddev.name()
+            import _boardname
+            name = _boardname.name("Session() names the cast source", "castdisplay", "pass name= to Session()")
         self.name = name
         self.source_id = source_id
         self.rtsp_port = rtsp_port

@@ -10,6 +10,6 @@
     ["castdisplay/roku_companion.py", "github:PyDevices/pydevices/packages/castdisplay/castdisplay/roku_companion.py"],
     ["castdisplay/uibcinput.py", "github:PyDevices/pydevices/packages/castdisplay/castdisplay/uibcinput.py"]
   ],
-  "deps": [],
+  "deps": [["github:PyDevices/pydevices/packages/_boardname", "main"]],
   "version": "0.1.0"
 }

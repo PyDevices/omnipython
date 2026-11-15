@@ -12,4 +12,5 @@ metadata(
     license="MIT",
 )
 
+require("_boardname")
 package("hmilink", files=("__init__.py", "tcp.py", "local.py", "stream.py", "osc.py"))

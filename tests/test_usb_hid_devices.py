@@ -21,6 +21,7 @@ import unittest
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 SOURCE = ROOT / "packages" / "usb" / "usb-hid" / "usb_hid.py"
 sys.path.insert(0, str(ROOT / "lib"))
+sys.path.insert(0, str(ROOT / "packages" / "_boardname"))
 
 import events  # noqa: E402
 from bledev.hidreport import INPUT, Decoder, ReportMap  # noqa: E402

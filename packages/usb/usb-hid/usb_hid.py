@@ -269,15 +269,7 @@ def disable():
 def _product(name):
     """The USB product string: *name*, else the board's name."""
     if name is None:
-        import boarddev
+        import _boardname
 
-        board_name = getattr(boarddev, "name", None)
-        if board_name is None:
-            raise AttributeError(
-                "usb_hid names the device after the board with boarddev.name(), which this "
-                "board's boarddev doesn't have: its firmware is older than usb_hid. Update the "
-                'firmware, install pydevices again with target="/" so a newer boarddev runs '
-                "ahead of the frozen one, or pass name= to enable()."
-            )
-        name = board_name()
+        name = _boardname.name("usb_hid names the USB device", "usb_hid", "pass name= to enable()")
     return name

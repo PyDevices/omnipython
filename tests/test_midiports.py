@@ -35,6 +35,7 @@ ADAFRUIT_PREFIX = "https://raw.githubusercontent.com/adafruit/Adafruit_CircuitPy
 OURS_PREFIX = "github:PyDevices/pydevices/"
 
 sys.path.insert(0, str(PACKAGE))
+sys.path.insert(0, str(ROOT / "packages" / "_boardname"))
 
 import midiports  # noqa: E402
 from midiports import IN, OUT, WholeMessages, linux, webmidi  # noqa: E402
