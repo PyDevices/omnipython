@@ -525,6 +525,35 @@ def c_usb_device_ports_names_the_board():
         _remove_fake_usb()
 
 
+def c_usb_device_ports_says_to_update_older_firmware():
+    # Firmware frozen before boarddev.name() existed runs its own boarddev
+    # ahead of a newer one in /lib.
+    usb_device = _install_fake_usb()
+    inits = []
+    usbd = _Module()
+    usbd.init = lambda *itfs, **kw: inits.append(kw)
+    sys.modules["usb.device"].get = lambda: usbd
+    sys.modules["usb"].device = sys.modules["usb.device"]
+    saved = sys.modules.get("boarddev")
+    sys.modules["boarddev"] = _Module()
+    try:
+        try:
+            usb_device.ports()
+            expect(False, "ports() started the device with no name to give it")
+        except AttributeError as e:
+            message = str(e)
+            expect("firmware" in message and "name=" in message, "the error says what to do: %r" % message)
+        expect(not inits, "the device started: %r" % (inits,))
+        usb_device.ports(name="Drum pads")
+        expect(inits[-1].get("product_str") == "Drum pads", "a name given still works: %r" % (inits[-1],))
+    finally:
+        if saved is None:
+            sys.modules.pop("boarddev", None)
+        else:
+            sys.modules["boarddev"] = saved
+        _remove_fake_usb()
+
+
 # -- a hosted MIDI device, over a fake usb.core -----------------------------------------------
 
 # One MIDIStreaming interface (class 1, subclass 3) with bulk IN 0x81 and OUT
@@ -1703,6 +1732,7 @@ CHECKS = (
     ("usb_device: a host not reading drops and counts, never stalls", c_usb_device_full_host_drops_and_counts),
     ("usb_device: 200 of 200 through events and back", c_usb_device_round_trip),
     ("usb_device: ports() lists the board under its name", c_usb_device_ports_names_the_board),
+    ("usb_device: ports() on older firmware says to update it", c_usb_device_ports_says_to_update_older_firmware),
     ("usb_host: 200 of 200 over a fake usb.core, packets to whole messages", c_usb_host),
     ("usb_host all_ports: two devices merged whole, out to both, arrivals and departures", c_usb_host_all),
     ("usb_host all_ports: a SysEx that stops, or whose device leaves, is ended", c_usb_host_all_stalled_sysex),

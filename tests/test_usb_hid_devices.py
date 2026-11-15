@@ -212,6 +212,23 @@ class NameTests(unittest.TestCase):
         self.usb_hid.disable()
         self.assertEqual(self.inits[-1], {"builtin_driver": True, "product_str": "den-pad"})
 
+    def test_an_older_boarddev_says_to_update_the_firmware(self):
+        # Firmware frozen before boarddev.name() existed runs its own boarddev
+        # ahead of a newer one in /lib.
+        sys.modules["boarddev"] = types.SimpleNamespace()
+        with self.assertRaises(AttributeError) as caught:
+            self.usb_hid.enable((self.usb_hid.Device.GAMEPAD,))
+        message = str(caught.exception)
+        self.assertIn("boarddev.name()", message)
+        self.assertIn("firmware", message)
+        self.assertIn("name=", message)
+        self.assertEqual(self.inits, [])
+
+    def test_an_older_boarddev_is_fine_with_a_name_given(self):
+        sys.modules["boarddev"] = types.SimpleNamespace()
+        self.usb_hid.enable((self.usb_hid.Device.GAMEPAD,), name="Arcade stick")
+        self.assertEqual(self.inits[-1]["product_str"], "Arcade stick")
+
 
 if __name__ == "__main__":
     unittest.main()
