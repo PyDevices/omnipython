@@ -27,7 +27,8 @@ What a package needs from Adafruit's bundle on CircuitPython goes under
 A package that isn't a library names its own folder under `target`, as an app
 does with `"target": "apps/home"`. That folder sits beside the one libraries go
 in, so it's `/apps/home` on a board whose libraries are in `/lib`, and what the
-package needs still goes in `/lib`.
+package needs still goes in `/lib`. Given a target that isn't a `lib` folder,
+such as `/flash`, the package's folder goes inside it: `/flash/apps/home`.
 """
 
 import gc
@@ -255,12 +256,21 @@ class _Plan:
 
 
 def _beside(target, folder):
-    """Where a package's own folder is: beside the library folder, unless it's absolute."""
+    """Where a package's own folder is.
+
+    Beside a target named `lib`, inside any other target, and as written when
+    it's absolute.
+    """
     if folder.startswith("/"):
         return folder.rstrip("/")
-    head, slash, _ = target.rpartition("/")
+    folder = folder.strip("/")
+    head, slash, last = target.rpartition("/")
     # "/lib" gives "/apps/home", "/flash/lib" gives "/flash/apps/home", "lib" gives "apps/home".
-    return head + slash + folder.strip("/") if slash else folder.strip("/")
+    if last == "lib":
+        return head + slash + folder
+    # "/flash" gives "/flash/apps/home" and "/" gives "/apps/home": the package
+    # stays on the drive it was sent to.
+    return target.rstrip("/") + "/" + folder
 
 
 def _module_names(paths):
@@ -742,7 +752,9 @@ def install(package, index=None, target=None, version=None, mpy=True, prompt=Tru
             (`omip.ADAFRUIT`), then micropython-lib.
         target (str): The folder to install into. By default the `lib` folder on
             `sys.path`. A package that names its own folder, as an app does,
-            goes in that folder beside this one.
+            goes in that folder beside this one when it's a `lib` folder, and
+            inside it otherwise: `target="/flash"` puts an app in
+            `/flash/apps/<name>`.
         version (str): A version on an index, or a branch or tag for a URL.
         mpy (bool): Take compiled `.mpy` files on MicroPython. Other platforms
             always take `.py`.
