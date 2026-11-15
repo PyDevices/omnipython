@@ -4,6 +4,7 @@ appdev.app
 appdev.devices
 audiodev
 audiodev.accel
+audiodev.alsa_audio
 audiodev.android_audio
 audiodev.auto
 audiodev.bytequeue
@@ -51,7 +52,12 @@ displaydev.pixeldisplay
 displaydev.sdldisplay
 displaydev.workerdisplay
 events
+frame_recorder
+iconkit
+iconkit.gfx
+jpegio
 keys
+mdns
 medialink
 medialink.codec
 medialink.discovery
@@ -65,5 +71,12 @@ medialink.wakeword
 multimer
 omip
 orientation
+palettes
+palettes.ansi
+palettes.cube
+palettes.material_design
+palettes.wheel
+pngio
+svgio
+usdl2
 wifi_manager
-audiodev.alsa_audio

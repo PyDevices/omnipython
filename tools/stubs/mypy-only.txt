@@ -8,3 +8,5 @@ displaydev.psdisplay
 displaydev.wasmdisplay
 displaydev.windisplay
 wifi
+iconkit.lvicons
+uwin32

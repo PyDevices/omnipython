@@ -2,7 +2,7 @@
 # SPDX-FileCopyrightText: 2026 Brad Barnett
 #
 # SPDX-License-Identifier: MIT
-"""Check the type stubs under lib/ against each other and against the code.
+"""Check the type stubs under lib/, utils/ and packages/*/lib against each other and against the code.
 
 From the repository root:
 
@@ -34,7 +34,14 @@ import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-LIB = ROOT / "lib"
+# Every folder whose `.pyi` files this checks: each is a source root, so a stub's
+# path inside it is its module's dotted name.
+SOURCES = [
+    ROOT / "lib",
+    ROOT / "utils",
+    ROOT / "packages" / "palettes" / "lib",
+    ROOT / "packages" / "iconkit" / "lib",
+]
 LISTS = ROOT / "tools" / "stubs"
 TIMEOUT = 120  # seconds, per module
 
@@ -48,19 +55,21 @@ def read_list(name):
 def stub_modules():
     """Dotted names of every module under lib/ that has a stub."""
     names = []
-    for path in sorted(LIB.rglob("*.pyi")):
-        parts = list(path.relative_to(LIB).with_suffix("").parts)
-        if parts[-1] == "__init__":
-            parts.pop()
-        names.append(".".join(parts))
+    for source in SOURCES:
+        for path in sorted(source.rglob("*.pyi")):
+            parts = list(path.relative_to(source).with_suffix("").parts)
+            if parts[-1] == "__init__":
+                parts.pop()
+            names.append(".".join(parts))
     return names
 
 
 def stage(destination):
-    for path in LIB.rglob("*.pyi"):
-        target = destination / path.relative_to(LIB)
-        target.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(path, target)
+    for source in SOURCES:
+        for path in source.rglob("*.pyi"):
+            target = destination / path.relative_to(source)
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(path, target)
 
 
 def run(command, env=None):
@@ -95,7 +104,7 @@ def main():
         print("== mypy over %d stubs" % len(files))
         status |= run([sys.executable, "-m", "mypy", "--no-incremental", "--no-site-packages", *files])
 
-        env = dict(os.environ, MYPYPATH=str(scratch), PYTHONPATH=os.pathsep.join([str(LIB), str(ROOT / "utils"), str(ROOT / "board_configs" / "desktop")]))
+        env = dict(os.environ, MYPYPATH=str(scratch), PYTHONPATH=os.pathsep.join([*map(str, SOURCES), str(ROOT / "board_configs" / "desktop")]))
         env.setdefault("SDL_VIDEODRIVER", "dummy")
         env.setdefault("SDL_AUDIODRIVER", "dummy")
         allowlist = LISTS / "allowlist.txt"
