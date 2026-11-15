@@ -35,6 +35,7 @@ To use another transport, change the line that opens the ports:
 | Windows' MIDI ports (a keyboard, loopMIDI, a DAW) | `windows.ports("loopMIDI")` |
 | Windows' loopback, for trying MIDI with no hardware | `windows.ports(midiports.LOOPBACK)` |
 | Linux raw MIDI | `linux.ports("DMK25")` |
+| Linux, 5-pin DIN on a serial port (a Pi's UART) | `linux.serial_ports("/dev/ttyAMA0")` |
 | Web MIDI, in a browser page (Pyodide) | `await webmidi.open("DMK25")` |
 | Web MIDI, in a browser page (MicroPython) | `webmidi.page_in("DMK25")`, `webmidi.page_out("synth")` |
 | Web MIDI, in a Web Worker, relayed by the page | `webmidi.relay_ports(port)` |
@@ -254,6 +255,11 @@ clock a worker's relayed times are on.
   has sent it, so a long one blocks for as long as it takes to send.
 - Linux: MicroPython's unix port can list ports but not open them, since its
   `os` has no `open` or `read`. CPython opens them.
+- Linux serial: `serial_ports()` sets MIDI's 31250 baud through the driver's
+  custom-rate call, and raises if the driver can't come within 1% of it. A
+  Pi whose UART clock was changed so that 38400 comes out as 31250 takes
+  `baudrate=38400`. The framing is tested over a pseudo-terminal; a real
+  5-pin jack on a serial port hasn't been tried yet.
 - USB: if the host stops reading, messages that don't fit within a few
   milliseconds are dropped and counted in `MIDIPortsInterface.dropped`, so
   your loop never stalls.

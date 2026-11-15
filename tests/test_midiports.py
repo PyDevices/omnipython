@@ -18,9 +18,11 @@ import asyncio
 import json
 import os
 import shutil
+import struct
 import subprocess
 import sys
 import tempfile
+import time
 import types
 import unittest
 from unittest import mock
@@ -244,6 +246,116 @@ class LinuxPort(unittest.TestCase):
     def test_no_matching_port_says_so(self):
         _make_asound(self.proc, {})
         self.assertRaises(OSError, linux.ports, "nothing", proc=self.proc, dev=self.dev)
+
+
+@unittest.skipUnless(sys.platform.startswith("linux"), "Linux serial ports")
+class LinuxSerialPort(unittest.TestCase):
+    """DIN MIDI on a serial port, with a pty pair standing in for the cable:
+    what's written to the master arrives at the port as a UART's bytes would."""
+
+    # Running status, data bytes a cooked tty would eat (CR, LF, ^C, XON,
+    # XOFF), a clock inside a note, one inside a SysEx, active sensing
+    # between two control changes, then start and a clock.
+    WIRE = (b"\x90\x3c\x0d", b"\x0a\x03\x90", b"\x11\xf8\x13",
+            b"\xf0\x7d\x0d\x0a\xf8", b"\x11\x13\xf7\xb0\x07", b"\x7f\xfe\x07\x00\xfa\xf8")
+    WHOLE = (b"\x90\x3c\x0d" b"\x90\x0a\x03" b"\xf8" b"\x90\x11\x13"
+             b"\xf0\x7d\x0d\x0a\x11\x13\xf7" b"\xf8" b"\xb0\x07\x7f" b"\xfe" b"\xb0\x07\x00" b"\xfa" b"\xf8")
+    MESSAGES = 11
+
+    def setUp(self):
+        self.master, slave = os.openpty()
+        self.path = os.ttyname(slave)
+        os.close(slave)
+        self.midi_in, self.midi_out = linux.serial_ports(self.path)
+
+    def tearDown(self):
+        self.midi_in.close()
+        self.midi_out.close()
+        os.close(self.master)
+
+    def _read(self, want):
+        got = b""
+        deadline = time.monotonic() + 2
+        while len(got) < want and time.monotonic() < deadline:
+            chunk = self.midi_in.read(64)
+            if chunk:
+                got += chunk
+        return got
+
+    def test_the_port_is_raw_at_31250_baud(self):
+        import fcntl
+        import termios
+
+        fd = self.midi_out._fd
+        raw = fcntl.ioctl(fd, linux._TCGETS2, bytes(44))
+        self.assertEqual(struct.unpack(linux._TERMIOS2, raw)[-2:], (31250, 31250))
+        iflag, oflag, cflag, lflag, _, _, cc = termios.tcgetattr(fd)
+        self.assertEqual(lflag & (termios.ICANON | termios.ECHO | termios.ISIG), 0)
+        self.assertEqual(iflag & (termios.ICRNL | termios.IXON), 0)
+        self.assertEqual(oflag & termios.OPOST, 0)
+        self.assertEqual(cflag & (termios.CSIZE | termios.PARENB | termios.CSTOPB), termios.CS8)
+        self.assertEqual((cc[termios.VMIN], cc[termios.VTIME]), (0, 0))
+
+    def test_a_rate_termios_names_is_set_directly(self):
+        import termios
+
+        midi_in, midi_out = linux.serial_ports(self.path, baudrate=38400)
+        try:
+            self.assertEqual(termios.tcgetattr(midi_out._fd)[4:6], [termios.B38400, termios.B38400])
+        finally:
+            midi_in.close()
+            midi_out.close()
+
+    def test_bytes_off_the_wire_come_out_as_whole_messages(self):
+        self.assertIsInstance(self.midi_in, WholeMessages)
+        self.assertIsNone(self.midi_in.read(64))
+        got = b""
+        for piece in self.WIRE:
+            os.write(self.master, piece)
+            got += self._read(1)
+        got += self._read(len(self.WHOLE) - len(got))
+        self.assertEqual(got.hex(" "), self.WHOLE.hex(" "))
+        self.assertEqual(self.midi_in.desync, 0)
+        stamps = [self.midi_in.take_timestamp() for _ in range(self.MESSAGES + 1)]
+        self.assertNotIn(None, stamps[:-1])
+        self.assertIsNone(stamps[-1])
+
+    def test_adafruit_midi_reads_every_message(self):
+        sys.path.insert(0, adafruit_dir(self))
+        try:
+            import adafruit_midi
+            # Each message type is known once its module is imported.
+            import adafruit_midi.control_change  # noqa: F401
+            import adafruit_midi.note_on  # noqa: F401
+            import adafruit_midi.start  # noqa: F401
+            import adafruit_midi.system_exclusive  # noqa: F401
+            import adafruit_midi.timing_clock  # noqa: F401
+        finally:
+            sys.path.pop(0)
+        midi = adafruit_midi.MIDI(midi_in=self.midi_in, midi_out=self.midi_out)
+        os.write(self.master, b"".join(self.WIRE))
+        names = []
+        deadline = time.monotonic() + 2
+        while len(names) < self.MESSAGES and time.monotonic() < deadline:
+            msg = midi.receive()
+            if msg is not None:
+                names.append(type(msg).__name__)
+        self.assertEqual(names, ["NoteOn", "NoteOn", "TimingClock", "NoteOn", "SystemExclusive",
+                                 "TimingClock", "ControlChange", "MIDIUnknownEvent", "ControlChange",
+                                 "Start", "TimingClock"])
+
+    def test_what_is_written_reaches_the_wire_unchanged(self):
+        sent = b"\x80\x0a\x0d\xb0\x03\x11\xf0\x13\x7f\xf7\xf8"
+        self.assertEqual(self.midi_out.write(sent), len(sent))
+        got = b""
+        deadline = time.monotonic() + 2
+        while len(got) < len(sent) and time.monotonic() < deadline:
+            got += os.read(self.master, 64)
+        self.assertEqual(got, sent)
+
+    def test_a_path_that_is_not_a_serial_port_is_refused(self):
+        with tempfile.NamedTemporaryFile() as plain:
+            self.assertRaises(OSError, linux.serial_ports, plain.name)
 
 
 class _Obj:
