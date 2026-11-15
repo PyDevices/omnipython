@@ -1,3 +1,7 @@
+## v0.0.16.dev1 (2026-11-15)
+
+- Type stubs ship in the wheel, so an editor knows every palette function and its types (#620)
+
 ## v0.0.16.dev0 (2026-11-14)
 
 - An ANSI palette, 16 or 256 colors, with `nearest()` to pick the closest entry for any color (#552)
