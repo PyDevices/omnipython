@@ -8,6 +8,7 @@ and a 440 Hz sine; packages/mp4mux/tests/mux_file.py muxes them on CPython and
 on unix MicroPython with frame times that vary and a hole in the sound.
 """
 
+import hashlib
 import json
 import os
 import shutil
@@ -29,6 +30,56 @@ MUX = os.path.join(MP4MUX, "tests", "mux_file.py")
 FRAMES = 100
 FRAME_MS = (30, 40, 50)
 RATE = 16000
+
+
+
+# Two recordings made from bytes written here, so their files don't depend on
+# the encoder installed. The default output is pinned byte for byte: recorders
+# in the field write it, and a new option must not change it.
+_SPS_BASELINE = b"\x67\x42\xc0\x1e" + bytes(range(16, 40))
+_SPS_HIGH = b"\x67\x64\x00\x1f\xac" + bytes(range(40, 60))  # 4:2:0, 8-bit
+_PPS = b"\x68\xce\x3c\x80"
+
+
+def _access_unit(i, sps, keyframe):
+    start = b"\x00\x00\x00\x01"
+    au = start + b"\x09\xf0"
+    if keyframe:
+        au += start + sps + start + _PPS
+    slice_ = bytes((0x65 if keyframe else 0x41,)) + bytes((i * 7 + k) & 0xFF for k in range(50 + 13 * (i % 5)))
+    return au + b"\x00\x00\x01" + slice_
+
+
+def _pcm(n, channels, seed):
+    return bytes((seed + 3 * k) & 0xFF for k in range(2 * channels * n))
+
+
+def _write_baseline(mp4mux, path, **options):
+    """Video from 0 ms at varying frame times; sound from 100 ms with a hole."""
+    mp4 = mp4mux.Writer(path, 320, 240, 25, audio_rate=16000, audio_channels=1, **options)
+    mp4.add_video(_access_unit(0, _SPS_BASELINE, False), 0, False)  # dropped: no keyframe yet
+    t = 0
+    for i in range(60):
+        mp4.add_video(_access_unit(i, _SPS_BASELINE, i % 20 == 0), t, i % 20 == 0)
+        t += (30, 40, 50)[i % 3]
+    for k, ms in enumerate(range(100, t, 20)):
+        if not 1000 <= ms < 1200:
+            mp4.add_audio(_pcm(320, 1, k), ms)
+    mp4.close()
+
+
+def _write_high(mp4mux, path, **options):
+    """Stereo 48 kHz sound from 0 ms, video from 250 ms at a steady 25 fps."""
+    mp4 = mp4mux.Writer(path, 640, 360, 25, audio_rate=48000, audio_channels=2, max_seconds=1, **options)
+    for k in range(150):
+        mp4.add_audio(array("h", _pcm(480, 2, k)), k * 10)
+        if k >= 25 and k % 4 == 1:
+            i = (k - 25) // 4
+            mp4.add_video(_access_unit(i, _SPS_HIGH, i % 12 == 0), k * 10, i % 12 == 0)
+    mp4.close()
+
+
+DEFAULT_FILES = {"baseline": _write_baseline, "high": _write_high}
 
 
 def _run(*args):
@@ -104,6 +155,35 @@ class TestMp4mux(unittest.TestCase):
         for profile in self.h264:
             with self.subTest(profile=profile):
                 self._check(_mprun.micropython(), profile)
+
+
+class TestDefaultBytes(unittest.TestCase):
+    """Without options, the writer's files stay exactly what they were."""
+
+    PINNED = {
+        "baseline": (80971, "7efbb93885d5ace0e31af822d52c1f16db6228736a6f35993d8bb7eb3d8fdba1"),
+        "high": (292533, "f27ba2c2201d67abc61b29f908cda8fbaf97c816deced63631d89e07ad5237d6"),
+    }
+
+    def setUp(self):
+        sys.path.insert(0, MP4MUX)
+        import mp4mux
+
+        self.mp4mux = mp4mux
+        self.path = tempfile.mktemp(suffix=".mp4")
+
+    def tearDown(self):
+        sys.path.remove(MP4MUX)
+        if os.path.exists(self.path):
+            os.remove(self.path)
+
+    def test_default_files_are_byte_identical(self):
+        for name, write in DEFAULT_FILES.items():
+            with self.subTest(name):
+                write(self.mp4mux, self.path)
+                with open(self.path, "rb") as f:
+                    data = f.read()
+                self.assertEqual((len(data), hashlib.sha256(data).hexdigest()), self.PINNED[name])
 
 
 class TestWriter(unittest.TestCase):
