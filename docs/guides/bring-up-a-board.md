@@ -90,6 +90,13 @@ WIFI_SSID = "..."
 WIFI_PASSWORD = "..."
 ```
 
+The same file is all `mpftp wifi enable` needs to set the board up for
+reaching it over Wi-Fi later: it writes `/webrepl_cfg.py` and a `boot.py` block
+on MicroPython, and the web workflow settings in `settings.toml` on
+CircuitPython. Stock firmware works, with or without `wifi_manager`.
+[Reaching the board over Wi-Fi](wifi.md#reaching-the-board-over-wi-fi) has the
+steps.
+
 The board installer pulls its own drivers and depends on `pydevices`, so the
 second call alone is usually enough. A program with no one at the REPL calls
 `omip.install(name, prompt=False)`, so it never waits for an answer.

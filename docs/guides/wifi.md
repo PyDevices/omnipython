@@ -101,17 +101,39 @@ on, because a light sleep drops the link.
 
 ## Reaching the board over Wi-Fi
 
-With WebREPL running, mpftp and Workbench can reach the board without a
-cable. Put the password in `/webrepl_cfg.py` (`PASS = "..."`, at most 9
-characters). Set a `hostname` when you connect, and the board answers as
-`NAME.local`:
+With the board's remote access on, [mpftp](https://github.com/PyDevices/mpftp)
+and Workbench can reach it without a cable. Each interpreter uses the files it
+already reads, so stock firmware needs nothing from PyDevices.
+
+**MicroPython.** Put a `secrets.py` on the board with `WIFI_SSID` and
+`WIFI_PASSWORD`, then run `mpftp wifi enable` over USB. It shows you the change
+and writes two files: `/webrepl_cfg.py` with `PASS = "..."` (4 to 9 characters),
+and a block at the top of `boot.py` that joins the network with `network.WLAN`
+and calls `webrepl.start()`. Set a `hostname` when you connect, and the board
+answers as `NAME.local`:
 
 ```bash
+mpftp put secrets.py /secrets.py
+mpftp wifi enable
 mpftp exec -d ws://kitchen-panel.local "print(1 + 1)"
 ```
 
-WebREPL has no encryption, so treat its password as a courtesy lock on your
-own network.
+`mpftp wifi disable` puts both files back as they were. If the board has
+`wifi_manager`, the block tries `wifi_manager.connect(setup=False)` first, so
+it joins any network the board remembers; without it the block joins the one in
+`secrets.py`.
+
+**CircuitPython.** The same `secrets.py`, or `CIRCUITPY_WIFI_SSID` and
+`CIRCUITPY_WIFI_PASSWORD` already in `settings.toml`. `mpftp wifi enable` puts
+the missing settings, and `CIRCUITPY_WEB_API_PASSWORD`, at the top of
+`settings.toml`; reset the board and it serves CircuitPython's web workflow.
+CircuitPython has no WebREPL, so `webrepl_cfg.py` is MicroPython-only.
+`wifi_manager` reads the same `settings.toml` and `secrets.py`.
+
+WebREPL and the web workflow have no encryption, so treat their passwords as a
+courtesy lock on your own network. mpftp's
+[Connect over Wi-Fi](https://github.com/PyDevices/mpftp/blob/main/docs/guides/connect-over-wifi.md)
+has the details.
 
 ## Slow replies: turn off power saving
 
