@@ -112,6 +112,8 @@ class Parser:
         screen = self.screen
         n = len(data)
         i = 0
+        if n and screen.view:
+            screen.snap()
         while i < n:
             state = self._state
             if state == _GROUND and not self._utf_need:
@@ -349,6 +351,18 @@ class Parser:
                 s.autowrap = on
                 if not on:
                     s.wrap_pending = False
+            elif p == 47 or p == 1047:
+                if on:
+                    s.enter_alt()
+                else:
+                    s.leave_alt()
+            elif p == 1049:
+                if on:
+                    s.save_cursor()
+                    s.enter_alt()
+                elif s.alt:
+                    s.leave_alt()
+                    s.restore_cursor()
             elif p == 25:
                 s.cursor_visible = on
                 s.dirty[s.y] = 1

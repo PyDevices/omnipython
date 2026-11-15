@@ -59,6 +59,9 @@ _SPECIAL = {
     1073741885: b"\x1bOS",
 }
 
+_PAGE_UP = 1073741899
+_PAGE_DOWN = 1073741902
+
 # Up, Down, Right, Left: the final byte of their sequences.
 _ARROWS = {1073741906: b"A", 1073741905: b"B", 1073741903: b"C", 1073741904: b"D"}
 
@@ -105,6 +108,24 @@ def key_bytes(key, mod=0, app_cursor=False):
     return out
 
 
+def scroll_key(screen, key, mod):
+    """Page the scrollback for Shift+Page Up or Shift+Page Down.
+
+    Args:
+        screen (Screen): The screen whose view moves.
+        key (int): An SDL-style key code.
+        mod (int): Modifier mask.
+
+    Returns:
+        bool: ``True`` if the key was a scrollback key, so it shouldn't be
+        sent to the program. On the alternate screen it never is.
+    """
+    if not mod & _KMOD_SHIFT or screen.alt or (key != _PAGE_UP and key != _PAGE_DOWN):
+        return False
+    screen.scroll_view((screen.rows - 1) * (1 if key == _PAGE_UP else -1))
+    return True
+
+
 class KeyEvents:
     """Reads key presses from an event function and returns their bytes.
 
@@ -126,8 +147,11 @@ class KeyEvents:
         """Return the bytes for the keys pressed since the last call, or ``None``."""
         out = None
         app = self.screen is not None and self.screen.app_cursor
+        scr = self.screen
         for e in self.get_events() or ():
             if getattr(e, "type", None) == _KEYDOWN:
+                if scr is not None and scroll_key(scr, e.key, e.mod):
+                    continue
                 b = key_bytes(e.key, e.mod, app)
                 if b:
                     out = b if out is None else out + b

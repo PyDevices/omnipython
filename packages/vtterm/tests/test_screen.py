@@ -7,8 +7,8 @@ from vtterm.parser import Parser
 from vtterm.screen import BOLD, REVERSE, UNDERLINE, Screen
 
 
-def make(cols=10, rows=4):
-    s = Screen(cols, rows)
+def make(cols=10, rows=4, scrollback=0):
+    s = Screen(cols, rows, scrollback=scrollback)
     out = []
     p = Parser(s, out.append)
     return s, p, out
@@ -196,3 +196,101 @@ def test_micropython_repl_line_edit():
     assert (s.text(0).rstrip(), s.x) == (">>> print(1)", 7)
     p.feed(b"\x08nt(1)\x1b[K\x1b[5D")
     assert (s.text(0).rstrip(), s.x) == (">>> prnt(1)", 6)
+
+
+def numbered(p, n):
+    for i in range(n):
+        p.feed(b"L%d\r\n" % i)
+
+
+def test_scrollback_keeps_rows_that_scroll_off():
+    s, p, _ = make(4, 3, scrollback=4 * 4 * 10)
+    numbered(p, 5)
+    assert [bytes(r[0]).decode().strip() for r in s.history] == ["L0", "L1", "L2"]
+    assert s.dump()[0].strip() == "L3"
+
+
+def test_scrollback_is_bounded_and_drops_the_oldest():
+    s, p, _ = make(4, 3, scrollback=4 * 4 * 2)
+    numbered(p, 10)
+    assert len(s.history) == 2
+    assert [bytes(r[0]).decode().strip() for r in s.history] == ["L6", "L7"]
+    assert s.dump()[0].strip() == "L8"
+
+
+def test_no_scrollback_by_default():
+    s, p, _ = make(4, 3)
+    numbered(p, 10)
+    assert s.history == []
+
+
+def test_view_scrolls_back_and_clamps():
+    s, p, _ = make(4, 3, scrollback=4 * 4 * 10)
+    numbered(p, 6)
+    live = [s.visible(y)[0].decode() for y in range(3)]
+    assert s.scroll_view(2) == 2
+    assert [bytes(s.visible(y)[0]).decode().strip() for y in range(3)] == ["L2", "L3", "L4"]
+    assert s.scroll_view(100) == len(s.history)
+    assert bytes(s.visible(0)[0]).decode().strip() == "L0"
+    assert s.scroll_view(-100) == 0
+    assert [bytes(s.visible(y)[0]).decode() for y in range(3)] == live
+
+
+def test_new_output_returns_to_live():
+    s, p, _ = make(4, 3, scrollback=4 * 4 * 10)
+    numbered(p, 6)
+    s.scroll_view(3)
+    p.feed(b"x")
+    assert s.view == 0
+
+
+def test_region_scroll_keeps_no_history():
+    s, p, _ = make(4, 4, scrollback=4 * 4 * 10)
+    p.feed(b"\x1b[1;3r\x1b[3;1H")
+    numbered(p, 5)
+    assert s.history == []
+
+
+def test_alt_screen_1049_restores_main_screen_and_cursor():
+    s, p, _ = make(10, 4)
+    p.feed(b"\x1b[31mprompt$ \x1b[0m")
+    before = s.dump()
+    p.feed(b"\x1b[?1049h")
+    assert s.alt and s.dump() == [" " * 10] * 4
+    p.feed(b"\x1b[3;3Heditor")
+    assert s.text(2) == "  editor  "
+    p.feed(b"\x1b[?1049l")
+    assert not s.alt
+    assert s.dump() == before
+    assert (s.y, s.x) == (0, 8)
+    assert s.lines[0][1][0] == 1 and s.fg == 7
+
+
+def test_alt_screen_47_and_1047_switch_without_saving_the_cursor():
+    for mode in (b"47", b"1047"):
+        s, p, _ = make(10, 4)
+        p.feed(b"main\x1b[?" + mode + b"h\x1b[4;1Halt\x1b[?" + mode + b"l")
+        assert s.text(0) == "main      "
+        assert s.text(3) == " " * 10
+        assert (s.y, s.x) == (3, 3)
+
+
+def test_alt_screen_scrolling_never_enters_the_scrollback():
+    s, p, _ = make(4, 3, scrollback=4 * 4 * 10)
+    p.feed(b"\x1b[?1049h")
+    numbered(p, 8)
+    p.feed(b"\x1b[?1049l")
+    assert s.history == []
+
+
+def test_alt_screen_leave_without_enter_is_ignored():
+    s, p, _ = make(10, 4)
+    p.feed(b"hi\x1b[?1049l")
+    assert s.text(0) == "hi        " and (s.y, s.x) == (0, 2)
+
+
+def test_reset_leaves_alt_and_clears_history():
+    s, p, _ = make(4, 3, scrollback=4 * 4 * 10)
+    numbered(p, 6)
+    p.feed(b"\x1b[?1049h\x1bc")
+    assert not s.alt and s.history == []

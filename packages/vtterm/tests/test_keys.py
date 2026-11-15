@@ -39,3 +39,27 @@ def test_key_events():
     k = KeyEvents(lambda: evs, other=other.append)
     assert k.read() == b"hi"
     assert len(other) == 2
+
+
+def test_shift_page_keys_scroll_the_screen_back():
+    from vtterm.parser import Parser
+    from vtterm.screen import Screen
+
+    s = Screen(4, 3, scrollback=4 * 4 * 10)
+    p = Parser(s)
+    for i in range(8):
+        p.feed(b"L%d\r\n" % i)
+
+    class Ev:
+        def __init__(self, key, mod):
+            self.type, self.key, self.mod = 0x300, key, mod
+
+    pending = [Ev(1073741899, 1)]
+    k = KeyEvents(lambda: pending, screen=s)
+    assert k.read() is None
+    assert s.view == 2
+    pending[:] = [Ev(1073741902, 1)]
+    k.read()
+    assert s.view == 0
+    pending[:] = [Ev(1073741899, 0)]
+    assert k.read() == b"\x1b[5~" and s.view == 0

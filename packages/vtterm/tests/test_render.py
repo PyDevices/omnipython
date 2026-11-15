@@ -90,3 +90,17 @@ def test_display_must_be_16_bit():
     except ValueError:
         return
     raise AssertionError("a 24-bit display was accepted")
+
+
+def test_scrolled_back_view_draws_the_history_and_hides_the_cursor():
+    d = FakeDisplay(80, 48)
+    t = Terminal(d, hardware_scroll=False, scrollback=4 * 10 * 20)
+    pal = t.renderer.palette
+    t.write(b"\x1b[31mred\x1b[0m\r\n\r\n\r\n\r\n")
+    assert not cell_has(d, t, 0, 0, pal[1])
+    t.scroll_back(3)
+    assert cell_has(d, t, 0, 0, pal[1])
+    assert not cell_has(d, t, 0, 2, pal[7])
+    t.scroll_back(-3)
+    assert not cell_has(d, t, 0, 0, pal[1])
+    assert cell_has(d, t, 0, 2, pal[7])

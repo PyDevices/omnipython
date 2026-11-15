@@ -40,6 +40,9 @@ class Terminal:
         palette (Palette): 16-bit colors for the 256 ANSI indices.
         hardware_scroll (bool): Scroll with the display's scroll registers;
             ``None`` (default) uses them when the driver has them.
+        scrollback (int): Bytes to keep of rows that scrolled off the top, four
+            per cell (a 40-column screen keeps about 100 rows in 16 KB).
+            ``0`` keeps none.
 
     Attributes:
         screen (Screen): The grid.
@@ -47,13 +50,13 @@ class Terminal:
         renderer (Renderer): Draws the grid.
     """
 
-    def __init__(self, display, font_height=16, cols=None, rows=None, fg=7, bg=0, palette=None, hardware_scroll=None):
+    def __init__(self, display, font_height=16, cols=None, rows=None, fg=7, bg=0, palette=None, hardware_scroll=None, scrollback=16384):
         font = Font(height=font_height)
         if cols is None:
             cols = display.width // font.width
         if rows is None:
             rows = display.height // font.height
-        self.screen = Screen(cols, rows, fg, bg)
+        self.screen = Screen(cols, rows, fg, bg, scrollback)
         self._answers = bytearray()
         self.parser = Parser(self.screen, self._answers.extend)
         self.renderer = Renderer(display, self.screen, font, palette, hardware_scroll)
@@ -66,6 +69,14 @@ class Terminal:
     def render(self):
         """Draw the rows that changed. Returns how many were drawn."""
         return self.renderer.render()
+
+    def scroll_back(self, rows):
+        """Scroll the view back ``rows`` rows into the scrollback (negative goes forward) and draw it.
+
+        New output returns the view to the live screen.
+        """
+        self.screen.scroll_view(rows)
+        self.renderer.render()
 
     def write(self, data):
         """Read ``data`` onto the grid and draw it."""
