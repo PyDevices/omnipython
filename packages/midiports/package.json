@@ -25,6 +25,10 @@
       "github:PyDevices/pydevices/packages/midiports/midiports/linux.py"
     ],
     [
+      "midiports/loopback.py",
+      "github:PyDevices/pydevices/packages/midiports/midiports/loopback.py"
+    ],
+    [
       "midiports/webmidi.py",
       "github:PyDevices/pydevices/packages/midiports/midiports/webmidi.py"
     ],
