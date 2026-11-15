@@ -68,6 +68,13 @@ WIDE_PAD = h("""
 09 39 15 01 25 08 35 00 46 3b 01 66 14 00 75 04 95 01 81 42
 05 09 19 01 29 0a 15 00 25 01 75 01 95 0a 81 02 75 01 95 02 81 03 c0
 """)
+# usb_hid's Device.GAMEPAD: report 4, sixteen buttons, a hat, four signed
+# axes. With its ID the report is eight bytes, one whole packet.
+USB_HID_PAD = h("""
+05 01 09 05 a1 01 85 04 05 09 19 01 29 10 15 00 25 01 75 01 95 10 81 02
+05 01 09 39 15 01 25 08 35 00 46 3b 01 65 14 75 04 95 01 81 42
+35 00 45 00 65 00 81 03 09 30 09 31 09 32 09 35 15 81 25 7f 75 08 95 04 81 02 c0
+""")
 KEYBOARD = h("05 01 09 06 a1 01 05 07 19 e0 29 e7 15 00 25 01 75 01 95 08 81 02 c0")
 
 
@@ -239,12 +246,29 @@ class Reading(unittest.TestCase):
         dev.reports = [bytes([1]) + bytes(8) + bytes([0x00, 0x00])]
         self.assertEqual([e for e in events(pad, dev) if e[0] == HAT], [(HAT, 0, Hat.CENTER)])
 
+    def test_reports_that_each_fill_a_packet_stay_apart(self):
+        # Two reports back to back, each exactly one packet: the second is the
+        # next report, not the rest of the first.
+        dev = FakePad(USB_HID_PAD, packet=8)
+        pad = Gamepad(dev)
+        dev.reports = [bytes([4, 0x01, 0, 0, 0, 0, 0, 0]), bytes([4, 0x03, 0, 0, 0, 0, 0, 0])]
+        self.assertEqual([e for e in events(pad, dev) if e[0] == BUTTON_DOWN],
+                         [(BUTTON_DOWN, 1, 0), (BUTTON_DOWN, 2, 0)])
+        self.assertEqual(pad.buttons, {1, 2})
+        dev = FakePad(GENERIC)
+        pad = Gamepad(dev)
+        dev.reports = [bytes.fromhex("7f7f7f7f7f1f0000"), bytes.fromhex("7f7f7f7f7f3f0000")]
+        self.assertEqual([e for e in events(pad, dev) if e[0] == BUTTON_DOWN],
+                         [(BUTTON_DOWN, 1, 0), (BUTTON_DOWN, 2, 0)])
+
     def test_tolerance_hides_small_axis_moves(self):
         dev = FakePad(GENERIC)
         pad = Gamepad(dev, tolerance=3)
         dev.reports = [bytes.fromhex("7f7f7f7f7f0f0000"), bytes.fromhex("827f7f7f7f0f0000"),
                        bytes.fromhex("847f7f7f7f0f0000")]
-        got = events(pad, dev)
+        got = []
+        while dev.reports:      # the middle report makes no event, so read on past it
+            got += events(pad, dev)
         self.assertEqual([e for e in got if e[0] == AXIS and e[1] == Axis.X], [(AXIS, Axis.X, 127), (AXIS, Axis.X, 132)])
 
 

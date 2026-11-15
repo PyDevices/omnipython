@@ -109,6 +109,12 @@ def parse(descriptor):
     this module doesn't read are left out. ``applications`` lists each top-level
     collection's usage as ``page << 16 | usage``.
     """
+    return _parse(descriptor)[:3]
+
+
+def _parse(descriptor):
+    # parse(), plus each report ID's input report length in bits, padding and
+    # the ID byte included.
     d = descriptor
     fields, apps, offsets, stack, kept = [], [], {0: 0}, [], []
     page = size = count = rid = lmin = lmax = hats = 0
@@ -176,7 +182,7 @@ def parse(descriptor):
                         fields.append([_AXIS, rid, at + j * size, size, lmin, lmax, u, None])
         if t in (0x80, 0x90, 0xB0, 0xA0, 0xC0):
             usages, umin, umax = [], None, None
-    return fields, ids, apps
+    return fields, ids, apps, offsets
 
 
 def _get(buf, off, size, signed=False):
@@ -219,13 +225,14 @@ class Gamepad:
         for itf in _interfaces(dev):
             if interface is not None and itf[0] != interface:
                 continue
-            fields, ids, apps = parse(_descriptor(dev, itf[0], itf[5]))
+            fields, ids, apps, bits = _parse(_descriptor(dev, itf[0], itf[5]))
             if fields and (interface is not None or [a for a in apps if a in _PAD_USAGES]):
-                found = itf, fields, ids
+                found = itf, fields, ids, bits
                 break
         if found is None:
             raise ValueError("no gamepad or joystick report descriptor")
-        itf, self._fields, self._ids = found
+        itf, self._fields, self._ids, bits = found
+        self._sizes = {rid: (n + 7) >> 3 for rid, n in bits.items()}
         self.dev = dev
         self.interface, self._in, self._packet = itf[0], itf[2], itf[3]
         self.tolerance = tolerance
@@ -275,13 +282,16 @@ class Gamepad:
         return self._queue.pop(0)
 
     def _read_report(self, timeout):
-        # A packet at a time; a report that fills its last packet exactly sends
-        # no short packet after it, so after a full one, a brief look for more.
+        # A packet at a time. A report longer than a packet comes as several,
+        # with no short packet after one that fills its last exactly, so while
+        # the report's ID says there's more, a brief look for it. A report that
+        # is one whole packet is complete: the next packet is the next report.
         p = self._packet
         n = 0
         try:
             n = self.dev.read(self._in, self._mv[:p], timeout, raise_on_timeout=False)
-            while n and n % p == 0 and n + p <= len(self._buf):
+            size = self._sizes.get(self._buf[0] if self._ids else 0, len(self._buf)) if n else 0
+            while n < size and n % p == 0 and n + p <= len(self._buf):
                 more = self.dev.read(self._in, self._mv[n:n + p], 2, raise_on_timeout=False)
                 n += more
                 if more < p:
