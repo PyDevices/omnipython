@@ -398,7 +398,9 @@ def assemble_repo_packages(root: Path, lock: Lock, version: str, tree: Tree, lib
     """This repository's packages: pydevices, pydevices-desktop, own-packages, top-level ones."""
     split = read_split(root)
     own = {name: section for name, section in split.items() if section.get("own-package")}
-    top_level = [name for name, section in split.items() if section.get("top-level")]
+    # A folder in lib-lock.json's folders is published from its own folder; the
+    # MIP index reads the same directory as a top-level package (iconkit).
+    top_level = [name for name, section in split.items() if section.get("top-level") and name not in lock.folders]
     host_only = {name: _host_only(root, name, section) for name, section in split.items() if not section.get("top-level")}
 
     for name in ("pydevices", "pydevices-desktop", *own):
