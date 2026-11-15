@@ -10,7 +10,7 @@ __all__ = ["WIN16", "get_palette", "Palette", "MappedPalette"]
 
 WIN16: tuple[tuple[int, str], ...]
 
-def get_palette(title: str = "default", **kwargs: Any) -> Palette:
+def get_palette(name: str = "default", **kwargs: Any) -> Palette:
     """Construct a palette by name: `default`, `wheel`, `cube`, `material_design` or `ansi`."""
 
 class Palette:
