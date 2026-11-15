@@ -36,7 +36,7 @@ To use another transport, change the line that opens the ports:
 | Windows' loopback, for trying MIDI with no hardware | `windows.ports(midiports.LOOPBACK)` |
 | Linux raw MIDI | `linux.ports("DMK25")` |
 | Web MIDI, in a browser page (Pyodide) | `await webmidi.open("DMK25")` |
-| Web MIDI, in a browser page (MicroPython) | `webmidi.page_in("DMK25")` |
+| Web MIDI, in a browser page (MicroPython) | `webmidi.page_in("DMK25")`, `webmidi.page_out("synth")` |
 | Web MIDI, in a Web Worker, relayed by the page | `webmidi.relay_ports(port)` |
 
 Import each from `midiports`. BLE MIDI ports come from
@@ -226,9 +226,12 @@ already hold a `MIDIAccess`, `webmidi.ports(access, "DMK25")` does the same
 without awaiting. Sending SysEx needs `sysex=True`.
 
 In MicroPython's WebAssembly port, `webmidi.page_in("DMK25")` opens an input
-without awaiting. It has no output and no timestamps. The browser asks for MIDI
-in the background, so `midi_in.names` stays empty until the person says yes, and
-`midi_in.why` says why if the answer was no.
+and `webmidi.page_out("synth")` an output, both without awaiting and with no
+timestamps. The browser asks for MIDI in the background, so `midi_in.names` and
+`midi_out.names` stay empty until the person says yes, and `why` says why if the
+answer was no. `midi_out.names` lists every output that matches, and
+`midi_out.name` is the one it sends to; until there is one, writes are dropped
+and counted in `midi_out.dropped`.
 
 Web MIDI doesn't exist in a Web Worker, so a worker gets its MIDI from the
 page over a `MessagePort`, and a few lines of JavaScript on the page relay

@@ -515,6 +515,124 @@ Object.defineProperty(globalThis, 'navigator', {value: {requestMIDIAccess: async
         out = subprocess.run(["node", "-e", script], capture_output=True, text=True, check=True, timeout=30).stdout
         self.assertIn("no Web MIDI", out)
 
+    def _page_out(self, connected=True, accepts=True):
+        """page_out() over a stand-in for the page's side of it."""
+        page = _Obj(pending=[], sent=[], closed=[])
+
+        def send():
+            data, page.pending[:] = bytes(page.pending), []
+            if not (connected and accepts):
+                return False
+            page.sent.append(data)
+            return True
+
+        page.put = page.pending.append
+        page.send = send
+        page.name = lambda: "Synth" if connected else None
+        page.names = lambda: "Synth\nSynth 2" if connected else ""
+        page.why = lambda: None if accepts else "InvalidAccessError"
+        page.close = lambda: page.closed.append(True)
+        js = types.ModuleType("js")
+        js.eval = lambda source: lambda name: page
+        with mock.patch.dict(sys.modules, {"js": js}):
+            return webmidi.page_out("synth"), page
+
+    def test_page_out_sends_whole_messages_to_the_page(self):
+        midi_out, page = self._page_out()
+        self.assertEqual(midi_out.name, "Synth")
+        self.assertEqual(midi_out.names, ["Synth", "Synth 2"])
+        self.assertEqual(midi_out.write(b"\x90\x3c"), 2)  # half a note waits
+        self.assertEqual(page.sent, [])
+        midi_out.write(b"\x64\xb0\x07\x7f")
+        self.assertEqual(page.sent, [b"\x90\x3c\x64\xb0\x07\x7f"])
+        midi_out.write(bytearray(b"\xf8"))
+        self.assertEqual(page.sent[-1], b"\xf8")
+        self.assertEqual(midi_out.dropped, 0)
+        midi_out.close()
+        self.assertEqual(page.closed, [True])
+        self.assertRaises(OSError, midi_out.write, b"\xf8")
+        midi_out.close()  # twice is fine
+        self.assertEqual(page.closed, [True])
+
+    def test_page_out_counts_what_has_nowhere_to_go(self):
+        midi_out, page = self._page_out(connected=False)
+        self.assertIsNone(midi_out.name)
+        self.assertEqual(midi_out.names, [])
+        midi_out.write(b"\x90\x3c\x64\x80\x3c\x00")
+        self.assertEqual((page.sent, page.pending, midi_out.dropped), ([], [], 1))
+        refused, _ = self._page_out(accepts=False)
+        refused.write(b"\xf0\x7d\x01\xf7")
+        self.assertEqual((refused.dropped, refused.why), (1, "InvalidAccessError"))
+
+    @unittest.skipUnless(shutil.which("node"), "needs node")
+    def test_page_out_javascript_follows_the_ports(self):
+        script = """
+const port = (name) => {
+    const p = {type: 'output', id: name, name, state: 'connected', sent: []};
+    p.send = (data) => { if (name === 'Picky') throw new TypeError('no SysEx'); p.sent.push(Array.from(data)); };
+    return p;
+};
+const keys = port('Keys Out'), synth = port('Synth A'), spare = port('Synth B'), late = port('Synth C');
+const outputs = new Map([['Keys Out', keys], ['Synth A', synth], ['Synth B', spare]]);
+let listener = null;
+const access = {
+    outputs,
+    addEventListener: (kind, fn) => { listener = fn; },
+    removeEventListener: (kind, fn) => { if (fn === listener) listener = null; },
+};
+Object.defineProperty(globalThis, 'navigator', {value: {requestMIDIAccess: async () => access}});
+const write = (page, bytes) => { for (const b of bytes) page.put(b); return page.send(); };
+(async () => {
+    const page = (%s)('SYNTH');
+    const out = {before: [page.name(), page.names(), write(page, [0x90, 60, 100])]};
+    await null; await null;
+    out.name = page.name();
+    out.names = page.names();
+    out.sent = write(page, [0x90, 60, 100, 0xb0, 7, 127]);
+    out.synth = synth.sent;
+    out.keys = keys.sent;
+    synth.state = 'disconnected';
+    listener({port: synth});
+    out.moved = [page.name(), page.names()];
+    spare.state = 'disconnected';
+    listener({port: spare});
+    out.gone = [page.name(), write(page, [0xf8])];
+    outputs.set('Synth C', late);
+    listener({port: late});
+    out.joined = page.name();
+    write(page, [0xfa]);
+    out.late = late.sent;
+    page.close();
+    out.closed = [page.name(), listener];
+    const picky = (%s)('picky');
+    outputs.set('Picky', port('Picky'));
+    await null; await null;
+    out.refused = [write(picky, [0xf0, 0x7d, 0xf7]), picky.why()];
+    console.log(JSON.stringify(out));
+})();
+""" % (webmidi._PAGE_OUT, webmidi._PAGE_OUT)
+        got = json.loads(subprocess.run(
+            ["node", "-e", script], capture_output=True, text=True, check=True, timeout=30).stdout)
+        self.assertEqual(got["before"], [None, "", False])  # nothing until the person says yes
+        self.assertEqual(got["name"], "Synth A")  # "SYNTH" matched, ignoring case; Keys Out didn't
+        self.assertEqual(got["names"], "Synth A\nSynth B")
+        self.assertTrue(got["sent"])
+        self.assertEqual(got["synth"], [[0x90, 60, 100, 0xB0, 7, 127]])
+        self.assertEqual(got["keys"], [])
+        self.assertEqual(got["moved"], ["Synth B", "Synth B"])  # another match takes the lost one's place
+        self.assertEqual(got["gone"], [None, False])
+        self.assertEqual(got["joined"], "Synth C")
+        self.assertEqual(got["late"], [[0xFA]])
+        self.assertEqual(got["closed"], [None, None])
+        self.assertEqual(got["refused"], [False, "TypeError: no SysEx"])
+
+    @unittest.skipUnless(shutil.which("node"), "needs node")
+    def test_page_out_javascript_reports_a_browser_without_web_midi(self):
+        script = "Object.defineProperty(globalThis, 'navigator', {value: {}});" \
+            "console.log((%s)('').why())" % webmidi._PAGE_OUT
+        out = subprocess.run(["node", "-e", script], capture_output=True, text=True, check=True, timeout=30).stdout
+        self.assertIn("no Web MIDI", out)
+
     def test_relay_input_takes_page_messages_with_their_timestamps(self):
         port = _MessagePort()
         midi_in, _ = webmidi.relay_ports(port)
