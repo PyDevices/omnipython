@@ -2,7 +2,7 @@
 
 Everything you can import or run, in one list. Start from what you want to do,
 or look a name up in the [A to Z](#a-to-z). If something is missing, it's a bug:
-[open an issue](https://github.com/PyDevices/pydevices/issues).
+[open an issue](https://github.com/PyDevices/omnipython/issues).
 
 **Get it** says how to install each one:
 
@@ -11,7 +11,7 @@ or look a name up in the [A to Z](#a-to-z). If something is missing, it's a bug:
 - `pip name` installs on a computer, with the index options
   [Install](get-started/install.md) shows.
 - "Firmware build" means you get it by building
-  [firmware](https://github.com/PyDevices/micropython-pydevices) with that
+  [firmware](https://github.com/PyDevices/omnipython-builds) with that
   module in, and "opt-in" means you have to name it when you build.
 - "From source" means you clone the repository.
 
