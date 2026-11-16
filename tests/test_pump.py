@@ -2258,5 +2258,102 @@ class TheQueueBelongsToThePump(PumpFixture):
         self.assertIs(attached[-1], queue, "the app's queue was replaced")
 
 
+# --- an output the pump writes to itself: a USB speaker --------------------
+
+
+class SinkEngine(FakeEngine):
+    """An engine whose ``spawn`` takes a C sink, and says so."""
+
+    C_SINK = True
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.sink = None
+        self.gains = []
+
+    def spawn(self, sample, blocks, status, ring=None, loop=False, timeout_ms=0,
+              sink=None, sink_room=0, sink_gain=None, prio=None):
+        super().spawn(sample, blocks, status, ring=ring, loop=loop,
+                      timeout_ms=timeout_ms)
+        self.sink = {"sink": sink, "room": sink_room, "gain": sink_gain,
+                     "prio": prio}
+        return True
+
+    def sink_gain(self, level):
+        self.gains.append(level)
+
+
+class SinkRecorder(Recorder):
+    """A transport with a C sink, as a hosted USB speaker has."""
+
+    CAPACITY = 48000
+
+    def c_sink(self):
+        self.open()
+        return b"a C sink, by value"
+
+    def capacity(self):
+        return self.CAPACITY
+
+
+class APumpThatWritesToTheOutputItself(PumpFixture):
+
+    ENGINE = SinkEngine
+
+    def test_the_graph_goes_to_the_outputs_c_sink(self):
+        transport = SinkRecorder()
+        out = self.player(transport=transport)
+        self.assertTrue(out.pumped)
+        got = self.engine.sink
+        self.assertEqual(got["sink"], b"a C sink, by value")
+        # 10 ms of 48 kHz stereo is 1920 bytes kept queued.
+        self.assertEqual(got["room"], SinkRecorder.CAPACITY - 1920)
+        self.assertEqual(got["gain"], 1.0)
+        self.assertIsNone(got["prio"])
+        out.service()
+        self.assertEqual(bytes(transport.data), b"",
+                         "the interpreter wrote audio the pump is writing")
+
+    def test_the_transport_names_the_pumps_priority(self):
+        transport = SinkRecorder()
+        transport.c_sink_prio = 6
+        self.player(transport=transport)
+        self.assertEqual(self.engine.sink["prio"], 6)
+
+    def test_volume_and_mute_reach_the_pump(self):
+        transport = SinkRecorder()
+        transport.set_volume(80)
+        out = self.player(transport=transport)
+        self.assertEqual(self.engine.sink["gain"], 0.8)
+        out.set_volume(50)
+        out.mute(True)
+        out.mute(False)
+        self.assertEqual(self.engine.gains, [0.5, 0.0, 0.5])
+        self.assertTrue(out.pumped)
+
+    def test_a_graph_in_another_format_stays_on_the_interpreter(self):
+        transport = SinkRecorder()
+        with mock.patch("sys.stdout", new_callable=io.StringIO) as said:
+            out = self.player(transport=transport,
+                              sample=FakeSample(sample_rate=RATE // 2))
+        self.assertFalse(out.pumped)
+        self.assertIn("the output is", said.getvalue())
+
+    def test_a_second_output_is_not_mixed_into_the_first(self):
+        first = self.player(transport=SinkRecorder())
+        with mock.patch("sys.stdout", new_callable=io.StringIO) as said:
+            second = self.player(transport=SinkRecorder())
+        self.assertTrue(first.pumped)
+        self.assertFalse(second.pumped)
+        self.assertIn("another output", said.getvalue())
+        self.assertEqual(len(self.engine.targets()), 1)
+
+    def test_an_engine_without_c_sink_keeps_the_old_path(self):
+        self.engine.C_SINK = False
+        out = self.player(transport=SinkRecorder())
+        self.assertIsNone(self.engine.sink["sink"])
+        self.assertTrue(out.pumped)     # through the ring, as before
+
+
 if __name__ == "__main__":
     unittest.main()

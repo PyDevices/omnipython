@@ -52,6 +52,8 @@ def on_board() -> bool:
     """True when the pump owns a peripheral, rather than a ring."""
 def speaker() -> bool:
     """True when the pump can play to the computer's speaker itself (Windows)."""
+def c_sink() -> bool:
+    """True when the pump can write to an output's C sink from its own thread."""
 
 class SpeakerWire:
     """The wire `BusioDriver` builds a desktop speaker output on."""
@@ -154,6 +156,20 @@ class ServiceDriver(RingDriver):
     def spawn(self, sample: _AudioSample, status: bytearray, loop: bool = False) -> None: ...
     def produce(self, into: bytearray | memoryview) -> int: ...
     def rest(self) -> None: ...
+
+class SinkDriver(_Driver):
+    """The graph goes to an output's C sink, written by the pump's thread."""
+
+    needs_service: bool
+    transport: Any
+    ahead_ms: int
+    def __init__(self, transport: Any, ahead_ms: int | None = None) -> None: ...
+    def spawn(self, sample: Any, status: bytearray, loop: bool = False) -> None: ...
+    def retarget(self, sample: Any, loop: bool = False) -> None: ...
+    def level(self) -> None:
+        """Take the transport's volume and mute to the playing pump."""
+    def status(self) -> bytearray | None: ...
+    def close(self) -> None: ...
 
 class BusioDriver(_Driver):
     """esp32: the graph goes to `audiobusio.I2SOut`, and it owns the bus."""
