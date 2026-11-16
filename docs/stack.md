@@ -90,8 +90,8 @@ and Android.
   Get it: `pip pydevices-desktop`. Runs on: Desktop.
 - [`svgio`](https://github.com/PyDevices/micropython-pydevices/tree/main/modules/svgio): Draw an SVG at any size into RGB565 with alpha, for pygraphics or LVGL's `lv.image`.\
   Get it: firmware build. Runs on: MP.
-- [`svgio for CPython`](https://github.com/PyDevices/pydevices/blob/main/utils/svgio.py): Use the `svgio` API on a desktop, over resvg-py and Pillow.\
-  Get it: `pip pydevices-desktop`. Runs on: Desktop.
+- [`svgio for CPython`](https://github.com/PyDevices/pydevices/blob/main/utils/svgio.py): Use the `svgio` API on a desktop, over resvg-py and Pillow, or in a Pyodide page, over the browser's canvas.\
+  Get it: `pip pydevices-desktop`. Runs on: Desktop, Web.
 - [`ppa`](https://github.com/PyDevices/micropython-pydevices/tree/main/modules/ppa): Scale, rotate, mirror, crop, convert, fill and blend pictures in memory, in hardware on an ESP32-P4.\
   Get it: firmware build. Runs on: MP.
 - [`frame_recorder`](https://github.com/PyDevices/pydevices/blob/main/utils/frame_recorder.py): Record a desktop display to video.\
