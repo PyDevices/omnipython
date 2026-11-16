@@ -8,7 +8,7 @@ the sixteen Windows names, with the same code on MicroPython-compatible boards,
 CircuitPython-compatible boards and CPython. It has no dependencies.
 
 ```bash
-pip install -i https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ pydevices-palettes
+pip install -i https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ omnipython-palettes
 ```
 
 ```python
@@ -17,7 +17,7 @@ omip.install("palettes")
 ```
 
 `omip` comes with OmniPython firmware. On other MicroPython firmware, run
-`mip.install("github:PyDevices/pydevices/lib/omip.py")` once to put it on the board.
+`mip.install("github:PyDevices/omnipython/lib/omip.py")` once to put it on the board.
 
 ```python
 from palettes import get_palette

@@ -13,7 +13,7 @@ writes a BMP565 file into ``lib/pdwidgets/icons/``. Non-glyph pixels are set to
 a magenta chroma key so ``pdwidgets.Icon(chroma=CHROMA_565)`` can render them
 with a transparent background. No PNG is shipped or decoded at runtime.
 
-Usage (from packages/pdwidgets/; needs a ``pygraphics`` checkout beside the pydevices repository)::
+Usage (from packages/pdwidgets/; needs a ``pygraphics`` checkout beside the OmniPython repository)::
 
     .venv/bin/python scripts/assets_make_color_icons.py
 
@@ -53,7 +53,7 @@ def resolve_pygraphics_root(explicit: str | None = None) -> Path:
     env_root = os.environ.get("PYGRAPHICS_ROOT")
     if env_root:
         candidates.append(Path(env_root))
-    # This folder sits in the pydevices repository, so pygraphics is a
+    # This folder sits in the OmniPython repository, so pygraphics is a
     # checkout beside that.
     candidates.append(REPO_ROOT.parent.parent / "pygraphics")
     for root in candidates:

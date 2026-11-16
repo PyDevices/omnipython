@@ -16,7 +16,7 @@ error, as Android does.
 
 Needs Playwright with Chromium, the pyscript-template checkout's vendored
 PyScript and the workspace's ``bin/micropython.mjs``. Without them the skip
-is loud, and ``PYDEVICES_REQUIRE_BROWSER=1`` turns it into a failure.
+is loud, and ``OMNIPYTHON_REQUIRE_BROWSER=1`` turns it into a failure.
 """
 
 from pathlib import Path
@@ -62,7 +62,7 @@ class WebBLEGate(unittest.TestCase):
         reason = _missing()
         if reason:
             message = "bledev.webble browser gate did NOT run: " + reason
-            if os.environ.get("PYDEVICES_REQUIRE_BROWSER") == "1":
+            if os.environ.get("OMNIPYTHON_REQUIRE_BROWSER") == "1":
                 raise AssertionError(message)
             sys.stderr.write("\n*** " + message + " ***\n")
             raise unittest.SkipTest(message)

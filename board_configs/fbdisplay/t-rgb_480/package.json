@@ -2,32 +2,32 @@
   "urls": [
     [
       "board_config.py",
-      "github:PyDevices/pydevices/board_configs/fbdisplay/t-rgb_480/board_config.py"
+      "github:PyDevices/omnipython/board_configs/fbdisplay/t-rgb_480/board_config.py"
     ],
     [
       "board_peripherals.py",
-      "github:PyDevices/pydevices/board_configs/fbdisplay/t-rgb_480/board_peripherals.py"
+      "github:PyDevices/omnipython/board_configs/fbdisplay/t-rgb_480/board_peripherals.py"
     ],
     [
       "st7701.py",
-      "github:PyDevices/pydevices/drivers/display/st7701.py"
+      "github:PyDevices/omnipython/drivers/display/st7701.py"
     ],
     [
       "xl9535.py",
-      "github:PyDevices/pydevices/drivers/io_expander/xl9535.py"
+      "github:PyDevices/omnipython/drivers/io_expander/xl9535.py"
     ],
     [
       "cst8xx.py",
-      "github:PyDevices/pydevices/drivers/touch/cst8xx.py"
+      "github:PyDevices/omnipython/drivers/touch/cst8xx.py"
     ],
     [
       "battery_adc.py",
-      "github:PyDevices/pydevices/drivers/power/battery_adc.py"
+      "github:PyDevices/omnipython/drivers/power/battery_adc.py"
     ]
   ],
   "deps": [
     [
-      "pydevices",
+      "omnipython",
       "latest"
     ]
   ],

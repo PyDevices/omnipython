@@ -6,7 +6,7 @@
     ],
     [
       "adafruit_hid/consumer_control.py",
-      "github:PyDevices/pydevices/packages/bledev_hid/adafruit_hid/consumer_control.py"
+      "github:PyDevices/omnipython/packages/bledev_hid/adafruit_hid/consumer_control.py"
     ],
     [
       "adafruit_hid/consumer_control_code.py",

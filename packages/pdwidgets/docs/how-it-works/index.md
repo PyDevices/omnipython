@@ -2,7 +2,7 @@
 
 pdwidgets is a widget toolkit written in pure Python, for touchscreen, desktop
 and browser interfaces. It builds buttons, forms, navigation, charts, dialogs
-and layout containers on a pydevices display driver and
+and layout containers on an OmniPython display driver and
 [pygraphics](https://docs.omnipython.org/en/latest/pygraphics/), with no native code to
 compile.
 
@@ -58,6 +58,6 @@ render loop of its own.
 
 ## What it depends on
 
-pdwidgets imports `appdev` from pydevices, `palettes` and `pygraphics`.
+pdwidgets imports `appdev` from OmniPython, `palettes` and `pygraphics`.
 [Install](../get-started/install.md) brings them in. To work on pdwidgets
-itself, see [CONTRIBUTING.md](https://github.com/PyDevices/pydevices/blob/main/packages/pdwidgets/CONTRIBUTING.md).
+itself, see [CONTRIBUTING.md](https://github.com/PyDevices/omnipython/blob/main/packages/pdwidgets/CONTRIBUTING.md).

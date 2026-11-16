@@ -2,16 +2,16 @@
   "urls": [
     [
       "board_config.py",
-      "github:PyDevices/pydevices/board_configs/cp/fbdisplay/esp32-p4-wifi6-touch-lcd-4b/board_config.py"
+      "github:PyDevices/omnipython/board_configs/cp/fbdisplay/esp32-p4-wifi6-touch-lcd-4b/board_config.py"
     ],
     [
       "gt911.py",
-      "github:PyDevices/pydevices/drivers/touch/gt911.py"
+      "github:PyDevices/omnipython/drivers/touch/gt911.py"
     ]
   ],
   "deps": [
     [
-      "pydevices",
+      "omnipython",
       "latest"
     ]
   ],

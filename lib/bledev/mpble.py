@@ -9,7 +9,7 @@
 
 Needs aioble, which isn't frozen into our firmware: install it once with
 ``mip.install("aioble")`` (MicroPython's index), then ``bledev`` from the
-PyDevices index.
+OmniPython index.
 
 aioble owns the one ``bluetooth.BLE()`` object and its IRQ handler. An
 `MPBLE` also answers every ``bluetooth.BLE`` method (``active()``,

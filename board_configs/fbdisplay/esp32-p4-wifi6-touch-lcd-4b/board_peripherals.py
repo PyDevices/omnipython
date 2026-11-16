@@ -234,7 +234,7 @@ def _refuse_if_held(session, wanted, holder):
     is in use does not raise on esp32: it deinitialises the live instance and
     hands the same object back in the new direction. Opening the microphone
     during playback silenced the speaker with no error anywhere, and
-    ``playing`` stayed True (pydevices#23, heard on this board). So the second
+    ``playing`` stayed True (omnipython#23, heard on this board). So the second
     direction is refused here, by name, instead.
 
     This still applies with the audio pump, to pcm_out: it is machine.I2S

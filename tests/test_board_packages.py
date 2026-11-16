@@ -5,7 +5,7 @@
 """Every board and driver package has the shape CI checks a contribution for.
 
 A board's manifest.py is what it installs: its own files, and with require()
-the driver packages it uses and pydevices. A driver that board_config.py or
+the driver packages it uses and OmniPython. A driver that board_config.py or
 board_peripherals.py imports, and that the manifest doesn't require, is an
 ImportError on the board the first time that code runs: the P4 panel's
 microphone (``es7210``) failed that way, at the first ``pcm_in()``, because

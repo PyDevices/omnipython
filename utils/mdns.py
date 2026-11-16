@@ -12,7 +12,7 @@
         print(s.instance_name, s.ipv4_address, s.port)
 
 An app imports mdns and doesn't care which runtime it's on: CircuitPython
-has it built in, MicroPython firmware from micropython-pydevices has it as a
+has it built in, MicroPython firmware from omnipython-builds has it as a
 C module, and on CPython this file maps it onto python-zeroconf
 (``pip install zeroconf``). The names, keyword-only arguments, defaults and
 errors are CircuitPython's.

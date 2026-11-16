@@ -89,12 +89,12 @@ for _name, _spec, _probe in (
 def select_backend():
     """Return the name of the first usable output backend.
 
-    Search order: ``PYDEVICES_AUDIO`` if set, then the backends a
+    Search order: ``OMNIPYTHON_AUDIO`` if set, then the backends a
     board config asked for with ``require`` (see `backends`), then the ones in the box
     in the documented probe order: wasm, Web Audio, Windows, SDL2, pygame, then
     ALSA on a Linux machine with a sound card and neither SDL2 nor pygame.
     """
-    for name, _spec, _builtin in backends.candidates("audio", backends._env("PYDEVICES_AUDIO")):
+    for name, _spec, _builtin in backends.candidates("audio", backends._env("OMNIPYTHON_AUDIO")):
         return name
     raise ImportError(
         "no usable audio transport: install pygame-ce, install/provide usdl2, "

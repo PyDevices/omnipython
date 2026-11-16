@@ -10,7 +10,7 @@ reaches the board with no Wi-Fi at all. Sockets, WebREPL and file transfers
 work over the same link.
 
 Needs: an ESP32-S2, S3 or P4, or an RP2040 or RP2350 with lwIP, running a
-PyDevices MicroPython firmware, with ``usb-device`` and ``usb-device-net``
+OmniPython firmware, with ``usb-device`` and ``usb-device-net``
 installed (ESP32 firmware has both frozen in). Plug the board's USB device port
 into your computer. The program keeps the board's serial port, so the REPL
 stays on the same cable.

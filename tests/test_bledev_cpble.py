@@ -443,15 +443,15 @@ class RunTwice(unittest.TestCase):
 
 def _circuitpython():
     """A CircuitPython unix binary and a directory holding Adafruit's asyncio
-    and adafruit_ticks, or ``(None, why)``. ``PYDEVICES_CIRCUITPYTHON`` and
-    ``PYDEVICES_CP_ASYNCIO`` name them; otherwise the workspace layout, where
+    and adafruit_ticks, or ``(None, why)``. ``OMNIPYTHON_CIRCUITPYTHON`` and
+    ``OMNIPYTHON_CP_ASYNCIO`` name them; otherwise the workspace layout, where
     ``bin/circuitpython`` and the ``circuitpython`` checkout (whose ``frozen/``
     carries both libraries) sit beside this repository."""
     import os
     from pathlib import Path
 
-    binary = os.environ.get("PYDEVICES_CIRCUITPYTHON")
-    libs = os.environ.get("PYDEVICES_CP_ASYNCIO")
+    binary = os.environ.get("OMNIPYTHON_CIRCUITPYTHON")
+    libs = os.environ.get("OMNIPYTHON_CP_ASYNCIO")
     here = Path(__file__).resolve().parent
     for parent in here.parents:
         if binary is None and (parent / "bin" / "circuitpython").is_file():
@@ -481,7 +481,7 @@ class OnCircuitPython(unittest.TestCase):
         found, why = _circuitpython()
         if found is None:
             message = why + ": bledev's checks did NOT run on CircuitPython"
-            if os.environ.get("PYDEVICES_REQUIRE_CIRCUITPYTHON") == "1":
+            if os.environ.get("OMNIPYTHON_REQUIRE_CIRCUITPYTHON") == "1":
                 self.fail(message)
             sys.stderr.write("\n*** " + message + " ***\n")
             self.skipTest(message)

@@ -4,7 +4,7 @@ From a board with nothing on it to one drawing on its own panel. Everything
 here was done rather than recalled — it comes out of a full bring-up of a
 Waveshare ESP32-S3-Touch-LCD-4.3 — and where something is untested it says so.
 
-For installing PyDevices anywhere else, including desktop, see
+For installing OmniPython anywhere else, including desktop, see
 [Install](../get-started/install.md). This page is the board.
 
 **Read §1 and §2 before you install anything.** Between them they are most of
@@ -16,8 +16,8 @@ into an afternoon.
 
 ## 1. What the firmware already has, and what it does not
 
-Check before installing anything. On an image built with the PyDevices C
-modules (micropython-pydevices' `build_mp.py --modules
+Check before installing anything. On an image built with the OmniPython C
+modules (omnipython-builds' `build_mp.py --modules
 displayif,lvgl,usbhost,pygraphics,audiodsp,ulab`, say) the following
 are **frozen or built in** — installing them is wasted effort:
 
@@ -32,7 +32,7 @@ are **frozen or built in** — installing them is wasted effort:
 and the following are **not**, and must be installed:
 
 - `displaydev`, `appdev`, `multimer`, `audiodev`, `boarddev`, `events`, `keys`
-  and `display_driver`, LVGL's coordinator (pydevices). An image built with
+  and `display_driver`, LVGL's coordinator (OmniPython). An image built with
   `--modules all` freezes these too, and
   `.frozen` comes before `/lib` on `sys.path`, so there a mip-installed copy
   never runs: rebuild to update them.
@@ -56,8 +56,8 @@ though it is there — because it imports `events`, and it is *that* import
 failing (`no module named 'events'`). The probe prints the exception
 text so you can see which module is really absent; a frozen module that
 reports `MISS` with somebody else's name in the message is present and fine.
-Install `pydevices` (which carries `events`, `appdev` and `display_driver`),
-then re-probe. Firmware built before display_driver moved to pydevices
+Install `omnipython` (which carries `events`, `appdev` and `display_driver`),
+then re-probe. Firmware built before display_driver moved to OmniPython
 froze it from the LVGL module, where it showed the same trap with
 `appdev`.
 
@@ -69,15 +69,15 @@ and what it needs. If `import omip` works on the freshly flashed board, your
 firmware already has it. Otherwise copy it on from the computer:
 
 ```bash
-mpremote connect <port> mip install github:PyDevices/pydevices/lib/omip.py
+mpremote connect <port> mip install github:PyDevices/omnipython/lib/omip.py
 ```
 
 Then, on the board:
 
 ```python
 import omip
-omip.install("pydevices")
-omip.install("github:PyDevices/pydevices/board_configs/fbdisplay/esp32-s3-touch-lcd-4_3")
+omip.install("omnipython")
+omip.install("github:PyDevices/omnipython/board_configs/fbdisplay/esp32-s3-touch-lcd-4_3")
 ```
 
 If the board is offline, `omip` joins the network in `secrets.py`, and with no
@@ -97,7 +97,7 @@ CircuitPython. Stock firmware works, with or without `wifi_manager`.
 [Reaching the board over Wi-Fi](wifi.md#reaching-the-board-over-wi-fi) has the
 steps.
 
-The board installer pulls its own drivers and depends on `pydevices`, so the
+The board installer pulls its own drivers and depends on `omnipython`, so the
 second call alone is usually enough. A program with no one at the REPL calls
 `omip.install(name, prompt=False)`, so it never waits for an answer.
 
@@ -123,17 +123,17 @@ rebuild the firmware, or put `/lib` ahead of `.frozen` on `sys.path`, which
 regardless.
 
 **Take both halves from the same place.** The pair above mixes the *released*
-`pydevices` (the index) with the board config from `main` (`github:`). That
+`omnipython` (the index) with the board config from `main` (`github:`). That
 is fine when the two agree, and wrong the moment `main`'s board configs pass
 something the release's library does not know: once, the release was
 one step behind the audio pump, so a board built exactly this way came up with
 a working panel and touch and **no audio** — `pcm_out()` raised
 `TypeError: unexpected keyword argument 'wire'`
-([#50](https://github.com/PyDevices/pydevices/issues/50)). To install a
+([#50](https://github.com/PyDevices/omnipython/issues/50)). To install a
 specific version of the board config, add `version=`:
 
 ```python
-omip.install("github:PyDevices/pydevices/board_configs/fbdisplay/esp32-s3-touch-lcd-4_3",
+omip.install("github:PyDevices/omnipython/board_configs/fbdisplay/esp32-s3-touch-lcd-4_3",
              version="v0.7.0")
 ```
 
@@ -152,7 +152,7 @@ numbers — and in your own programs the display comes up first.
 A board with no network, the XIAO nRF52840 on stock MicroPython among them,
 has no `mip` to fetch with, so you copy files from the computer. Its
 filesystem fills sooner than the byte count suggests: littlefs gives every
-file at least one 4 KB block, and the XIAO's is 64 blocks, so pydevices plus
+file at least one 4 KB block, and the XIAO's is 64 blocks, so OmniPython plus
 `pygraphics` as separate `.mpy` files didn't fit.
 
 Where the firmware has a ROMFS partition (the stock XIAO nRF52840 build has
@@ -181,8 +181,8 @@ look for literals passed to `write()`.
 
 ## 3. Choosing what to install, and from where
 
-`omip.install("pydevices")` and
-`omip.install("github:PyDevices/pydevices/board_configs/...")` both work and give you
+`omip.install("omnipython")` and
+`omip.install("github:PyDevices/omnipython/board_configs/...")` both work and give you
 different things. The difference is invisible until you wonder why your edit
 did not take.
 
@@ -197,7 +197,7 @@ in the [MIP index](https://github.com/PyDevices/mip)'s lockfile — while
 serves bytecode by default and source on request:
 
 ```python
-omip.install("pydevices", mpy=False)   # released, but as .py source
+omip.install("omnipython", mpy=False)   # released, but as .py source
 ```
 
 Bytecode is smaller and loads faster; source is what you can read on the board
@@ -296,7 +296,7 @@ nothing raises, and the screen never changes.
 Under LVGL it is wired for you — `display_driver` hands LVGL's `refresh_cb` to
 `show()`, and disables `App`'s own refresh so nothing presents twice.
 
-Without LVGL it is wired for you too, since `pydevices` 0.4.0. `appdev.App`
+Without LVGL it is wired for you too, since `omnipython` 0.4.0. `appdev.App`
 drives periodic `show()` for any display whose `needs_refresh` is `True`, and
 `FBDisplay.needs_refresh` is a computed property rather than a fixed attribute:
 it reports `True` when the underlying display does not auto-refresh, `False`
@@ -313,7 +313,7 @@ against the auto-refresh case.
 
 **On an older install** the class inherited `needs_refresh = False`, so a
 non-LVGL program that did not call `show()` drew nothing, silently. If you meet
-that, this is it — and the fix is to update `pydevices` rather than to sprinkle
+that, this is it — and the fix is to update `omnipython` rather than to sprinkle
 `show()` calls.
 
 ## 8. `blit_rect` byteswaps in place

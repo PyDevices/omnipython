@@ -56,8 +56,8 @@ def adafruit_hid_dir():
     for dest, url in urls:
         target = root / dest
         target.parent.mkdir(parents=True, exist_ok=True)
-        if url.startswith("github:PyDevices/pydevices/"):
-            shutil.copyfile(_TESTS.parent / url[len("github:PyDevices/pydevices/"):], target)
+        if url.startswith("github:PyDevices/omnipython/"):
+            shutil.copyfile(_TESTS.parent / url[len("github:PyDevices/omnipython/"):], target)
         elif not target.is_file():
             with urllib.request.urlopen(url, timeout=30) as r:
                 target.write_bytes(r.read())
@@ -93,7 +93,7 @@ class HidSuites(unittest.TestCase):
         interpreter = _micropython()
         if interpreter is None:
             message = "no micropython binary: the bledev.hid suites did NOT run on MicroPython"
-            if os.environ.get("PYDEVICES_REQUIRE_MICROPYTHON") == "1":
+            if os.environ.get("OMNIPYTHON_REQUIRE_MICROPYTHON") == "1":
                 self.fail(message)
             sys.stderr.write("\n*** " + message + " ***\n")
             self.skipTest(message)

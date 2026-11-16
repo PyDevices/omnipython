@@ -34,7 +34,7 @@ def _inject_notebook_css(width, height, first_time):
     max-width: fit-content !important;
     display: inline-block !important;
 }}
-.pydevices-jn-image {{
+.omnipython-jn-image {{
     width: {width}px !important;
     height: {height}px !important;
     max-width: {width}px !important;
@@ -45,7 +45,7 @@ def _inject_notebook_css(width, height, first_time):
     overflow: hidden !important;
     line-height: 0 !important;
 }}
-.pydevices-jn-image img {{
+.omnipython-jn-image img {{
     width: {width}px !important;
     height: {height}px !important;
     object-fit: fill !important;
@@ -119,7 +119,7 @@ class JNDevices:
         self._pressed = set()
 
         self.image = Image(format="png")
-        self.image.add_class("pydevices-jn-image")
+        self.image.add_class("omnipython-jn-image")
 
         self._events = Event(
             source=self.image,

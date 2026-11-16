@@ -278,14 +278,14 @@ class TestEnvironmentAndPrint(unittest.TestCase):
         multimer.stop_all()
 
     def _clean_env(self, **env):
-        for k in ("PYDEVICES_FPS", "PYDEVICES_FPS_PRINT"):
+        for k in ("OMNIPYTHON_FPS", "OMNIPYTHON_FPS_PRINT"):
             boarddev._overrides.pop(k, None)
-        patched = {k: v for k, v in os.environ.items() if not k.startswith("PYDEVICES_FPS")}
+        patched = {k: v for k, v in os.environ.items() if not k.startswith("OMNIPYTHON_FPS")}
         patched.update(env)
         return mock.patch.dict(os.environ, patched, clear=True)
 
-    def test_pydevices_fps_switches_it_on_at_start(self):
-        with self._clean_env(PYDEVICES_FPS="1"):
+    def test_omnipython_fps_switches_it_on_at_start(self):
+        with self._clean_env(OMNIPYTHON_FPS="1"):
             d = Panel()
         self.assertIn("show", d.__dict__)
         self.assertIsNotNone(d.fps())
@@ -296,8 +296,8 @@ class TestEnvironmentAndPrint(unittest.TestCase):
             d = Panel()
         self.assertNotIn("show", d.__dict__)
 
-    def test_pydevices_fps_print_starts_the_line(self):
-        with self._clean_env(PYDEVICES_FPS_PRINT="0.05"):
+    def test_omnipython_fps_print_starts_the_line(self):
+        with self._clean_env(OMNIPYTHON_FPS_PRINT="0.05"):
             d = Panel()
         self.assertIsNotNone(d.fps())
         self.assertIsNotNone(d._fps_timer)

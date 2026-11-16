@@ -2,12 +2,12 @@
   "urls": [
     [
       "board_config.py",
-      "github:PyDevices/pydevices/board_configs/pixeldisplay/neopixel_8x4/board_config.py"
+      "github:PyDevices/omnipython/board_configs/pixeldisplay/neopixel_8x4/board_config.py"
     ]
   ],
   "deps": [
     [
-      "pydevices",
+      "omnipython",
       "latest"
     ],
     [

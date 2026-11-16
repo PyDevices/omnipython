@@ -9,7 +9,7 @@ or a Windows PC's Wireless Display app. The TV is the screen and the
 speaker, so the board running this needs no display of its own. Every few
 seconds it prints how many pictures it showed and how the sound is going.
 
-The camera side is pydevices' medialink surveillance camera example, run
+The camera side is OmniPython's medialink surveillance camera example, run
 with CAMERA = True on a board with a camera, or on a computer with a
 folder of JPEG files. Set its RATE to 24000 to match this one: on a board
 the cast carries what the board's speaker plays, and reads it at 24 or
@@ -22,7 +22,7 @@ it sends a frame only when the picture changes; capping it at 30, 15 or
 
 Needs: castdisplay. On a board, an ESP32-P4 with firmware that carries
 castif, h264enc and the audio pump, and Wi-Fi set up in secrets.py; on a computer, CPython with ffmpeg on the
-path. Both need pydevices' medialink and audiodev, and jpegio (built into
+path. Both need OmniPython's medialink and audiodev, and jpegio (built into
 the firmware, or Pillow on CPython). The Roku TV needs Screen mirroring
 on; Windows needs its Wireless Display app open, on another computer than
 the one running this.

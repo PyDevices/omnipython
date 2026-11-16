@@ -1,6 +1,6 @@
-# pydevices-desktop
+# omnipython-desktop
 
-Desktop board and host-adapter bundle for non-MCU PyDevices applications.
+Desktop board and host-adapter bundle for non-MCU OmniPython applications.
 
 Installed modules:
 - board_config
@@ -11,20 +11,20 @@ Installed modules:
 - usdl2
 - uwin32 (Windows CPython)
 
-It depends on the full `pydevices` meta-package, which includes `appdev`, and
-on python-zeroconf, which `mdns` runs on ([`utils/requirements.txt`](https://github.com/PyDevices/pydevices/blob/main/utils/requirements.txt)).
+It depends on the full `omnipython` meta-package, which includes `appdev`, and
+on python-zeroconf, which `mdns` runs on ([`utils/requirements.txt`](https://github.com/PyDevices/omnipython/blob/main/utils/requirements.txt)).
 
 Source of truth:
-- Fixed library modules come from [`board_configs/desktop/`](https://github.com/PyDevices/pydevices/tree/main/board_configs/desktop) and `drivers/`.
+- Fixed library modules come from [`board_configs/desktop/`](https://github.com/PyDevices/omnipython/tree/main/board_configs/desktop) and `drivers/`.
 - Every non-debris library module under `utils/` is discovered automatically.
-- [`pydevices-desktop.toml`](https://github.com/PyDevices/pydevices/blob/main/pydevices-desktop.toml) lists the same complete payload for PyScript.
+- [`omnipython-desktop.toml`](https://github.com/PyDevices/omnipython/blob/main/omnipython-desktop.toml) lists the same complete payload for PyScript.
 
 This package is intended to provide a single pip-installable desktop config
-bundle while core PyDevices libraries continue to come from PyDevices packages.
+bundle while core OmniPython libraries continue to come from OmniPython packages.
 
 `board_config.py` ownership for packaged desktop installs lives here
-(`pydevices-desktop`), analogous to the MIP desktop bundle in
-[`board_configs/desktop`](https://github.com/PyDevices/pydevices/tree/main/board_configs/desktop).
+(`omnipython-desktop`), analogous to the MIP desktop bundle in
+[`board_configs/desktop`](https://github.com/PyDevices/omnipython/tree/main/board_configs/desktop).
 
 ## Install (TestPyPI)
 
@@ -32,7 +32,7 @@ Install and verification flows are centralized here:
 [Install](../get-started/install.md)
 
 Use the sections:
-- "pydevices-desktop via pip"
+- "omnipython-desktop via pip"
 - "Verify with .venv"
 - "Verify without .venv (python.exe / pip.exe)"
 

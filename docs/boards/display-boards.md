@@ -1,23 +1,23 @@
 # Display boards — bring-up notes
 
 Panel resolution, touch controller, interface module, and per-board quirks for
-the commercially available boards with a PyDevices `board_config`. If you have
+the commercially available boards with a OmniPython `board_config`. If you have
 one of these boards, this is what you need to know to bring the display up.
 
 Coverage spans the RGB DotClock, MIPI DSI (`mipidsi`), and busdisplay
 (`spibus` / `i80bus`) paths, each verified against LVGL with `lv_test_timer`.
 
 Paths are under
-[`pydevices`](https://github.com/PyDevices/pydevices)
+[`omnipython`](https://github.com/PyDevices/omnipython)
 `board_configs/fbdisplay/<name>/` unless a `busdisplay/…` path is given.
 Device roles (eager / lazy):
 [`device-matrix.md`](device-matrix.md)
 
 Native drivers live in **displayif** (`displayif.DotClockFramebuffer` or
 `mipidsi`), which is part of
-[micropython-pydevices](https://github.com/PyDevices/micropython-pydevices/tree/main/modules/displayif).
+[omnipython-builds](https://github.com/PyDevices/omnipython-builds/tree/main/modules/displayif).
 Soft-reset / scanout lessons:
-[displayif `docs/soft-reset-and-bring-up.md`](https://github.com/PyDevices/micropython-pydevices/blob/main/modules/displayif/docs/soft-reset-and-bring-up.md).
+[displayif `docs/soft-reset-and-bring-up.md`](https://github.com/PyDevices/omnipython-builds/blob/main/modules/displayif/docs/soft-reset-and-bring-up.md).
 
 Typical MicroPython flash for the ESP32-S3 RGB boards below:
 `ESP32_GENERIC_S3` + **`SPIRAM_OCT`** (8 MB octal PSRAM). P4 uses its own board
@@ -86,7 +86,7 @@ variant (`C6_WIFI`).
   `midiports.usb_host`, while the USB-C port stays the REPL. The port has no
   power until `usb.core.start()`. Bus-powered devices that draw more than about
   500 mA may not run; use a powered hub. Needs firmware with the `usbhost`
-  module ([what it supports](https://github.com/PyDevices/micropython-pydevices/blob/main/modules/usbhost/README.md)).
+  module ([what it supports](https://github.com/PyDevices/omnipython-builds/blob/main/modules/usbhost/README.md)).
 - **USB flash drive as `/sd`:** the board has no card slot, so `sdcard` is the
   flash drive in the USB-A hub, as a block device: `os.mount(board.sdcard, "/sd")`
   and apps that read `/sd` (midiEngine's `/sd/midi` and `/sd/soundfonts`, the MP3
@@ -106,9 +106,9 @@ variant (`C6_WIFI`).
 - **Not yet roles:** the camera connector waits for firmware support; the shield's RGB LED (IS31FL3197 at `0x50`) waits for a driver. CAN needs a
   transceiver the board doesn't have, and the only RTC is the STM32's own
   (`machine.RTC`).
-- **Firmware:** micropython-pydevices' `ARDUINO_GIGA` board with its
+- **Firmware:** omnipython-builds' `ARDUINO_GIGA` board with its
   `DISPLAY_SHIELD` variant and `--modules displayif,lvgl`
-  ([flashing it](https://github.com/PyDevices/micropython-pydevices/blob/main/docs/guides/flash-a-board.md)).
+  ([flashing it](https://github.com/PyDevices/omnipython-builds/blob/main/docs/guides/flash-a-board.md)).
 - **Libraries:** the OmniPython libraries don't fit in the firmware beside
   LVGL, so they go in the board's 4 MB ROMFS with the drivers this board
   needs: the two in this repository, micropython-lib's `bmi270` for the IMU
@@ -121,17 +121,17 @@ variant (`C6_WIFI`).
   of this repository:
 
   ```bash
-  git clone --depth 1 https://github.com/PyDevices/pydevices.git
+  git clone --depth 1 https://github.com/PyDevices/omnipython.git
   mkdir romfs
   unzip omnipython-mp-arduino_giga-display_shield-*.romfs-files.zip -d romfs
-  cp -r pydevices/lib/* pydevices/drivers/touch/gt911.py \
-      pydevices/drivers/display/giga_display_shield_init.py romfs/
-  cp -r pydevices/packages/midiports/midiports romfs/
+  cp -r omnipython/lib/* omnipython/drivers/touch/gt911.py \
+      omnipython/drivers/display/giga_display_shield_init.py romfs/
+  cp -r omnipython/packages/midiports/midiports romfs/
   mkdir -p romfs/usb/host
-  cp pydevices/packages/usb/usb-core/usb/*.py romfs/usb/
-  cp pydevices/packages/usb/usb-core/usb_host.py romfs/
-  cp pydevices/packages/usb/usb-host-hid/usb/host/*.py \
-      pydevices/packages/usb/usb-host-msc/usb/host/*.py romfs/usb/host/
+  cp omnipython/packages/usb/usb-core/usb/*.py romfs/usb/
+  cp omnipython/packages/usb/usb-core/usb_host.py romfs/
+  cp omnipython/packages/usb/usb-host-hid/usb/host/*.py \
+      omnipython/packages/usb/usb-host-msc/usb/host/*.py romfs/usb/host/
   curl -o romfs/bmi270.py https://raw.githubusercontent.com/micropython/micropython-lib/master/micropython/drivers/imu/bmi270/bmi270.py
   mkdir romfs/aioble
   for f in __init__ central client core device l2cap peripheral security server; do
@@ -143,7 +143,7 @@ variant (`C6_WIFI`).
       rm -f romfs/$r/README.md
   done
   mpremote romfs deploy romfs
-  cd pydevices/board_configs/fbdisplay/arduino-giga-display-shield
+  cd omnipython/board_configs/fbdisplay/arduino-giga-display-shield
   mpremote cp board_config.py board_peripherals.py :/flash/
   ```
 
@@ -157,7 +157,7 @@ variant (`C6_WIFI`).
 
   ```python
   import mip
-  mip.install("github:PyDevices/pydevices/lib/omip.py", target="/flash/lib")
+  mip.install("github:PyDevices/omnipython/lib/omip.py", target="/flash/lib")
   ```
 
   `omip.install` then installs into `/flash/lib` and `/flash/apps` on its
@@ -251,7 +251,7 @@ variant (`C6_WIFI`).
 ### LILYGO T-Embed (SPI ST7789)
 
 - **board_config title:** `LILYGO T-Embed ST7789 170x320 SPI + rotary`
-- **Dir:** [`board_configs/busdisplay/spi/t-embed`](https://github.com/PyDevices/pydevices/tree/main/board_configs/busdisplay/spi/t-embed) (native displayif `spibus`)
+- **Dir:** [`board_configs/busdisplay/spi/t-embed`](https://github.com/PyDevices/omnipython/tree/main/board_configs/busdisplay/spi/t-embed) (native displayif `spibus`)
 - **Resolution:** 170×320, `colstart=35`, `rowstart=0`, `invert=True`, `bgr=True`
 - **Orientation:** `rotation=180`, `mirrored=True` → MADCTL **MX|MY|BGR
   (`0xC8`)**. Encoder at the physical bottom → origin upper-left. Matches
@@ -271,13 +271,13 @@ variant (`C6_WIFI`).
   stuck.
 - **Interesting:** Solid fills looked fine, but `BusDisplay.fill_rect` using
   ST7789 `RAMCONT` (`0x3C`) with CS dropping between strips produced dots /
-  garbage. Fixed in [`lib/displaydev/busdisplay.py`](https://github.com/PyDevices/pydevices/blob/main/lib/displaydev/busdisplay.py): per-strip window +
+  garbage. Fixed in [`lib/displaydev/busdisplay.py`](https://github.com/PyDevices/omnipython/blob/main/lib/displaydev/busdisplay.py): per-strip window +
   `RAMWR` (`0x2C`) only. Verified with an L geometry under MADCTL `0xC8`.
 
 ### LILYGO T-HMI (I80 ST7789)
 
 - **board_config title:** `LILYGO T-HMI 240x320 ST7789 I80 + XPT2046`
-- **Dir:** [`board_configs/busdisplay/i80/t-hmi`](https://github.com/PyDevices/pydevices/tree/main/board_configs/busdisplay/i80/t-hmi) (native displayif `i80bus`)
+- **Dir:** [`board_configs/busdisplay/i80/t-hmi`](https://github.com/PyDevices/omnipython/tree/main/board_configs/busdisplay/i80/t-hmi) (native displayif `i80bus`)
 - **Resolution:** 240×320, `colstart=0`, `invert=False`, `bgr=True`
 - **Orientation:** `rotation=0`, `mirrored=True` → MADCTL **BGR (`0x08`)**
   (TFT_eSPI Setup207 / ST7789 rot0). `mirrored=False` added MX (`0x48`) and
@@ -288,7 +288,7 @@ variant (`C6_WIFI`).
   — both must be high); backlight GPIO38
 - **Touch:** XPT2046 on dedicated SPI1 (LilyGO `pins.h`): SCK=1, MOSI=3,
   MISO=4, CS=2, IRQ=9 (active-low, pull-up). Baud 2 MHz, MODE0. Driver
-  framing matches LilyGO `transfer16` ([`drivers/touch/xpt2046.py`](https://github.com/PyDevices/pydevices/blob/main/drivers/touch/xpt2046.py)). Press =
+  framing matches LilyGO `transfer16` ([`drivers/touch/xpt2046.py`](https://github.com/PyDevices/omnipython/blob/main/drivers/touch/xpt2046.py)). Press =
   IRQ low or `|z| ≥ 25`. Cal defaults from LilyGO `touch.ino`
   (`xmin=1788, xmax=285, ymin=1877, ymax=311`); pass
   `width=height_disp, height=width_disp` into `calibrate(orientation=0)` so
@@ -312,8 +312,8 @@ variant (`C6_WIFI`).
 
 - **board_config titles:** `Waveshare RP2040-Touch-LCD-1.28 GC9A01 240x240`
   (MicroPython); same board under CircuitPython
-- **Dirs:** [`board_configs/busdisplay/spi/rp2040-touch-lcd-1.28`](https://github.com/PyDevices/pydevices/tree/main/board_configs/busdisplay/spi/rp2040-touch-lcd-1.28) (MP);
-  [`board_configs/cp/busdisplay/spi/rp2040-touch-lcd-1.28`](https://github.com/PyDevices/pydevices/tree/main/board_configs/cp/busdisplay/spi/rp2040-touch-lcd-1.28) (CP)
+- **Dirs:** [`board_configs/busdisplay/spi/rp2040-touch-lcd-1.28`](https://github.com/PyDevices/omnipython/tree/main/board_configs/busdisplay/spi/rp2040-touch-lcd-1.28) (MP);
+  [`board_configs/cp/busdisplay/spi/rp2040-touch-lcd-1.28`](https://github.com/PyDevices/omnipython/tree/main/board_configs/cp/busdisplay/spi/rp2040-touch-lcd-1.28) (CP)
 - **Resolution:** 240×240 round GC9A01A, `bgr=True`,
   `reverse_bytes_in_word=True`, `invert=True`
 - **Bus (MP):** `SPIBus(id=1, sck=10, mosi=11, dc=8, cs=9)` @ **10 MHz**
@@ -323,7 +323,7 @@ variant (`C6_WIFI`).
   `LCD_DC` / `LCD_CS` / `LCD_RST` @ 10 MHz. Official CP board build
   (`waveshare_rp2040_touch_lcd_1_28`) exposes `LCD_*` / `IMU_*` aliases —
   **no** `board.SPI()` / `board.I2C()`.
-- **Panel init:** Waveshare full GC9A01A sequence in [`drivers/display/gc9a01.py`](https://github.com/PyDevices/pydevices/blob/main/drivers/display/gc9a01.py)
+- **Panel init:** Waveshare full GC9A01A sequence in [`drivers/display/gc9a01.py`](https://github.com/PyDevices/omnipython/blob/main/drivers/display/gc9a01.py)
   with **MADCTL `0x98`** and **COLMOD `0x05`**. Short Adafruit-style init +
   BusDisplay’s post-init COLMOD **`0x55`** → backlight on, **no pixels**.
   Reinforce `0x36`/`0x3A` after construct.
@@ -331,13 +331,13 @@ variant (`C6_WIFI`).
   looks like a blank panel.
 - **Touch:** CST816 family @ `0x15` on I2C1 **SDA=6 / SCL=7** (CP:
   `IMU_SDA`/`IMU_SCL`); RST=GP22, IRQ=GP21 (polled). MP: `cst8xx.CST8XX`;
-  CP: [`drivers/touch/circuitpython/cst816.py`](https://github.com/PyDevices/pydevices/blob/main/drivers/touch/circuitpython/cst816.py).
+  CP: [`drivers/touch/circuitpython/cst816.py`](https://github.com/PyDevices/omnipython/blob/main/drivers/touch/circuitpython/cst816.py).
 - **Flash / USB:** RP2040 ROM UF2 bootloader (`RPI-RP2`). MicroPython `RPI_PICO` → CDC `VID_2E8A`/`PID_0005`;
   CircuitPython board UF2 → `PID_1057` + **CIRCUITPY**. Adafruit TinyUF2
   does **not** ship RP2040 builds (ROM UF2 only).
 - **displayif notes:** native `spibus` `SPI.init` must **not** re-pass
   sck/mosi/miso on **rp2** (`extra keyword arguments given`); pin kwargs are
-  ESP-only. Same guard in Python [`drivers/bus/spibus.py`](https://github.com/PyDevices/pydevices/blob/main/drivers/bus/spibus.py).
+  ESP-only. Same guard in Python [`drivers/bus/spibus.py`](https://github.com/PyDevices/omnipython/blob/main/drivers/bus/spibus.py).
 - **Demos:** LVGL/`lv_test_timer` is too RAM-heavy on this board. Prefer
   [`lib/examples/simon.py`](https://github.com/PyDevices/gallery/blob/main/lib/examples/simon.py) (MP graphics + appdev) or
   [`lib/examples/circuitpython/simon_waveshare_rp2040_touch_lcd_1_28.py`](https://github.com/PyDevices/gallery/blob/main/lib/examples/circuitpython/simon_waveshare_rp2040_touch_lcd_1_28.py)
@@ -351,7 +351,7 @@ variant (`C6_WIFI`).
 ### Adafruit Metro M7 + 2.8″ TFT Touch Shield (cap, product 1947)
 
 - **board_config title:** `Metro M7 + Adafruit 2.8" TFT Touch Shield (cap) product 1947`
-- **Dir:** [`board_configs/busdisplay/spi/metro_m7_tft_touch_shield_1947`](https://github.com/PyDevices/pydevices/tree/main/board_configs/busdisplay/spi/metro_m7_tft_touch_shield_1947) (MP)
+- **Dir:** [`board_configs/busdisplay/spi/metro_m7_tft_touch_shield_1947`](https://github.com/PyDevices/omnipython/tree/main/board_configs/busdisplay/spi/metro_m7_tft_touch_shield_1947) (MP)
 - **Resolution:** 240×320 ILI9341, `bgr=True`, `reverse_bytes_in_word=True`,
   `rotation=0`
 - **Shield SPI jumpers (one toggle in board_config):** `USE_SOFTSPI`
@@ -383,7 +383,7 @@ variant (`C6_WIFI`).
   that SoftSPI path (`SPIBus loaded (SoftSPI)`).
 - **CircuitPython caveats (same shield wiring):** `displaydev` **MemoryError**
   on ~35 KiB free heap. `bitbangio.SPI.write` → `OSError: 5`; GPIO SoftSPI
-  paint works but is very slow. Prefer MP + native SoftSPI for PyDevices;
+  paint works but is very slow. Prefer MP + native SoftSPI for OmniPython;
   CP is fine for AirLift networking.
 - **Demos:** stripes / `ili9341` over SoftSPI; Simon needs a slim path (no
   appdev). LVGL unlikely without frozen/slim app.
@@ -393,7 +393,7 @@ variant (`C6_WIFI`).
 ### ST NUCLEO-H743ZI2 + Adafruit 2.8″ TFT Touch Shield (cap, product 1947)
 
 - **board_config title:** `NUCLEO-H743ZI2 + Adafruit 2.8" TFT Touch Shield (cap) product 1947`
-- **Dir:** [`board_configs/busdisplay/spi/nucleo_h743zi2_tft_touch_shield_1947`](https://github.com/PyDevices/pydevices/tree/main/board_configs/busdisplay/spi/nucleo_h743zi2_tft_touch_shield_1947) (MP)
+- **Dir:** [`board_configs/busdisplay/spi/nucleo_h743zi2_tft_touch_shield_1947`](https://github.com/PyDevices/omnipython/tree/main/board_configs/busdisplay/spi/nucleo_h743zi2_tft_touch_shield_1947) (MP)
 - **Resolution:** 240×320 ILI9341, `bgr=True`, `reverse_bytes_in_word=True`,
   `rotation=0`
 - **SPI:** Prefer **`USE_SOFTSPI = False`** → `SPIBus(id=1, dc="D9", cs="D10")`

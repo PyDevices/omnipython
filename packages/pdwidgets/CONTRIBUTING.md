@@ -1,7 +1,7 @@
 # Contributing to pdwidgets
 
 pdwidgets is a pure-Python widget toolkit: a `Display`, a `Screen` and about
-49 widgets that draw through pydevices and pygraphics. A focused widget test,
+49 widgets that draw through OmniPython and pygraphics. A focused widget test,
 a clearer docs example or a fix to a widget's behavior is a good first
 contribution. [How pdwidgets works](docs/how-it-works/index.md) explains how
 the pieces fit.
@@ -24,7 +24,7 @@ the pieces fit.
 
 ## Run the tests
 
-pdwidgets imports pydevices' `appdev`, `palettes` and `pygraphics`, none of them
+pdwidgets imports OmniPython's `appdev`, `palettes` and `pygraphics`, none of them
 installed in the test environment, so the test command puts their sources on
 `PYTHONPATH`. From this folder, with a checkout of
 [pygraphics](https://github.com/PyDevices/pygraphics) at `$PYGRAPHICS`:
@@ -90,7 +90,7 @@ python scripts/assets_convert_md_png_to_pbm.py
 ## Redraw the README picture
 
 [`docs/images/pdwidgets.png`](docs/images/pdwidgets.png) is the README example after three clicks. Redraw it
-on a machine with `pydevices-desktop` and Pillow installed:
+on a machine with `omnipython-desktop` and Pillow installed:
 
 ```bash
 SDL_VIDEODRIVER=dummy PYTHONPATH=lib python scripts/generate_readme_screenshot.py
@@ -108,8 +108,8 @@ errors. The API pages are generated from the docstrings when you build.
 
 ## Release
 
-pdwidgets has its own version, in `VERSION`, apart from the pydevices release.
+pdwidgets has its own version, in `VERSION`, apart from the OmniPython release.
 A pull request that changes `VERSION` and adds the matching section to
-`CHANGELOG.md` tags `pdwidgets-vX.Y.Z` when it merges, and the pydevices release
-chain publishes `pydevices-pdwidgets` to TestPyPI. The import name and the mip
+`CHANGELOG.md` tags `pdwidgets-vX.Y.Z` when it merges, and the OmniPython release
+chain publishes `omnipython-pdwidgets` to TestPyPI. The import name and the mip
 package name stay `pdwidgets`.

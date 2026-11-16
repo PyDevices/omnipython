@@ -1,6 +1,6 @@
 # Drivers
 
-Hardware helpers for [pydevices](https://github.com/PyDevices/pydevices)
+Hardware helpers for [OmniPython](https://github.com/PyDevices/omnipython)
 board configs. Each one is a package named by its module, listed in
 [`drivers.toml`](drivers.toml) with its version and the other drivers it
 needs, and a board's `manifest.py` requires the ones it uses. Adding or fixing

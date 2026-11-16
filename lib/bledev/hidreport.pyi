@@ -1,7 +1,7 @@
 # SPDX-FileCopyrightText: 2026 Brad Barnett
 #
 # SPDX-License-Identifier: MIT
-"""HID report descriptors, and the reports they describe, as PyDevices events."""
+"""HID report descriptors, and the reports they describe, as OmniPython events."""
 import events
 import keys
 from collections.abc import Iterable
@@ -122,7 +122,7 @@ def consumer_keycode(usage: int) -> int | None:
     """The `keys.K_*` code for a consumer-page usage (`0xE9`, not extended), or `None`."""
 
 class Decoder:
-    """Turns one device's input reports into PyDevices events."""
+    """Turns one device's input reports into OmniPython events."""
 
     map: ReportMap
     instance_id: int

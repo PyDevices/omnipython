@@ -2,24 +2,24 @@
   "urls": [
     [
       "board_config.py",
-      "github:PyDevices/pydevices/board_configs/fbdisplay/qualia_tl040hds20/board_config.py"
+      "github:PyDevices/omnipython/board_configs/fbdisplay/qualia_tl040hds20/board_config.py"
     ],
     [
       "board_peripherals.py",
-      "github:PyDevices/pydevices/board_configs/fbdisplay/qualia_tl040hds20/board_peripherals.py"
+      "github:PyDevices/omnipython/board_configs/fbdisplay/qualia_tl040hds20/board_peripherals.py"
     ],
     [
       "ft6x36.py",
-      "github:PyDevices/pydevices/drivers/touch/ft6x36.py"
+      "github:PyDevices/omnipython/drivers/touch/ft6x36.py"
     ],
     [
       "pca9554.py",
-      "github:PyDevices/pydevices/drivers/io_expander/pca9554.py"
+      "github:PyDevices/omnipython/drivers/io_expander/pca9554.py"
     ]
   ],
   "deps": [
     [
-      "pydevices",
+      "omnipython",
       "latest"
     ]
   ],

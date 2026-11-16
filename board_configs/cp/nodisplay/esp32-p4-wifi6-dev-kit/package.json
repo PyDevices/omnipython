@@ -2,11 +2,11 @@
   "urls": [
     [
       "board_peripherals.py",
-      "github:PyDevices/pydevices/board_configs/cp/nodisplay/esp32-p4-wifi6-dev-kit/board_peripherals.py"
+      "github:PyDevices/omnipython/board_configs/cp/nodisplay/esp32-p4-wifi6-dev-kit/board_peripherals.py"
     ],
     [
       "es8311.py",
-      "github:PyDevices/pydevices/drivers/codec/es8311.py"
+      "github:PyDevices/omnipython/drivers/codec/es8311.py"
     ]
   ],
   "deps": [],

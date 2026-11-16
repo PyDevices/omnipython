@@ -9,7 +9,7 @@ The contract (``midiports_contract.py``) runs with Adafruit's
 ``adafruit_midi``, fetched from the URLs ``midiports/package.json`` pins, so
 the files a board would install are the files under test. They're cached in
 the system temp directory by tag. Without a network the contract runs are
-skipped loudly, and ``PYDEVICES_REQUIRE_NETWORK=1`` turns that into a
+skipped loudly, and ``OMNIPYTHON_REQUIRE_NETWORK=1`` turns that into a
 failure. The MicroPython run finds its interpreter as ``test_bledev`` does.
 """
 
@@ -34,7 +34,7 @@ ROOT = Path(__file__).resolve().parents[1]
 PACKAGE = ROOT / "packages" / "midiports"
 CONTRACT = Path(__file__).resolve().parent / "midiports_contract.py"
 ADAFRUIT_PREFIX = "https://raw.githubusercontent.com/adafruit/Adafruit_CircuitPython_MIDI/"
-OURS_PREFIX = "github:PyDevices/pydevices/"
+OURS_PREFIX = "github:PyDevices/omnipython/"
 
 sys.path.insert(0, str(PACKAGE))
 sys.path.insert(0, str(ROOT / "packages" / "_boardname"))
@@ -75,7 +75,7 @@ def adafruit_dir(case):
             partial.replace(target)
     except OSError as error:
         message = "could not fetch adafruit_midi ({}): the midiports contract did NOT run".format(error)
-        if os.environ.get("PYDEVICES_REQUIRE_NETWORK") == "1":
+        if os.environ.get("OMNIPYTHON_REQUIRE_NETWORK") == "1":
             case.fail(message)
         sys.stderr.write("\n*** " + message + " ***\n")
         case.skipTest(message)

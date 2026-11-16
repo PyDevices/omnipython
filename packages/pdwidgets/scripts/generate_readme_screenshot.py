@@ -5,7 +5,7 @@
 
 """Redraw docs/images/pdwidgets.png: the README example after three taps.
 
-Needs pydevices-desktop (for ``board_config``) and Pillow. Run it headless:
+Needs omnipython-desktop (for ``board_config``) and Pillow. Run it headless:
 
     SDL_VIDEODRIVER=dummy PYTHONPATH=lib python scripts/generate_readme_screenshot.py
 

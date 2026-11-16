@@ -1,6 +1,6 @@
-# How pydevices fits together
+# How OmniPython fits together
 
-pydevices has three parts: portable libraries for displays, audio, events, timers and application coordination; board configs and the hardware drivers they use; and the board contract that ties a board config to a program.
+OmniPython has three parts: portable libraries for displays, audio, events, timers and application coordination; board configs and the hardware drivers they use; and the board contract that ties a board config to a program.
 
 ## Mental model
 
@@ -30,13 +30,13 @@ Read [the board contract](../boards/board-contract.md) before adding a board and
 ## Choose a GUI layer
 
 - Use displaydev and pygraphics for direct drawing.
-- Use [pdwidgets](https://github.com/PyDevices/pydevices/tree/main/pdwidgets) for a pure-Python widget toolkit.
-- Use [LVGL](../guides/lvgl.md) when the firmware or the pydevices-lvgl wheel provides the lvgl module.
+- Use [pdwidgets](https://github.com/PyDevices/omnipython/tree/main/pdwidgets) for a pure-Python widget toolkit.
+- Use [LVGL](../guides/lvgl.md) when the firmware or the omnipython-lvgl wheel provides the lvgl module.
 
 The hardware configuration remains the same whichever layer you choose. Ready-to-run programs live in [gallery](https://github.com/PyDevices/gallery), not this product repository.
 
 ## Where to go from here
 
 [Architecture](architecture.md) shows how the pieces fit on each kind of host.
-To change pydevices itself, start with
-[CONTRIBUTING.md](https://github.com/PyDevices/pydevices/blob/main/CONTRIBUTING.md).
+To change OmniPython itself, start with
+[CONTRIBUTING.md](https://github.com/PyDevices/omnipython/blob/main/CONTRIBUTING.md).

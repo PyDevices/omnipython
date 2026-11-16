@@ -100,7 +100,7 @@ class Peripheral:
         name: str | None = None,
         encrypted: bool = False,
         battery: int = 100,
-        manufacturer: str = 'PyDevices',
+        manufacturer: str = 'OmniPython',
         service_uuid: UUID | int | str | bytes = ...,
     ) -> None: ...
     async def serve(self, timeout_ms: int | None = None) -> Connection:
@@ -110,7 +110,7 @@ class Peripheral:
     def close(self) -> None: ...
 
 class Host:
-    """One connected HID device, as a stream of PyDevices events."""
+    """One connected HID device, as a stream of OmniPython events."""
 
     connection: Connection
     service_uuid: UUID

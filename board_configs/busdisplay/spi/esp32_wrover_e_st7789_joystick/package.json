@@ -2,24 +2,24 @@
   "urls": [
     [
       "board_config.py",
-      "github:PyDevices/pydevices/board_configs/busdisplay/spi/esp32_wrover_e_st7789_joystick/board_config.py"
+      "github:PyDevices/omnipython/board_configs/busdisplay/spi/esp32_wrover_e_st7789_joystick/board_config.py"
     ],
     [
       "board_peripherals.py",
-      "github:PyDevices/pydevices/board_configs/busdisplay/spi/esp32_wrover_e_st7789_joystick/board_peripherals.py"
+      "github:PyDevices/omnipython/board_configs/busdisplay/spi/esp32_wrover_e_st7789_joystick/board_peripherals.py"
     ],
     [
       "st7789.py",
-      "github:PyDevices/pydevices/drivers/display/st7789.py"
+      "github:PyDevices/omnipython/drivers/display/st7789.py"
     ],
     [
       "gpiojoystick.py",
-      "github:PyDevices/pydevices/drivers/joystick/gpiojoystick.py"
+      "github:PyDevices/omnipython/drivers/joystick/gpiojoystick.py"
     ]
   ],
   "deps": [
     [
-      "pydevices",
+      "omnipython",
       "latest"
     ]
   ],

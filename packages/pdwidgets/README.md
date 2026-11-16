@@ -7,19 +7,19 @@ sliders, lists, dialogs and layouts in pure Python, with the same code on
 MicroPython-compatible boards, CPython and in the browser.
 
 ```bash
-pip install -i https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ pydevices-pdwidgets pydevices-desktop
+pip install -i https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ omnipython-pdwidgets omnipython-desktop
 ```
 
 ```python
 import omip
-for package in ("pydevices", "pygraphics", "palettes", "pdwidgets"):
+for package in ("omnipython", "pygraphics", "palettes", "pdwidgets"):
     omip.install(package)
 ```
 
 `omip` comes with OmniPython firmware. On other MicroPython firmware, run
-`mip.install("github:PyDevices/pydevices/lib/omip.py")` once to put it on the board.
+`mip.install("github:PyDevices/omnipython/lib/omip.py")` once to put it on the board.
 
-The first is for a desktop, and `pydevices-desktop` brings the display it draws
+The first is for a desktop, and `omnipython-desktop` brings the display it draws
 on. The second installs onto a board, which also needs its board config:
 [Install](docs/get-started/install.md) has every board and channel.
 

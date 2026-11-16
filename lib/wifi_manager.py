@@ -55,11 +55,11 @@ tries it at every boot even though scans can't see it.
 
 Install
 -------
-It is part of the ``pydevices`` package, so a firmware that freezes
-pydevices already has it.  Otherwise, on MicroPython::
+It is part of the ``omnipython`` package, so a firmware that freezes
+OmniPython already has it.  Otherwise, on MicroPython::
 
     import omip
-    omip.install("pydevices")
+    omip.install("omnipython")
 
 CircuitPython: copy this file to ``/lib``.
 

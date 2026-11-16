@@ -8,7 +8,7 @@ metadata(
     version="0.1",
 )
 
-require("pydevices")
+require("omnipython")
 require("qtpy_esp32_pico_audio_bff")
 require("sh1106")
 

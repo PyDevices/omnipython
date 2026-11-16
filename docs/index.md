@@ -1,6 +1,6 @@
-# pydevices
+# OmniPython
 
-pydevices is the part of OmniPython that talks to hardware: displays, touch,
+This library is the part of OmniPython that talks to hardware: displays, touch,
 audio, USB, Bluetooth LE, Wi-Fi and timers, with one board config per board
 and the same program on MicroPython-compatible boards, CircuitPython-compatible
 boards, a desktop, a browser and an Android phone.
@@ -17,7 +17,7 @@ boards, a desktop, a browser and an Android phone.
 - [Displays](guides/displays.md)
 - [appdev](guides/the-app-loop.md)
 - [multimer](guides/timers.md)
-- [Upgrade multimer from pydevices 0.5](guides/upgrade-multimer-from-0.5.md)
+- [Upgrade multimer from OmniPython 0.5](guides/upgrade-multimer-from-0.5.md)
 - [Portable audio](guides/audio.md)
 - [USB, both ways round](guides/usb.md)
 - [bledev: Bluetooth Low Energy](guides/bluetooth-le.md)
@@ -25,10 +25,10 @@ boards, a desktop, a browser and an Android phone.
 - [wifi_manager](guides/wifi.md)
 - [mdns](guides/mdns.md)
 - [medialink: audio between devices](guides/medialink.md)
-- [Using LVGL with PyDevices](guides/lvgl.md)
+- [Using LVGL with OmniPython](guides/lvgl.md)
 - [vtterm: a terminal on a display](guides/vtterm.md)
 - [castdisplay: cast an app to a TV](guides/cast-to-a-tv.md)
-- [pydevices-desktop](guides/run-on-the-desktop.md)
+- [omnipython-desktop](guides/run-on-the-desktop.md)
 - [Direct MicroPython WebAssembly](guides/run-in-the-browser.md)
 - [PyScript and Pyodide](guides/run-in-pyscript.md)
 - [Android](guides/run-on-android.md)
@@ -55,7 +55,7 @@ boards, a desktop, a browser and an Android phone.
 
 ## How it works
 
-- [How pydevices fits together](how-it-works/index.md)
+- [How OmniPython fits together](how-it-works/index.md)
 - [Architecture](how-it-works/architecture.md)
 - [The PyDevices ecosystem](how-it-works/ecosystem.md)
 - [Display backend internals](how-it-works/displaydev-internals.md)

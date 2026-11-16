@@ -42,7 +42,7 @@ IMPORT_EXEMPT = {"generate_readme_screenshot"}
 OPTIONAL_DEPS = {"PIL"}
 
 # Sibling checkouts an authoring script reads at import. CI clones only
-# pydevices, pygraphics and palettes, so a script that exits naming one of
+# OmniPython, pygraphics and palettes, so a script that exits naming one of
 # these is skipped; any other SystemExit still fails.
 OPTIONAL_CHECKOUTS = ("gallery checkout not found",)
 

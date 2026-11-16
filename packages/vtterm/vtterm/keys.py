@@ -4,14 +4,14 @@
 """Turn key presses into the bytes a VT100 sends.
 
 `key_bytes` maps one key code and modifier mask (the SDL-style codes in
-pydevices' ``keys`` module) to bytes: letters and symbols on a US layout,
+OmniPython's ``keys`` module) to bytes: letters and symbols on a US layout,
 Ctrl+letter as a control code, and the arrows, Home, End, Page Up, Page Down,
 Insert, Delete and F1 to F4 as escape sequences. `KeyEvents` reads key-down
 events from a function such as a desktop display's ``get_events``, and mouse
 events too when you give it a `Mouse <vtterm.mouse.Mouse>`.
 """
 
-# Key codes and modifier bits, the same values as pydevices' keys module.
+# Key codes and modifier bits, the same values as OmniPython's keys module.
 _KMOD_SHIFT = 0x0003
 _KMOD_CTRL = 0x00C0
 _KMOD_ALT = 0x0300

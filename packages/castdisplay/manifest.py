@@ -4,7 +4,7 @@
 
 # Freezing castdisplay into a firmware. Every module is pure Python. The
 # displays build on displaydev's FBDisplay and uibcinput on keys, both in
-# pydevices. On a board, CastDisplay and HlsDisplay stream through the
+# OmniPython. On a board, CastDisplay and HlsDisplay stream through the
 # firmware's castif module (ESP32-P4, with h264enc and tsmux); pycast is
 # CPython's stand-in and is never imported on a board.
 metadata(

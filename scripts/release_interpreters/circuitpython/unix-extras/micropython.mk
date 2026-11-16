@@ -1,5 +1,5 @@
 # What the CircuitPython interpreter attached to a release adds to
-# CircuitPython's unix coverage variant beyond the PyDevices modules, as a user
+# CircuitPython's unix coverage variant beyond the OmniPython modules, as a user
 # C module so CircuitPython's own tree is never edited. release_interpreters.sh
 # passes this directory to build_mp.py --modules.
 #

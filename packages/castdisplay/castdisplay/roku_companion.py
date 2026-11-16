@@ -52,7 +52,7 @@ import socket
 import time
 
 # Frames go to the TV as PNG through pngio: MicroPython's built-in module, or
-# pydevices-desktop's pngio.py over Pillow on CPython. Compressed, a typical
+# omnipython-desktop's pngio.py over Pillow on CPython. Compressed, a typical
 # 480x270 screen is a few kB rather than 389 kB, which is what decides how many
 # frames a second the TV can fetch over Wi-Fi.
 try:
@@ -64,8 +64,8 @@ except ImportError:
 def _png_encoder():
     if pngio is None:
         raise RuntimeError(
-            "RokuDisplay needs pngio: MicroPython firmware built with it (micropython-pydevices' "
-            "modules/pngio), or on CPython pydevices-desktop and Pillow (pip install pillow)"
+            "RokuDisplay needs pngio: MicroPython firmware built with it (omnipython-builds' "
+            "modules/pngio), or on CPython omnipython-desktop and Pillow (pip install pillow)"
         )
     return pngio.PngEncoder()
 
@@ -194,13 +194,13 @@ def _routed_ip(target_host):
         pass
     ip = _ip_from_proc(target_host)
     if ip is None:
-        raise OSError("can't tell this machine's address; set PYDEVICES_MY_IP")
+        raise OSError("can't tell this machine's address; set OMNIPYTHON_MY_IP")
     return ip
 
 
 def _get_local_ip(target_host):
     """Find the local IP address routable to target_host."""
-    env_ip = _getenv("PYDEVICES_MY_IP")
+    env_ip = _getenv("OMNIPYTHON_MY_IP")
     if env_ip:
         return env_ip
     ip = _routed_ip(target_host)
@@ -208,7 +208,7 @@ def _get_local_ip(target_host):
     # (WSL's mirrored networking mode shares the PC's LAN address instead.)
     if ip.startswith("172."):
         raise OSError(
-            "this machine's address %s isn't reachable from the TV; set PYDEVICES_MY_IP "
+            "this machine's address %s isn't reachable from the TV; set OMNIPYTHON_MY_IP "
             "to its LAN address, or use WSL's mirrored networking mode" % ip
         )
     return ip
@@ -1289,9 +1289,9 @@ class RokuAudioSink:
             pass
 
 
-# Register RokuDisplay with PyDevices' experimental backend registry, so a
+# Register RokuDisplay with OmniPython's experimental backend registry, so a
 # config that says ``backends.require("display", "roku", module="castdisplay.roku_companion")``
-# gets it from AutoDisplay(width, height, tv=ADDRESS). PyDevices before 0.7.7
+# gets it from AutoDisplay(width, height, tv=ADDRESS). OmniPython before 0.7.7
 # has no registry; there the display is still built by hand.
 try:
     import backends

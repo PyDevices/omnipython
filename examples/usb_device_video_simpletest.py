@@ -8,7 +8,7 @@ it. Instead of a sensor it sends a 160x120 picture of a grey ramp that slides
 sideways, so you can tell frames are arriving live. Replace ``make_frame()``
 with a capture from a real camera to send its picture.
 
-Needs: an ESP32-S2, S3 or P4 board running MicroPython with the PyDevices
+Needs: an ESP32-S2, S3 or P4 board running MicroPython with the OmniPython
 streaming endpoints, with ``usb-device`` and ``usb-device-video`` installed.
 Plug the board's USB device port into your computer. The program keeps the
 board's serial port, so the REPL stays on the same cable.

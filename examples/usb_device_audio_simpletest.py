@@ -9,7 +9,7 @@ device in any sound recorder, or in your computer's sound settings, and the
 level meter shows the tone. Replace ``PERIOD`` with frames from a real source
 to send your own sound.
 
-Needs: an ESP32-S2, S3 or P4 board running MicroPython with the PyDevices
+Needs: an ESP32-S2, S3 or P4 board running MicroPython with the OmniPython
 streaming endpoints, with ``usb-device`` and ``usb-device-audio`` installed.
 Plug the board's USB device port into your computer. The program keeps the
 board's serial port, so the REPL stays on the same cable.

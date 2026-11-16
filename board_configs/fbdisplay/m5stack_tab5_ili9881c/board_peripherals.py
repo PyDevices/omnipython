@@ -205,7 +205,7 @@ def _pcm_out(format=None, *, latency=None, queue_ms=None):
         # and never opens ``machine.I2S`` on this port -- the pump's own I2S
         # channel is the only owner. On a firmware without it these two are
         # inert. Without them this board plays every sample on machine.I2S
-        # and the pump sits idle (PyDevices/pydevices#41).
+        # and the pump sits idle (PyDevices/omnipython#41).
         # PUMP WIRING UNVERIFIED ON HARDWARE (2026-09-23): copied from the
         # Waveshare P4 / T-Embed pattern; nobody here has a Tab5.
         wire=AUDIO_OUT.wire,

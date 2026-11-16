@@ -21,7 +21,7 @@ its x scale.
 and the battery (``battery``).
 
 Copy these two files, ``gc9a01.py``, ``chsc6x.py`` (the CircuitPython one),
-``pcf8563.py``, and pydevices' ``displaydev`` and ``boarddev`` to CIRCUITPY.
+``pcf8563.py``, and OmniPython's ``displaydev`` and ``boarddev`` to CIRCUITPY.
 """
 
 import board

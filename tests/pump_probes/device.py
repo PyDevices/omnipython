@@ -101,7 +101,7 @@ class Tee:
     # SDL device waits for 96 000 B before it unpauses, so each side waits for
     # the other and the stream stops after 12 writes. Found the hard way by
     # this probe's first run -- the instrument planted the fault, and it was
-    # filed as pydevices#54.
+    # filed as omnipython#54.
     #
     # It was `self._prebuffer_bytes = getattr(inner, "_prebuffer_bytes", 0)`
     # here: a wrapper reaching for a private attribute because the public

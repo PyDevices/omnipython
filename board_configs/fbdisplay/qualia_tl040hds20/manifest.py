@@ -8,7 +8,7 @@ metadata(
     version="0.1",
 )
 
-require("pydevices")
+require("omnipython")
 require("ft6x36")
 require("pca9554")
 

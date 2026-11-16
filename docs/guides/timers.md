@@ -1,7 +1,7 @@
 # multimer
 
 One `Timer` with `machine.Timer`'s shape, one clock, and one place that
-delivers callbacks, on every interpreter PyDevices runs on. The script ends,
+delivers callbacks, on every interpreter OmniPython runs on. The script ends,
 the prompt comes back, and the timers keep firing.
 
 ```python
@@ -88,7 +88,7 @@ instead: `sleep_ms`, `pump`, `run_until`, or the loop that keeps a script
 running after its last line. So `sys.exit()` from a timer ends the program
 the same way on every host. A board's REPL that is back at its prompt drops
 what multimer kept, because the command it was meant for has ended. On
-[OmniPython firmware](https://github.com/PyDevices/micropython-pydevices), a
+[OmniPython firmware](https://github.com/PyDevices/omnipython-builds), a
 Ctrl-C that lands in a callback also stops the code the callback
 interrupted, so one press stops a command at the REPL however much of the
 time your timers take.
@@ -102,7 +102,7 @@ the timer pauses after each pass for as long as the pass took, up to
 instead of taking the thread from your code. At a MicroPython board's own
 prompt it runs back to back too once the REPL has waited half a second with
 no input, on firmware that has `micropython.repl_idle_ms()`
-([OmniPython firmware](https://github.com/PyDevices/micropython-pydevices)
+([OmniPython firmware](https://github.com/PyDevices/omnipython-builds)
 for ESP32 boards); a command, a paste or a WebREPL file transfer
 gets the pause while it runs. Other firmware can't tell a waiting REPL from a
 running command, so the pause applies at its prompt; to run a slow timer back
@@ -168,7 +168,7 @@ and `multimer.loop_running()` when a library must know whether a loop is up;
 `get_event_loop()` and `get_running_loop()` are not portable enough for that
 test across MicroPython and CircuitPython.
 
-## PyDevices integration
+## OmniPython integration
 
 `appdev.App` is built on this: `app.every()` returns a `multimer.Timer`, the
 device service tick and each display's refresh are ordinary timers you see in
@@ -179,6 +179,6 @@ display's `frame_clock`. Neither needs `app.run()`.
 ## Next
 
 - [Timer internals and the wake sources](../how-it-works/multimer-internals.md)
-- [Upgrading from pydevices 0.5](upgrade-multimer-from-0.5.md)
+- [Upgrading from OmniPython 0.5](upgrade-multimer-from-0.5.md)
 - [App and board config](write-an-application.md)
 - [Displays](displays.md)

@@ -2,7 +2,7 @@
 # SPDX-FileCopyrightText: 2026 Brad Barnett
 #
 # SPDX-License-Identifier: MIT
-"""Build the PyDevices package library: a mip index, and a tree firmware builds require() from.
+"""Build the OmniPython package library: a mip index, and a tree firmware builds require() from.
 
 From the repository root:
 
@@ -11,7 +11,7 @@ From the repository root:
     python tools/libbuild.py compare build/lib/index https://lib.omnipython.org
 
 ``build`` assembles every package this repository publishes (the ones
-``mip-split.toml`` names, plus ``pydevices`` and ``pydevices-desktop``, all at
+``mip-split.toml`` names, plus ``omnipython`` and ``omnipython-desktop``, all at
 the repository's version), the packages in their own folders here that
 ``lib-lock.json`` lists under ``folders`` (palettes, pdwidgets and iconkit, each
 at the version in its folder's ``VERSION``), and every package
@@ -20,7 +20,7 @@ at the version in its folder's ``VERSION``), and every package
 beside its sources. A firmware manifest uses it with::
 
     add_library("omnipython-lib", "<out>/library")
-    require("pydevices", library="omnipython-lib")
+    require("omnipython", library="omnipython-lib")
 
 It then compiles that tree into ``<out>/index``, the layout ``mip`` reads:
 ``package/<mpy version>/<name>/latest.json``, ``package/py/<name>/...`` and the
@@ -65,10 +65,10 @@ AUTHOR = "Brad Barnett"
 
 #: The two packages of this repository that also exist on PyPI under the
 #: same name. Every other package says nothing about PyPI.
-PYPI_DISTRIBUTIONS = frozenset({"pydevices", "pydevices-desktop"})
+PYPI_DISTRIBUTIONS = frozenset({"omnipython", "omnipython-desktop"})
 
 #: Every key a mip-split.toml section may use. An unknown key fails the
-#: build, so a misspelt ``own-package`` can't quietly ship inside pydevices.
+#: build, so a misspelt ``own-package`` can't quietly ship inside OmniPython.
 MIP_SPLIT_KEYS = frozenset({"host-only", "own-package", "requires", "pypi-extras", "pypi-desktop", "top-level"})
 
 #: The desktop package ships utils/ plus this board config, whole.
@@ -79,7 +79,7 @@ DESKTOP_BOARD_DIR = "board_configs/desktop"
 #: install by copying, not with mip).
 BOARD_ROOT = "board_configs"
 BOARD_SKIP = frozenset({"cp"})
-#: The desktop board config ships inside pydevices-desktop; its board package
+#: The desktop board config ships inside omnipython-desktop; its board package
 #: brings that, and its manifest.py is the firmware freeze manifest.
 DESKTOP_BOARD_PACKAGE = "desktop"
 
@@ -88,7 +88,7 @@ DRIVERS_DIR = "drivers"
 DRIVERS_FILE = "drivers/drivers.toml"
 DRIVER_KEYS = frozenset({"version", "description", "modules", "requires", "native"})
 
-#: Packages pydevices once carried copies of and now leaves to micropython-lib.
+#: Packages OmniPython once carried copies of and now leaves to micropython-lib.
 #: A board that imports one must require it, so a firmware build freezes it.
 MOVED_UPSTREAM = frozenset({"sdcard", "bmi270"})
 
@@ -101,7 +101,7 @@ UNTESTED_DIR = "untested"
 
 #: The PyScript filesystem table the index carries (with --base-url): the
 #: desktop stack, fetched from the index instead of from GitHub.
-PYSCRIPT_TOML = "pydevices-desktop.toml"
+PYSCRIPT_TOML = "omnipython-desktop.toml"
 PYSCRIPT_PACKAGES = ("desktop", "bledev")
 
 #: micropython-lib's own library folders, searched for a require() this
@@ -324,7 +324,7 @@ def read_split(root: Path) -> dict[str, dict]:
         elif "requires" in section and not section.get("own-package"):
             raise BuildError(
                 f"{MIP_SPLIT_FILE} [{package}] has requires but is not an own-package; "
-                f"a package inside pydevices has no manifest of its own to put them in"
+                f"a package inside OmniPython has no manifest of its own to put them in"
             )
     return declared
 
@@ -412,13 +412,13 @@ class Tree:
 
 
 def assemble_repo_packages(root: Path, lock: Lock, version: str, tree: Tree, library: str, local: frozenset[str]) -> None:
-    """This repository's packages: pydevices, pydevices-desktop, own-packages, top-level ones."""
+    """This repository's packages: OmniPython, omnipython-desktop, own-packages, top-level ones."""
     split = read_split(root)
     own = {name: section for name, section in split.items() if section.get("own-package")}
     top_level = [name for name, section in split.items() if section.get("top-level")]
     host_only = {name: _host_only(root, name, section) for name, section in split.items() if not section.get("top-level")}
 
-    for name in ("pydevices", "pydevices-desktop", *own):
+    for name in ("omnipython", "omnipython-desktop", *own):
         if name not in lock.repo:
             raise BuildError(f"{LOCKFILE} has no repo.{name} entry (its description)")
         if lock.repo[name].get("upstream"):
@@ -434,7 +434,7 @@ def assemble_repo_packages(root: Path, lock: Lock, version: str, tree: Tree, lib
         destination.mkdir(parents=True)
         return destination
 
-    package = add("pydevices", "lib/")
+    package = add("omnipython", "lib/")
     payloads: list[str] = []
     names: list[str] = []
     host_components: list[tuple[Path, frozenset[str]]] = []
@@ -478,9 +478,9 @@ def assemble_repo_packages(root: Path, lock: Lock, version: str, tree: Tree, lib
         raise BuildError("lib/ contains colliding module and package names")
     (package / "manifest.py").write_text(
         render_manifest(
-            description=lock.repo["pydevices"]["description"],
+            description=lock.repo["omnipython"]["description"],
             version=version,
-            pypi="pydevices",
+            pypi="omnipython",
             requires=(),
             payloads=tuple(payloads),
             library=library,
@@ -514,7 +514,7 @@ def assemble_repo_packages(root: Path, lock: Lock, version: str, tree: Tree, lib
             elif path.name != "package.json" and _publishable(path):
                 _copy(path, destination / path.name)
 
-    desktop = add("pydevices-desktop", "lib/ host-only modules, utils/")
+    desktop = add("omnipython-desktop", "lib/ host-only modules, utils/")
     desktop_payloads: list[str] = []
     for source, split_names in host_components:
         host_files = sorted(p.name for p in source.glob("*.py") if p.stem in split_names)
@@ -532,10 +532,10 @@ def assemble_repo_packages(root: Path, lock: Lock, version: str, tree: Tree, lib
             desktop_payloads.append(_payload(source))
     (desktop / "manifest.py").write_text(
         render_manifest(
-            description=lock.repo["pydevices-desktop"]["description"],
+            description=lock.repo["omnipython-desktop"]["description"],
             version=version,
-            pypi="pydevices-desktop",
-            requires=("pydevices",),
+            pypi="omnipython-desktop",
+            requires=("omnipython",),
             payloads=tuple(desktop_payloads),
             library=library,
             local=local,
@@ -668,7 +668,7 @@ def assemble_folder(folder: Folder, root: Path, tree: Tree, library: str, local:
 def local_names(root: Path, lock: Lock) -> frozenset[str]:
     """Every package name the library will hold, known before assembling it."""
     split = read_split(root)
-    names = {"pydevices", "pydevices-desktop", *lock.pinned, *lock.folders}
+    names = {"omnipython", "omnipython-desktop", *lock.pinned, *lock.folders}
     for pinned in lock.pinned.values():
         names.update(pinned.packages)
     names.update(find_boards(root))
@@ -819,7 +819,7 @@ def assemble_boards(root: Path, boards: dict[str, Path], version: str, tree: Tre
                 description="The board config for every desktop, browser and Android host: AutoDisplay picks the window",
                 version=version,
                 pypi=None,
-                requires=("pydevices-desktop",),
+                requires=("omnipython-desktop",),
                 payloads=tuple(payloads),
                 library=library,
                 local=local,
@@ -1268,7 +1268,7 @@ def _flatten(index: Path, kind: str, name: str, seen: set[str] | None = None) ->
 def write_pyscript_toml(index: Path, base_url: str, packages: tuple[str, ...], out: Path) -> int:
     """A PyScript [files] table that fetches the desktop stack's .py files from the index."""
     lines = [
-        "# The PyDevices desktop stack for PyScript, served by the package index.",
+        "# The OmniPython desktop stack for PyScript, served by the package index.",
         "# Written by tools/libbuild.py with the index it points at. Do not edit by hand.",
         "",
         "[files]",
@@ -1293,12 +1293,12 @@ def write_landing_page(out: Path, base_url: str, entries: list[dict]) -> None:
         f"<td>{html.escape(p['description'])}</td></tr>"
         for p in entries
     )
-    example = html.escape(f'mip.install("pydevices", index="{base_url}")', quote=False)
+    example = html.escape(f'mip.install("omnipython", index="{base_url}")', quote=False)
     page = f"""<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>PyDevices package index</title></head>
+<title>OmniPython package index</title></head>
 <body>
-<h1>PyDevices package index</h1>
+<h1>OmniPython package index</h1>
 <p>Install a package on a board with <code>mip</code>:</p>
 <pre>import mip
 {example}</pre>
@@ -1315,18 +1315,18 @@ def write_landing_page(out: Path, base_url: str, entries: list[dict]) -> None:
 # The GitHub installers: each board's package.json, written from its manifest.py
 #
 # Until the index is served, a board installs with
-# mip.install("github:PyDevices/pydevices/<folder>"), which reads the
+# mip.install("github:PyDevices/omnipython/<folder>"), which reads the
 # package.json beside its manifest.py. They're generated, so the two can't
 # disagree; `installers --check` fails when one is stale.
 
-GITHUB_REPO = "PyDevices/pydevices"
+GITHUB_REPO = "PyDevices/omnipython"
 #: Where an upstream package a board requires lives in micropython-lib.
 UPSTREAM_GITHUB = {
     "sdcard": "micropython/micropython-lib/micropython/drivers/storage/sdcard/sdcard.py",
     "bmi270": "micropython/micropython-lib/micropython/drivers/imu/bmi270/bmi270.py",
 }
 #: Packages an installer names in "deps" (from mip's index), not by file.
-INSTALLER_DEPS = frozenset({"pydevices", "pydevices-desktop", "pygraphics"})
+INSTALLER_DEPS = frozenset({"omnipython", "omnipython-desktop", "pygraphics"})
 #: Driver modules that stand in on MicroPython for a CircuitPython core module,
 #: so a CircuitPython config's installer leaves them out.
 CIRCUITPYTHON_CORE_SHIMS = frozenset({"digitalio"})
@@ -1409,7 +1409,7 @@ def render_installers(root: Path) -> dict[Path, str]:
         files = sorted(p.name for p in desktop.iterdir() if _publishable(p) and p.is_file())
         body = {
             "urls": [[f, f"github:{GITHUB_REPO}/{DESKTOP_BOARD_DIR}/{f}"] for f in files],
-            "deps": [["pydevices-desktop", "latest"]],
+            "deps": [["omnipython-desktop", "latest"]],
             "description": "The board config for every desktop, browser and Android host",
             "generated": "by tools/libbuild.py installers",
         }
@@ -1449,7 +1449,7 @@ def render_cp_installers(root: Path, drivers: dict[str, Driver]) -> dict[Path, s
     A CircuitPython config has no manifest.py, so its installer is read from
     what its files import: the drivers in drivers/ by file, Adafruit's
     libraries under "circuitpython" (only omip on CircuitPython reads it), and
-    pydevices as a dep when it imports a library from lib/.
+    OmniPython as a dep when it imports a library from lib/.
     """
     base = root / BOARD_ROOT / "cp"
     if not base.is_dir():
@@ -1483,7 +1483,7 @@ def render_cp_installers(root: Path, drivers: dict[str, Driver]) -> dict[Path, s
             elif name.startswith("adafruit_") or name in ADAFRUIT_UNPREFIXED:
                 adafruit.append([name, "latest"])
             elif name in library and not deps:
-                deps.append(["pydevices", "latest"])
+                deps.append(["omnipython", "latest"])
         main = folder / "board_config.py"
         body = {
             "urls": urls,

@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: MIT
 
 """svgio on CPython and Pyodide: SVG decode, the same API as MicroPython's
-built-in svgio (micropython-pydevices' modules/svgio).
+built-in svgio (omnipython-builds' modules/svgio).
 
     d = svgio.SvgDecoder()
     w, h = d.open("wifi.svg", width=48)          # or bytes, or a stream

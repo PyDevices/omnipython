@@ -273,7 +273,7 @@ def ports(ring=256, stamps=None, name=None):
 
     The built-in USB serial port stays, so the REPL survives. Calling this
     re-enumerates the board on the host, which lists it as *name*: the
-    board's name, ``boarddev.name()`` from pydevices, when None.
+    board's name, ``boarddev.name()`` from OmniPython, when None.
 
     Raises:
         AttributeError: *name* is None and the board's boarddev, frozen into

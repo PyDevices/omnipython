@@ -56,7 +56,7 @@ print("Click Tap me on the canvas.")
 [your first program](get-started/first-program.md). The
 [guides](guides/lay-out-widgets.md) take one task each, the
 docstrings in
-[`lib/pdwidgets`](https://github.com/PyDevices/pydevices/tree/main/packages/pdwidgets/lib/pdwidgets)
+[`lib/pdwidgets`](https://github.com/PyDevices/omnipython/tree/main/packages/pdwidgets/lib/pdwidgets)
 document every widget and name, and
 [How it works](how-it-works/index.md) explains the design.
 

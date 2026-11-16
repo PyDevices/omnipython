@@ -36,7 +36,7 @@ and agree with CircuitPython's lilygo_twatch_s3 board definition:
     interrupts                           PMU 21, RTC 17, BMA423 14, touch 16
 
 ``pcm_in`` needs firmware whose ``machine.I2S`` has PDM receive
-(``I2S.PDM_RX``, in PyDevices' MicroPython builds), on I2S0, so the speaker
+(``I2S.PDM_RX``, in OmniPython's MicroPython builds), on I2S0, so the speaker
 is on I2S1 and the two can run at once.
 
 The battery charger is the AXP2101's own. There is no thermistor on this
@@ -563,7 +563,7 @@ def _pcm_in(format=None, *, latency=None, queue_ms=None):
     from audiodev import check_latency, queue_bytes
 
     if not hasattr(I2S, "PDM_RX"):
-        raise OSError("this firmware's machine.I2S has no PDM_RX: the microphone needs a PyDevices build")
+        raise OSError("this firmware's machine.I2S has no PDM_RX: the microphone needs a OmniPython build")
     check_latency(latency)
     wire, source = negotiate(AUDIO_IN, format)
     if source is not wire:

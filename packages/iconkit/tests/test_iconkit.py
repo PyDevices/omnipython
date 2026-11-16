@@ -6,10 +6,10 @@ CPython and on unix MicroPython.
 
     python -m unittest tests.test_iconkit
 
-The generator needs Pillow. MicroPython comes from ``PYDEVICES_MICROPYTHON``,
+The generator needs Pillow. MicroPython comes from ``OMNIPYTHON_MICROPYTHON``,
 ``micropython`` on PATH, or a ``bin/micropython`` in a folder above this one;
 with none, the MicroPython half skips loudly, and fails when
-``PYDEVICES_REQUIRE_MICROPYTHON=1``.
+``OMNIPYTHON_REQUIRE_MICROPYTHON=1``.
 """
 
 import contextlib
@@ -240,7 +240,7 @@ class Shipped(unittest.TestCase):
 
 def _micropython():
     candidates = []
-    explicit = os.environ.get("PYDEVICES_MICROPYTHON")
+    explicit = os.environ.get("OMNIPYTHON_MICROPYTHON")
     if explicit:
         candidates.append(explicit)
     found = shutil.which("micropython")
@@ -274,7 +274,7 @@ class Contract(unittest.TestCase):
         interpreter = _micropython()
         if interpreter is None:
             message = "no MicroPython: iconkit's checks did NOT run on it"
-            if os.environ.get("PYDEVICES_REQUIRE_MICROPYTHON") == "1":
+            if os.environ.get("OMNIPYTHON_REQUIRE_MICROPYTHON") == "1":
                 self.fail(message)
             sys.stderr.write("\n*** " + message + " ***\n")
             self.skipTest(message)

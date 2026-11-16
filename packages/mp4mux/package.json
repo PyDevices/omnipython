@@ -1,6 +1,6 @@
 {
   "urls": [
-    ["mp4mux/__init__.py", "github:PyDevices/pydevices/packages/mp4mux/mp4mux/__init__.py"]
+    ["mp4mux/__init__.py", "github:PyDevices/omnipython/packages/mp4mux/mp4mux/__init__.py"]
   ],
   "deps": [],
   "version": "0.1.0"

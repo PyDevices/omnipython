@@ -7,9 +7,9 @@
 Lives in pdwidgets because it walks a material-design-icons ``png/`` tree used
 for icon authoring here. Requires a sibling **gallery** checkout (board_config,
 ``png``, display stack), ``pypng``, and the icons ``png/`` tree (or
-``PDWIDGETS_PNG_DIR`` / ``PYDEVICES_PNG_DIR`` / ``MATERIAL_DESIGN_ICONS_PNG``).
+``PDWIDGETS_PNG_DIR`` / ``OMNIPYTHON_PNG_DIR`` / ``MATERIAL_DESIGN_ICONS_PNG``).
 
-Run from the pdwidgets repo root (or with ``PYDEVICES_EXAMPLES_ROOT`` set)::
+Run from the pdwidgets repo root (or with ``OMNIPYTHON_EXAMPLES_ROOT`` set)::
 
     SDL_VIDEODRIVER=dummy ../../gallery/.venv/bin/python tools/png_test.py
 """
@@ -25,11 +25,11 @@ _ROOT = Path(__file__).resolve().parents[1]
 
 
 def _resolve_pydevices_examples_root() -> Path:
-    env_root = os.environ.get("PYDEVICES_EXAMPLES_ROOT")
+    env_root = os.environ.get("OMNIPYTHON_EXAMPLES_ROOT")
     candidates = []
     if env_root:
         candidates.append(Path(env_root))
-    candidates.append(_ROOT.parents[1] / "gallery")  # beside the pydevices clone
+    candidates.append(_ROOT.parents[1] / "gallery")  # beside the OmniPython clone
     candidates.append(_ROOT.parent / "gallery")
     for root in candidates:
         if (root / "lib" / "utils").is_dir():
@@ -37,7 +37,7 @@ def _resolve_pydevices_examples_root() -> Path:
     tried = ", ".join(str(p) for p in candidates)
     raise SystemExit(
         "gallery checkout not found (needed for board_config / png). "
-        f"Set PYDEVICES_EXAMPLES_ROOT or clone sibling gallery. Tried: {tried}"
+        f"Set OMNIPYTHON_EXAMPLES_ROOT or clone sibling gallery. Tried: {tried}"
     )
 
 
@@ -104,7 +104,7 @@ def _is_dir(path):
 
 def _resolve_png_dir():
     getenv = getattr(os, "getenv", None)
-    for key in ("PDWIDGETS_PNG_DIR", "PYDEVICES_PNG_DIR", "MATERIAL_DESIGN_ICONS_PNG"):
+    for key in ("PDWIDGETS_PNG_DIR", "OMNIPYTHON_PNG_DIR", "MATERIAL_DESIGN_ICONS_PNG"):
         override = getenv(key) if getenv is not None else None
         if override and _is_dir(override):
             return _norm_path(override).rstrip("/") + "/"

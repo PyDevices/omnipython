@@ -72,7 +72,7 @@ wrapping, names, and cache behavior remain consistent.
   and CircuitPython alike.
 - `swapped=True` changes only 16-bit RGB565 output. Do not use it to model a
   display driver or to compensate for an unrelated pixel-format mismatch.
-- The package remains pure Python with no PyDevices runtime dependency. Put
+- The package remains pure Python with no OmniPython runtime dependency. Put
   board- or framework-specific behavior in the consuming project.
 
 For the exact bit layouts and HSV calculations, use
@@ -83,13 +83,13 @@ the [guides](../guides/fill-a-framebuffer-with-pygraphics.md) rather than copyin
 ## Where it ships
 
 One source tree ships through several channels. Setuptools packages
-`lib/palettes` as `pydevices-palettes` for CPython; `mip` installs it on
+`lib/palettes` as `omnipython-palettes` for CPython; `mip` installs it on
 MicroPython; a firmware build can freeze it by including `manifest.py`; and
 `palettes.toml` gives the PyScript gallery its file list. All of them consume
 the same package, so a library change belongs in `lib/palettes`.
 
 [Install](../get-started/install.md) has the commands, and the
-[contributor guide](https://github.com/PyDevices/pydevices/blob/main/packages/palettes/CONTRIBUTING.md)
+[contributor guide](https://github.com/PyDevices/omnipython/blob/main/packages/palettes/CONTRIBUTING.md)
 has the repository map and how to run the tests.
 
 ## Where to read next

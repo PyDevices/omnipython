@@ -8,7 +8,7 @@ metadata(
     version="0.3",
 )
 
-require("pydevices")
+require("omnipython")
 require("gt911")
 require("pi4ioe5v")
 require("tab5_ili9881c_init")

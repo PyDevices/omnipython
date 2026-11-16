@@ -10,7 +10,7 @@ sound, so a recorder pointed at "PyDevices Headset" hears whatever you play to
 to make a real headset: play ``headset.ring`` out and write what you record to
 ``headset.mic``.
 
-Needs: an ESP32-S2, S3 or P4 board running MicroPython with the PyDevices
+Needs: an ESP32-S2, S3 or P4 board running MicroPython with the OmniPython
 streaming endpoints, with ``usb-device`` and ``usb-device-audio`` installed.
 Plug the board's USB device port into your computer. A headset takes two of the
 controller's four IN endpoints beside the serial port's two, so the board

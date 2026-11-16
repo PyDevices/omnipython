@@ -1,6 +1,6 @@
 {
   "urls": [
-    ["_boardname.py", "github:PyDevices/pydevices/packages/_boardname/_boardname.py"]
+    ["_boardname.py", "github:PyDevices/omnipython/packages/_boardname/_boardname.py"]
   ],
   "deps": [],
   "version": "0.1.0"

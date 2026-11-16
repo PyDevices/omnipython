@@ -8,7 +8,7 @@ metadata(
     version="0.1.0",
 )
 
-require("pydevices")
+require("omnipython")
 require("es8311")
 require("camera_sensors")
 require("imx219")

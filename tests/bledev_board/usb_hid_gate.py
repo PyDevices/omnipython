@@ -12,7 +12,7 @@ consumer control, so the script's gamepad steps are skipped, as they are over
 BLE without ``GAMEPAD``.
 
 Needs ``hid_script.py`` beside it, ``usb_hid``, ``adafruit_hid``, and
-pydevices' ``events`` and ``keys`` (which ``hid_script`` imports). On Windows,
+OmniPython's ``events`` and ``keys`` (which ``hid_script`` imports). On Windows,
 ``usb_hid_gate_windows.py`` hears it. ``PLANT = True`` drops Shift from the
 first character typed, as in ``hid_peripheral.py``; the comparison must then
 fail. ``run()`` returns the number of steps sent.

@@ -21,19 +21,19 @@ There is no `board_config.py` for your hardware. Install a
 
 ```python
 import mip
-mip.install("github:PyDevices/pydevices/board_configs/sdldisplay")  # desktop SDL2
+mip.install("github:PyDevices/omnipython/board_configs/sdldisplay")  # desktop SDL2
 ```
 
 ## Install failures
 
-### `pip` cannot resolve a PyDevices distribution
+### `pip` cannot resolve a OmniPython distribution
 
-PyDevices wheels are on **TestPyPI**, and some of their dependencies are on
+OmniPython wheels are on **TestPyPI**, and some of their dependencies are on
 **PyPI** only. Pass both indexes or the install fails:
 
 ```bash
 pip install -i https://test.pypi.org/simple/ \
-  --extra-index-url https://pypi.org/simple/ pydevices-desktop
+  --extra-index-url https://pypi.org/simple/ omnipython-desktop
 ```
 
 ### `mip` network or SSL errors on device
@@ -46,7 +46,7 @@ Wi-Fi on the board for OTA installs.
 CircuitPython has no MicroPython-compatible `framebuf`. Install the shim from
 [pygraphics](https://github.com/PyDevices/pygraphics)
 ([`lib/pygraphics/framebuf.py`](https://github.com/PyDevices/pygraphics/blob/main/lib/pygraphics/framebuf.py); MIP package `pygraphics`, TestPyPI
-`pydevices-pygraphics`).
+`omnipython-pygraphics`).
 
 ## Display issues
 
@@ -61,7 +61,7 @@ CircuitPython has no MicroPython-compatible `framebuf`. Install the shim from
 
 1. Verify the correct [board config](../boards/board-configs.md) for your wiring.
 2. Check `requires_byteswap` / `BusDisplay.disable_auto_byteswap()`
-   (defined in [`displaydev`](https://github.com/PyDevices/pydevices/blob/main/lib/displaydev/__init__.py)).
+   (defined in [`displaydev`](https://github.com/PyDevices/omnipython/blob/main/lib/displaydev/__init__.py)).
 3. Confirm the SPI / I80 pins match your schematic.
 
 ### Touch coordinates wrong or inverted
@@ -79,7 +79,7 @@ smoothly. Mouse clicks and drags never show the square and are not laggy. This
 reproduces identically under `micropython`, CircuitPython, and CPython, with
 either `SDLDisplay` or `PGDisplay`.
 
-**Cause:** not a PyDevices bug. WSLg forwards touch from the Windows host over
+**Cause:** not a OmniPython bug. WSLg forwards touch from the Windows host over
 the RDP Input Extension Protocol
 ([MS-RDPEI](https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-rdpei/)),
 which negotiates `CS_READY_FLAGS_SHOW_TOUCH_VISUALS` and applies Windows' legacy
@@ -91,7 +91,7 @@ same WSLg session; disabling Windows' *Settings → Bluetooth & devices → Touc
 "Press and hold for right-click"* does **not** remove it, consistent with the
 gesture being applied at the RDP/WSLg layer.
 
-**Fix:** none from application code — PyDevices' SDL2 / PyGame event handling
+**Fix:** none from application code — OmniPython's SDL2 / PyGame event handling
 already treats touch and mouse identically. Native Windows builds
 (`micropython.exe`, `python.exe`) are unaffected because they receive touch
 directly from the Windows touch stack; native (non-WSL) Linux is unaffected too.
@@ -144,6 +144,6 @@ the lines yourself.
 ## Still stuck?
 
 Open an issue on the repository that owns the component, or ask in
-[pydevices Discussions](https://github.com/PyDevices/pydevices/discussions).
+[OmniPython Discussions](https://github.com/PyDevices/omnipython/discussions).
 Include board / OS, MicroPython or CPython version, the `board_config` path, and
 a minimal reproduction script.

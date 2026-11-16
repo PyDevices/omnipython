@@ -59,7 +59,7 @@ def _built_from(binary):
 def _cpython_oracle_candidate():
     """Return the workspace audiodsp source tree when its extension is built.
 
-    ``pydevices`` deliberately does not depend on ``omnipython-audiodsp``.  In
+    ``omnipython`` deliberately does not depend on ``omnipython-audiodsp``.  In
     the multi-repository workspace, though, include CPython in this integration
     parity test whenever the sibling checkout has an in-place extension for
     the running interpreter.
@@ -151,7 +151,7 @@ class AudioPlaybackGoldenTests(unittest.TestCase):
             # cost a filed bug: `bin/micropython` and `bin/micropython.exe`
             # carried audiodsp c5513a0 and 32d7131, nineteen commits apart,
             # and the diff between their renders was read as a fault in the
-            # win32 pump driver (pydevices#53). A difference between two
+            # win32 pump driver (omnipython#53). A difference between two
             # different DSP cores is not a port difference; say so instead of
             # asserting, because the assertion would be about the wrong thing.
             built = {name: _built_from(path)

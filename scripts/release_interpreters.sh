@@ -12,7 +12,7 @@
 #       $GITHUB_OUTPUT. Only a final tag (vX.Y.Z) is ever attached: a dev, a,
 #       b or rc release gets no interpreters, and a branch is only ever built.
 #       The optional refs override the commits release_interpreters/sources.lock
-#       pins for micropython-pydevices and omnipython-lvgl; a run that
+#       pins for omnipython-builds and omnipython-lvgl; a run that
 #       overrides one never attaches. Also prints mpp= and lvgl=, the pins.
 #
 #   release_interpreters.sh fetch <name> <dir> [<ref>]
@@ -21,15 +21,15 @@
 #       submodules (omnipython-lvgl's LVGL).
 #
 #   release_interpreters.sh build <target> <out-dir>
-#       Build one interpreter with micropython-pydevices' build_mp.py and put
+#       Build one interpreter with omnipython-builds' build_mp.py and put
 #       the files it makes in <out-dir>. Targets:
 #         mp-unix     micropython              (linux-x86_64)
 #         mp-windows  micropython.exe          (windows-amd64, MinGW cross build)
 #         mp-wasm     micropython.mjs, micropython.wasm
 #         cp-unix     circuitpython            (linux-x86_64)
 #       Environment:
-#         MPP_DIR  a micropython-pydevices checkout (required)
-#         PYD_DIR  the pydevices tree to build into the interpreters
+#         MPP_DIR  a omnipython-builds checkout (required)
+#         PYD_DIR  the OmniPython tree to build into the interpreters
 #                  (default: the one this script lives in)
 #         WS_DIR   cp-unix only: a directory holding a checkout of
 #                  omnipython-lvgl
@@ -69,7 +69,7 @@ gate() {
             ;;
     esac
     if [[ "$do_attach" == "true" && ( -n "$mpp_ref" || -n "$lvgl_ref" ) ]]; then
-        echo "error: will not attach interpreters built from another micropython-pydevices or omnipython-lvgl than sources.lock pins" >&2
+        echo "error: will not attach interpreters built from another omnipython-builds or omnipython-lvgl than sources.lock pins" >&2
         return 1
     fi
     echo "build=$build"
@@ -104,7 +104,7 @@ fetch() {
 
 build() {
     local target="${1:?target}" out="${2:?out-dir}"
-    : "${MPP_DIR:?set MPP_DIR to a micropython-pydevices checkout}"
+    : "${MPP_DIR:?set MPP_DIR to a omnipython-builds checkout}"
     local pyd="${PYD_DIR:-$(cd "$HERE/.." && pwd)}"
     local jobs="${JOBS:-$(nproc)}"
     local mpp
@@ -112,10 +112,10 @@ build() {
     mkdir -p "$out"
     out=$(cd "$out" && pwd)
 
-    # The release's own pydevices goes into the interpreter, not the commit
-    # micropython-pydevices pins for omnipython-lib: build_mp.py takes the library from
+    # The release's own OmniPython goes into the interpreter, not the commit
+    # omnipython-builds pins for omnipython-lib: build_mp.py takes the library from
     # modules/.omnipython-lib when it is there, and a link wins. The packages
-    # of the release (pydevices, palettes, pdwidgets) come out of this tree.
+    # of the release (OmniPython, palettes, pdwidgets) come out of this tree.
     if [[ ! -e "$mpp/modules/.omnipython-lib" ]]; then
         ln -s "$pyd" "$mpp/modules/.omnipython-lib"
     fi
@@ -123,18 +123,18 @@ build() {
     cd "$mpp"
     case "$target" in
         mp-unix)
-            JOBS="$jobs" python3 build_mp.py --port unix --variant pydevices --modules all
-            install -m 755 builds/unix/pydevices/micropython "$out/micropython"
+            JOBS="$jobs" python3 build_mp.py --port unix --variant omnipython --modules all
+            install -m 755 builds/unix/omnipython/micropython "$out/micropython"
             ;;
         mp-windows)
-            JOBS="$jobs" python3 build_mp.py --port windows --variant pydevices --modules all
-            install -m 755 builds/windows/pydevices/micropython.exe "$out/micropython.exe"
+            JOBS="$jobs" python3 build_mp.py --port windows --variant omnipython --modules all
+            install -m 755 builds/windows/omnipython/micropython.exe "$out/micropython.exe"
             ;;
         mp-wasm)
-            JOBS="$jobs" python3 build_mp.py --port webassembly --variant pydevices --modules all
-            sed -i 's/[[:space:]]\+$//' builds/webassembly/pydevices/micropython.mjs
-            install -m 755 builds/webassembly/pydevices/micropython.mjs "$out/micropython.mjs"
-            install -m 755 builds/webassembly/pydevices/micropython.wasm "$out/micropython.wasm"
+            JOBS="$jobs" python3 build_mp.py --port webassembly --variant omnipython --modules all
+            sed -i 's/[[:space:]]\+$//' builds/webassembly/omnipython/micropython.mjs
+            install -m 755 builds/webassembly/omnipython/micropython.mjs "$out/micropython.mjs"
+            install -m 755 builds/webassembly/omnipython/micropython.wasm "$out/micropython.wasm"
             ;;
         cp-unix)
             : "${WS_DIR:?set WS_DIR to a directory with a checkout of omnipython-lvgl}"
@@ -142,14 +142,14 @@ build() {
             ws=$(cd "$WS_DIR" && pwd)
             cp_dir="$HERE/release_interpreters/circuitpython"
             [[ -f "$ws/omnipython-lvgl/ports/circuitpython/manifest.py" ]] || { echo "error: $ws/omnipython-lvgl is not a checkout" >&2; return 1; }
-            # pydevices, pdwidgets and palettes are frozen from the library, by build_mp.py.
-            # pydevices must be named: pdwidgets imports its events module.
+            # OmniPython, pdwidgets and palettes are frozen from the library, by build_mp.py.
+            # OmniPython must be named: pdwidgets imports its events module.
             # The unix port's default variant, coverage, has the modules we want
             # and instruments the binary, which then reports on every exit that
             # it can't write its profile data to the machine that built it.
             JOBS="$jobs" python3 build_mp.py \
                 --interpreter circuitpython --port unix \
-                --modules "audiodsp,displayif,pygraphics,pydevices,pdwidgets,palettes,$ws/omnipython-lvgl/ports/circuitpython,$cp_dir/unix-extras" \
+                --modules "audiodsp,displayif,pygraphics,omnipython,pdwidgets,palettes,$ws/omnipython-lvgl/ports/circuitpython,$cp_dir/unix-extras" \
                 "CFLAGS_EXTRA=-fno-profile-arcs -fno-test-coverage" "LDFLAGS_EXTRA=-fno-profile-arcs -fno-test-coverage"
             install -m 755 builds/circuitpython/unix/coverage/micropython "$out/circuitpython"
             ;;

@@ -33,7 +33,7 @@ What `bledev` can do on each host, and what it can't. The
 | `bledev.cyclingpower` | Cycling Power Service (0x1818), with its control point | A peripheral: `CyclingPower` |
 | `bledev.runningspeed` | Running Speed and Cadence Service (0x1814), with its control point | A peripheral: `RunningSpeedCadence` |
 | `bledev.environmental` | Environmental Sensing Service (0x181A): temperature, humidity, pressure and UV index | A peripheral: `EnvironmentalSensing` |
-| `bledev.hid`, host | Keyboards, remotes and gamepads, as PyDevices events | `connect()` from a board or a laptop |
+| `bledev.hid`, host | Keyboards, remotes and gamepads, as OmniPython events | `connect()` from a board or a laptop |
 | `bledev.hid`, device | A keyboard, mouse, media remote and gamepad, with `battery` and `deviceinfo` inside it | `Peripheral.serve()` on a board |
 | `Service` and `Characteristic` | Your own GATT table, served or discovered | Each host, in the roles above |
 

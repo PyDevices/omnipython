@@ -1,5 +1,5 @@
 # The packages that keep a version of their own (palettes, pdwidgets and
-# iconkit) release apart from pydevices. A merged pull request that changes
+# iconkit) release apart from OmniPython. A merged pull request that changes
 # packages/<name>/VERSION
 # becomes the <name>-vX.Y.Z tag and a GitHub Release, created with the App
 # token so that publish-package-release.yml runs. A VERSION file that is new
@@ -73,7 +73,7 @@ jobs:
           app-id: ${{ secrets.PYDEVICES_APP_ID }}
           private-key: ${{ secrets.PYDEVICES_APP_PRIVATE_KEY }}
 
-      # --latest=false: the repository's "latest release" stays pydevices'.
+      # --latest=false: the repository's "latest release" stays OmniPython's.
       - name: Create tag and Release
         if: steps.detect.outputs.changed == 'true'
         env:

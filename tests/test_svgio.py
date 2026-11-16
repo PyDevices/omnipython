@@ -2,9 +2,9 @@
 #
 # SPDX-License-Identifier: MIT
 
-"""svgio.py (pydevices-desktop) on a desktop: MicroPython's svgio API over resvg and Pillow.
+"""svgio.py (omnipython-desktop) on a desktop: MicroPython's svgio API over resvg and Pillow.
 
-The full test is micropython-pydevices' modules/svgio/tests/test_svgio.py,
+The full test is omnipython-builds' modules/svgio/tests/test_svgio.py,
 which runs unchanged on CPython against this file, and whose renders its
 check_svgio_references.py compares. What is here is the CPython-only part:
 sizes, the three ways to decode, placement, and the message a desktop

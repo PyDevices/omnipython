@@ -14,8 +14,8 @@ from boarddev import env_int
 from displaydev.workerdisplay import WorkerDisplay
 from js import display_canvas
 
-width = env_int("PYDEVICES_WIDTH", int(display_canvas.width))
-height = env_int("PYDEVICES_HEIGHT", int(display_canvas.height))
+width = env_int("OMNIPYTHON_WIDTH", int(display_canvas.width))
+height = env_int("OMNIPYTHON_HEIGHT", int(display_canvas.height))
 
 display_drv = WorkerDisplay(display_canvas, width, height)
 

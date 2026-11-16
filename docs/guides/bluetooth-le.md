@@ -68,7 +68,7 @@ mip.install("bledev", index="https://lib.omnipython.org")
 
 Firmware that freezes aioble doesn't need it installed.
 
-On a laptop, bledev is inside the `pydevices` wheel. `pip install "pydevices[ble]"`
+On a laptop, bledev is inside the `omnipython` wheel. `pip install "omnipython[ble]"`
 adds bleak, which the laptop backend needs.
 
 On CircuitPython with Wi-Fi, `omip.install("bledev")` runs on the board too, once
@@ -78,8 +78,8 @@ Adafruit's `asyncio` library and `adafruit_ticks` in its place. At around -70 dB
 it usually loses the connection partway and raises `OSError`. Run it again: it
 keeps the files it already has. Or copy the files
 yourself: bledev isn't in a circup bundle. With the board's CIRCUITPY drive mounted, make a
-[`lib/bledev/`](https://github.com/PyDevices/pydevices/tree/main/lib/bledev) folder on it and copy these into it from
-[`lib/bledev/`](https://github.com/PyDevices/pydevices/tree/main/lib/bledev), as `.py` source (MicroPython's `.mpy` files
+[`lib/bledev/`](https://github.com/PyDevices/omnipython/tree/main/lib/bledev) folder on it and copy these into it from
+[`lib/bledev/`](https://github.com/PyDevices/omnipython/tree/main/lib/bledev), as `.py` source (MicroPython's `.mpy` files
 won't load on CircuitPython):
 
 - `__init__.py` and `cpble.py`, always;
@@ -95,7 +95,7 @@ asyncio`, which brings `adafruit_ticks`, or `omip.install("asyncio")` on the boa
 
 ## Getting an adapter
 
-The adapter is one radio. On a board with a PyDevices board config, it's the
+The adapter is one radio. On a board with a OmniPython board config, it's the
 `ble` role:
 
 ```python
@@ -359,7 +359,7 @@ REPL's password by default (or [pairing](#pairing-and-bonding)), sent to one
 extra characteristic, and until it's right
 every command is refused. One attempt per connection, and a wrong one is hung
 up on. Logging in to the REPL over the same connection unlocks files too,
-which is what [mpftp](https://github.com/PyDevices/mpftp) does. The protocol
+which is what [mpftp](https://github.com/PyDevices/mcuctl) does. The protocol
 has no checksum beyond the radio's own, so check what matters (mpftp compares
 SHA-256 after every transfer).
 
@@ -530,7 +530,7 @@ while True:
     await asyncio.sleep(0.001)
 ```
 
-The port is the contract the [`midiports`](https://github.com/PyDevices/pydevices/blob/main/packages/midiports/README.md) package
+The port is the contract the [`midiports`](https://github.com/PyDevices/omnipython/blob/main/packages/midiports/README.md) package
 documents: `read(nbytes)` returns MIDI bytes or `None` and never blocks,
 `readinto(buf, nbytes)` does the same into your buffer without allocating,
 `any()` says how many bytes are waiting, and `write(buf, nbytes)` sends.
@@ -551,7 +551,7 @@ max_conn_interval_us=7500)`. The latency that buys is in
 
 The packet format lives in `bledev.midi_codec`, pure Python with no
 imports: timestamps, running status, SysEx split across packets, and clock
-slipped into a SysEx. Its test vectors ([`tests/bledev_midi_vectors.json`](https://github.com/PyDevices/pydevices/blob/main/tests/bledev_midi_vectors.json)) were
+slipped into a SysEx. Its test vectors ([`tests/bledev_midi_vectors.json`](https://github.com/PyDevices/omnipython/blob/main/tests/bledev_midi_vectors.json)) were
 worked out by hand from the specification, and every interpreter checks
 against the same file.
 
@@ -612,7 +612,7 @@ Mouse(per.devices).move(x=40, y=-12)
 ```
 
 Install `adafruit_hid` on MicroPython with
-`mip.install("github:PyDevices/pydevices/bledev_hid")`: it fetches
+`mip.install("github:PyDevices/omnipython/bledev_hid")`: it fetches
 Adafruit's files at a release tag, with one file patched so
 `consumer_control` imports on MicroPython, and micropython-lib's
 `__future__`. Each `send_report()` returns once the radio has the report,
@@ -751,8 +751,8 @@ what trips people up on hardware: a name that only reaches an active scan, a
 transmit buffer that fills (`notify_buffers`), and a reader that falls behind
 (`queue_limit`).
 
-The contract's own checks are [`tests/bledev_contract.py`](https://github.com/PyDevices/pydevices/blob/main/tests/bledev_contract.py), a plain script so it
-runs on both interpreters. [`tests/test_bledev.py`](https://github.com/PyDevices/pydevices/blob/main/tests/test_bledev.py) runs it on CPython and on a
+The contract's own checks are [`tests/bledev_contract.py`](https://github.com/PyDevices/omnipython/blob/main/tests/bledev_contract.py), a plain script so it
+runs on both interpreters. [`tests/test_bledev.py`](https://github.com/PyDevices/omnipython/blob/main/tests/test_bledev.py) runs it on CPython and on a
 unix `micropython`, and then once per planted fault, each of which must make
 it fail:
 
@@ -766,7 +766,7 @@ python -m unittest tests.test_bledev
 
 Measured with MicroPython 1.30 preview on two ESP32-S3s about a metre apart,
 with Wi-Fi off. "7.5 ms" means a connection interval of 7.5 to 15 ms asked
-for in `connect()`. The harnesses are in [`tests/bledev_board/`](https://github.com/PyDevices/pydevices/tree/main/tests/bledev_board).
+for in `connect()`. The harnesses are in [`tests/bledev_board/`](https://github.com/PyDevices/omnipython/tree/main/tests/bledev_board).
 
 Board to board over nus (16 KB each way, verified byte for byte):
 

@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: MIT
 """Run two timers at once and stop them from a third.
 
-multimer gives every PyDevices host, board or desktop, the same Timer as
+multimer gives every OmniPython host, board or desktop, the same Timer as
 MicroPython's machine.Timer. Callbacks run on the main thread, between
 lines of your program, so they can touch anything it can. Here one timer
 ticks every quarter second, another every second, and a one-shot timer

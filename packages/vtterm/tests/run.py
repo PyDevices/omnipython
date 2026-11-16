@@ -9,7 +9,7 @@
 
 The tests are plain functions named ``test_*``. vtterm and palettes come from
 this checkout, ahead of any frozen copy; pygraphics comes from the
-interpreter (``pip install pydevices-pygraphics`` on CPython).
+interpreter (``pip install omnipython-pygraphics`` on CPython).
 pytest collects ``test_all`` from here too.
 """
 

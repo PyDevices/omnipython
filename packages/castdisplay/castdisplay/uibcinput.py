@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: MIT
 
 """The laptop's mouse, keyboard, touchscreen and remote, arriving over the
-cast's back channel, as a pydevices input device: a cursor the board
+cast's back channel, as an OmniPython input device: a cursor the board
 integrates from the relative mouse reports, clicks as touches at the cursor,
 fingers on a touchscreen as touches where they are, and HID keyboard and
 remote-control reports as the set of pressed K_* codes. Merged into a board's

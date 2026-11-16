@@ -6,11 +6,11 @@
 """
 display_driver.py - LVGL displaydev/input wiring and event loop for PyDevices.
 
-It lives in PyDevices/pydevices (``lib/display_driver.py``) because it is
-PyDevices plumbing: it needs ``appdev``, ``displaydev``, ``events``, ``keys``,
+It lives in PyDevices/omnipython (``lib/display_driver.py``) because it is
+OmniPython plumbing: it needs ``appdev``, ``displaydev``, ``events``, ``keys``,
 ``multimer`` and the ``board_config`` idiom, and ships with them in the
-``pydevices`` mip package, the ``pydevices`` wheel and the frozen
-``pydevices`` module. The LVGL bindings (lvgl-bindings and the lvgl-micropython,
+``omnipython`` mip package, the ``omnipython`` wheel and the frozen
+``omnipython`` module. The LVGL bindings (lvgl-bindings and the lvgl-micropython,
 lvgl-circuitpython and lvgl-python consumers) carry only ``lvgl`` itself and
 ``fs_driver``, so anyone can use them with plumbing of their own.
 
@@ -1797,7 +1797,7 @@ class DisplayDriver:
             # KeyboardInterrupt from Ctrl-C), that wait never ends: the
             # interpreter is stuck inside the timer callback, and neither the
             # REPL nor MicroPython's USB, which runs from the scheduler,
-            # answers again until a hard reset (micropython-pydevices#48).
+            # answers again until a hard reset (omnipython-builds#48).
             # A present that is still on its way is finished by
             # _flush_wait_cb, which LVGL calls before it paints again.
             if (self._blocking or not done) and not (done and self._started_present):

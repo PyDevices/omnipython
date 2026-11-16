@@ -25,7 +25,7 @@ From Waveshare's ESP32-P4-WIFI6 schematic and the Pico-Audio's:
 - The Type-C is a CH343 USB-UART only. The P4's full-speed USB pairs reach
   the Pico header: GPIO24/25 at pins 19 (D-) and 20 (D+), GPIO26/27 at
   pins 29 (D-) and 27 (D+). Which one is the USB device depends on the
-  firmware (micropython-pydevices' boards table).
+  firmware (omnipython-builds' boards table).
 
 ``audio_out`` and ``pcm_out`` play through the Pico-Audio, or through the
 ES8311 when board_config sets ``AUDIO = "es8311"``.

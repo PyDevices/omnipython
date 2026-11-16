@@ -21,7 +21,7 @@
 # full_speed=True to hold the port to full speed: on an ESP32-P4, whose port
 # is high speed, that's how full- and low-speed devices behind a hub work
 # (ESP-IDF's host has no transaction translator). Underneath is ESP-IDF's USB
-# host library, driven by the firmware's _usbhost C module (micropython-pydevices' modules/usbhost).
+# host library, driven by the firmware's _usbhost C module (omnipython-builds' modules/usbhost).
 #
 # One speed per power-up on the ESP32-P4 WIFI6 DEV-KIT: its onboard hub can't
 # be power-cycled from software, and a host restarted at a different speed

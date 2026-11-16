@@ -1,7 +1,7 @@
 # SPDX-FileCopyrightText: 2026 Brad Barnett
 #
 # SPDX-License-Identifier: MIT
-"""Unit tests for pydevices/bin/jupyter.py CLI parsing and notebook generation."""
+"""Unit tests for omnipython/bin/jupyter.py CLI parsing and notebook generation."""
 
 import importlib.util
 import json

@@ -11,7 +11,7 @@ Each display is an ``FBDisplay``, so a board config can make one its
   the PC's mouse and keyboard coming back as touches and keys.
 - ``castdisplay.hls_display.HlsDisplay``: live HLS for VLC, any HLS player or a
   Roku running the PyDevices Companion channel, about ten seconds behind.
-- ``castdisplay.roku_companion.RokuDisplay``: frames shown by the PyDevices
+- ``castdisplay.roku_companion.RokuDisplay``: frames shown by the OmniPython
   Companion channel on a Roku.
 
 On an ESP32-P4 the stream is the firmware's ``castif`` task; on CPython,

@@ -35,7 +35,7 @@ Do not run audiodev tests while another process is playing audio — see
 | [`test_multimer.py`](test_multimer.py) | public multimer API |
 | [`test_events.py`](test_events.py) / [`test_keys.py`](test_keys.py) | shared event types and key codes |
 | [`test_boarddev.py`](test_boarddev.py) | `boarddev.bind_lazy` |
-| [`test_mdns.py`](test_mdns.py) | `mdns.py` (pydevices-desktop): CircuitPython's `mdns` API over python-zeroconf, its errors, and, with zeroconf installed, a service advertised and found on the machine's own network |
+| [`test_mdns.py`](test_mdns.py) | `mdns.py` (omnipython-desktop): CircuitPython's `mdns` API over python-zeroconf, its errors, and, with zeroconf installed, a service advertised and found on the machine's own network |
 | [`test_wifi_manager.py`](test_wifi_manager.py) | `wifi_manager.connect()`: which networks it tries and in what order, a static address counted as connected only with a link, `wait=False`, `ntp=True`, and setup mode |
 | [`test_wifi.py`](test_wifi.py) | `lib/wifi.py` with a static address, and the deprecated `connect_from_secrets()` handing over to `wifi_manager.connect()` |
 | [`test_standalone.py`](test_standalone.py) | displaydev and multimer import in isolation |

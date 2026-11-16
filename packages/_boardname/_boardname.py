@@ -27,7 +27,7 @@ def name(what, package, instead):
         raise AttributeError(
             "%s after the board with boarddev.name(), which this board's "
             "boarddev doesn't have: its firmware is older than %s. Update the firmware, "
-            'install pydevices again with target="/" so a newer boarddev runs ahead of '
+            'install omnipython again with target="/" so a newer boarddev runs ahead of '
             "the frozen one, or %s." % (what, package, instead)
         )
     return board_name()

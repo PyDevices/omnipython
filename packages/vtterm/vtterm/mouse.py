@@ -36,7 +36,7 @@ NONE = 3
 WHEEL_UP = 64
 WHEEL_DOWN = 65
 
-# Event types, the same values as pydevices' events module.
+# Event types, the same values as OmniPython's events module.
 _MOTION = 0x400
 _DOWN = 0x401
 _UP = 0x402

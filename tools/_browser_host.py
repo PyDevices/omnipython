@@ -64,14 +64,14 @@ def _port_open(host: str, port: int) -> bool:
 
 
 def probe_server(host: str, port: int) -> tuple[bool, bool]:
-    """Return whether a port is open and identifies as a PyDevices server."""
+    """Return whether a port is open and identifies as a OmniPython server."""
     if not _port_open(host, port):
         return False, False
     try:
         connection = http.client.HTTPConnection(host, port, timeout=1)
         connection.request("HEAD", "/")
         response = connection.getresponse()
-        signature = response.getheader("X-PyDevices-Server", "").lower()
+        signature = response.getheader("X-OmniPython-Server", "").lower()
         connection.close()
         return True, signature in {"portal", "pydevices", "examples"}
     except OSError:
@@ -131,7 +131,7 @@ def start_server(
 
         def end_headers(self) -> None:
             self.send_header("Cache-Control", "no-store")
-            self.send_header("X-PyDevices-Server", "portal")
+            self.send_header("X-OmniPython-Server", "portal")
             self.send_header("Cross-Origin-Opener-Policy", "same-origin")
             self.send_header("Cross-Origin-Embedder-Policy", "credentialless")
             self.send_header("Cross-Origin-Resource-Policy", "cross-origin")

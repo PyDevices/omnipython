@@ -8,7 +8,7 @@ ESP32-C6 for Wi-Fi and Bluetooth.
 
 It needs MicroPython firmware with the C6's Wi-Fi: the `WIFI6_DEV_KIT_H2`
 variant with `--flash 32MB`, from
-[micropython-pydevices' boards table](https://github.com/PyDevices/micropython-pydevices/blob/main/docs/reference/boards.md).
+[omnipython-builds' boards table](https://github.com/PyDevices/omnipython-builds/blob/main/docs/reference/boards.md).
 That firmware has the camera drivers in, and finds the sensor itself.
 
 ## Before you power it
@@ -31,7 +31,7 @@ speaker connector instead: in `board_config.py`, swap the comments on the two
 ```python
 import omip
 
-omip.install("github:PyDevices/pydevices/board_configs/busdisplay/spi/esp32-p4-wifi6_pico-lcd-1.8_pico-audio")
+omip.install("github:PyDevices/omnipython/board_configs/busdisplay/spi/esp32-p4-wifi6_pico-lcd-1.8_pico-audio")
 ```
 
 ## What it provides

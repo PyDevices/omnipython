@@ -8,7 +8,7 @@ metadata(
     version="0.3",
 )
 
-require("pydevices")
+require("omnipython")
 require("esp32-p4-wifi6-dev-kit")
 require("ft6x36")
 require("es8311")

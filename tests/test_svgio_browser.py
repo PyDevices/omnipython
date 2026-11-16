@@ -13,13 +13,13 @@ Everything runs twice, on the page's main thread and in a worker, and every
 call into Python is synchronous.
 
 Needs Playwright with Chromium, resvg-py and Pillow, and Pyodide: the folder
-named by ``PYDEVICES_PYODIDE_DIR`` (one holding ``pyodide.mjs``), or else
+named by ``OMNIPYTHON_PYODIDE_DIR`` (one holding ``pyodide.mjs``), or else
 the jsDelivr copy, over the network. Without them the skip is loud, and
-``PYDEVICES_REQUIRE_BROWSER=1`` turns it into a failure.
+``OMNIPYTHON_REQUIRE_BROWSER=1`` turns it into a failure.
 
-    PYDEVICES_PYODIDE_DIR=~/pyodide python -m unittest discover -s tests -p "test_svgio_browser.py"
+    OMNIPYTHON_PYODIDE_DIR=~/pyodide python -m unittest discover -s tests -p "test_svgio_browser.py"
 
-``PYDEVICES_SVGIO_OUT=<folder>`` also writes each case as a PNG, desktop on
+``OMNIPYTHON_SVGIO_OUT=<folder>`` also writes each case as a PNG, desktop on
 the left, browser in the middle and where they differ on the right.
 """
 
@@ -350,7 +350,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
 
 
 def _pyodide_dir():
-    env = os.environ.get("PYDEVICES_PYODIDE_DIR")
+    env = os.environ.get("OMNIPYTHON_PYODIDE_DIR")
     return Path(env).expanduser() if env else None
 
 
@@ -366,7 +366,7 @@ def _missing():
         return "resvg-py or Pillow isn't installed, so there is no desktop render to compare with"
     folder = _pyodide_dir()
     if folder is not None and not (folder / "pyodide.mjs").exists():
-        return "PYDEVICES_PYODIDE_DIR has no pyodide.mjs"
+        return "OMNIPYTHON_PYODIDE_DIR has no pyodide.mjs"
     return None
 
 
@@ -468,7 +468,7 @@ class InTheBrowser(unittest.TestCase):
                 reason = "%s: %s" % (type(e).__name__, str(e).splitlines()[0])
         if reason:
             message = "the svgio browser check did NOT run: " + reason
-            if os.environ.get("PYDEVICES_REQUIRE_BROWSER") == "1":
+            if os.environ.get("OMNIPYTHON_REQUIRE_BROWSER") == "1":
                 raise AssertionError(message)
             sys.stderr.write("\n*** " + message + " ***\n")
             raise unittest.SkipTest(message)
@@ -501,7 +501,7 @@ class InTheBrowser(unittest.TestCase):
                 self.assertEqual(case["recolored"], name.startswith("colours-swapped"), (where, name))
 
     def test_pixels_are_close_to_the_desktop(self):
-        out = os.environ.get("PYDEVICES_SVGIO_OUT")
+        out = os.environ.get("OMNIPYTHON_SVGIO_OUT")
         for name, _, _, allowed in CASES:
             far, alpha_far, worst = compare(name, self.results["Main"]["cases"][name], self.desktop["cases"][name], out)
             if out:

@@ -2,27 +2,27 @@
   "urls": [
     [
       "board_config.py",
-      "github:PyDevices/pydevices/board_configs/busdisplay/spi/m5stack-cores3/board_config.py"
+      "github:PyDevices/omnipython/board_configs/busdisplay/spi/m5stack-cores3/board_config.py"
     ],
     [
       "board_peripherals.py",
-      "github:PyDevices/pydevices/board_configs/busdisplay/spi/m5stack-cores3/board_peripherals.py"
+      "github:PyDevices/omnipython/board_configs/busdisplay/spi/m5stack-cores3/board_peripherals.py"
     ],
     [
       "ili9341.py",
-      "github:PyDevices/pydevices/drivers/display/ili9341.py"
+      "github:PyDevices/omnipython/drivers/display/ili9341.py"
     ],
     [
       "ft6x36.py",
-      "github:PyDevices/pydevices/drivers/touch/ft6x36.py"
+      "github:PyDevices/omnipython/drivers/touch/ft6x36.py"
     ],
     [
       "es7210.py",
-      "github:PyDevices/pydevices/drivers/codec/es7210.py"
+      "github:PyDevices/omnipython/drivers/codec/es7210.py"
     ],
     [
       "aw88298.py",
-      "github:PyDevices/pydevices/drivers/codec/aw88298.py"
+      "github:PyDevices/omnipython/drivers/codec/aw88298.py"
     ],
     [
       "bmi270.py",
@@ -31,7 +31,7 @@
   ],
   "deps": [
     [
-      "pydevices",
+      "omnipython",
       "latest"
     ]
   ],

@@ -7,7 +7,7 @@
 # CastDisplay is an FBDisplay over a framebuffer in RAM. Whatever an app draws
 # goes out over Wi-Fi Display (Miracast over infrastructure) to a Roku TV or a
 # Windows laptop's Wireless Display app, so a P4 with no screen of its own can
-# run any pydevices app. On a laptop, its mouse and keyboard come back over
+# run any OmniPython app. On a laptop, its mouse and keyboard come back over
 # UIBC as touches and keys.
 #
 #   from castdisplay.cast_display import CastDisplay
@@ -259,10 +259,10 @@ def _can_encode():
     return bool(os.environ.get("FFMPEG") or shutil.which("ffmpeg"))
 
 
-# Register CastDisplay with PyDevices' experimental backend registry, so a
+# Register CastDisplay with OmniPython's experimental backend registry, so a
 # config that says ``backends.require("display", "cast", module="castdisplay.cast_display")``
 # gets it from AutoDisplay(width, height, sink=ADDRESS, kind="windows").
-# PyDevices before 0.7.7 has no registry; there the display is still built by
+# OmniPython before 0.7.7 has no registry; there the display is still built by
 # hand.
 try:
     import backends

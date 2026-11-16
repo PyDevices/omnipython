@@ -2,11 +2,11 @@
   "urls": [
     [
       "board_config.py",
-      "github:PyDevices/pydevices/board_configs/cp/busdisplay/spi/pico-lcd-1.8/board_config.py"
+      "github:PyDevices/omnipython/board_configs/cp/busdisplay/spi/pico-lcd-1.8/board_config.py"
     ],
     [
       "st7735r_1.py",
-      "github:PyDevices/pydevices/drivers/display/st7735r_1.py"
+      "github:PyDevices/omnipython/drivers/display/st7735r_1.py"
     ]
   ],
   "deps": [],

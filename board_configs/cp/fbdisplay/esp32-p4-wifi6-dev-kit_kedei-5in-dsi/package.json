@@ -2,16 +2,16 @@
   "urls": [
     [
       "board_config.py",
-      "github:PyDevices/pydevices/board_configs/cp/fbdisplay/esp32-p4-wifi6-dev-kit_kedei-5in-dsi/board_config.py"
+      "github:PyDevices/omnipython/board_configs/cp/fbdisplay/esp32-p4-wifi6-dev-kit_kedei-5in-dsi/board_config.py"
     ],
     [
       "ft6x36.py",
-      "github:PyDevices/pydevices/drivers/touch/ft6x36.py"
+      "github:PyDevices/omnipython/drivers/touch/ft6x36.py"
     ]
   ],
   "deps": [
     [
-      "pydevices",
+      "omnipython",
       "latest"
     ]
   ],

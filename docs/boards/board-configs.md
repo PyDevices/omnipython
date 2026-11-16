@@ -1,6 +1,6 @@
 # Board configs
 
-Every PyDevices app needs a `board_config.py` that describes its display and
+Every OmniPython app needs a `board_config.py` that describes its display and
 input hardware without selecting an application event system.
 
 For the stable end-device role names (`touch`, `wlan`, …), lazy `PERIPHERALS`
@@ -20,22 +20,22 @@ Typically:
   module covers most non-UI peripherals.
 
 Configs live in
-[`PyDevices/pydevices`](https://github.com/PyDevices/pydevices)
+[`PyDevices/omnipython`](https://github.com/PyDevices/omnipython)
 (`board_configs/`). Each MicroPython folder is a package named by the folder:
 its `manifest.py` says what it installs, and requires the driver packages it
-uses and `pydevices`, so one `mip.install` of the board brings everything. The
+uses and `omnipython`, so one `mip.install` of the board brings everything. The
 `package.json` beside it installs the same files from GitHub, and is written
 from the manifest.
 
 See the canonical commands and verification steps in
 [Install](../get-started/install.md). To add a board or a driver, or to
-mark one tested, see [CONTRIBUTING.md](https://github.com/PyDevices/pydevices/blob/main/CONTRIBUTING.md).
+mark one tested, see [CONTRIBUTING.md](https://github.com/PyDevices/omnipython/blob/main/CONTRIBUTING.md).
 
-CircuitPython configs live under [`board_configs/cp/`](https://github.com/PyDevices/pydevices/tree/main/board_configs/cp) with the same bus layout and
+CircuitPython configs live under [`board_configs/cp/`](https://github.com/PyDevices/omnipython/tree/main/board_configs/cp) with the same bus layout and
 directory names as MicroPython (no `cp_` prefix; a `board_peripherals.py` is
 optional and only a few configs have one). They have no `manifest.py`, but each
 folder has a `package.json`, written from what its files import, so one
-`omip.install("github:PyDevices/pydevices/board_configs/cp/<folder>")` brings
+`omip.install("github:PyDevices/omnipython/board_configs/cp/<folder>")` brings
 the config, the drivers it uses and the Adafruit libraries it imports.
 MicroPython configs stay at the top level of `board_configs/` (not under an
 `mp/` folder).
@@ -48,7 +48,7 @@ about four seconds with the console on the screen and a quarter of a second
 without it, and a program that streams sound or network frames loses
 whatever arrives during the stall.
 
-So a PyDevices config keeps the console off the screen. A config that paints
+So a OmniPython config keeps the console off the screen. A config that paints
 the screen shows its own group in place of the console, one that drives the
 panel itself releases the firmware's display first, and any displaydev driver
 takes the console off `board.DISPLAY` when it starts, if it's still there.
@@ -132,7 +132,7 @@ An exact match for all four is rare; bus + display controller is usually enough 
 | `fbdisplay/arduino-giga-display-shield` | Arduino GIGA R1 WiFi with the GIGA Display Shield (MIPI-DSI, GT911 touch) |
 | `fbdisplay/esp32-p4-wifi6-touch-lcd-4b` | Waveshare ESP32-P4-WIFI6-Touch-LCD-4B (MIPI-DSI, touch, ES8311) |
 | `fbdisplay/esp32-p4-wifi6-dev-kit_kedei-5in-dsi` | Waveshare ESP32-P4-WIFI6-DEV-KIT with a KeDei 5" Raspberry Pi-style DSI display (ICN6211 bridge, FocalTech touch) |
-| `fbdisplay/t-rgb_480` | LilyGO T-RGB 480×480 ST7701 (ESP32-S3; RGB via pydevices/displayif) |
+| `fbdisplay/t-rgb_480` | LilyGO T-RGB 480×480 ST7701 (ESP32-S3; RGB via omnipython/displayif) |
 | `fbdisplay/pico2_dvi_sock_640x480` | Pico 2 + Adafruit DVI Sock or PiCowbell HSTX |
 | `fbdisplay/pico2w_dvi_sock_640x480` | Pico 2 W + Sock / PiCowbell HSTX |
 | `fbdisplay/olimex_rp2350pc_640x480` | Olimex RP2350pc onboard HDMI (HSTX) |
@@ -232,7 +232,7 @@ that also runs with a display treats `board_config` as optional.
 
 ## Default config
 
-[`board_configs/desktop/`](https://github.com/PyDevices/pydevices/tree/main/board_configs/desktop) — universal non-MCU
+[`board_configs/desktop/`](https://github.com/PyDevices/omnipython/tree/main/board_configs/desktop) — universal non-MCU
 `board_config` for desktop, PyScript, and Jupyter. Host display selection is
 `displaydev.auto.AutoDisplay` (PS / JN / Win→PG→SDL on Windows); the config
 exports hardware only:
@@ -253,29 +253,29 @@ app = appdev.App(board_config)
 
 LVGL instead creates an independent coordinator in `display_driver`.
 
-Panel size overrides (before `import board_config`): `PYDEVICES_WIDTH`,
-`PYDEVICES_HEIGHT`, `PYDEVICES_ROTATION`, `PYDEVICES_SCALE`, and
-`PYDEVICES_MAXIMIZED=1` to open maximised with the panel the window's whole
+Panel size overrides (before `import board_config`): `OMNIPYTHON_WIDTH`,
+`OMNIPYTHON_HEIGHT`, `OMNIPYTHON_ROTATION`, `OMNIPYTHON_SCALE`, and
+`OMNIPYTHON_MAXIMIZED=1` to open maximised with the panel the window's whole
 client area at scale 1 (WinDisplay, on Windows; see
 [Displays](../guides/displays.md#windisplay)). Apps should read geometry from
 `display_drv`, not module-level names on `board_config`.
 
 Set the env vars **before** `import board_config` (or any import that loads
-it). On a host with no environment, `boarddev.env_set("PYDEVICES_WIDTH", 800)`
+it). On a host with no environment, `boarddev.env_set("OMNIPYTHON_WIDTH", 800)`
 does the same from Python. A script that wants a default size but should respect the user's own
 environment sets it only when nothing else has:
 
 ```python
 import boarddev
 
-if boarddev.env_get("PYDEVICES_WIDTH") is None:
-    boarddev.env_set("PYDEVICES_WIDTH", 800)
+if boarddev.env_get("OMNIPYTHON_WIDTH") is None:
+    boarddev.env_set("OMNIPYTHON_WIDTH", 800)
 import board_config
 ```
 
 A value set with `env_set` wins over `os.environ`, so without the check it
 would override the user. Parsing lives in
-[`boarddev.env_int`](https://github.com/PyDevices/pydevices/blob/main/lib/boarddev.py)
+[`boarddev.env_int`](https://github.com/PyDevices/omnipython/blob/main/lib/boarddev.py)
 and friends (`env_get`, `env_float`, `env_bool`, `env_set`).
 
 Per-board configs under `board_configs/` describe hardware; they never

@@ -9,7 +9,7 @@ metadata(
     version="0.1.0",
 )
 
-require("pydevices")
+require("omnipython")
 require("st7735r_1")
 require("es8311")
 

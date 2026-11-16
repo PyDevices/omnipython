@@ -2,20 +2,20 @@
   "urls": [
     [
       "board_config.py",
-      "github:PyDevices/pydevices/board_configs/fbdisplay/matrixportal_s3_64x64/board_config.py"
+      "github:PyDevices/omnipython/board_configs/fbdisplay/matrixportal_s3_64x64/board_config.py"
     ],
     [
       "board_peripherals.py",
-      "github:PyDevices/pydevices/board_configs/fbdisplay/matrixportal_s3_64x64/board_peripherals.py"
+      "github:PyDevices/omnipython/board_configs/fbdisplay/matrixportal_s3_64x64/board_peripherals.py"
     ],
     [
       "lis3dh.py",
-      "github:PyDevices/pydevices/drivers/imu/lis3dh.py"
+      "github:PyDevices/omnipython/drivers/imu/lis3dh.py"
     ]
   ],
   "deps": [
     [
-      "pydevices",
+      "omnipython",
       "latest"
     ]
   ],

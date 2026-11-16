@@ -4,7 +4,7 @@
 
 # roku_cast.py -- a Roku TV as a wireless display you can also control.
 #
-# Two halves, for a PyDevices smart-home app:
+# Two halves, for a OmniPython smart-home app:
 #   * Control, over ECP (gallery's roku_engine): power, keys, launching
 #     apps, reading what is on screen. Works from any host with a socket,
 #     the P4 included.

@@ -963,7 +963,7 @@ class CircuitPythonRun(Indexes):
         self.adafruit_dir = build_adafruit(self.scratch)
 
     def run_cp(self, script, *, stdin="", address='"10.0.0.1"', env=None):
-        interpreter = os.environ.get("PYDEVICES_CIRCUITPYTHON") or shutil.which("circuitpython")
+        interpreter = os.environ.get("OMNIPYTHON_CIRCUITPYTHON") or shutil.which("circuitpython")
         if not interpreter:
             found = [p / "bin" / "circuitpython" for p in _TESTS.parents if (p / "bin" / "circuitpython").is_file()]
             interpreter = str(found[0]) if found else None

@@ -2,15 +2,15 @@
   "urls": [
     [
       "board_config.py",
-      "github:PyDevices/pydevices/board_configs/cp/busdisplay/i2c/sh1107_oled_128x64/board_config.py"
+      "github:PyDevices/omnipython/board_configs/cp/busdisplay/i2c/sh1107_oled_128x64/board_config.py"
     ],
     [
       "i2cbus.py",
-      "github:PyDevices/pydevices/drivers/bus/i2cbus.py"
+      "github:PyDevices/omnipython/drivers/bus/i2cbus.py"
     ],
     [
       "sh1107.py",
-      "github:PyDevices/pydevices/drivers/display/sh1107.py"
+      "github:PyDevices/omnipython/drivers/display/sh1107.py"
     ]
   ],
   "deps": [],

@@ -2,7 +2,7 @@
   "urls": [
     [
       "board_peripherals.py",
-      "github:PyDevices/pydevices/board_configs/cp/nodisplay/qtpy_esp32_pico_audio_bff/board_peripherals.py"
+      "github:PyDevices/omnipython/board_configs/cp/nodisplay/qtpy_esp32_pico_audio_bff/board_peripherals.py"
     ]
   ],
   "deps": [],

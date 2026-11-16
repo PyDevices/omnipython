@@ -130,7 +130,7 @@ class Screen:
     A picture bigger than the display is decoded at a half, a quarter or an
     eighth of its size, whichever is the largest that fits. Decoding uses
     ``jpegio``: built into MicroPython firmware that carries it and into
-    CircuitPython, and on CPython pydevices-desktop's, over Pillow.
+    CircuitPython, and on CPython omnipython-desktop's, over Pillow.
 
     A picture the decoder can't read (a progressive JPEG, say, which
     jpegio's decoder doesn't take) shows nothing: ``errors`` counts them

@@ -1,6 +1,6 @@
 # Audio drivers
 
-PCM playback and capture for [pydevices](https://github.com/PyDevices/pydevices)
+PCM playback and capture for [OmniPython](https://github.com/PyDevices/omnipython)
 board configs. The `audiodev` package owns the portable bases; each backend is a
 standalone submodule that subclasses them. `audiodev.auto` is an optional
 selector only — backends never import it.
@@ -50,7 +50,7 @@ Family invariants (template for later displaydev / multimer):
 3. Optional behavior is real methods with defaults (`service`, `queued_size`, `is_active`, `clear`), not `getattr` discovery.
 4. Platform defects stay documented with “do not simplify” tests, inside the owning subclass.
 
-For a complete program to start from, see [audiodev_simpletest.py](https://github.com/PyDevices/pydevices/blob/main/examples/audiodev_simpletest.py).
+For a complete program to start from, see [audiodev_simpletest.py](https://github.com/PyDevices/omnipython/blob/main/examples/audiodev_simpletest.py).
 
 ## Buffering options
 
@@ -692,7 +692,7 @@ out.drain()
 ```
 
 `audiodev.auto` picks this last: after SDL2 and pygame, and only on Linux with a
-sound card. Name it yourself with `PYDEVICES_AUDIO=alsa_audio` to use it over the others.
+sound card. Name it yourself with `OMNIPYTHON_AUDIO=alsa_audio` to use it over the others.
 
 ## `web_audio.py`
 

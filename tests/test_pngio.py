@@ -2,9 +2,9 @@
 #
 # SPDX-License-Identifier: MIT
 
-"""pngio.py (pydevices-desktop): MicroPython's pngio API over Pillow.
+"""pngio.py (omnipython-desktop): MicroPython's pngio API over Pillow.
 
-The full round-trip test is micropython-pydevices' modules/pngio/tests/
+The full round-trip test is omnipython-builds' modules/pngio/tests/
 test_pngio.py, which runs unchanged on CPython against this file. What is here
 is the CPython-only part: exact RGB565 round trips, and the message a desktop
 without Pillow gets.

@@ -2,17 +2,17 @@
 #
 # SPDX-License-Identifier: MIT
 
-"""Sphinx configuration for the pydevices documentation.
+"""Sphinx configuration for the OmniPython documentation.
 
-Everything shared by the PyDevices documentation projects (theme, top bar,
-Markdown and docstring setup, the reference map) comes from pydevices-docs.
+Everything shared by the OmniPython documentation projects (theme, top bar,
+Markdown and docstring setup, the reference map) comes from omnipython-docs.
 """
 
-from pydevices_docs import configure
+from omnipython_docs import configure
 
 globals().update(configure(
-    "pydevices", __file__,
-    repo="PyDevices/pydevices", edit_path="docs",
+    "omnipython", __file__,
+    repo="PyDevices/omnipython", edit_path="docs",
     source_dirs=["../lib", "../utils", "../packages/vtterm"],
     api_packages=["displaydev", "audiodev", "appdev", "multimer", "bledev", "vtterm"],
     mock_imports=["bleak", "_bleio", "bluetooth", "IPython", "pygame", "js",

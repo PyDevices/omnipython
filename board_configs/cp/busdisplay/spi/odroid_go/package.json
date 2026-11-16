@@ -2,24 +2,24 @@
   "urls": [
     [
       "board_config.py",
-      "github:PyDevices/pydevices/board_configs/cp/busdisplay/spi/odroid_go/board_config.py"
+      "github:PyDevices/omnipython/board_configs/cp/busdisplay/spi/odroid_go/board_config.py"
     ],
     [
       "gpiojoystick.py",
-      "github:PyDevices/pydevices/drivers/joystick/gpiojoystick.py"
+      "github:PyDevices/omnipython/drivers/joystick/gpiojoystick.py"
     ],
     [
       "ili9341.py",
-      "github:PyDevices/pydevices/drivers/display/ili9341.py"
+      "github:PyDevices/omnipython/drivers/display/ili9341.py"
     ],
     [
       "keypad_gpio.py",
-      "github:PyDevices/pydevices/drivers/input/keypad_gpio.py"
+      "github:PyDevices/omnipython/drivers/input/keypad_gpio.py"
     ]
   ],
   "deps": [
     [
-      "pydevices",
+      "omnipython",
       "latest"
     ]
   ],

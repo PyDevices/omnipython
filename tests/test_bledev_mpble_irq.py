@@ -8,7 +8,7 @@ central's version and features, with that read's status; MicroPython reports
 a non-zero status as a failed connection (``_IRQ_CENTRAL_DISCONNECT`` with
 address type 0xFF) although the link is up. An nRF52840 central running
 CircuitPython triggers it, and aioble's advertise() then never returned
-(pydevices#91). mpble announces such a connection itself.
+(omnipython#91). mpble announces such a connection itself.
 """
 
 import importlib

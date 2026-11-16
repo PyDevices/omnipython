@@ -64,8 +64,8 @@ Announce the device and a panel finds it without its address.
 name over mDNS, so a phone opens `http://<name>.local:9000/` and an mDNS
 browser app lists the page. On a panel, `tcp.find()` returns
 `(name, (ip, port))` for each device it hears, and `tcp.find("kitchen")` just
-that one. It needs the `mdns` module, which CircuitPython and PyDevices
-firmware have built in, and `pydevices-desktop` brings to a computer.
+that one. It needs the `mdns` module, which CircuitPython and OmniPython
+firmware have built in, and `omnipython-desktop` brings to a computer.
 
 With OSC, the controller app needs no code from you. Point it at the
 board's address and port 8000, and each control's message becomes an op on

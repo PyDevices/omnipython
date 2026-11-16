@@ -1,13 +1,13 @@
 {
   "repo": {
-    "pydevices": {
-      "description": "Portable display, audio, event, and timing foundations for PyDevices"
+    "omnipython": {
+      "description": "Portable display, audio, event, and timing foundations for OmniPython"
     },
-    "pydevices-desktop": {
-      "description": "Complete PyDevices desktop stack and board configuration"
+    "omnipython-desktop": {
+      "description": "Complete OmniPython desktop stack and board configuration"
     },
     "bledev": {
-      "description": "Portable async Bluetooth Low Energy for PyDevices, over aioble on boards",
+      "description": "Portable async Bluetooth Low Energy for OmniPython, over aioble on boards",
       "upstream": ["aioble"],
       "circuitpython": ["asyncio"]
     },
@@ -17,12 +17,12 @@
   },
   "folders": {
     "palettes": {
-      "description": "Color palette toolkit for PyDevices (wheel, cube, material_design)",
-      "pypi": "pydevices-palettes"
+      "description": "Color palette toolkit for OmniPython (wheel, cube, material_design)",
+      "pypi": "omnipython-palettes"
     },
     "pdwidgets": {
-      "description": "Cross-platform widget toolkit for PyDevices",
-      "pypi": "pydevices-pdwidgets"
+      "description": "Cross-platform widget toolkit for OmniPython",
+      "pypi": "omnipython-pdwidgets"
     },
     "iconkit": {
       "description": "Material Design icons as flash-resident alpha masks, drawn in LVGL or pygraphics",

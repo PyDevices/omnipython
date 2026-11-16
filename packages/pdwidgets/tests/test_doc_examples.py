@@ -5,7 +5,7 @@
 
 This is a *static* check: it never executes the extracted code (many blocks
 import ``board_config``, which only exists on a real board or with
-``pydevices-desktop`` installed). Instead it AST-parses each block and checks
+``omnipython-desktop`` installed). Instead it AST-parses each block and checks
 its claims against the real ``pdwidgets`` package:
 
 - ``from pdwidgets... import X`` -- X must actually exist at that import path.

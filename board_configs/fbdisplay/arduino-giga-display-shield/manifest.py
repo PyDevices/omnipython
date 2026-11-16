@@ -8,7 +8,7 @@ metadata(
     version="0.1.0",
 )
 
-require("pydevices")
+require("omnipython")
 require("gt911")
 require("giga_display_shield_init")
 require("bmi270")  # micropython-lib's: frozen into OmniPython firmware, or mip.install("bmi270") first

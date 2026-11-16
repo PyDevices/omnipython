@@ -2,15 +2,15 @@
   "urls": [
     [
       "board_config.py",
-      "github:PyDevices/pydevices/board_configs/cp/busdisplay/spi/seeed_gc9a01_on_qtpy_esp32s3/board_config.py"
+      "github:PyDevices/omnipython/board_configs/cp/busdisplay/spi/seeed_gc9a01_on_qtpy_esp32s3/board_config.py"
     ],
     [
       "chsc6x.py",
-      "github:PyDevices/pydevices/drivers/touch/chsc6x.py"
+      "github:PyDevices/omnipython/drivers/touch/chsc6x.py"
     ],
     [
       "gc9a01.py",
-      "github:PyDevices/pydevices/drivers/display/gc9a01.py"
+      "github:PyDevices/omnipython/drivers/display/gc9a01.py"
     ]
   ],
   "deps": [],

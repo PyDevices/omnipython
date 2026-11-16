@@ -14,7 +14,7 @@ Needs: a board running MicroPython with ``machine.USBDevice``, micropython-lib's
 ``adafruit_midi``:
 
     mip.install("usb-device-midi")
-    mip.install("github:PyDevices/pydevices/packages/midiports")
+    mip.install("github:PyDevices/omnipython/packages/midiports")
 
 Plug the board's USB device port into your computer.
 

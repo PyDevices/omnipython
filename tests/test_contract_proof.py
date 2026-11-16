@@ -1,7 +1,7 @@
 # SPDX-FileCopyrightText: 2026 Brad Barnett
 #
 # SPDX-License-Identifier: MIT
-"""Structural smoke tests for graduated boards in pydevices."""
+"""Structural smoke tests for graduated boards in OmniPython."""
 
 from __future__ import annotations
 
@@ -13,10 +13,10 @@ import sys
 import unittest
 
 HW = Path(__file__).resolve().parents[1]
-# boarddev.py lives in lib/ and ships as part of the pydevices meta package.
+# boarddev.py lives in lib/ and ships as part of the OmniPython meta package.
 LIB = HW / "lib"
 
-# Graduated campaign boards: name -> path under pydevices/board_configs/
+# Graduated campaign boards: name -> path under omnipython/board_configs/
 EXPECTED = {
     "esp32-p4-wifi6-touch-lcd-4b": {
         "path": "fbdisplay/esp32-p4-wifi6-touch-lcd-4b",
@@ -139,7 +139,7 @@ def _assigned_names(tree: ast.AST) -> set[str]:
     return names
 
 
-@unittest.skipUnless(HW.is_dir(), "sibling pydevices clone required")
+@unittest.skipUnless(HW.is_dir(), "sibling OmniPython clone required")
 class TestGraduatedBoardLayout(unittest.TestCase):
     def test_each_board_files_and_ast(self):
         for name, expect in EXPECTED.items():
@@ -190,10 +190,10 @@ class TestGraduatedBoardLayout(unittest.TestCase):
                 self.assertIn("board_config.py", urls)
                 self.assertIn("board_peripherals.py", urls)
                 joined = " ".join(u[1] for u in meta["urls"])
-                self.assertIn("pydevices/", joined)
+                self.assertIn("omnipython/", joined)
 
 
-@unittest.skipUnless(HW.is_dir(), "sibling pydevices clone required")
+@unittest.skipUnless(HW.is_dir(), "sibling OmniPython clone required")
 class TestGraduatedBindLazy(unittest.TestCase):
     def test_ch422g_boards_declare_initial_state(self):
         """Every board that builds a CH422G says what its outputs start at.

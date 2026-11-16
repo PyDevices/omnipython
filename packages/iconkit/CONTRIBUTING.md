@@ -29,8 +29,8 @@ ruff check lib tests tools
 ```
 
 The generator's tests need Pillow. The MicroPython half of `tests/iconkit_contract.py`
-runs on the interpreter named by `PYDEVICES_MICROPYTHON`, or on `micropython` from
-your `PATH`; with neither it skips, and fails if `PYDEVICES_REQUIRE_MICROPYTHON=1`.
+runs on the interpreter named by `OMNIPYTHON_MICROPYTHON`, or on `micropython` from
+your `PATH`; with neither it skips, and fails if `OMNIPYTHON_REQUIRE_MICROPYTHON=1`.
 
 ## Add an icon to a set
 
@@ -50,8 +50,8 @@ python tools/icon_sheets.py docs/reference/icons
 
 ## Release
 
-iconkit has its own version, in `VERSION`, apart from the pydevices release. A pull
+iconkit has its own version, in `VERSION`, apart from the OmniPython release. A pull
 request that changes `VERSION` and adds the matching section to `CHANGELOG.md`
-tags `iconkit-vX.Y.Z` when it merges, and the pydevices release chain publishes
+tags `iconkit-vX.Y.Z` when it merges, and the OmniPython release chain publishes
 `omnipython-iconkit` to TestPyPI. The import name and the mip package name stay
 `iconkit`.

@@ -15,7 +15,7 @@ settings and put the cursor in a text field.
 
 Needs: a board with Bluetooth LE, MicroPython with aioble and bledev
 installed, and adafruit_hid (mpremote mip install
-github:PyDevices/pydevices/bledev_hid). Don't pair it with the computer
+github:PyDevices/omnipython/bledev_hid). Don't pair it with the computer
 that runs mpremote, or it types into your terminal.
 
 Run it:

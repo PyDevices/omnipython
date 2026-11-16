@@ -2,11 +2,11 @@
   "urls": [
     [
       "board_config.py",
-      "github:PyDevices/pydevices/board_configs/cp/busdisplay/spi/t-qt-pro/board_config.py"
+      "github:PyDevices/omnipython/board_configs/cp/busdisplay/spi/t-qt-pro/board_config.py"
     ],
     [
       "gc9a01.py",
-      "github:PyDevices/pydevices/drivers/display/gc9a01.py"
+      "github:PyDevices/omnipython/drivers/display/gc9a01.py"
     ]
   ],
   "deps": [],

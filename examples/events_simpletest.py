@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: MIT
 """Make events, tell them apart by type, and add one of your own.
 
-Every input in PyDevices, from a touch screen to a USB keyboard, arrives
+Every input in OmniPython, from a touch screen to a USB keyboard, arrives
 as one of these small named tuples. A program looks at .type and reads the
 fields it needs. Here three events are made by hand, the way a display
 backend makes them, and handled in a loop.

@@ -601,7 +601,7 @@ class AudioOutTests(unittest.TestCase):
             "pump stopped feeding a still-priming transport (deadlock)")
 
     def test_a_wrapper_that_forwards_the_interface_does_not_deadlock(self):
-        # pydevices#54. Put anything between AudioOut and a queued transport
+        # omnipython#54. Put anything between AudioOut and a queued transport
         # -- a tee, a logger, a volume shim -- and the audio used to stop
         # after about a tenth of a second, with no exception and no message,
         # because the backpressure cap read the priming threshold off a
@@ -663,7 +663,7 @@ class AudioOutTests(unittest.TestCase):
                          "it should not have needed the stall guard")
 
     def test_a_transport_that_stops_consuming_is_pushed_past_the_cap(self):
-        # The other half of pydevices#54, and the more valuable one: a cap is
+        # The other half of omnipython#54, and the more valuable one: a cap is
         # a latency guard, not a fact about the device. A wrapper that cannot
         # say what it needs to prime -- every wrapper written before
         # `prebuffer_bytes` existed -- still caps below the threshold and
@@ -755,7 +755,7 @@ class AudioOutTests(unittest.TestCase):
                          "the pump pulled against a draining backlog")
 
     def test_a_stall_keeps_a_lookahead_above_the_catchup_limit(self):
-        # pydevices#394: the catch-up limit counts from the lookahead, so a
+        # omnipython#394: the catch-up limit counts from the lookahead, so a
         # lookahead larger than `max_catchup_chunks` survives a stall. The
         # device here plays its queue in real time, so what it holds after
         # each tick is the latency the pump really keeps.
@@ -785,7 +785,7 @@ class AudioOutTests(unittest.TestCase):
     def test_channel_adapter_forwards_the_priming_threshold(self):
         # `ChannelAdapter` is not hypothetical: this repository ships it and
         # calls it "the producer-facing PCMOutput". It is what a mono graph
-        # on a stereo device gets, and before pydevices#54 it answered 0.
+        # on a stereo device gets, and before omnipython#54 it answered 0.
         stereo = AudioFormat(rate=48000, channels=2, bits=16)
         mono = AudioFormat(rate=48000, channels=1, bits=16)
 
@@ -1290,7 +1290,7 @@ class PaceOutputTests(unittest.TestCase):
         # 0.5 ms of DAC time: by the next call, 0.5 ms more has played, so a
         # full ring always takes a few bytes. Before the fix, _flush chased
         # that trickle until the stash was empty, so every write() waited out
-        # the queue in real time and space() never fell (pydevices#464).
+        # the queue in real time and space() never fell (omnipython#464).
         class TrickleRing(FakePCMOutput):
             COST_BYTES = 88  # 0.5 ms at 176400 B/s, whole frames
 

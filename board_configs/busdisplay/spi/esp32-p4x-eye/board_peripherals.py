@@ -322,7 +322,7 @@ def _pcm_in(format=None, *, latency=None, queue_ms=None):
     from audiodev import check_latency, queue_bytes
 
     if not hasattr(I2S, "PDM_RX"):
-        raise OSError("this firmware's machine.I2S has no PDM_RX: the microphone needs a PyDevices build")
+        raise OSError("this firmware's machine.I2S has no PDM_RX: the microphone needs a OmniPython build")
     check_latency(latency)
     wire, source = negotiate(AUDIO_IN, format)
     if source is not wire:

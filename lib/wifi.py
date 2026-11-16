@@ -433,7 +433,7 @@ def connect_from_secrets(module="secrets", *, wait=True, ntp=True, timeout=None)
     """Deprecated: call ``wifi_manager.connect()``, which this now does.
 
     Boards set up before the move still have this call in their ``boot.py``.
-    It needs ``wifi_manager.py`` beside this file (the ``pydevices`` package
+    It needs ``wifi_manager.py`` beside this file (the ``omnipython`` package
     has both).
     """
     import wifi_manager

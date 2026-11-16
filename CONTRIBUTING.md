@@ -6,8 +6,8 @@
 |---|---|
 | [board_configs/](board_configs/) | MicroPython board configurations; CircuitPython boards are under [board_configs/cp/](board_configs/cp/). |
 | [drivers/](drivers/) | Bus, display, touch, input, codec, sensor, power and storage drivers. |
-| [lib/](lib/) | The libraries that make up the `pydevices` package (`displaydev`, `audiodev`, `appdev`, `multimer`, `bledev` and the rest). |
-| [utils/](utils/) | Desktop helpers that ship in `pydevices-desktop` (`mdns`, `micropython`, `usdl2`, `uwin32` and more). |
+| [lib/](lib/) | The libraries that make up the `omnipython` package (`displaydev`, `audiodev`, `appdev`, `multimer`, `bledev` and the rest). |
+| [utils/](utils/) | Desktop helpers that ship in `omnipython-desktop` (`mdns`, `micropython`, `usdl2`, `uwin32` and more). |
 | `packages/usb/usb-core/`, `usb-host-*/`, `usb-device-*/`, `packages/usb/usb-hid/` | The USB packages ([docs/guides/usb.md](docs/guides/usb.md)). |
 | [packages/palettes/](packages/palettes/), [packages/pdwidgets/](packages/pdwidgets/), [packages/iconkit/](packages/iconkit/), [packages/midiports/](packages/midiports/), [packages/vtterm/](packages/vtterm/), [packages/castdisplay/](packages/castdisplay/) | Packages that publish on their own, each with its own README. |
 | [docs/](docs/) | The documentation site's source. |
@@ -51,7 +51,7 @@ The folder holds `board_config.py`, usually `board_peripherals.py` (the
 ```python
 metadata(description="Waveshare ESP32-S3-Touch-LCD-4.3: 800x480 RGB, GT911 touch", version="0.1.0")
 
-require("pydevices")
+require("omnipython")
 require("ch422g")
 require("gt911")
 require("sdcard")  # micropython-lib's
@@ -61,7 +61,7 @@ module("board_peripherals.py")
 ```
 
 `require()` every driver your files import, by its package name, plus
-`pydevices`, or `pydevices-desktop` for a desktop host. A package from
+`omnipython`, or `omnipython-desktop` for a desktop host. A package from
 micropython-lib (`sdcard`, `bmi270`, `aioble`) can be required too: firmware
 builds freeze it, and on stock MicroPython you install it from
 micropython-lib's index first (below). List every `.py` in the folder with
@@ -151,14 +151,14 @@ These hold the design together. Some are checked by a test or by `libbuild.py ch
 - A CircuitPython config under `board_configs/cp/` has no `manifest.py`, and no `board_peripherals.py` unless a role needs setup the native `board` module doesn't do (a codec, a power chip). That file never does `from board_config import ...`. `board_config.py` provides `display_drv`, the eager input hardware and the neutral read aliases (`touch_read`, `keypad_read`, `encoder_read`). Non-UI peripherals stay on `board` and CircuitPython's libraries. See [the contract](docs/boards/board-contract.md).
 - A board config never creates an `appdev.App` or any traffic controller.
 - Don't copy a micropython-lib driver into `drivers/`; `require()` upstream's package. Use `machine.SDCard` for SDMMC and SDIO, upstream's `sdcard` for SPI chip-select paths (`sdcard_nrf` on the nRF52).
-- Don't `module()` anything under `lib/` in a manifest: `require("pydevices")` installs all of it.
+- Don't `module()` anything under `lib/` in a manifest: `require("omnipython")` installs all of it.
 
 **Package names and what ships**
 
-- `lib/` is the core, and it installs as the `pydevices` package. Each folder under `packages/` publishes on its own, under its own name, with its own version.
-- MIP names and Python imports are unprefixed (`displaydev`, `audiodev`, `appdev`, `events`, `keys`, `multimer`). TestPyPI distribution names are always `pydevices-*`.
+- `lib/` is the core, and it installs as the `omnipython` package. Each folder under `packages/` publishes on its own, under its own name, with its own version.
+- MIP names and Python imports are unprefixed (`displaydev`, `audiodev`, `appdev`, `events`, `keys`, `multimer`). TestPyPI distribution names are always `omnipython-*`.
 - `displaydev` needs `events` and `keys`; `appdev` needs `events`, `keys` and `multimer`.
-- Every top-level component in `lib/` ships inside the `pydevices` MIP package. Only a directory marked `own-package` in [`mip-split.toml`](mip-split.toml) also publishes on its own; `bledev` is the one that does (install aioble from micropython-lib first). Every library component in `utils/` is bundled into `pydevices-desktop`, which depends on `pydevices`.
+- Every top-level component in `lib/` ships inside the `omnipython` MIP package. Only a directory marked `own-package` in [`mip-split.toml`](mip-split.toml) also publishes on its own; `bledev` is the one that does (install aioble from micropython-lib first). Every library component in `utils/` is bundled into `omnipython-desktop`, which depends on `omnipython`.
 - Don't rename the GitHub repository: MIP URLs and the docs pin its name.
 
 **Imports**
@@ -169,7 +169,7 @@ These hold the design together. Some are checked by a test or by `libbuild.py ch
 
 ## Releases
 
-The release procedure itself is the same for every PyDevices repository and
+The release procedure itself is the same for every OmniPython repository and
 is in the [organization's runbook](https://github.com/PyDevices/.github/blob/main/docs/publishing-automation.md):
 the steps, the shared workflows, the secrets, retrying an interrupted
 publication and correcting a bad release. This section covers what a release
@@ -183,13 +183,13 @@ same version.
 
 Exactly two TestPyPI distributions build from this repository, both assembled
 by
-[`dotgithub/scripts/build_pydevices_python_distributions.py`](https://github.com/PyDevices/.github/blob/main/scripts/build_pydevices_python_distributions.py):
+[`dotgithub/scripts/build_omnipython_python_distributions.py`](https://github.com/PyDevices/.github/blob/main/scripts/build_omnipython_python_distributions.py):
 
-- `pydevices` copies in every top-level module or package under `lib/`
+- `omnipython` copies in every top-level module or package under `lib/`
   as one distribution. There is no include
-  list — adding a component under `lib/` adds it to `pydevices` on the next
+  list — adding a component under `lib/` adds it to `omnipython` on the next
   release automatically.
-- `pydevices-desktop` depends on `pydevices==X.Y.Z` and on each requirement in
+- `omnipython-desktop` depends on `omnipython==X.Y.Z` and on each requirement in
   [`utils/requirements.txt`](utils/requirements.txt) (zeroconf, for `mdns`),
   and additionally copies in every module discovered under `utils/` plus the
   desktop board config directory ([`board_configs/desktop`](board_configs/desktop)). Utilities do not get their own
@@ -201,8 +201,8 @@ A final release (`vX.Y.Z`) also gets fresh desktop interpreters as release
 assets, built by
 [`release-interpreters.yml`](.github/workflows/release-interpreters.yml):
 `micropython`, `micropython.exe`, `micropython.mjs`, `micropython.wasm` and
-`circuitpython`, each carrying every PyDevices module with this release's
-`pydevices` frozen in, plus an `interpreters.json` listing each file's sha256,
+`circuitpython`, each carrying every OmniPython module with this release's
+`omnipython` frozen in, plus an `interpreters.json` listing each file's sha256,
 size and version. A dev, a, b or rc release gets none.
 [`bin/fetch_interpreters.sh`](bin/fetch_interpreters.sh) downloads the
 newest set and checks it against that manifest. To rebuild without releasing,
@@ -215,13 +215,13 @@ recipe is [`scripts/release_interpreters.sh`](scripts/release_interpreters.sh).
 What you download from a final must be what that release built, so the
 interpreters are made from fixed commits, never from a branch tip.
 [`scripts/release_interpreters/sources.lock`](scripts/release_interpreters/sources.lock)
-names the commit of `micropython-pydevices` (the build script, its patches, and
+names the commit of `omnipython-builds` (the build script, its patches, and
 its own locks for MicroPython, the toolchains and every module) and of
 `omnipython-lvgl`. `interpreters.json` records every commit that went in:
-this release's `pydevices`, the two pins, the MicroPython commit, the
+this release's `omnipython`, the two pins, the MicroPython commit, the
 CircuitPython version and each module's commit, with `"pinned": true` when the
 build used exactly the pins. A run that attaches always does; to try another
-`micropython-pydevices` or `omnipython-lvgl`, name it in the two inputs of a
+`omnipython-builds` or `omnipython-lvgl`, name it in the two inputs of a
 manual run, which then attaches nothing.
 
 **Before you cut a final, move the pins:**
@@ -235,7 +235,7 @@ Commit that change in a pull request; its checks build all four interpreters
 from the new pins. The workflow prints a warning on every run whose pin is
 behind its repository's default branch, but never fails on it, because
 holding a pin back is sometimes right. `bump --dry-run` shows what would move.
-The interpreter versions are whatever the pinned `micropython-pydevices` builds,
+The interpreter versions are whatever the pinned `omnipython-builds` builds,
 so a MicroPython or CircuitPython pre-release in its locks reaches the
 interpreters as it is; the manifest's `version` fields say which. The
 release's notes say so too: the workflow ends them with one line naming the
@@ -244,7 +244,7 @@ preview)" when either is not a release
 ([`notes.py`](scripts/release_interpreters/notes.py), which reads the line
 from `interpreters.json`). Attaching again replaces that line.
 
-MIP publishes `pydevices` as a
+MIP publishes `omnipython` as a
 single package rather than per-component (see
 [gallery's package names table](https://github.com/PyDevices/gallery#package-names)).
 
@@ -257,7 +257,7 @@ records `X.Y.Z` as its own version.
 Each board config and each driver is a package of the library index that
 [`tools/libbuild.py`](tools/libbuild.py) builds: a board's `manifest.py` requires its driver
 packages (listed in [`drivers/drivers.toml`](drivers/drivers.toml)) and
-`pydevices`, and mip installs them as `deps` from the same index. A board with
+`omnipython`, and mip installs them as `deps` from the same index. A board with
 a `tested.json` publishes to the main index with the drivers it uses; every
 other one is in the index's `untested/` folder, which holds everything.
 [Add a board or a driver](#add-a-board-or-a-driver) has the commands.
@@ -278,7 +278,7 @@ the tag. It records the tag, builds every package with [`tools/libbuild.py`](too
 from the releases it has recorded, and serves the result from GitHub Pages at
 `https://lib.omnipython.org`. The library index takes pre-releases, so its
 `latest` can be a release candidate. A board installs from it with
-`omip.install("pydevices")`.
+`omip.install("omnipython")`.
 
 Boards and drivers don't wait for a release. A merge to `main` that touches
 `board_configs/` (a `tested.json` included) or `drivers/` runs
@@ -286,7 +286,7 @@ Boards and drivers don't wait for a release. A merge to `main` that touches
 sends the library index a `boards` request naming the merge commit. The index
 takes those two folders from that commit and everything else from the last
 `vX.Y.Z` release, so the new board file is live a few minutes after the merge
-while `pydevices` itself keeps its released version. A board's version is still
+while `omnipython` itself keeps its released version. A board's version is still
 the repository's, so the file hashes in its `package.json` tell two builds
 apart. The next release clears the commit. A merge that touches neither folder
 sends nothing. If the combination doesn't build, the index's run fails and the
@@ -294,7 +294,7 @@ index stays as it was; the fix is another merge.
 
 ### PyScript filesystem
 
-[`pydevices-desktop.toml`](pydevices-desktop.toml) is a generated, committed filesystem mapping that
+[`omnipython-desktop.toml`](omnipython-desktop.toml) is a generated, committed filesystem mapping that
 tracks `main`. It contains the complete Python payload of the desktop package
 with explicit `/lib/...` destinations. CI fails if any discovered `lib/` or
 `utils/` source, or one of the fixed desktop board files, is missing or stale.

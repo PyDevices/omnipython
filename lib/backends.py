@@ -22,7 +22,7 @@ its own. ``AutoDisplay``'s window hints (``scale``, ``title``, ``quiet``,
 
 ``kind`` is ``"display"`` or ``"audio"``. The search order is:
 
-1. the environment variable (``PYDEVICES_DISPLAY`` or ``PYDEVICES_AUDIO``),
+1. the environment variable (``OMNIPYTHON_DISPLAY`` or ``OMNIPYTHON_AUDIO``),
    if set. It names one backend and nothing else is tried;
 2. the backends a config ``require``d, in order, skipping any whose
    ``probe()`` says no;

@@ -6,7 +6,7 @@
 """
 scripts/bundle_pyscript_assets.py — Bundle pure-Python packages for Pyodide in the docs site.
 
-Packages lib/ from the current repository and sibling PyDevices repositories
+Packages lib/ from the current repository and sibling OmniPython repositories
 into docs/assets/pyscript/pydevices_bundle.zip for zero-network execution on ReadTheDocs.
 """
 
@@ -19,12 +19,12 @@ def bundle_assets(repo_root: Path) -> Path:
     assets_dir.mkdir(parents=True, exist_ok=True)
     bundle_zip = assets_dir / "pydevices_bundle.zip"
 
-    # pydevices' lib/ and palettes beside this folder, and a pygraphics
-    # checkout beside the pydevices repository.
+    # OmniPython's lib/ and palettes beside this folder, and a pygraphics
+    # checkout beside the OmniPython repository.
     pydevices_root = repo_root.parent
     sibling_libs = [pydevices_root / "lib", pydevices_root / "palettes" / "lib", pydevices_root.parent / "pygraphics" / "lib"]
 
-    print(f"Bundling PyDevices packages into {bundle_zip}...")
+    print(f"Bundling OmniPython packages into {bundle_zip}...")
     with zipfile.ZipFile(bundle_zip, "w", zipfile.ZIP_DEFLATED) as zf:
         # First bundle current repo's lib/
         current_lib = repo_root / "lib"

@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: MIT
 
 # hls_display.py -- a display that is live video: whatever an app draws, the
-# ESP32-P4 encodes as H.264 and serves as HLS, for a Roku TV (the PyDevices
+# ESP32-P4 encodes as H.264 and serves as HLS, for a Roku TV (the OmniPython
 # Companion channel's video mode), VLC, or any HLS player.
 #
 #   from castdisplay.hls_display import HlsDisplay
@@ -63,7 +63,7 @@ class _FfmpegHls:
             raise RuntimeError("HlsDisplay on a desktop needs ffmpeg on the PATH (https://ffmpeg.org)")
         self.w, self.h, self.fps, self.bitrate = width, height, fps, bitrate
         self.port, self.path, self.segments = port, path.rstrip("/"), segments
-        self.dir = tempfile.mkdtemp(prefix="pydevices-hls-")
+        self.dir = tempfile.mkdtemp(prefix="omnipython-hls-")
         self.frame = bytes(width * height * 2)
         self.lock = threading.Lock()
         self.offers = self.frames = self.requests = 0
@@ -292,9 +292,9 @@ def _can_encode():
     return bool(os.environ.get("FFMPEG") or shutil.which("ffmpeg"))
 
 
-# Register HlsDisplay with PyDevices' experimental backend registry, so a
+# Register HlsDisplay with OmniPython's experimental backend registry, so a
 # config that says ``backends.require("display", "hls", module="castdisplay.hls_display")``
-# gets it from AutoDisplay(width, height, tv=ADDRESS_OR_NONE). PyDevices before
+# gets it from AutoDisplay(width, height, tv=ADDRESS_OR_NONE). OmniPython before
 # 0.7.7 has no registry; there the display is still built by hand.
 try:
     import backends

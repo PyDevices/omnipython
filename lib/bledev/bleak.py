@@ -7,7 +7,7 @@
     from bledev.bleak import BleakBLE
     ble = BleakBLE()
 
-Needs bleak (``pip install "pydevices[ble]"``). A laptop can scan and connect
+Needs bleak (``pip install "omnipython[ble]"``). A laptop can scan and connect
 but can't advertise, so ``advertise()`` and ``register_services()`` raise
 `bledev.UnsupportedError`; ``capabilities()`` says so up front.
 

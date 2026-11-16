@@ -615,7 +615,7 @@ class _Device:
         primed device stays paused until this many bytes are queued, while a
         producer that caps itself lower has already decided the queue is full
         enough. Each waits on the other and the audio stops without an
-        exception (pydevices#54).
+        exception (omnipython#54).
 
         It used to be readable only as ``_prebuffer_bytes``, by ``getattr``
         with a default of 0 -- so a wrapper that forwarded every *documented*
@@ -1015,7 +1015,7 @@ class ChannelAdapter(PCMOutput):
         wire does, and an unscaled threshold would be twice what the
         producer has to clear.
 
-        Not forwarding this at all is pydevices#54: the pump capped itself
+        Not forwarding this at all is omnipython#54: the pump capped itself
         below the inner device's priming threshold, the device stayed
         paused, and the audio stopped after about a tenth of a second with
         no exception and no message.
@@ -1209,7 +1209,7 @@ class PaceOutput(PCMOutput):
     def prebuffer_bytes(self):
         """The inner device's threshold, unscaled: same format either side.
 
-        Forwarded rather than inherited, for pydevices#54's reason -- a
+        Forwarded rather than inherited, for omnipython#54's reason -- a
         wrapper that answers 0 here caps the producer below what the device
         needs to start, and both sides wait.
         """

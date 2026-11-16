@@ -2,32 +2,32 @@
   "urls": [
     [
       "board_config.py",
-      "github:PyDevices/pydevices/board_configs/busdisplay/spi/pybadge/board_config.py"
+      "github:PyDevices/omnipython/board_configs/busdisplay/spi/pybadge/board_config.py"
     ],
     [
       "board_peripherals.py",
-      "github:PyDevices/pydevices/board_configs/busdisplay/spi/pybadge/board_peripherals.py"
+      "github:PyDevices/omnipython/board_configs/busdisplay/spi/pybadge/board_peripherals.py"
     ],
     [
       "st7789.py",
-      "github:PyDevices/pydevices/drivers/display/st7789.py"
+      "github:PyDevices/omnipython/drivers/display/st7789.py"
     ],
     [
       "keypad_shift.py",
-      "github:PyDevices/pydevices/drivers/input/keypad_shift.py"
+      "github:PyDevices/omnipython/drivers/input/keypad_shift.py"
     ],
     [
       "digitalio.py",
-      "github:PyDevices/pydevices/drivers/bus/digitalio.py"
+      "github:PyDevices/omnipython/drivers/bus/digitalio.py"
     ],
     [
       "lis3dh.py",
-      "github:PyDevices/pydevices/drivers/imu/lis3dh.py"
+      "github:PyDevices/omnipython/drivers/imu/lis3dh.py"
     ]
   ],
   "deps": [
     [
-      "pydevices",
+      "omnipython",
       "latest"
     ]
   ],
