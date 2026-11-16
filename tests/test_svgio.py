@@ -137,6 +137,35 @@ class Decode(unittest.TestCase):
             with self.assertRaises(ValueError):
                 svgio.expand(bad)
 
+    def test_colours_swapped(self):
+        d = self.d
+        w, h = d.open(ICON, width=48)
+        red, blue = bytearray(w * h * 2), bytearray(w * h * 2)
+        d.decode(red, bytearray(w * h))
+        d.decode(blue, bytearray(w * h), colors={0xFF0000: 0x0000FF, 0x123456: 0})
+        self.assertEqual((px(red, 12 * w + 24), px(blue, 12 * w + 24)), (0xF800, 0x001F))
+        with self.assertRaises(TypeError):
+            d.decode(red, colors=[(1, 2)])
+        with self.assertRaises(ValueError):
+            d.decode(red, colors={0x1000000: 0})
+
+    def test_buffer_and_close(self):
+        import svgio
+
+        w, h = self.d.open(ICON)
+        buf = svgio.Buffer(w * h * 3)
+        view = memoryview(buf)
+        self.d.decode(view[: w * h * 2], view[w * h * 2 :])
+        self.assertEqual((len(buf), px(buf, 5 * w + 10), buf[w * h * 2 + 5 * w + 10]), (w * h * 3, 0xF800, 255))
+        view = None
+        buf.close()
+        self.assertEqual(len(buf), 0)
+        with self.assertRaises(ValueError):
+            svgio.Buffer(0)
+        self.d.close()
+        with self.assertRaises(RuntimeError):
+            self.d.decode(bytearray(w * h * 2))
+
     def test_errors(self):
         import svgio
 
