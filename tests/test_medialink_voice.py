@@ -104,6 +104,22 @@ class Level(unittest.TestCase):
         self.assertTrue(any(self.in_a_very_quiet_room(tone(16000, freq=400, level=40))))
 
     @unittest.skipUnless(HAVE_FEATURES, "needs audiofeatures with voice activity")
+    def test_a_long_sound_stays_speech_to_audiofeatures(self):
+        # Four seconds of one note: the last frames still count, each heard
+        # after the hold of the one before has run out.
+        voice = medialink.VoiceActivity(detector="audiofeatures", hold_ms=50)
+        for f in frames(hiss(16000 * 3, level=8)):
+            voice.feed(f)
+        note = frames(tone(16000 * 4, freq=400, level=2000))
+        for f in note[:-5]:
+            voice.feed(f)
+        heard = []
+        for f in note[-5:]:
+            time.sleep(0.06)
+            heard.append(voice.feed(f))
+        self.assertTrue(all(heard))
+
+    @unittest.skipUnless(HAVE_FEATURES, "needs audiofeatures with voice activity")
     def test_audiofeatures_is_the_default_where_there_is_one(self):
         voice = medialink.VoiceActivity(hold_ms=0)
         self.assertEqual(voice.detector, "audiofeatures")

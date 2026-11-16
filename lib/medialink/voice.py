@@ -91,16 +91,18 @@ class VoiceActivity:
         if bytes(pcm[step:]) == bytes(pcm[:-step]):
             # Digital silence, from a microphone still starting: not the room.
             return self.speaking
-        self._follow_floor()
         if self._frontend is not None:
             # The detector hears every frame, so its own floor keeps
-            # following the room.
+            # following the room. The level floor climbs only while the
+            # detector hears no speech, so a long cry doesn't become the room.
             voiced = self._voiced_frontend(pcm)
+            self._follow_floor(rise=not voiced)
             settled = self._samples >= self.rate
             if not settled:
                 self._samples += len(pcm) // step
             voiced = voiced and settled and self.level > max(_LEAST, self._floor * _OVER_FLOOR)
         else:
+            self._follow_floor()
             voiced = self._voiced_level()
         if voiced:
             self._heard = ticks_ms()
@@ -116,7 +118,7 @@ class VoiceActivity:
                 return True
         return False
 
-    def _follow_floor(self):
+    def _follow_floor(self, rise=True):
         level = self.level
         floor = self._floor
         # The floor drops to the quiet at once and climbs back slowly, so a
@@ -124,7 +126,7 @@ class VoiceActivity:
         # doesn't.
         if floor is None or level < floor:
             floor = level
-        else:
+        elif rise:
             floor += (level - floor) / 200
         self._floor = floor
 
