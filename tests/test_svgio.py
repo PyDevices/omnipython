@@ -74,6 +74,36 @@ class Decode(unittest.TestCase):
         self.assertEqual(px(screen, (y + 5) * sw + x + 10), 0xF800)
         self.assertEqual(px(screen, (y + 5) * sw + x + w), 0x001F)
 
+    def test_bands_are_the_whole_picture(self):
+        d = self.d
+        w, h = d.open(ICON, width=96)
+        whole_p, whole_a = bytearray(w * h * 2), bytearray(w * h)
+        d.decode(whole_p, whole_a)
+        band_p, band_a = bytearray(w * h * 2), bytearray(w * h)
+        blend_whole, blend_bands = bytearray(b"\x1f\x00" * (w * h)), bytearray(b"\x1f\x00" * (w * h))
+        d.decode(blend_whole)
+        for y0, y1 in ((0, 7), (7, 7), (7, 30), (30, h)):
+            d.decode(band_p, band_a, rows=(y0, y1))
+            d.decode(blend_bands, rows=(y0, y1))
+        self.assertEqual((band_p, band_a), (whole_p, whole_a))
+        self.assertEqual(blend_bands, blend_whole)
+        d.decode(bytearray(w * 10 * 2), rows=(0, 10))  # a target only as tall as the rows
+        for bad in ((5, 2), (0, h + 1), (1,)):
+            with self.assertRaises(ValueError):
+                d.decode(whole_p, rows=bad)
+
+    def test_memory_is_accepted(self):
+        import svgio
+
+        d = svgio.SvgDecoder(memory=64 * 1024)
+        self.assertEqual((d.memory, d.memory_peak, self.d.memory), (64 * 1024, 0, 0))
+        w, h = d.open(ICON)
+        pixels, alpha = bytearray(w * h * 2), bytearray(w * h)
+        d.decode(pixels, alpha)
+        self.assertEqual(px(pixels, 5 * w + 10), 0xF800)
+        with self.assertRaises(ValueError):
+            svgio.SvgDecoder(memory=100)
+
     def test_errors(self):
         import svgio
 
