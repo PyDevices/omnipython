@@ -1,3 +1,15 @@
+## v0.8.0.dev23 (2026-11-16)
+
+- medialink: what the detector calls speech must be 10 dB over the room's level floor (#668)
+- Stack page: audioroute's guide is audiodsp's change-without-a-click page (#671)
+- Docs: Bluetooth LE guide split in two, one board page, one USB support page (#670)
+- Packages read boarddev.name() themselves; _boardname goes (#669)
+- audiodev: capture opens at the wire's channel count and remixes to the one asked for (#665)
+- Docs: live demos use the omnipython-live-demo class the theme styles (#667)
+- Docs: the stack page links the omnipython and omnipython-builds repositories (#666)
+- usb.host.audio: the audio pump plays to a USB speaker itself (#660)
+- Docs and examples: mpftp is now mcuctl (#661)
+
 ## v0.8.0.dev22 (2026-11-16)
 
 - OmniPython: the library takes its new names (#656)
