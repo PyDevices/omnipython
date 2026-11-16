@@ -8,7 +8,7 @@ Click the button and drag the slider below. It runs in your browser, on
 MicroPython compiled to WebAssembly.
 
 ````{raw} html
-<div class="pydevices-live-demo">
+<div class="omnipython-live-demo">
   <div class="demo-editor-pane">
     <textarea class="code-editor">
 import appdev
