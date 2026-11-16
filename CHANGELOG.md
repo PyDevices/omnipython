@@ -1,3 +1,18 @@
+## v0.8.0.dev21 (2026-11-16)
+
+- Docs: links point at docs.omnipython.org (#651)
+- Check these pages in the documentation site (#650)
+- Stack page: Huey, the chameleon you hold and talk to (#649)
+- Docs: the new PyDevices docs theme (#648)
+- Stack page: _boardname (#647)
+- Stack: svgio for CPython also draws in a Pyodide page (#646)
+- svgio: draws under Pyodide, on the browser's canvas (#645)
+- svgio for CPython: Buffer, close() and decode(colors=) (#644)
+- svgio for CPython: reads a drawing in the compact form, and expand() (#642)
+- svgio for CPython: decode(rows=) draws a band, SvgDecoder(memory=) is accepted (#641)
+- Stack page: Huey's Perch (#643)
+- Library: apps 0.1.2.dev12 (#640)
+
 ## v0.8.0.dev20 (2026-11-15)
 
 - usb-host-net: a CDC-ECM adapter comes up as a network interface beside RNDIS (#508)
