@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: MIT
 
-"""PyDevices as a micropython-lib package: freeze it into a firmware, or
+"""OmniPython as a micropython-lib package: freeze it into a firmware, or
 require() it from another manifest.
 
 It carries everything in ``lib/`` at top level, so ``appdev``, ``audiodev``,
@@ -12,21 +12,21 @@ install. The list is read from ``lib/`` itself, so a new module there is
 included without anyone editing this file. ``utils/`` is not: its modules
 are for desktop hosts.
 
-With micropython-pydevices, ``build_mp.py --modules pydevices`` (or ``all``)
+With omnipython-builds, ``build_mp.py --modules omnipython`` (or ``all``)
 freezes it. From your own freeze manifest::
 
-    include("path/to/pydevices")
+    include("path/to/omnipython")
 
-micropython-pydevices' desktop and browser variants also include
+omnipython-builds' desktop and browser variants also include
 ``board_configs/desktop``, whose own manifest freezes the desktop board config
 and the pure-Python SDL2 and Win32 bindings.
 
 This file is not what ``mip`` installs from. The org's publisher builds the
-``pydevices`` and ``pydevices-desktop`` mip packages from ``lib/``, ``utils/``
+``omnipython`` and ``omnipython-desktop`` mip packages from ``lib/``, ``utils/``
 and ``mip-split.toml`` directly, with manifests of its own.
 
 **What freezing costs you.** Frozen modules come before ``lib`` on
-``sys.path`` (``.frozen`` is searched first), so a frozen PyDevices shadows any
+``sys.path`` (``.frozen`` is searched first), so a frozen OmniPython shadows any
 copy installed with ``mip``. Updating it means rebuilding the firmware. Freeze
 it where one self-contained image is the point, or where a page should load
 without fetching it (the webassembly build); elsewhere, install with ``mip``.

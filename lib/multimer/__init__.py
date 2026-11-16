@@ -1,7 +1,7 @@
 # SPDX-FileCopyrightText: 2024 Brad Barnett
 #
 # SPDX-License-Identifier: MIT
-"""multimer: one Timer, one clock, one dispatcher, on every PyDevices host.
+"""multimer: one Timer, one clock, one dispatcher, on every OmniPython host.
 
 ::
 

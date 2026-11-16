@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: MIT
 """The HID gate over USB, Windows' half: hear what ``usb_hid_gate.py`` types, and check it.
 
-Run with a Windows Python, with pydevices' ``lib`` and this folder on the path::
+Run with a Windows Python, with OmniPython's ``lib`` and this folder on the path::
 
     PYTHONPATH="$(wslpath -w lib);$(wslpath -w tests/bledev_board)" \\
         python.exe "$(wslpath -w tests/bledev_board/usb_hid_gate_windows.py)" 30

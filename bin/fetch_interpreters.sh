@@ -1,17 +1,17 @@
 #!/usr/bin/env bash
-# Fetch the bundled interpreter binaries from a pydevices GitHub Release.
+# Fetch the bundled interpreter binaries from an OmniPython GitHub Release.
 # They are release assets, not git content (modernization Gate 3 decision):
 # the repo carries only this script and the Python launchers.
 #
 # Requires the gh CLI (https://cli.github.com/), authenticated against
-# github.com with at least read access to PyDevices/pydevices releases
+# github.com with at least read access to PyDevices/omnipython releases
 # (gh auth login).
 #
 #   ./bin/fetch_interpreters.sh            # newest release with interpreter assets
 #   ./bin/fetch_interpreters.sh v0.3.8.dev1
 set -euo pipefail
 HERE=$(cd "$(dirname "$0")" && pwd)
-REPO=PyDevices/pydevices
+REPO=PyDevices/omnipython
 TAG="${1:-}"
 FILES=(micropython micropython.exe circuitpython micropython.mjs micropython.wasm)
 MANIFEST=interpreters.json

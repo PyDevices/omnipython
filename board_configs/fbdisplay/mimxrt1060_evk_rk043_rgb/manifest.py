@@ -8,7 +8,7 @@ metadata(
     version="0.1",
 )
 
-require("pydevices")
+require("omnipython")
 require("gt911")
 
 module("board_config.py")

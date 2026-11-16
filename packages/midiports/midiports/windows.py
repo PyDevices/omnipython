@@ -21,7 +21,7 @@ To try MIDI with no hardware, open the loopback port with
 ``windows.ports(midiports.LOOPBACK)``: what a program writes to its output
 comes out of its input. ``python -m midiports.loopback`` creates it.
 
-It needs ``uwin32``, which ships in ``pydevices-desktop``.
+It needs ``uwin32``, which ships in ``omnipython-desktop``.
 
 Ids carry the direction: ``"out:1"`` and ``"in:1"``. winmm numbers inputs
 and outputs separately, so a bare ``1`` would name two different devices.

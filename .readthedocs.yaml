@@ -1,4 +1,4 @@
-# Read the Docs builds the pydevices library's site from this file. The
+# Read the Docs builds the OmniPython library's site from this file. The
 # palettes and pdwidgets sites in this repository have their own, in their
 # folders.
 version: 2

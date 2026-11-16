@@ -13,7 +13,7 @@ white. That controller acknowledges every I2C address, so a scan of this bus
 lists them all. Touch is a FocalTech part at 0x38.
 
 Needs a CircuitPython-compatible build whose mipidsi.Display takes
-non_burst and continuous_clock (micropython-pydevices' CircuitPython
+non_burst and continuous_clock (omnipython-builds' CircuitPython
 patches). The board's other devices come from board_peripherals.
 """
 

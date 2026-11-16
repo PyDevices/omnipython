@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Upload the bundled interpreter binaries to a pydevices GitHub Release as
+# Upload the bundled interpreter binaries to an OmniPython GitHub Release as
 # assets, along with a generated interpreters.json manifest (sha256, size,
 # platform/arch, and interpreter version per file). This is the producer side
 # of bin/fetch_interpreters.sh: that script downloads what this one uploads.
@@ -21,7 +21,7 @@
 #               gh checks. The workflow's dry run uses it.
 set -euo pipefail
 HERE=$(cd "$(dirname "$0")" && pwd)
-REPO=PyDevices/pydevices
+REPO=PyDevices/omnipython
 TAG="${1:-}"
 CLOBBER="${2:-}"
 

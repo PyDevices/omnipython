@@ -2,11 +2,11 @@
   "urls": [
     [
       "board_config.py",
-      "github:PyDevices/pydevices/board_configs/cp/busdisplay/spi/rp2040-touch-lcd-1.28/board_config.py"
+      "github:PyDevices/omnipython/board_configs/cp/busdisplay/spi/rp2040-touch-lcd-1.28/board_config.py"
     ],
     [
       "gc9a01.py",
-      "github:PyDevices/pydevices/drivers/display/gc9a01.py"
+      "github:PyDevices/omnipython/drivers/display/gc9a01.py"
     ]
   ],
   "deps": [],

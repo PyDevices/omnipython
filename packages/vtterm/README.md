@@ -10,7 +10,7 @@ On a board, with `mip`:
 
 ```python
 import mip
-mip.install("github:PyDevices/pydevices/packages/vtterm")
+mip.install("github:PyDevices/omnipython/packages/vtterm")
 ```
 
 It draws with pygraphics and takes its colors from palettes' ANSI palette,

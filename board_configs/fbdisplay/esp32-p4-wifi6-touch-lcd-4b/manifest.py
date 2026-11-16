@@ -8,7 +8,7 @@ metadata(
     version="0.3",
 )
 
-require("pydevices")
+require("omnipython")
 require("gt911")
 require("es8311")
 require("es7210")

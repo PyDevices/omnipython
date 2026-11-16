@@ -1,6 +1,6 @@
-# Upgrade multimer from pydevices 0.5
+# Upgrade multimer from OmniPython 0.5
 
-pydevices 0.6.0 redesigned multimer. This page is what changes for a
+OmniPython 0.6.0 redesigned multimer. This page is what changes for a
 program, a library and a board config written for 0.5 or earlier. How
 multimer works is in
 [multimer internals](../how-it-works/multimer-internals.md).
@@ -70,5 +70,5 @@ called `app.stop_timer()` around draw-buffer creation use
 
 ## The test kits
 
-`PYDEVICES_TIMER_ASYNC` is retired. The examples kit still accepts it and
+`OMNIPYTHON_TIMER_ASYNC` is retired. The examples kit still accepts it and
 ignores it; `lv_timer_test_kit.py` has one mode.

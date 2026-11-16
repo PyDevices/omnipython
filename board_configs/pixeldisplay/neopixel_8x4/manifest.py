@@ -8,7 +8,7 @@ metadata(
     version="0.1",
 )
 
-require("pydevices")
+require("omnipython")
 require("pygraphics")
 
 module("board_config.py")

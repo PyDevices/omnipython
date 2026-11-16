@@ -5,7 +5,7 @@
 """Freeze the palettes package from its canonical source tree.
 
 A firmware build that wants palettes frozen includes this file from its own
-freeze manifest -- micropython-pydevices' ``build_mp.py --modules palettes``
+freeze manifest -- omnipython-builds' ``build_mp.py --modules palettes``
 does exactly that.
 """
 

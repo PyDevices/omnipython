@@ -8,8 +8,8 @@ audiobusio and audioio outputs do: play(), stop() and playing. Here a
 synthio Synthesizer is the sample, and the program presses four notes in
 turn. On a desktop the notes come out of the computer's speakers.
 
-Needs: a board_config with an audio_out, which a PyDevices board package
-or pydevices-desktop provides, and synthio (from audiodsp). CircuitPython
+Needs: a board_config with an audio_out, which a OmniPython board package
+or omnipython-desktop provides, and synthio (from audiodsp). CircuitPython
 boards play samples their own way; see audiobusio there.
 
 Run it:

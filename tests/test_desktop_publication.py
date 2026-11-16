@@ -1,7 +1,7 @@
 # SPDX-FileCopyrightText: 2026 Brad Barnett
 #
 # SPDX-License-Identifier: MIT
-"""Tests for the generated complete ``pydevices-desktop`` filesystem."""
+"""Tests for the generated complete ``omnipython-desktop`` filesystem."""
 
 import unittest
 from pathlib import Path
@@ -13,7 +13,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 class TestDesktopPublication(unittest.TestCase):
     def test_toml_contains_every_python_source(self):
-        files = tomllib.loads((ROOT / "pydevices-desktop.toml").read_text())["files"]
+        files = tomllib.loads((ROOT / "omnipython-desktop.toml").read_text())["files"]
         destinations = set(files.values())
         expected = set()
         for source_root in (ROOT / "lib", ROOT / "utils"):

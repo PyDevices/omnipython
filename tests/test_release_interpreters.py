@@ -59,7 +59,7 @@ class Scratch(unittest.TestCase):
 
     def lock(self, mpp, lvgl, comment="# pins\n"):
         path = self.dir / "sources.lock"
-        path.write_text(f"{comment}micropython-pydevices   {self.dir}/mpp   {mpp}\n"
+        path.write_text(f"{comment}omnipython-builds   {self.dir}/mpp   {mpp}\n"
                         f"omnipython-lvgl         {self.dir}/lvgl  {lvgl}  # trailing note\n")
         return path
 
@@ -67,7 +67,7 @@ class Scratch(unittest.TestCase):
 class TheShippedLock(unittest.TestCase):
     def test_pins_both_sources_at_full_commits(self):
         pins = sources.pins()
-        self.assertEqual(set(pins), {"micropython-pydevices", "omnipython-lvgl"})
+        self.assertEqual(set(pins), {"omnipython-builds", "omnipython-lvgl"})
         for name, (url, commit) in pins.items():
             self.assertRegex(commit, r"^[0-9a-f]{40}$", name)
             self.assertTrue(url.startswith("https://github.com/PyDevices/"), name)
@@ -91,14 +91,14 @@ class ReadingPins(Scratch):
 
     def test_a_missing_source_is_refused(self):
         path = self.dir / "sources.lock"
-        path.write_text(f"micropython-pydevices https://example.com/x.git {'a' * 40}\n")
+        path.write_text(f"omnipython-builds https://example.com/x.git {'a' * 40}\n")
         with self.assertRaises(SystemExit) as cm:
             sources.pins(path)
         self.assertIn("omnipython-lvgl", str(cm.exception))
 
     def test_a_row_of_the_wrong_shape_is_refused(self):
         path = self.dir / "sources.lock"
-        path.write_text("micropython-pydevices https://example.com/x.git\n")
+        path.write_text("omnipython-builds https://example.com/x.git\n")
         with self.assertRaises(SystemExit):
             sources.pins(path)
 
@@ -115,7 +115,7 @@ class Bumping(Scratch):
     def test_moves_a_pin_to_the_tip_and_keeps_the_comments(self):
         sources.bump(self.path)
         pins = sources.pins(self.path)
-        self.assertEqual(pins["micropython-pydevices"][1], self.mpp_new)
+        self.assertEqual(pins["omnipython-builds"][1], self.mpp_new)
         self.assertEqual(pins["omnipython-lvgl"][1], self.lvgl_old)
         text = self.path.read_text()
         self.assertTrue(text.startswith("# pins\n"))
@@ -132,7 +132,7 @@ class Bumping(Scratch):
         buf = io.StringIO()
         with contextlib.redirect_stdout(buf):
             sources.stale(self.path)
-        self.assertIn("micropython-pydevices pin is behind", buf.getvalue())
+        self.assertIn("omnipython-builds pin is behind", buf.getvalue())
         self.assertNotIn("omnipython-lvgl pin", buf.getvalue())
 
 
@@ -157,8 +157,8 @@ class TheSourcesRecord(Scratch):
     def test_lists_every_commit_the_build_used(self):
         rec = self.record(self.lock(self.mpp, self.lvgl))
         self.assertTrue(rec["pinned"])
-        self.assertEqual(rec["pydevices"], {"commit": self.pyd, "ref": "v1.2.3"})
-        self.assertEqual(rec["micropython-pydevices"], {"commit": self.mpp})
+        self.assertEqual(rec["omnipython"], {"commit": self.pyd, "ref": "v1.2.3"})
+        self.assertEqual(rec["omnipython-builds"], {"commit": self.mpp})
         self.assertEqual(rec["omnipython-lvgl"], {"commit": self.lvgl})
         self.assertEqual(rec["micropython"], {"commit": "c" * 40})
         self.assertEqual(rec["circuitpython"], {"version": "11.0.0-alpha.1"})
@@ -194,7 +194,7 @@ class TheSourcesRecord(Scratch):
     def test_verify_fails_on_the_wrong_commit(self):
         lock = self.lock("d" * 40, self.lvgl)
         with self.assertRaises(SystemExit):
-            sources.verify("micropython-pydevices", self.dir / "mpp", lock)
+            sources.verify("omnipython-builds", self.dir / "mpp", lock)
         sources.verify("omnipython-lvgl", self.dir / "lvgl", lock)
 
 
@@ -211,7 +211,7 @@ class TheWorkflowSteps(Scratch):
                         ignore=shutil.ignore_patterns("__pycache__"))
         shutil.copy(SCRIPTS / "release_interpreters.sh", self.tree)
         (self.tree / "release_interpreters" / "sources.lock").write_text(
-            f"micropython-pydevices {self.dir}/mpp {self.mpp}\nomnipython-lvgl {self.dir}/lvgl {self.lvgl}\n")
+            f"omnipython-builds {self.dir}/mpp {self.mpp}\nomnipython-lvgl {self.dir}/lvgl {self.lvgl}\n")
 
     def sh(self, *args, check=True):
         return subprocess.run(["bash", str(self.tree / "release_interpreters.sh"), *args],
@@ -235,7 +235,7 @@ class TheWorkflowSteps(Scratch):
         self.assertIn("attach=false", r.stdout)
 
     def test_gate_stops_on_a_bad_lock(self):
-        (self.tree / "release_interpreters" / "sources.lock").write_text("micropython-pydevices x y\n")
+        (self.tree / "release_interpreters" / "sources.lock").write_text("omnipython-builds x y\n")
         self.assertNotEqual(self.sh("gate", "release", "v1.2.3", check=False).returncode, 0)
 
     def test_fetch_checks_out_the_pinned_commit_not_the_tip(self):
@@ -269,7 +269,7 @@ class TheManifest(Scratch):
             (bindir / name).chmod(0o755)
         for name in ("micropython.exe", "micropython.mjs", "micropython.wasm"):
             (bindir / name).write_text("x")
-        record = {"pinned": True, "micropython-pydevices": {"commit": "a" * 40}, "modules": {"m": "b" * 40}}
+        record = {"pinned": True, "omnipython-builds": {"commit": "a" * 40}, "modules": {"m": "b" * 40}}
         (self.dir / "sources.json").write_text(json.dumps(record, indent=2))
         env = dict(os.environ, DRY_RUN="1", SOURCES_JSON=str(self.dir / "sources.json"))
         subprocess.run(["bash", str(bindir / "upload_interpreters.sh"), "v1.2.3"], check=True,

@@ -17,8 +17,8 @@ own OPTIONS before asking.
 
 Once the sink says PLAY, the stream is a C task on the P4's core 0, the
 firmware's `castif`. It converts the framebuffer with the PPA, encodes H.264
-in hardware with [`h264enc`](https://github.com/PyDevices/micropython-pydevices/tree/main/modules/h264enc),
-muxes MPEG-TS with [`tsmux`](https://github.com/PyDevices/micropython-pydevices/tree/main/modules/tsmux)
+in hardware with [`h264enc`](https://github.com/PyDevices/omnipython-builds/tree/main/modules/h264enc),
+muxes MPEG-TS with [`tsmux`](https://github.com/PyDevices/omnipython-builds/tree/main/modules/tsmux)
 and sends it over RTP, with the audio as 48 kHz LPCM on the same clock.
 Python only answers keepalives, forwards the sink's keyframe requests and
 draws. `castdisplay.castfast` is the Python side of that task.

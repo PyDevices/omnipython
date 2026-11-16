@@ -2,36 +2,36 @@
   "urls": [
     [
       "board_config.py",
-      "github:PyDevices/pydevices/board_configs/fbdisplay/m5stack_tab5_ili9881c/board_config.py"
+      "github:PyDevices/omnipython/board_configs/fbdisplay/m5stack_tab5_ili9881c/board_config.py"
     ],
     [
       "board_peripherals.py",
-      "github:PyDevices/pydevices/board_configs/fbdisplay/m5stack_tab5_ili9881c/board_peripherals.py"
+      "github:PyDevices/omnipython/board_configs/fbdisplay/m5stack_tab5_ili9881c/board_peripherals.py"
     ],
     [
       "gt911.py",
-      "github:PyDevices/pydevices/drivers/touch/gt911.py"
+      "github:PyDevices/omnipython/drivers/touch/gt911.py"
     ],
     [
       "pi4ioe5v.py",
-      "github:PyDevices/pydevices/drivers/io_expander/pi4ioe5v.py"
+      "github:PyDevices/omnipython/drivers/io_expander/pi4ioe5v.py"
     ],
     [
       "tab5_ili9881c_init.py",
-      "github:PyDevices/pydevices/drivers/display/tab5_ili9881c_init.py"
+      "github:PyDevices/omnipython/drivers/display/tab5_ili9881c_init.py"
     ],
     [
       "es7210.py",
-      "github:PyDevices/pydevices/drivers/codec/es7210.py"
+      "github:PyDevices/omnipython/drivers/codec/es7210.py"
     ],
     [
       "es8388.py",
-      "github:PyDevices/pydevices/drivers/codec/es8388.py"
+      "github:PyDevices/omnipython/drivers/codec/es8388.py"
     ]
   ],
   "deps": [
     [
-      "pydevices",
+      "omnipython",
       "latest"
     ]
   ],

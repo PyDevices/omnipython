@@ -2,23 +2,23 @@
   "urls": [
     [
       "board_config.py",
-      "github:PyDevices/pydevices/board_configs/busdisplay/spi/t-display-s3-pro/board_config.py"
+      "github:PyDevices/omnipython/board_configs/busdisplay/spi/t-display-s3-pro/board_config.py"
     ],
     [
       "board_peripherals.py",
-      "github:PyDevices/pydevices/board_configs/busdisplay/spi/t-display-s3-pro/board_peripherals.py"
+      "github:PyDevices/omnipython/board_configs/busdisplay/spi/t-display-s3-pro/board_peripherals.py"
     ],
     [
       "st7796.py",
-      "github:PyDevices/pydevices/drivers/display/st7796.py"
+      "github:PyDevices/omnipython/drivers/display/st7796.py"
     ],
     [
       "cst226.py",
-      "github:PyDevices/pydevices/drivers/touch/cst226.py"
+      "github:PyDevices/omnipython/drivers/touch/cst226.py"
     ],
     [
       "battery_adc.py",
-      "github:PyDevices/pydevices/drivers/power/battery_adc.py"
+      "github:PyDevices/omnipython/drivers/power/battery_adc.py"
     ],
     [
       "sdcard.py",
@@ -27,7 +27,7 @@
   ],
   "deps": [
     [
-      "pydevices",
+      "omnipython",
       "latest"
     ]
   ],

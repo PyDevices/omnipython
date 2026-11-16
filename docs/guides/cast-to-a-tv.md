@@ -17,7 +17,7 @@ import mip
 mip.install("castdisplay")
 ```
 
-or `mip.install("github:PyDevices/pydevices/packages/castdisplay")` for the
+or `mip.install("github:PyDevices/omnipython/packages/castdisplay")` for the
 newest code. From a checkout, put `packages/castdisplay` on `PYTHONPATH` (or
 `MICROPYPATH`) beside `lib/`.
 
@@ -114,7 +114,7 @@ read its remote, speak through it and play video on it, through
   frames, not both.
 
 It's plain sockets plus `pngio`, so it needs no video encoder. OmniPython MP
-firmware has `pngio` built in; on CPython it comes with `pydevices-desktop`
+firmware has `pngio` built in; on CPython it comes with `omnipython-desktop`
 and needs Pillow. From WSL, give it the TV's address: SSDP discovery doesn't
 cross WSL's NAT.
 
@@ -154,7 +154,7 @@ The names are `cast` (module `castdisplay.cast_display`, `sink=` and
 `kind=`), `hls` (`castdisplay.hls_display`, `tv=`) and `roku`
 (`castdisplay.roku_companion`, `tv=`). A cast display is never picked unless
 something asks for it, so nothing streams to a TV by surprise.
-`PYDEVICES_DISPLAY=hls` names one for a single run. The registry itself is in
+`OMNIPYTHON_DISPLAY=hls` names one for a single run. The registry itself is in
 the [displays guide](displays.md#write-your-own-backend).
 
 ## The Roku remote over Miracast

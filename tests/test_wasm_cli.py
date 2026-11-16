@@ -37,7 +37,7 @@ class TestWasmCli(unittest.TestCase):
                 modules=["hello"],
                 deps=["palettes"],
             ),
-            "https://pydevices.github.io/gallery/pyscript/pyodide.html?modules=hello&deps=pydevices-palettes%2Cpydevices-pygraphics",
+            "https://pydevices.github.io/gallery/pyscript/pyodide.html?modules=hello&deps=omnipython-palettes%2Comnipython-pygraphics",
         )
 
     def test_direct_builtins_are_not_reinstalled(self):
@@ -66,7 +66,7 @@ class TestWasmCli(unittest.TestCase):
                 resolved = resolve_dependencies([name], "pyodide")
                 self.assertTrue(resolved, f"{name} resolved to nothing")
                 self.assertTrue(
-                    resolved[0].startswith(("pydevices-", "omnipython-")),
+                    resolved[0].startswith("omnipython-"),
                     f"{name} -> {resolved[0]}, which is not a wheel name",
                 )
 

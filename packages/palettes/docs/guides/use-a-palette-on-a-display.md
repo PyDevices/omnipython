@@ -16,10 +16,10 @@ for x in range(display_drv.width):
 display_drv.show()
 ```
 
-`board_config` comes from [pydevices](https://github.com/PyDevices/pydevices),
+`board_config` comes from [OmniPython](https://github.com/PyDevices/omnipython),
 not from palettes. It is a per-board file you copy onto the device from
-[board_configs](https://github.com/PyDevices/pydevices/tree/main/board_configs),
-or that `pydevices-desktop` provides on a desktop. palettes does not depend on
+[board_configs](https://github.com/PyDevices/omnipython/tree/main/board_configs),
+or that `omnipython-desktop` provides on a desktop. palettes does not depend on
 it.
 
 ## When the colors look wrong

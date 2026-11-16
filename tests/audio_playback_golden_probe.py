@@ -96,7 +96,7 @@ transport = _wav_audio_out(_FORMAT, path=OUT_PATH)
 # runs of the same file differed from each other in 13 352 of 21 504 PCM bytes,
 # whole blocks of silence landing in different places each time, while the
 # windows build was byte-identical run to run. That difference was read as a
-# fault in the win32 driver (pydevices#53); it is this. With the pump off all
+# fault in the win32 driver (omnipython#53); it is this. With the pump off all
 # three unix runs, all three windows runs and the two ports agree byte for
 # byte, which is the parity claim this probe exists to make.
 #

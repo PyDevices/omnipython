@@ -11,8 +11,8 @@ dependencies do. What differs is how each runtime is checked.
 | MicroPython in the browser | `micropip` or the live demos | The [example gallery](https://gallery.omnipython.org/pyscript/) runs widget apps in a page. |
 | CircuitPython | none | `manifest.py` can be frozen into a firmware build, but no such build has been run and there is no `circup` route. Treat it as unsupported. |
 
-The desktop and browser paths need `pydevices-pygraphics`, whose
+The desktop and browser paths need `omnipython-pygraphics`, whose
 [docs](https://docs.omnipython.org/en/latest/pygraphics/) list the platforms it ships wheels for.
 
 Current releases are on TestPyPI. PyPI holds an older release, which installs
-and works, so a plain `pip install pydevices-pdwidgets` gives you that one.
+and works, so a plain `pip install omnipython-pdwidgets` gives you that one.

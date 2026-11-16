@@ -6,7 +6,7 @@
 On esp32 a virtual ``machine.Timer`` fires on the ``esp_timer`` task, on the
 other core, and ``init()``/``deinit()`` clear the port's handler pointer for a
 moment; a fire in that moment calls NULL and reboots the board
-(micropython-pydevices#14). These tests drive the source against a fake
+(omnipython-builds#14). These tests drive the source against a fake
 ``machine.Timer`` on a fake clock and record every ``init()`` or ``deinit()``
 made while the fake is firing or about to.
 """

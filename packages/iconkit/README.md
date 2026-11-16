@@ -11,7 +11,7 @@ MicroPython-compatible boards, CircuitPython-compatible boards and CPython.
 pip install -i https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ omnipython-iconkit
 ```
 
-On a board, freeze it: `include("/path/to/pydevices/packages/iconkit")` from your
+On a board, freeze it: `include("/path/to/omnipython/packages/iconkit")` from your
 firmware's `manifest.py`. Without freezing, the masks load into RAM when
 imported, so freeze them on a board that is short of it.
 

@@ -110,7 +110,7 @@ class Peripheral:
     def close(self) -> None: ...
 
 class Host:
-    """One connected HID device, as a stream of PyDevices events."""
+    """One connected HID device, as a stream of OmniPython events."""
 
     connection: Connection
     service_uuid: UUID

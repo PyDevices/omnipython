@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: MIT
 
-"""HID report descriptors, and the reports they describe, as PyDevices events.
+"""HID report descriptors, and the reports they describe, as OmniPython events.
 
 A HID device describes its own reports: the *report descriptor* (Bluetooth
 calls it the Report Map) says which bits of which report carry which control.
@@ -424,7 +424,7 @@ def _axis_order(usage):
 
 
 class Decoder:
-    """Turns one device's input reports into PyDevices events.
+    """Turns one device's input reports into OmniPython events.
 
     One instance per device: it holds that device's state (held keys, axis
     positions) and diffs each report against it. ``instance_id`` is the

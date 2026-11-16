@@ -15,9 +15,9 @@ LIB = TESTS.parent / "lib"
 
 
 def micropython():
-    """``PYDEVICES_MICROPYTHON``, ``micropython`` on PATH, or the workspace's
+    """``OMNIPYTHON_MICROPYTHON``, ``micropython`` on PATH, or the workspace's
     ``bin/micropython`` beside this checkout; None when there is none."""
-    explicit = os.environ.get("PYDEVICES_MICROPYTHON")
+    explicit = os.environ.get("OMNIPYTHON_MICROPYTHON")
     if explicit:
         return explicit
     found = shutil.which("micropython")
@@ -34,7 +34,7 @@ def need_micropython(case):
     interpreter = micropython()
     if interpreter is None:
         message = "no micropython binary: this check did NOT run on MicroPython"
-        if os.environ.get("PYDEVICES_REQUIRE_MICROPYTHON") == "1":
+        if os.environ.get("OMNIPYTHON_REQUIRE_MICROPYTHON") == "1":
             case.fail(message)
         sys.stderr.write("\n*** " + message + " ***\n")
         case.skipTest(message)

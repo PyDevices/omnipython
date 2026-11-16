@@ -13,8 +13,8 @@ copy.
 
 Needs Playwright with Chromium and a wasm build with the audio unlock in its
 bridge: ``bin/micropython.mjs`` in the workspace, or the folder named by
-``PYDEVICES_WASM_DIR``. Without them the skip is loud, and
-``PYDEVICES_REQUIRE_BROWSER=1`` turns it into a failure.
+``OMNIPYTHON_WASM_DIR``. Without them the skip is loud, and
+``OMNIPYTHON_REQUIRE_BROWSER=1`` turns it into a failure.
 """
 
 import functools
@@ -105,7 +105,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
 
 
 def _wasm_dir():
-    env = os.environ.get("PYDEVICES_WASM_DIR")
+    env = os.environ.get("OMNIPYTHON_WASM_DIR")
     if env:
         return Path(env)
     for parent in ROOT.parents:
@@ -121,7 +121,7 @@ def _missing():
         return "playwright is not installed"
     folder = _wasm_dir()
     if folder is None or not (folder / "micropython.mjs").exists():
-        return "no wasm build (bin/micropython.mjs or PYDEVICES_WASM_DIR)"
+        return "no wasm build (bin/micropython.mjs or OMNIPYTHON_WASM_DIR)"
     return None
 
 
@@ -131,7 +131,7 @@ class AudioUnlocksOnTheFirstClick(unittest.TestCase):
         reason = _missing()
         if reason:
             message = "the browser audio-unlock gate did NOT run: " + reason
-            if os.environ.get("PYDEVICES_REQUIRE_BROWSER") == "1":
+            if os.environ.get("OMNIPYTHON_REQUIRE_BROWSER") == "1":
                 raise AssertionError(message)
             sys.stderr.write("\n*** " + message + " ***\n")
             raise unittest.SkipTest(message)

@@ -8,7 +8,7 @@ metadata(
     version="0.1",
 )
 
-require("pydevices")
+require("omnipython")
 require("gc9a01")
 require("chsc6x")
 require("sdcard_nrf")

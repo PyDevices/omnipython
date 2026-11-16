@@ -71,7 +71,7 @@ _BLOCKS_FOREVER = 0x7FFFFFFF
 
 # How long produce() waits for a pump that has not made its first block, and
 # how it waits. It used to spin 20 000 drains and nothing else, and that spin
-# was the race behind pydevices#56: on a loaded machine the pump thread often
+# was the race behind omnipython#56: on a loaded machine the pump thread often
 # shares a core with the interpreter, and a thread that never gives the core
 # up is exactly what keeps the pump from running. Pinned to one core, 303 of
 # those spins in ten probe runs ended with the pump still at block 0. A round
@@ -156,7 +156,7 @@ class StartFailed(RuntimeError):
     file-backed source" is a property of the graph and will be true again in a
     millisecond; "the thread lost a race with a busy CPU" is a property of the
     afternoon, and making the second one sticky turns a transient loss into a
-    process that never uses the pump again (pydevices#52).
+    process that never uses the pump again (omnipython#52).
     """
 
 
@@ -164,7 +164,7 @@ def _why_not_running(mod, status):
     """Why a just-spawned pump is not running, as a sentence, or None.
 
     **"Not running" is not the same as "did not start", and the difference is
-    the whole of pydevices#52.** `audiopump.running()` is
+    the whole of omnipython#52.** `audiopump.running()` is
     `live && !finished`, and `live` is set on the CALLING thread before
     `spawn()` returns -- so what this can catch is a pump that has already
     *finished*. Under load that is exactly what happens: a 0.05 s RawSample is
@@ -869,13 +869,13 @@ class RingDriver(_Driver):
             # finished, and a short sample under load does that before the
             # interpreter gets its next slice. Asking it as a bare boolean
             # read that as "would not start" and threw away a pump that had
-            # just done the whole job (pydevices#52), so ask the status.
+            # just done the whole job (omnipython#52), so ask the status.
             self._parked = False
             if not mod.running():
                 # It did not fail to start. It started, and it has already
                 # FINISHED -- so ask the status, not the clock. "The pump
                 # would not start" was the wrong sentence and sent three
-                # sessions looking at thread creation (pydevices#52).
+                # sessions looking at thread creation (omnipython#52).
                 why = _why_not_running(mod, status)
                 if why is None:
                     # The pump pulled the whole graph before this thread was
@@ -955,7 +955,7 @@ class RingDriver(_Driver):
             # microseconds and has not finished its first block. Waiting here
             # beats returning a service call that produced nothing -- but not
             # by spinning, which can keep the pump off the very core it needs
-            # (pydevices#56; see _FIRST_BLOCK_WAIT_US).
+            # (omnipython#56; see _FIRST_BLOCK_WAIT_US).
             idle += 1
             if idle <= _FIRST_BLOCK_SPINS:
                 continue
@@ -1614,7 +1614,7 @@ class Pump:
         # way. They came apart because a fault that had already been torn
         # down went on refusing every later `play()` for the rest of the
         # boot, silently, and the speaker came back on `machine.I2S`
-        # (pydevices#45). A pump with no clients, no thread and no driver has
+        # (omnipython#45). A pump with no clients, no thread and no driver has
         # nothing broken left to carry, so `_shutdown` clears this and keeps
         # the sentence for whoever wants to report it.
         self._blocked = False
@@ -1897,7 +1897,7 @@ class Pump:
 
         The counters underneath this were each readable on their own and none
         of them had a reader, which is how `reentered()` came to be a number
-        nobody could see (pydevices#38; audiocomponents#97 is the same shape
+        nobody could see (omnipython#38; audiocomponents#97 is the same shape
         one layer up and chose this surface first).
 
         The entries, and which of them is bad news:
@@ -2037,7 +2037,7 @@ class Pump:
         on `fault()` for whoever reports it, and the next `play()` tries
         again. That is what a transient loss wants -- a pump that lost one
         race with a busy CPU is not a pump that cannot pump this graph, and
-        nothing else ever clears `_blocked` on this path (pydevices#52).
+        nothing else ever clears `_blocked` on this path (omnipython#52).
         """
         self._fault = why
         self._refusal = None
@@ -2070,7 +2070,7 @@ class Pump:
         # after this has no clients, no thread, no driver and no channel, so
         # there is nothing for the next play() to trip over. The sentence
         # stays on `fault()` for whoever wants to report it; what goes is the
-        # refusal that used to outlive it (pydevices#45).
+        # refusal that used to outlive it (omnipython#45).
         self._blocked = False
         if driver is not None:
             driver.close()

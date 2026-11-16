@@ -8,7 +8,7 @@ metadata(
     version="0.4",
 )
 
-require("pydevices")
+require("omnipython")
 require("st7789")
 require("dotstar")
 require("es7210")

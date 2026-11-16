@@ -2,20 +2,20 @@
   "urls": [
     [
       "board_config.py",
-      "github:PyDevices/pydevices/board_configs/busdisplay/spi/diy_esp32_ili9341_xpt2046/board_config.py"
+      "github:PyDevices/omnipython/board_configs/busdisplay/spi/diy_esp32_ili9341_xpt2046/board_config.py"
     ],
     [
       "ili9341.py",
-      "github:PyDevices/pydevices/drivers/display/ili9341.py"
+      "github:PyDevices/omnipython/drivers/display/ili9341.py"
     ],
     [
       "xpt2046.py",
-      "github:PyDevices/pydevices/drivers/touch/xpt2046.py"
+      "github:PyDevices/omnipython/drivers/touch/xpt2046.py"
     ]
   ],
   "deps": [
     [
-      "pydevices",
+      "omnipython",
       "latest"
     ]
   ],

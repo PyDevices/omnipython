@@ -2,12 +2,12 @@
   "urls": [
     [
       "board_config.py",
-      "github:PyDevices/pydevices/board_configs/cp/fbdisplay/pimoroni_pico_dv_base_640x480/board_config.py"
+      "github:PyDevices/omnipython/board_configs/cp/fbdisplay/pimoroni_pico_dv_base_640x480/board_config.py"
     ]
   ],
   "deps": [
     [
-      "pydevices",
+      "omnipython",
       "latest"
     ]
   ],

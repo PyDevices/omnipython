@@ -3,23 +3,23 @@
 What a board can drive from its host port, and what it can't. The
 [USB guide](../guides/usb.md) shows how to use each package; the host's
 limits are in
-[the host's own page](https://github.com/PyDevices/micropython-pydevices/blob/main/modules/usbhost/docs/host.md).
+[the host's own page](https://github.com/PyDevices/omnipython-builds/blob/main/modules/usbhost/docs/host.md).
 
 ## What works
 
 | Device | Package | What you get |
 |---|---|---|
-| Keyboard, mouse, media keys | [`usb-host-hid`](https://github.com/PyDevices/pydevices/tree/main/packages/usb/usb-host-hid) | Key, button and movement events named as `adafruit_hid` names them. Boot protocol by default, report protocol with `boot=False` |
-| Gamepad, joystick | [`usb-host-hid`](https://github.com/PyDevices/pydevices/tree/main/packages/usb/usb-host-hid) | `usb.host.hid_generic`: button, axis and hat events from the device's report descriptor. A D-pad reported as buttons, and pads that need a start-up message, aren't read |
-| Flash drive | [`usb-host-msc`](https://github.com/PyDevices/pydevices/tree/main/packages/usb/usb-host-msc) | Bulk-Only Transport, mounted with `vfs.VfsFat`, read and write. 512-byte blocks |
-| USB serial (CDC-ACM, CH340/CH341, CP210x, FTDI, PL2303) | [`usb-host-cdc`](https://github.com/PyDevices/pydevices/tree/main/packages/usb/usb-host-cdc) | A `Serial` that reads and writes like `machine.UART`, with DTR and RTS and line coding. A CDC-ECM or NCM network device isn't taken for a serial port |
-| MIDI controller (MIDI 1.0) | [`midiports`](https://github.com/PyDevices/pydevices/blob/main/packages/midiports/README.md) | `midiports.usb_host`, the same port shape as `usb_midi` |
-| Speaker or microphone (USB Audio 1.0 and 2.0) | [`usb-host-audio`](https://github.com/PyDevices/pydevices/tree/main/packages/usb/usb-host-audio) | `Speaker` and `Microphone`, and audiodev `audio_out()` and `pcm_in()` over them |
-| Webcam (UVC) | [`usb-host-video`](https://github.com/PyDevices/pydevices/tree/main/packages/usb/usb-host-video) | Whole MJPEG or YUY2 frames, negotiated with the camera |
-| Phone or camera (MTP and PTP) | [`usb-host-mtp`](https://github.com/PyDevices/pydevices/tree/main/packages/usb/usb-host-mtp) | List, read and fetch photos and files, and thumbnails. Read only |
-| Android USB tethering (RNDIS), CDC-ECM Ethernet adapters | [`usb-host-net`](https://github.com/PyDevices/pydevices/tree/main/packages/usb/usb-host-net) | `Tether`, a network interface with an address from the phone or the adapter's network. CDC-NCM and vendor-specific adapters aren't supported |
-| Board in its DFU bootloader | [`usb-host-dfu`](https://github.com/PyDevices/pydevices/tree/main/packages/usb/usb-host-dfu) | Read a board's flash, a block at a time. Read only: nothing is downloaded or erased |
-| Anything else | [`usb-core`](https://github.com/PyDevices/pydevices/tree/main/packages/usb/usb-core) | `usb.core.find`, `ctrl_transfer`, `read` and `write`, in PyUSB's shape |
+| Keyboard, mouse, media keys | [`usb-host-hid`](https://github.com/PyDevices/omnipython/tree/main/packages/usb/usb-host-hid) | Key, button and movement events named as `adafruit_hid` names them. Boot protocol by default, report protocol with `boot=False` |
+| Gamepad, joystick | [`usb-host-hid`](https://github.com/PyDevices/omnipython/tree/main/packages/usb/usb-host-hid) | `usb.host.hid_generic`: button, axis and hat events from the device's report descriptor. A D-pad reported as buttons, and pads that need a start-up message, aren't read |
+| Flash drive | [`usb-host-msc`](https://github.com/PyDevices/omnipython/tree/main/packages/usb/usb-host-msc) | Bulk-Only Transport, mounted with `vfs.VfsFat`, read and write. 512-byte blocks |
+| USB serial (CDC-ACM, CH340/CH341, CP210x, FTDI, PL2303) | [`usb-host-cdc`](https://github.com/PyDevices/omnipython/tree/main/packages/usb/usb-host-cdc) | A `Serial` that reads and writes like `machine.UART`, with DTR and RTS and line coding. A CDC-ECM or NCM network device isn't taken for a serial port |
+| MIDI controller (MIDI 1.0) | [`midiports`](https://github.com/PyDevices/omnipython/blob/main/packages/midiports/README.md) | `midiports.usb_host`, the same port shape as `usb_midi` |
+| Speaker or microphone (USB Audio 1.0 and 2.0) | [`usb-host-audio`](https://github.com/PyDevices/omnipython/tree/main/packages/usb/usb-host-audio) | `Speaker` and `Microphone`, and audiodev `audio_out()` and `pcm_in()` over them |
+| Webcam (UVC) | [`usb-host-video`](https://github.com/PyDevices/omnipython/tree/main/packages/usb/usb-host-video) | Whole MJPEG or YUY2 frames, negotiated with the camera |
+| Phone or camera (MTP and PTP) | [`usb-host-mtp`](https://github.com/PyDevices/omnipython/tree/main/packages/usb/usb-host-mtp) | List, read and fetch photos and files, and thumbnails. Read only |
+| Android USB tethering (RNDIS), CDC-ECM Ethernet adapters | [`usb-host-net`](https://github.com/PyDevices/omnipython/tree/main/packages/usb/usb-host-net) | `Tether`, a network interface with an address from the phone or the adapter's network. CDC-NCM and vendor-specific adapters aren't supported |
+| Board in its DFU bootloader | [`usb-host-dfu`](https://github.com/PyDevices/omnipython/tree/main/packages/usb/usb-host-dfu) | Read a board's flash, a block at a time. Read only: nothing is downloaded or erased |
+| Anything else | [`usb-core`](https://github.com/PyDevices/omnipython/tree/main/packages/usb/usb-core) | `usb.core.find`, `ctrl_transfer`, `read` and `write`, in PyUSB's shape |
 
 ## Where it runs
 

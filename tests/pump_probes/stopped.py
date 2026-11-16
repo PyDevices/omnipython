@@ -19,7 +19,7 @@
 # WHY IT EXISTS
 # -------------
 # Close a player while the pump is still producing and, until this file, nobody
-# knew what came out (pydevices#55). `identity.py` beside this compares the old
+# knew what came out (omnipython#55). `identity.py` beside this compares the old
 # path against the pump, but it LOOPS until `not out.playing` with a twenty-
 # second deadline -- it waits for the pump rather than racing it, which is
 # right for what it measures and is exactly why it has never asked this.
@@ -44,7 +44,7 @@
 # use: the audio up to the moment it stopped, and nothing that was never in
 # the music.
 #
-# The earlier sighting that opened pydevices#55 -- three unix runs of one
+# The earlier sighting that opened omnipython#55 -- three unix runs of one
 # script differing in 13 352 of 21 504 bytes, with whole blocks of silence
 # landing in different places -- was measured through a probe that was
 # stopping early BY CONSTRUCTION, with a fake clock advancing virtual ticks
@@ -125,7 +125,7 @@ class Sink(audiodev.PCMOutput):
     Backpressure is what paces a pump, so a consumer that stops has to be a
     queue that stops being emptied. `drained` is what a speaker would have
     played; `written` is what the pump handed over, which is the question
-    pydevices#55 asks.
+    omnipython#55 asks.
     """
 
     def __init__(self, fmt, prebuffer=0):

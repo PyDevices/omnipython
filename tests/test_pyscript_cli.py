@@ -1,7 +1,7 @@
 # SPDX-FileCopyrightText: 2026 Brad Barnett
 #
 # SPDX-License-Identifier: MIT
-"""Unit tests for pydevices/bin/pyscript.py CLI parsing, URL generation, and server probing."""
+"""Unit tests for omnipython/bin/pyscript.py CLI parsing, URL generation, and server probing."""
 
 import importlib.util
 import sys
@@ -55,10 +55,10 @@ class TestPyScriptCli(unittest.TestCase):
             extra_deps=["palettes"],
             base_url="http://127.0.0.1:8000",
         )
-        # Pyodide maps palettes to pydevices-palettes,pydevices-pygraphics wheels
+        # Pyodide maps palettes to omnipython-palettes,omnipython-pygraphics wheels
         self.assertEqual(
             url,
-            "http://127.0.0.1:8000/gallery/pyscript/pyodide.html?modules=hello&deps=pydevices-palettes%2Cpydevices-pygraphics",
+            "http://127.0.0.1:8000/gallery/pyscript/pyodide.html?modules=hello&deps=omnipython-palettes%2Comnipython-pygraphics",
         )
 
     def test_playwright_options_are_not_part_of_launcher(self):

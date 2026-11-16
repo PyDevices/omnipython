@@ -1,7 +1,7 @@
 # Install
 
-This page covers installing pydevices. For general `mip`, `micropython -m mip`,
-and `mpremote mip` usage, see the [PyDevices MIP index](https://github.com/PyDevices/mip).
+This page covers installing OmniPython. For general `mip`, `micropython -m mip`,
+and `mpremote mip` usage, see the [OmniPython MIP index](https://github.com/PyDevices/mip).
 
 ## System prerequisites (desktop)
 
@@ -17,7 +17,7 @@ Python from python.org — `pygame-ce` (`PGDisplay`) is generally the easiest
 window backend there, and WSL supports the Linux workflow unchanged.
 
 Headless CI should set `SDL_VIDEODRIVER=dummy` and `SDL_AUDIODRIVER=dummy`. For
-Linux without X11 or Wayland, install the [`board_configs/sdldisplay/linux_kms`](https://github.com/PyDevices/pydevices/tree/main/board_configs/sdldisplay/linux_kms)
+Linux without X11 or Wayland, install the [`board_configs/sdldisplay/linux_kms`](https://github.com/PyDevices/omnipython/tree/main/board_configs/sdldisplay/linux_kms)
 board config, which sets `SDL_VIDEODRIVER=kmsdrm` before SDL initializes; the
 host needs an SDL build with KMSDRM support, access to `/dev/dri`, and no
 competing DRM master.
@@ -30,17 +30,17 @@ competing DRM master.
 
 ## Desktop with pip
 
-One command installs the complete desktop stack: all portable PyDevices
+One command installs the complete desktop stack: all portable OmniPython
 components, the desktop board configuration, and the bundled utility modules.
 
 ```bash
 python -m pip install \
   --index-url https://test.pypi.org/simple/ \
   --extra-index-url https://pypi.org/simple/ \
-  pydevices-desktop
+  omnipython-desktop
 ```
 
-`pydevices-desktop` depends on `pydevices`; no extra is required. Verify the
+`omnipython-desktop` depends on `omnipython`; no extra is required. Verify the
 board and utility entry points in a fresh environment:
 
 ```bash
@@ -49,7 +49,7 @@ python -m venv .venv
 python -m pip install \
   --index-url https://test.pypi.org/simple/ \
   --extra-index-url https://pypi.org/simple/ \
-  pydevices-desktop
+  omnipython-desktop
 python -c "import board_config, micropython, mip; print(board_config.__file__)"
 ```
 
@@ -59,7 +59,7 @@ Install only the portable libraries when no desktop board is wanted:
 python -m pip install \
   --index-url https://test.pypi.org/simple/ \
   --extra-index-url https://pypi.org/simple/ \
-  pydevices
+  omnipython
 ```
 
 ## MicroPython hardware board
@@ -70,12 +70,12 @@ how to let the board fetch its own files over Wi-Fi instead of feeding them
 down a serial line, and the handful of traps that look like broken hardware.
 
 Board installers live in this repository. Select the matching directory and
-install it from GitHub; `omip` finds its `pydevices` dependency on the index:
+install it from GitHub; `omip` finds its `omnipython` dependency on the index:
 
 ```python
 import omip
 
-omip.install("github:PyDevices/pydevices/board_configs/busdisplay/i80/t-display-s3")
+omip.install("github:PyDevices/omnipython/board_configs/busdisplay/i80/t-display-s3")
 ```
 
 Each board installer includes its board-specific Python display, touch, and
@@ -101,9 +101,9 @@ it writable, and `omip` says how when it isn't.
 ## Desktop with MicroPython MIP
 
 Get the `micropython` (or `micropython.exe`) interpreter binary, either by
-running [`./bin/fetch_interpreters.sh`](https://github.com/PyDevices/pydevices/blob/main/bin/fetch_interpreters.sh) from a `pydevices` checkout (downloads
+running [`./bin/fetch_interpreters.sh`](https://github.com/PyDevices/omnipython/blob/main/bin/fetch_interpreters.sh) from a `omnipython` checkout (downloads
 the latest release's assets into `bin/`) or by downloading it directly from
-the [pydevices releases page](https://github.com/PyDevices/pydevices/releases).
+the [OmniPython releases page](https://github.com/PyDevices/omnipython/releases).
 Then create a ready-to-use workspace in the default user library location:
 
 ```bash
@@ -111,7 +111,7 @@ Then create a ready-to-use workspace in the default user library location:
 mkdir -p ~/.micropython && cd ~/.micropython
 micropython -m mip install --target lib \
   --index https://lib.omnipython.org \
-  github:PyDevices/pydevices/board_configs/desktop
+  github:PyDevices/omnipython/board_configs/desktop
 ```
 
 ```bat
@@ -119,39 +119,39 @@ REM Windows (cmd.exe)
 mkdir "%USERPROFILE%\.micropython" && cd "%USERPROFILE%\.micropython"
 micropython.exe -m mip install --target lib ^
   --index https://lib.omnipython.org ^
-  github:PyDevices/pydevices/board_configs/desktop
+  github:PyDevices/omnipython/board_configs/desktop
 ```
 
-The desktop raw-GitHub installer depends on the indexed `pydevices-desktop`
+The desktop raw-GitHub installer depends on the indexed `omnipython-desktop`
 package. Installing into an arbitrary directory instead works the same way:
 
 ```bash
 micropython -m mip install \
   --index https://lib.omnipython.org \
-  github:PyDevices/pydevices/board_configs/desktop
+  github:PyDevices/omnipython/board_configs/desktop
 ```
 
 Use `--target lib` when installing into a workspace whose import path expects a
 `lib/` directory. Add `--no-mpy` when the same tree must be readable by
 CircuitPython or CPython.
 
-## Freezing PyDevices into one binary
+## Freezing OmniPython into one binary
 
 If you want a single `micropython.exe` (or board image) that runs with nothing
-installed, freeze PyDevices into it with micropython-pydevices' `build_mp.py`.
-Its `pydevices` variant also freezes the universal desktop board config:
+installed, freeze OmniPython into it with omnipython-builds' `build_mp.py`.
+Its `omnipython` variant also freezes the universal desktop board config:
 
 ```bash
-build_mp.py --port windows --variant pydevices --modules pydevices,<your app>
+build_mp.py --port windows --variant omnipython --modules omnipython,<your app>
 ```
 
-[`manifest.py`](https://github.com/PyDevices/pydevices/blob/main/manifest.py) freezes everything in `lib/`;
-[`board_configs/desktop/manifest.py`](https://github.com/PyDevices/pydevices/blob/main/board_configs/desktop/manifest.py)
+[`manifest.py`](https://github.com/PyDevices/omnipython/blob/main/manifest.py) freezes everything in `lib/`;
+[`board_configs/desktop/manifest.py`](https://github.com/PyDevices/omnipython/blob/main/board_configs/desktop/manifest.py)
 freezes the desktop board config and the pure-Python SDL2 and Win32 bindings.
 A `board_config.py` beside your script still wins over the frozen one. For a
 board image, freeze `lib/` only and install the board's own config.
 
-Frozen modules come before `lib` on `sys.path`, so a frozen PyDevices shadows
+Frozen modules come before `lib` on `sys.path`, so a frozen OmniPython shadows
 any copy installed with `mip`, and updating it means rebuilding. The board's
 root comes before them, though, so one module can be replaced without a
 rebuild by installing it there. That's how to get a newer `omip` onto firmware
@@ -160,7 +160,7 @@ that has one frozen in:
 ```python
 import mip
 
-mip.install("github:PyDevices/pydevices/lib/omip.py", target="/")
+mip.install("github:PyDevices/omnipython/lib/omip.py", target="/")
 ```
 
 From then on `import omip` finds the copy in the root. Asking a frozen `omip`
@@ -180,7 +180,7 @@ on the device:
 ```bash
 mpremote mip install \
   --index https://lib.omnipython.org \
-  github:PyDevices/pydevices/board_configs/busdisplay/i80/t-display-s3
+  github:PyDevices/omnipython/board_configs/busdisplay/i80/t-display-s3
 ```
 
 The recommended hosted-interpreter search paths keep frozen firmware modules ahead
@@ -200,5 +200,5 @@ set PYTHONPATH=.;lib;utils
 This keeps the unix port's default search order — `.frozen`, then
 `~/.micropython/lib`, then `/usr/lib/micropython` — and adds `.`, `lib/` and
 `utils/` so a workspace runs from any directory. It is also why installing
-the CPython [`micropython.py`](https://github.com/PyDevices/pydevices/blob/main/utils/micropython.py) compatibility module is harmless on MicroPython:
+the CPython [`micropython.py`](https://github.com/PyDevices/omnipython/blob/main/utils/micropython.py) compatibility module is harmless on MicroPython:
 `.frozen` resolves first.

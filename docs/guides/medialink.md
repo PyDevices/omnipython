@@ -21,7 +21,7 @@ intercom.release()      # let go: the other side may talk now
 
 [`medialink_walkie_talkie`](https://github.com/PyDevices/apps/blob/main/apps/medialink_walkie_talkie/__init__.py)
 is the whole walkie-talkie, finding the other side by name.
-[`examples/medialink_simpletest.py`](https://github.com/PyDevices/pydevices/blob/main/examples/medialink_simpletest.py)
+[`examples/medialink_simpletest.py`](https://github.com/PyDevices/omnipython/blob/main/examples/medialink_simpletest.py)
 sends one frame and shows a send to an absent peer failing. Three more
 put the same pieces to other uses:
 [`medialink_baby_monitor`](https://github.com/PyDevices/apps/blob/main/apps/medialink_baby_monitor/__init__.py),
@@ -32,7 +32,7 @@ described below.
 
 ## Install
 
-On a board, medialink is its own package in the PyDevices index, so a board
+On a board, medialink is its own package in the OmniPython index, so a board
 that never streams doesn't carry it:
 
 ```python
@@ -40,9 +40,9 @@ import mip
 mip.install("medialink", index="https://lib.omnipython.org")
 ```
 
-On a computer it comes with `pydevices`. Finding a peer by name needs the
+On a computer it comes with `omnipython`. Finding a peer by name needs the
 `mdns` module ([mdns](mdns.md)): built into CircuitPython and into
-MicroPython firmware that carries it, and from `pydevices-desktop` with
+MicroPython firmware that carries it, and from `omnipython-desktop` with
 python-zeroconf on CPython.
 
 ## Finding each other
@@ -238,7 +238,7 @@ the few the network stack keeps for you: a listener that printed "sound"
 at the start of each one-second turn heard 34 or 35 of its 50 frames.
 Frames a talker captured during the stall go out in a burst that the
 listener can't keep either. With the console off the screen, every frame
-arrives. A PyDevices board config takes it off for you; a program that
+arrives. A OmniPython board config takes it off for you; a program that
 doesn't import one does it itself, as
 [Board configs](../boards/board-configs.md#the-circuitpython-console) shows.
 

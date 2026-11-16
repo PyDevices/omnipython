@@ -7,9 +7,9 @@ The contract is a plain script so MicroPython can run it too. This file runs
 it under CPython, under a unix ``micropython`` when one is available, and once
 per planted fault, each of which must make it fail.
 
-The MicroPython run looks for ``PYDEVICES_MICROPYTHON``, then ``micropython``
+The MicroPython run looks for ``OMNIPYTHON_MICROPYTHON``, then ``micropython``
 on PATH, then the workspace's ``bin/micropython`` beside this checkout. When
-none exists the skip is loud, and ``PYDEVICES_REQUIRE_MICROPYTHON=1`` turns it
+none exists the skip is loud, and ``OMNIPYTHON_REQUIRE_MICROPYTHON=1`` turns it
 into a failure.
 """
 
@@ -26,7 +26,7 @@ PLANTS = ("drop", "corrupt", "reorder", "truncate", "overwrite", "midi")
 
 
 def _micropython():
-    explicit = os.environ.get("PYDEVICES_MICROPYTHON")
+    explicit = os.environ.get("OMNIPYTHON_MICROPYTHON")
     if explicit:
         return explicit
     found = shutil.which("micropython")
@@ -62,7 +62,7 @@ class BledevContract(unittest.TestCase):
         interpreter = _micropython()
         if interpreter is None:
             message = "no micropython binary: the bledev contract did NOT run on MicroPython"
-            if os.environ.get("PYDEVICES_REQUIRE_MICROPYTHON") == "1":
+            if os.environ.get("OMNIPYTHON_REQUIRE_MICROPYTHON") == "1":
                 self.fail(message)
             sys.stderr.write("\n*** " + message + " ***\n")
             self.skipTest(message)

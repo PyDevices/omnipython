@@ -1,14 +1,14 @@
 # Architecture
 
-`pydevices` is the core product layer, owning portable hardware interfaces, driver abstractions, board wiring contracts, and releases.
+`omnipython` is the core product layer, owning portable hardware interfaces, driver abstractions, board wiring contracts, and releases.
 
-Applications build directly on the **PyDevices Board Contract** and core packages (`displaydev`, `audiodev`, `appdev`, `multimer`). Downstream showcases like `gallery` consume this layer as companion sample code.
+Applications build directly on the **OmniPython Board Contract** and core packages (`displaydev`, `audiodev`, `appdev`, `multimer`). Downstream showcases like `gallery` consume this layer as companion sample code.
 
 ## Component diagram
 
 ```{mermaid}
 flowchart TB
-  subgraph product [pydevices Core Engine]
+  subgraph product [OmniPython Core Engine]
     BC[board_config.py - Eager UI Hardware]
     BP[board_peripherals.py / boarddev - Lazy Extras]
     DD[displaydev - Display Abstraction]
@@ -58,12 +58,12 @@ flowchart TB
 | `audiodev` | Cross-platform audio output/input interfaces (`I2SPCMOutput`, `SDLPCMOutput`, …). |
 | `events` / `keys` | Neutral event definitions, key codes, modifier keys, and touch gestures. |
 | `multimer` | One `machine.Timer`-shaped `Timer` on every host, with the clock, `sleep_ms`, `schedule`, `hold` and `report`. |
-| `appdev` | Optional event traffic controller and input queue for applications using native PyDevices dispatch. |
+| `appdev` | Optional event traffic controller and input queue for applications using native OmniPython dispatch. |
 | `display_driver` | LVGL coordinator bridging LVGL widgets to `displaydev` and `multimer`. |
 
 ## Standard Application Boot Sequence
 
-1. Install `pydevices` or your board's `board_config` via MIP or pip.
+1. Install `omnipython` or your board's `board_config` via MIP or pip.
 2. Import `display_drv` from `board_config`.
 3. Draw directly or bind your choice of UI toolkit (`pdwidgets`, `lvgl`, or raw framebuffers).
 4. Run your application event loop.
@@ -78,14 +78,14 @@ display_drv.show()
 
 ## Choosing a GUI layer
 
-PyDevices supports several graphical approaches; pick by how much you need and
+OmniPython supports several graphical approaches; pick by how much you need and
 what you can compile:
 
 | Approach | Use it for | Package |
 |---|---|---|
 | **Raw graphics / canvas** | Direct pixel, line, and shape drawing | [`displaydev`](../guides/displays.md) with [`pygraphics`](https://github.com/PyDevices/pygraphics) |
-| **Pure-Python GUI** | Portable buttons, lists, themes, and screen management with nothing to compile | [`pdwidgets`](https://github.com/PyDevices/pydevices/tree/main/pdwidgets) |
-| **C-native GUI** | Complex vector widgets and a C-accelerated animation engine | [`lvgl`](https://github.com/PyDevices/omnipython-lvgl) — see [using LVGL with PyDevices](../guides/lvgl.md) |
+| **Pure-Python GUI** | Portable buttons, lists, themes, and screen management with nothing to compile | [`pdwidgets`](https://github.com/PyDevices/omnipython/tree/main/pdwidgets) |
+| **C-native GUI** | Complex vector widgets and a C-accelerated animation engine | [`lvgl`](https://github.com/PyDevices/omnipython-lvgl) — see [using LVGL with OmniPython](../guides/lvgl.md) |
 
 All three sit on the same board contract, so the choice does not change how your
 hardware is configured.

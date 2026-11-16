@@ -229,7 +229,7 @@ def AutoDisplay(
             ``rotation`` it has no parameter for. The message
             names the backend.
 
-    The search order is the ``PYDEVICES_DISPLAY`` environment
+    The search order is the ``OMNIPYTHON_DISPLAY`` environment
     variable, then the backends a board config asked for with ``require``, then the ones in
     the box. See `backends`.
 
@@ -241,8 +241,8 @@ def AutoDisplay(
     from boarddev import env_get
 
     if canvas_id is None:
-        canvas_id = env_get("PYDEVICES_CANVAS_ID", "display_canvas")
-    override = env_get("PYDEVICES_DISPLAY")
+        canvas_id = env_get("OMNIPYTHON_CANVAS_ID", "display_canvas")
+    override = env_get("OMNIPYTHON_DISPLAY")
 
     seen = []
     for name, spec, builtin in backends.candidates("display", override):
@@ -274,7 +274,7 @@ def AutoDisplay(
         except backends.Decline:
             if override:
                 raise ImportError(
-                    "display backend %r (PYDEVICES_DISPLAY) can't run here" % name
+                    "display backend %r (OMNIPYTHON_DISPLAY) can't run here" % name
                 )
     raise ImportError(
         "no usable display backend; the ones registered are: %s"

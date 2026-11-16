@@ -22,7 +22,7 @@ on:
       # lib/ and utils/, so a change to it has to run the suite. Without this
       # the assertion only fires when something ELSE changes: the wifi.py move
       # left the TOML stale, and the fix could not trigger its own test.
-      - 'pydevices-desktop.toml'
+      - 'omnipython-desktop.toml'
       - 'tests/**'
       - 'packages/vtterm/**'
       - 'packages/castdisplay/**'
@@ -51,7 +51,7 @@ on:
       # lib/ and utils/, so a change to it has to run the suite. Without this
       # the assertion only fires when something ELSE changes: the wifi.py move
       # left the TOML stale, and the fix could not trigger its own test.
-      - 'pydevices-desktop.toml'
+      - 'omnipython-desktop.toml'
       - 'tests/**'
       - 'packages/vtterm/**'
       - 'packages/castdisplay/**'
@@ -78,7 +78,7 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y libsdl2-2.0-0
 
       - name: Install zeroconf, for mdns.py's network test, resvg-py and Pillow for svgio.py, and pygraphics and pyte for vtterm
-        run: python -m pip install zeroconf resvg-py pillow pydevices-pygraphics pyte
+        run: python -m pip install -i https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ zeroconf resvg-py pillow "omnipython-pygraphics>=0.1.7.dev0" pyte
 
       - name: Run stdlib unittest suite
         env:
@@ -93,12 +93,12 @@ jobs:
   # on a real interpreter. So this job builds one.
   #
   # It needs audiodsp and nothing else: `audiopump` the engine ships with
-  # audiodsp on every port, and the platform driver (`modules/audioif` in micropython-pydevices) is
+  # audiodsp on every port, and the platform driver (`modules/audioif` in omnipython-builds) is
   # optional -- without it `threaded()` is False and the same loop runs on
   # the interpreter's own thread, which both probes pass on. That is what
   # makes this job possible in a public repository at all.
   #
-  # PYDEVICES_REQUIRE_PUMP=1 is the point of the job: without it the tests
+  # OMNIPYTHON_REQUIRE_PUMP=1 is the point of the job: without it the tests
   # skip, loudly but greenly, which is what they do in the unittest job
   # above on a runner with no interpreter.
   #
@@ -112,7 +112,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
-          path: pydevices
+          path: omnipython
 
       - uses: actions/setup-python@v7
         with:
@@ -145,50 +145,50 @@ jobs:
             USER_C_MODULES=$GITHUB_WORKSPACE
 
       - name: The pump probes, with their planted faults
-        working-directory: pydevices
+        working-directory: omnipython
         env:
-          PYDEVICES_PUMP_INTERPRETER: >-
+          OMNIPYTHON_PUMP_INTERPRETER: >-
             ${{ github.workspace }}/micropython/ports/unix/build-standard/micropython
-          PYDEVICES_REQUIRE_PUMP: '1'
+          OMNIPYTHON_REQUIRE_PUMP: '1'
         run: python -m unittest tests.test_pump_interpreter -v
 
       # multimer's nrf timer interrupt must not run the delivery it schedules:
       # the probe checks that on a real VM, where pending calls run at jumps.
       - name: multimer nrf interrupt probe on MicroPython
-        working-directory: pydevices
+        working-directory: omnipython
         env:
-          PYDEVICES_MICROPYTHON: >-
+          OMNIPYTHON_MICROPYTHON: >-
             ${{ github.workspace }}/micropython/ports/unix/build-standard/micropython
-          PYDEVICES_REQUIRE_MICROPYTHON: '1'
+          OMNIPYTHON_REQUIRE_MICROPYTHON: '1'
         timeout-minutes: 5
         run: python -m unittest discover -s tests -p 'test_multimer_machine_source.py' -k TestNrfInterruptRunsNoDelivery -v
 
       - name: omip on MicroPython
-        working-directory: pydevices
+        working-directory: omnipython
         env:
-          PYDEVICES_MICROPYTHON: >-
+          OMNIPYTHON_MICROPYTHON: >-
             ${{ github.workspace }}/micropython/ports/unix/build-standard/micropython
-          PYDEVICES_REQUIRE_MICROPYTHON: '1'
+          OMNIPYTHON_REQUIRE_MICROPYTHON: '1'
         timeout-minutes: 5
         run: python -m unittest discover -s tests -p 'test_omip.py' -k MicroPythonRun -v
 
       - name: the board's name on MicroPython
-        working-directory: pydevices
+        working-directory: omnipython
         env:
-          PYDEVICES_MICROPYTHON: >-
+          OMNIPYTHON_MICROPYTHON: >-
             ${{ github.workspace }}/micropython/ports/unix/build-standard/micropython
-          PYDEVICES_REQUIRE_MICROPYTHON: '1'
+          OMNIPYTHON_REQUIRE_MICROPYTHON: '1'
         timeout-minutes: 5
         run: python -m unittest discover -s tests -p 'test_board_name.py' -v
 
       # usb.host.net reads a CDC-ECM adapter's MAC string with code that runs on
       # a board, where a bytearray takes only step-1 slices.
       - name: usb.host.net on MicroPython
-        working-directory: pydevices
+        working-directory: omnipython
         env:
-          PYDEVICES_MICROPYTHON: >-
+          OMNIPYTHON_MICROPYTHON: >-
             ${{ github.workspace }}/micropython/ports/unix/build-standard/micropython
-          PYDEVICES_REQUIRE_MICROPYTHON: '1'
+          OMNIPYTHON_REQUIRE_MICROPYTHON: '1'
         timeout-minutes: 5
         run: python -m unittest discover -s tests -p 'test_usb_host_net.py' -k EcmOnMicroPythonTests -v
 
@@ -197,10 +197,10 @@ jobs:
       # delivers through micropython.schedule, which swallows both, and which
       # way a tick arrives is a race, so the test runs the program many times.
       - name: multimer exit from a timer on MicroPython
-        working-directory: pydevices
+        working-directory: omnipython
         env:
-          PYDEVICES_MICROPYTHON: >-
+          OMNIPYTHON_MICROPYTHON: >-
             ${{ github.workspace }}/micropython/ports/unix/build-standard/micropython
-          PYDEVICES_REQUIRE_MICROPYTHON: '1'
+          OMNIPYTHON_REQUIRE_MICROPYTHON: '1'
         timeout-minutes: 5
         run: python -m unittest discover -s tests -p 'test_multimer_exit.py' -v

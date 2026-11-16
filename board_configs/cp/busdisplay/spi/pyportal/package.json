@@ -2,11 +2,11 @@
   "urls": [
     [
       "board_config.py",
-      "github:PyDevices/pydevices/board_configs/cp/busdisplay/spi/pyportal/board_config.py"
+      "github:PyDevices/omnipython/board_configs/cp/busdisplay/spi/pyportal/board_config.py"
     ],
     [
       "ili9341.py",
-      "github:PyDevices/pydevices/drivers/display/ili9341.py"
+      "github:PyDevices/omnipython/drivers/display/ili9341.py"
     ]
   ],
   "deps": [],

@@ -8,7 +8,7 @@ metadata(
     version="0.1",
 )
 
-require("pydevices")
+require("omnipython")
 require("sdcard")  # micropython-lib's: frozen into OmniPython firmware, or mip.install("sdcard") first
 
 module("board_config.py")

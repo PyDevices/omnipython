@@ -42,8 +42,8 @@ won't take yet, to go out on the next ``flush()`` or ``poll()``.
 
 Runs on MicroPython and CPython with ``socket``. On CircuitPython pass
 ``pool=socketpool.SocketPool(wifi.radio)``. Announcing and finding need the
-``mdns`` module: CircuitPython's, the one in PyDevices firmware, or on a
-computer pydevices-desktop's (``pip install pydevices-desktop``).
+``mdns`` module: CircuitPython's, the one in OmniPython firmware, or on a
+computer omnipython-desktop's (``pip install omnipython-desktop``).
 """
 
 import binascii
@@ -346,7 +346,7 @@ class Listener:
             try:
                 name = _boardname.name("announce=True names the link", "hmilink", 'pass announce="a-name"')
             except ImportError:
-                raise ImportError("announce=True needs pydevices' boarddev for the board's name; or pass announce=\"a-name\"")
+                raise ImportError("announce=True needs OmniPython's boarddev for the board's name; or pass announce=\"a-name\"")
         server = _mdns_server()
         try:
             server.instance_name = name
@@ -396,8 +396,8 @@ def _mdns_server():
         import mdns
     except ImportError:
         raise ImportError(
-            "announcing needs the mdns module: CircuitPython's, PyDevices firmware's, "
-            "or on a computer pip install pydevices-desktop"
+            "announcing needs the mdns module: CircuitPython's, OmniPython firmware's, "
+            "or on a computer pip install omnipython-desktop"
         )
     if sys.implementation.name == "circuitpython":
         import wifi

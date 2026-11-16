@@ -21,7 +21,7 @@ while True:
         print(msg)
 ```
 
-On a desktop, `pip install pydevices-desktop` installs `midiports` and
+On a desktop, `pip install omnipython-desktop` installs `midiports` and
 `adafruit_midi` together; on a board, install with `mip`.
 
 To use another transport, change the line that opens the ports:
@@ -64,7 +64,7 @@ On a board, with `mip`:
 
 ```python
 import mip
-mip.install("github:PyDevices/pydevices/packages/midiports")
+mip.install("github:PyDevices/omnipython/packages/midiports")
 ```
 
 That fetches `midiports` and Adafruit's `adafruit_midi`, pinned to a release
@@ -81,10 +81,10 @@ board's schedule queue, and the board stops receiving MIDI until it resets. The 
 has had 0.1.1 since September 2026, but a firmware that freezes the package may carry
 0.1.0.
 
-From a computer, `mpremote mip install github:PyDevices/pydevices/midiports`
+From a computer, `mpremote mip install github:PyDevices/omnipython/midiports`
 does the same.
 
-From release 0.7.6, `midiports` is in the PyDevices index too, so a board
+From release 0.7.6, `midiports` is in the OmniPython index too, so a board
 config can `require("midiports")` and you can install it by name:
 
 ```python
@@ -92,13 +92,13 @@ omip.install("midiports")
 ```
 
 `omip` comes with OmniPython firmware. On other MicroPython firmware, run
-`mip.install("github:PyDevices/pydevices/lib/omip.py")` once to put it on the board.
+`mip.install("github:PyDevices/omnipython/lib/omip.py")` once to put it on the board.
 
 That installs `midiports` alone, because `adafruit_midi` isn't in any mip
 index. If your board doesn't have it, use the `github:` install above, which
 fetches both.
 
-On desktop Python, the Windows port needs `uwin32` from `pydevices-desktop`.
+On desktop Python, the Windows port needs `uwin32` from `omnipython-desktop`.
 `midiports` isn't on PyPI yet, so put this folder on your path. Adafruit
 publishes `adafruit_midi` there as `adafruit-circuitpython-midi`.
 

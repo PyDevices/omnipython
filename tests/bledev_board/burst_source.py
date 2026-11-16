@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: MIT
 """Notification bursts, the source: notifies numbered packets back to back on command.
 
-Pair with burst_sink.py on another board (pydevices#87). Logs to /burst_per.log.
+Pair with burst_sink.py on another board (omnipython#87). Logs to /burst_per.log.
 """
 import asyncio, struct, time
 import bledev, bledev.mpble

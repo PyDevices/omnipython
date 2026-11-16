@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: MIT
 
-"""Private URL policy shared by PyDevices browser launchers and generators."""
+"""Private URL policy shared by OmniPython browser launchers and generators."""
 
 from __future__ import annotations
 
@@ -16,7 +16,7 @@ RUNTIMES = ("wasm", "pyodide")
 # Present in the direct-WebAssembly runtime without being installed: compiled
 # in as a usermod (displayif, audiodsp, pygraphics, lvgl, usdl2), frozen from
 # the aggregator's manifest (palettes), or installed unconditionally by every
-# host as part of pydevices-desktop (appdev, displaydev, multimer,
+# host as part of omnipython-desktop (appdev, displaydev, multimer,
 # board_config, display_driver).
 #
 # pdwidgets was frozen here until 2026-09-04, when it left the aggregator to
@@ -34,7 +34,7 @@ _DIRECT_BUILTINS = frozenset(
         "lvgl",
         "multimer",
         "palettes",
-        "pydevices-lvgl",
+        "omnipython-lvgl",
         "pygraphics",
         "usdl2",
         "usdl2-py",
@@ -44,24 +44,24 @@ _PYODIDE_BASE = frozenset({"appdev", "board_config", "displaydev", "multimer"})
 _MIP_REWRITE = {
     "display-driver": None,
     "lvgl": None,
-    "pydevices-lvgl": None,
+    "omnipython-lvgl": None,
     "usdl2-py": "usdl2",
 }
 _WHEEL_REWRITE = {
-    "appdev": "pydevices",
+    "appdev": "omnipython",
     "audioeffects": "omnipython-audioeffects",
     "audiodsp": "omnipython-audiodsp",
     "audioinstruments": "omnipython-audioinstruments",
     "controlkit": "omnipython-applibs",
-    "display-driver": "pydevices-lvgl",
-    "displaydev": "pydevices",
-    "lvgl": "pydevices-lvgl",
-    "multimer": "pydevices",
+    "display-driver": "omnipython-lvgl",
+    "displaydev": "omnipython",
+    "lvgl": "omnipython-lvgl",
+    "multimer": "omnipython",
     "iconkit": "omnipython-iconkit",
-    "palettes": "pydevices-palettes",
-    "pdwidgets": "pydevices-pdwidgets",
-    "pydevices-lvgl": "pydevices-lvgl",
-    "pygraphics": "pydevices-pygraphics",
+    "palettes": "omnipython-palettes",
+    "pdwidgets": "omnipython-pdwidgets",
+    "omnipython-lvgl": "omnipython-lvgl",
+    "pygraphics": "omnipython-pygraphics",
     "usdl2-py": "usdl2",
 }
 
@@ -127,9 +127,9 @@ def resolve_dependencies(deps: Iterable[str], runtime: str) -> list[str]:
     if (
         runtime == "pyodide"
         and pulls_pygraphics
-        and "pydevices-pygraphics" not in output
+        and "omnipython-pygraphics" not in output
     ):
-        output.append("pydevices-pygraphics")
+        output.append("omnipython-pygraphics")
     return output
 
 

@@ -9,13 +9,13 @@ import sys
 from boarddev import env_bool, env_float, env_int
 from displaydev.auto import AutoDisplay
 
-_width = env_int("PYDEVICES_WIDTH", 320)
-_height = env_int("PYDEVICES_HEIGHT", 480)
-_rotation = env_int("PYDEVICES_ROTATION", 0)
-_scale = env_float("PYDEVICES_SCALE", 2.0)
+_width = env_int("OMNIPYTHON_WIDTH", 320)
+_height = env_int("OMNIPYTHON_HEIGHT", 480)
+_rotation = env_int("OMNIPYTHON_ROTATION", 0)
+_scale = env_float("OMNIPYTHON_SCALE", 2.0)
 # Open maximised, the panel the window's whole client area at scale 1
 # (WIDTH, HEIGHT and SCALE are then ignored); Windows only, for now.
-_maximized = env_bool("PYDEVICES_MAXIMIZED", False)
+_maximized = env_bool("OMNIPYTHON_MAXIMIZED", False)
 
 display_drv = AutoDisplay(
     width=_width,

@@ -231,4 +231,4 @@ See [App and board config](write-an-application.md), [Architecture](../how-it-wo
 
 ## API reference
 
-[appdev source and product docs](https://github.com/PyDevices/pydevices/tree/main/lib/appdev).
+[appdev source and product docs](https://github.com/PyDevices/omnipython/tree/main/lib/appdev).

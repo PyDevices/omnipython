@@ -68,7 +68,7 @@ def mpftp_command() -> list[str]:
         if sibling.is_file():
             found = str(sibling)
     if not found:
-        raise SystemExit("mark_tested: mpftp not found (pip install pydevices-mpftp, or set MPFTP)")
+        raise SystemExit("mark_tested: mpftp not found (pip install mcuctl, or set MPFTP)")
     return [found]
 
 

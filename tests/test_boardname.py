@@ -30,7 +30,7 @@ USERS = {
     "castdisplay": ("packages/castdisplay", "castdisplay/micecast.py"),
     "hmilink": ("packages/hmilink", "hmilink/tcp.py"),
 }
-DEP = "github:PyDevices/pydevices/packages/_boardname"
+DEP = "github:PyDevices/omnipython/packages/_boardname"
 # A call of boarddev.name() with nothing in the brackets reads the name. With
 # an argument it sets it, which is the program's own business.
 _DIRECT = re.compile(r"\bboarddev\.name\(\s*\)")

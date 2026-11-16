@@ -1,6 +1,6 @@
 # Examples
 
-The smallest program that shows each of pydevices' core libraries working.
+The smallest program that shows each of OmniPython's core libraries working.
 Each one says in its docstring what it needs and where it has been run.
 
 | Example | What it shows |

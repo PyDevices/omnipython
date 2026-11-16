@@ -14,7 +14,7 @@
 #     spk.write(pcm)                  # little-endian PCM, whole frames
 #
 # Any class-compliant device, USB Audio 1.0 or 2.0: a headset, a USB DAC, or
-# a PyDevices board running usb-device-audio. Its descriptors are read here,
+# a OmniPython board running usb-device-audio. Its descriptors are read here,
 # a stream is chosen (the rate, channels and bits you ask for, or its best
 # offer), a 2.0 device's clock is asked its rates, and the samples move over
 # isochronous transfers in C, through a ring between your writes and the bus.

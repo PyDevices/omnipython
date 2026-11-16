@@ -24,7 +24,7 @@ weak or absent.
 MDNS uses the ``mdns`` module, which is CircuitPython's API wherever it runs:
 built into CircuitPython, a C module in MicroPython firmware that carries it
 (and the unix and Windows ports), and on CPython ``mdns.py`` in
-pydevices-desktop, over python-zeroconf (``pip install zeroconf``).
+omnipython-desktop, over python-zeroconf (``pip install zeroconf``).
 
 When you already know the address, skip discovery and connect to it.
 """
@@ -85,7 +85,7 @@ class MDNS:
 
 
 def _radio():
-    """``wifi.radio``: CircuitPython's own, or pydevices' wifi module on
+    """``wifi.radio``: CircuitPython's own, or OmniPython's wifi module on
     MicroPython, which has the same API over ``network.WLAN``."""
     try:
         import wifi
@@ -138,8 +138,8 @@ class Hotspot:
     ``start()`` and ``join()`` are the two halves on their own, for a
     program that decides the roles itself.
 
-    It needs a board with Wi-Fi: on MicroPython pydevices' ``wifi`` module,
-    built into PyDevices firmware; on CircuitPython ``wifi``. A password
+    It needs a board with Wi-Fi: on MicroPython OmniPython's ``wifi`` module,
+    built into OmniPython firmware; on CircuitPython ``wifi``. A password
     must be 8 to 63 characters.
     """
 

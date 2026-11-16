@@ -2,40 +2,40 @@
   "urls": [
     [
       "board_config.py",
-      "github:PyDevices/pydevices/board_configs/fbdisplay/esp32-p4-wifi6-touch-lcd-4b/board_config.py"
+      "github:PyDevices/omnipython/board_configs/fbdisplay/esp32-p4-wifi6-touch-lcd-4b/board_config.py"
     ],
     [
       "board_peripherals.py",
-      "github:PyDevices/pydevices/board_configs/fbdisplay/esp32-p4-wifi6-touch-lcd-4b/board_peripherals.py"
+      "github:PyDevices/omnipython/board_configs/fbdisplay/esp32-p4-wifi6-touch-lcd-4b/board_peripherals.py"
     ],
     [
       "gt911.py",
-      "github:PyDevices/pydevices/drivers/touch/gt911.py"
+      "github:PyDevices/omnipython/drivers/touch/gt911.py"
     ],
     [
       "es8311.py",
-      "github:PyDevices/pydevices/drivers/codec/es8311.py"
+      "github:PyDevices/omnipython/drivers/codec/es8311.py"
     ],
     [
       "es7210.py",
-      "github:PyDevices/pydevices/drivers/codec/es7210.py"
+      "github:PyDevices/omnipython/drivers/codec/es7210.py"
     ],
     [
       "keypad_gpio.py",
-      "github:PyDevices/pydevices/drivers/input/keypad_gpio.py"
+      "github:PyDevices/omnipython/drivers/input/keypad_gpio.py"
     ],
     [
       "camera_sensors.py",
-      "github:PyDevices/pydevices/drivers/camera/camera_sensors.py"
+      "github:PyDevices/omnipython/drivers/camera/camera_sensors.py"
     ],
     [
       "imx219.py",
-      "github:PyDevices/pydevices/drivers/camera/imx219.py"
+      "github:PyDevices/omnipython/drivers/camera/imx219.py"
     ]
   ],
   "deps": [
     [
-      "pydevices",
+      "omnipython",
       "latest"
     ]
   ],

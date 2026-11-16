@@ -13,7 +13,7 @@ or a real BLE keyboard or remote: set KEYBOARD to the name it advertises,
 and put it in pairing mode.
 
 Needs: a board with Bluetooth LE, and MicroPython with aioble and bledev
-installed. On a laptop, pip install "pydevices[ble]", though Windows may
+installed. On a laptop, pip install "omnipython[ble]", though Windows may
 keep a keyboard for itself once it has paired.
 
 Run it:

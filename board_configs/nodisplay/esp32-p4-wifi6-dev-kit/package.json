@@ -2,24 +2,24 @@
   "urls": [
     [
       "board_peripherals.py",
-      "github:PyDevices/pydevices/board_configs/nodisplay/esp32-p4-wifi6-dev-kit/board_peripherals.py"
+      "github:PyDevices/omnipython/board_configs/nodisplay/esp32-p4-wifi6-dev-kit/board_peripherals.py"
     ],
     [
       "es8311.py",
-      "github:PyDevices/pydevices/drivers/codec/es8311.py"
+      "github:PyDevices/omnipython/drivers/codec/es8311.py"
     ],
     [
       "camera_sensors.py",
-      "github:PyDevices/pydevices/drivers/camera/camera_sensors.py"
+      "github:PyDevices/omnipython/drivers/camera/camera_sensors.py"
     ],
     [
       "imx219.py",
-      "github:PyDevices/pydevices/drivers/camera/imx219.py"
+      "github:PyDevices/omnipython/drivers/camera/imx219.py"
     ]
   ],
   "deps": [
     [
-      "pydevices",
+      "omnipython",
       "latest"
     ]
   ],

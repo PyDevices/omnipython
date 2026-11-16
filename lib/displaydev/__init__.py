@@ -587,7 +587,7 @@ class DisplayDriver:
     ``DISPLAY_RENDER_MODE.DIRECT``). Default False — desktop/bus drivers keep
     their own draw buffers.
 
-    Frame rate: `measure_fps` (or ``PYDEVICES_FPS=1``) counts frames and
+    Frame rate: `measure_fps` (or ``OMNIPYTHON_FPS=1``) counts frames and
     times presents; `fps` reads them. Off by default, and nothing is
     wrapped or timed while it is off.
 
@@ -607,7 +607,7 @@ class DisplayDriver:
     # The display's own frame period: what ``appdev.App`` presents at and what a
     # GUI's refresh timer is set to. A backend that can measure its host's
     # refresh (vsync, requestAnimationFrame) sets it; 33 ms otherwise.
-    # ``PYDEVICES_REFRESH_MS`` overrides it per instance when the driver starts.
+    # ``OMNIPYTHON_REFRESH_MS`` overrides it per instance when the driver starts.
     refresh_period_ms = 33
     share_framebuffer = False
     # HostEventsDevice reads this ``(key, mod)`` tuple; None disables keyboard quit.
@@ -679,14 +679,14 @@ class DisplayDriver:
         # so displaydev never re-exports them.
         from boarddev import env_bool, env_float
 
-        every = env_float("PYDEVICES_FPS_PRINT", 0)
+        every = env_float("OMNIPYTHON_FPS_PRINT", 0)
         if every > 0:
             self.fps_print(every)
-        elif env_bool("PYDEVICES_FPS"):
+        elif env_bool("OMNIPYTHON_FPS"):
             self.measure_fps(True)
 
     def _apply_refresh_override(self):
-        """``PYDEVICES_REFRESH_MS=N`` replaces this display's frame period.
+        """``OMNIPYTHON_REFRESH_MS=N`` replaces this display's frame period.
 
         Read once, when the driver starts, after the backend's own ``init()``
         has had its say, so it wins over a backend's default (33 ms, or the
@@ -697,7 +697,7 @@ class DisplayDriver:
         """
         from boarddev import env_int
 
-        period = env_int("PYDEVICES_REFRESH_MS", 0)
+        period = env_int("OMNIPYTHON_REFRESH_MS", 0)
         if period <= 0:
             return
         self.refresh_period_ms = period
@@ -1003,7 +1003,7 @@ class DisplayDriver:
         direct-framebuffer panel). ``flush_rect`` and ``blit_rect`` calls
         (a partial-render panel presents through ``blit_rect``) are counted
         as ``flushes`` and ``pixels``, not frames; one that calls the other
-        is counted once. ``PYDEVICES_FPS=1`` switches it on when the driver starts.
+        is counted once. ``OMNIPYTHON_FPS=1`` switches it on when the driver starts.
 
         Returns:
             bool: Whether it is measuring now.
@@ -1118,7 +1118,7 @@ class DisplayDriver:
 
             fps 29.8 avg 29.5 frames 1180 present 4.2 ms (max 12.0) busy 13%
 
-        ``PYDEVICES_FPS_PRINT=N`` starts it when the driver starts.
+        ``OMNIPYTHON_FPS_PRINT=N`` starts it when the driver starts.
         """
         timer = self._fps_timer
         self._fps_timer = None

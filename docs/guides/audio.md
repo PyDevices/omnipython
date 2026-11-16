@@ -31,7 +31,7 @@ which is what lets a headless Connect speaker or a USB sound card run on a
 build with no DSP package in it.
 
 **Host or board** is resolved by `boarddev`, not by `audiodev` (which must stay
-usable with no pydevices board tree at all):
+usable with no OmniPython board tree at all):
 
 ```python
 from boarddev import pcm_out
@@ -122,13 +122,13 @@ satisfying CircuitPython's audiosample pull protocol — a
 python -m pip install --index-url https://test.pypi.org/simple/ omnipython-audiodsp
 ```
 
-Neither `pydevices` distribution depends on it; importing `audiodev` and
+Neither `omnipython` distribution depends on it; importing `audiodev` and
 using raw PCM transports therefore remain available without synthesis support.
 This is the same object shape CircuitPython code already expects from
 `audiobusio.I2SOut`/`audioio.AudioOut` — a synth built for a CircuitPython
 tutorial runs unchanged against this port's `AudioOut`.
 
-**On CircuitPython boards** ([`board_configs/cp/`](https://github.com/PyDevices/pydevices/tree/main/board_configs/cp)) the contract is satisfied
+**On CircuitPython boards** ([`board_configs/cp/`](https://github.com/PyDevices/omnipython/tree/main/board_configs/cp)) the contract is satisfied
 *natively*: there is no `AudioOut` wrapper. Where a CP board config has an
 `audio_out` role, it returns CircuitPython's own `audiobusio.I2SOut`; without
 one, apps construct `audiobusio.I2SOut(...)`/`audioio.AudioOut(...)` directly
@@ -144,7 +144,7 @@ not a stopgap: every real backend's bottom layer is a push+queued transport
 (`SDL_QueueAudio`, WASAPI, the wasm bridge, `machine.I2S.write`), and an
 audio-thread callback into Python is unsafe even in C once it would need to
 pull a synth's block graph, which allocates on the GC heap (documented in
-[`sdl2_audio.py`](https://github.com/PyDevices/pydevices/blob/main/lib/audiodev/sdl2_audio.py)). So playback flows only while something calls
+[`sdl2_audio.py`](https://github.com/PyDevices/omnipython/blob/main/lib/audiodev/sdl2_audio.py)). So playback flows only while something calls
 `AudioOut.service()` — the app tick, an `asyncio` pump, or `attach(app)` —
 same requirement every queued transport already has. **No resampling**: a
 sample's own `sample_rate` is not renegotiated against the transport; a
@@ -221,7 +221,7 @@ thread, and `fault` says why. Each entry's meaning is on `Pump.health()`'s
 docstring.
 
 The mechanism, the driver per port, what a fault says and what is still
-unproven: [`lib/audiodev/README.md`](https://github.com/PyDevices/pydevices/blob/main/lib/audiodev/README.md#pumppy--the-audio-pump).
+unproven: [`lib/audiodev/README.md`](https://github.com/PyDevices/omnipython/blob/main/lib/audiodev/README.md#pumppy--the-audio-pump).
 
 ### Stopping in the middle
 
@@ -237,7 +237,7 @@ near where you stopped, and two runs that stop after the same number of ticks
 can end at different bytes. Ask for the audio up to the moment you stopped;
 do not ask for a frame.
 
-Measured by [`tests/pump_probes/stopped.py`](https://github.com/PyDevices/pydevices/blob/main/tests/pump_probes/stopped.py),
+Measured by [`tests/pump_probes/stopped.py`](https://github.com/PyDevices/omnipython/blob/main/tests/pump_probes/stopped.py),
 which also says why a recording transport cannot ask this question.
 
 ### A transport that stops consuming
@@ -303,7 +303,7 @@ async contract as hardware devices.
 `audiodev.win_audio` is the Windows WASAPI backend (`uwin32`), selected ahead
 of `sdl2_audio` on Windows when available. On `micropython.exe`, a sample
 player on the default speaker plays through the audio pump instead, which
-writes to WASAPI from its own thread ([how](https://github.com/PyDevices/pydevices/blob/main/lib/audiodev/README.md#on-micropython-the-pump-plays-to-the-speaker-itself)).
+writes to WASAPI from its own thread ([how](https://github.com/PyDevices/omnipython/blob/main/lib/audiodev/README.md#on-micropython-the-pump-plays-to-the-speaker-itself)).
 
 `audiodev.alsa_audio` plays and records through ALSA on Linux, from CPython and
 unix MicroPython, with no SDL2 or pygame. `alsa_audio.devices()` lists the sound
@@ -324,7 +324,7 @@ of 256 frames and this module answers, either from a render callback you set
 `pcm_out(format, port=port)`. It tells you the worklet's frame offset, so you
 can place an event at an exact sample. Import it explicitly: automatic
 selection never picks it. The protocol is in
-[lib/audiodev/README.md](https://github.com/PyDevices/pydevices/blob/main/lib/audiodev/README.md#worklet_audiopy).
+[lib/audiodev/README.md](https://github.com/PyDevices/omnipython/blob/main/lib/audiodev/README.md#worklet_audiopy).
 
 `audiodev.i2s_audio` adapts `machine.I2S` for MCU boards; boards construct it
 directly with board-specific pins/codec wiring, then wrap it in `AudioOut`.
@@ -345,7 +345,7 @@ command above; direct raw `write()`/`readinto()` remains independent.
 
 ### Write your own transport
 
-`audiodev.auto` looks its transport up in the same small registry as `AutoDisplay` ([`backends`](https://github.com/PyDevices/pydevices/blob/main/lib/backends.py), explained in [Displays](displays.md#write-your-own-backend)). A transport is a module that provides `pcm_out` and `pcm_in`:
+`audiodev.auto` looks its transport up in the same small registry as `AutoDisplay` ([`backends`](https://github.com/PyDevices/omnipython/blob/main/lib/backends.py), explained in [Displays](displays.md#write-your-own-backend)). A transport is a module that provides `pcm_out` and `pcm_in`:
 
 ```python
 import backends
@@ -355,7 +355,7 @@ backends.register("audio", "mine", "my_audio", probe=lambda: my_card_present())
 backends.require("audio", "mine")
 ```
 
-`select_backend()` tries the `PYDEVICES_AUDIO` environment variable (one name, nothing else), then what a config `require`d, in order and skipping any whose probe says no, then the built-in transports in the order above. The built-in names are `wasm_audio`, `web_audio`, `win_audio`, `sdl2_audio`, `pygame_audio` and `alsa_audio`. A transport you registered is never picked unless it was required or you named it. On MicroPython, `require` is the only way a transport gets registered; nothing scans for installed ones.
+`select_backend()` tries the `OMNIPYTHON_AUDIO` environment variable (one name, nothing else), then what a config `require`d, in order and skipping any whose probe says no, then the built-in transports in the order above. The built-in names are `wasm_audio`, `web_audio`, `win_audio`, `sdl2_audio`, `pygame_audio` and `alsa_audio`. A transport you registered is never picked unless it was required or you named it. On MicroPython, `require` is the only way a transport gets registered; nothing scans for installed ones.
 
 ## Emulated devices (CI / no hardware)
 
@@ -377,7 +377,7 @@ mic = pcm_in(path="/sd/prompt.wav")
 `WavPCMOutput` doubles as the deterministic golden-file target for testing
 the whole `AudioOut` chain — synthio/Mixer rendered through `AudioOut` over
 `emulated_audio.pcm_out(path=...)`, hash-compared, no audio hardware
-needed. See [`tests/test_audiodev.py`](https://github.com/PyDevices/pydevices/blob/main/tests/test_audiodev.py).
+needed. See [`tests/test_audiodev.py`](https://github.com/PyDevices/omnipython/blob/main/tests/test_audiodev.py).
 
 ## ESP32-P4 status
 

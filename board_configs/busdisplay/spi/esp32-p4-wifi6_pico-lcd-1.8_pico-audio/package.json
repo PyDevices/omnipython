@@ -2,24 +2,24 @@
   "urls": [
     [
       "board_config.py",
-      "github:PyDevices/pydevices/board_configs/busdisplay/spi/esp32-p4-wifi6_pico-lcd-1.8_pico-audio/board_config.py"
+      "github:PyDevices/omnipython/board_configs/busdisplay/spi/esp32-p4-wifi6_pico-lcd-1.8_pico-audio/board_config.py"
     ],
     [
       "board_peripherals.py",
-      "github:PyDevices/pydevices/board_configs/busdisplay/spi/esp32-p4-wifi6_pico-lcd-1.8_pico-audio/board_peripherals.py"
+      "github:PyDevices/omnipython/board_configs/busdisplay/spi/esp32-p4-wifi6_pico-lcd-1.8_pico-audio/board_peripherals.py"
     ],
     [
       "st7735r_1.py",
-      "github:PyDevices/pydevices/drivers/display/st7735r_1.py"
+      "github:PyDevices/omnipython/drivers/display/st7735r_1.py"
     ],
     [
       "es8311.py",
-      "github:PyDevices/pydevices/drivers/codec/es8311.py"
+      "github:PyDevices/omnipython/drivers/codec/es8311.py"
     ]
   ],
   "deps": [
     [
-      "pydevices",
+      "omnipython",
       "latest"
     ]
   ],

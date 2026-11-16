@@ -2,11 +2,11 @@
   "urls": [
     [
       "board_config.py",
-      "github:PyDevices/pydevices/board_configs/cp/busdisplay/spi/ssd1351_128_oled/board_config.py"
+      "github:PyDevices/omnipython/board_configs/cp/busdisplay/spi/ssd1351_128_oled/board_config.py"
     ],
     [
       "ssd1351.py",
-      "github:PyDevices/pydevices/drivers/display/ssd1351.py"
+      "github:PyDevices/omnipython/drivers/display/ssd1351.py"
     ]
   ],
   "deps": [],

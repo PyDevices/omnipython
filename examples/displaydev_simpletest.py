@@ -8,8 +8,8 @@ copy a block of pixels onto the screen. This fills the screen and three
 boxes, then draws a label with pygraphics into a small buffer and copies
 it on. The same program runs on a board's panel or in a desktop window.
 
-Needs: a board_config with a display_drv, which a PyDevices board
-package or pydevices-desktop provides, and pygraphics.
+Needs: a board_config with a display_drv, which a OmniPython board
+package or omnipython-desktop provides, and pygraphics.
 
 Run it:
     micropython displaydev_simpletest.py

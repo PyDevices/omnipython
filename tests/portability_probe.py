@@ -81,7 +81,7 @@ def probe_env_helpers():
         print("  skip: boarddev is not installed for this interpreter")
         return
 
-    name = "PYDEVICES_PROBE_VAR"
+    name = "OMNIPYTHON_PROBE_VAR"
     check("env_get returns None for an unset name", env_get(name) is None)
     env_set(name, "directsound")
     check("env_set is visible to env_get", env_get(name) == "directsound")

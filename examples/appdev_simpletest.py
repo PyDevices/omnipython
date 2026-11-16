@@ -8,8 +8,8 @@ touch screen, mouse and keys, calls your handlers, runs your timers and
 keeps the display up to date. Here a timer slides a box across the screen,
 a tap or click moves it there, and any key changes its color.
 
-Needs: a board_config with a display_drv, which a PyDevices board
-package or pydevices-desktop provides. A touch screen, mouse or keyboard
+Needs: a board_config with a display_drv, which a OmniPython board
+package or omnipython-desktop provides. A touch screen, mouse or keyboard
 makes it interactive.
 
 Run it:

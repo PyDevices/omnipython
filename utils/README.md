@@ -1,12 +1,12 @@
 # Desktop utility modules
 
 Every non-debris library module placed directly under this directory is
-automatically included in both the pip and MIP `pydevices-desktop` packages and
-in [`pydevices-desktop.toml`](../pydevices-desktop.toml). Utilities do not publish as separate packages.
+automatically included in both the pip and MIP `omnipython-desktop` packages and
+in [`omnipython-desktop.toml`](../omnipython-desktop.toml). Utilities do not publish as separate packages.
 
 | Module | Role |
 |---|---|
-| [`mdns.py`](mdns.py) | CircuitPython's `mdns` API over python-zeroconf, which pydevices-desktop installs ([`requirements.txt`](requirements.txt)) |
+| [`mdns.py`](mdns.py) | CircuitPython's `mdns` API over python-zeroconf, which omnipython-desktop installs ([`requirements.txt`](requirements.txt)) |
 | [`micropython.py`](micropython.py) | CPython compatibility shim for common MicroPython decorators and helpers |
 | [`frame_recorder.py`](frame_recorder.py) | FFmpeg recording for desktop displays |
 | [`jpegio.py`](jpegio.py) | JPEG encode and decode, MicroPython's `jpegio` API over Pillow; says how to install Pillow when it's missing |

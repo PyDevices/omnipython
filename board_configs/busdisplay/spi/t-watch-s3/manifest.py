@@ -8,7 +8,7 @@ metadata(
     version="0.1.0",
 )
 
-require("pydevices")
+require("omnipython")
 require("st7789")
 require("ft6x36")
 require("keypad_gpio")

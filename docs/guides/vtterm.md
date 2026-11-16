@@ -14,12 +14,12 @@ On a board, with `mip`:
 
 ```python
 import mip
-mip.install("github:PyDevices/pydevices/packages/vtterm")
+mip.install("github:PyDevices/omnipython/packages/vtterm")
 ```
 
-From a computer, `mpremote mip install github:PyDevices/pydevices/packages/vtterm`
+From a computer, `mpremote mip install github:PyDevices/omnipython/packages/vtterm`
 does the same. On a CircuitPython-compatible board, copy the
-[`packages/vtterm/vtterm`](https://github.com/PyDevices/pydevices/tree/main/packages/vtterm/vtterm)
+[`packages/vtterm/vtterm`](https://github.com/PyDevices/omnipython/tree/main/packages/vtterm/vtterm)
 folder to `CIRCUITPY/lib/`.
 
 vtterm draws its characters with pygraphics and takes its 256 colors from
@@ -33,7 +33,7 @@ On a desktop, install pygraphics from PyPI and put
 repository on the path:
 
 ```bash
-pip install pydevices-pygraphics
+pip install omnipython-pygraphics
 PYTHONPATH=packages/vtterm:packages/palettes/lib python3 your_program.py
 ```
 
@@ -335,7 +335,7 @@ The other board runs `bledev.repl.start(name="mpy-repl")`. `keys` is any
 object whose `read()` returns the bytes typed since the last call, or `None`.
 `run` returns when the link closes, or when an `asyncio.Event` you pass as
 `stop` is set. On MicroPython, `bledev.repl.connect` stops at the password
-prompt ([#553](https://github.com/PyDevices/pydevices/issues/553)).
+prompt ([#553](https://github.com/PyDevices/omnipython/issues/553)).
 
 When the other side asks where the cursor is (`ESC [ 6 n`) or what the
 terminal is (`ESC [ c`), `run` sends the answer down the link, so

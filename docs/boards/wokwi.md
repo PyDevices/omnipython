@@ -21,7 +21,7 @@ Technical reference for the Wokwi project in gallery. Simulator assets live in
 
 ### Pin wiring
 
-Matches [`wokwi_ili9341_ft6x36_esp32s3/board_config.py`](https://github.com/PyDevices/pydevices/blob/main/board_configs/busdisplay/spi/wokwi_ili9341_ft6x36_esp32s3/board_config.py):
+Matches [`wokwi_ili9341_ft6x36_esp32s3/board_config.py`](https://github.com/PyDevices/omnipython/blob/main/board_configs/busdisplay/spi/wokwi_ili9341_ft6x36_esp32s3/board_config.py):
 
 | Signal | GPIO | `diagram.json` part / pin |
 |--------|------|---------------------------|
@@ -42,9 +42,9 @@ Display part id in `diagram.json`: **`lcd1`** (`board-ili9341-cap-touch`).
 
 ---
 
-## FT6206 (Wokwi) vs FT6X36 (PyDevices driver)
+## FT6206 (Wokwi) vs FT6X36 (OmniPython driver)
 
-Wokwi’s cap-touch board simulates an **FT6206** I2C controller. The PyDevices board config uses the **FT6X36** driver ([`ft6x36.py`](https://github.com/PyDevices/pydevices/blob/main/drivers/touch/ft6x36.py)) — same FT6xx family and register-style protocol. No board_config change is expected; if touch behaves oddly, compare with real hardware and file an issue.
+Wokwi’s cap-touch board simulates an **FT6206** I2C controller. The OmniPython board config uses the **FT6X36** driver ([`ft6x36.py`](https://github.com/PyDevices/omnipython/blob/main/drivers/touch/ft6x36.py)) — same FT6xx family and register-style protocol. No board_config change is expected; if touch behaves oddly, compare with real hardware and file an issue.
 
 ---
 
@@ -65,8 +65,8 @@ mip.install pattern in [`wokwi/main.py`](https://github.com/PyDevices/gallery/bl
 import mip
 
 OMNIPYTHON_LIB = "https://lib.omnipython.org"
-PYDEVICES = "github:PyDevices/pydevices"
-PYDEVICES_EXAMPLES = "github:PyDevices/gallery"
+PYDEVICES = "github:PyDevices/omnipython"
+OMNIPYTHON_EXAMPLES = "github:PyDevices/gallery"
 
 # Board package pulls ili9341/ft6x36/spibus from this repo and displaydev from
 # the OmniPython index (displaydev → events + keys). Install optional appdev in the
@@ -77,7 +77,7 @@ mip.install(
     target=".",
 )
 mip.install("pygraphics", index=OMNIPYTHON_LIB, target=".")
-mip.install(PYDEVICES_EXAMPLES + "/lib/examples/testris.py", target=".")
+mip.install(OMNIPYTHON_EXAMPLES + "/lib/examples/testris.py", target=".")
 
 import testris
 ```
@@ -86,7 +86,7 @@ import testris
 
 ```python
 mip.install(
-    "github:PyDevices/pydevices/board_configs/busdisplay/spi/wokwi_ili9341_esp32s3_no_touch"
+    "github:PyDevices/omnipython/board_configs/busdisplay/spi/wokwi_ili9341_esp32s3_no_touch"
 )
 ```
 

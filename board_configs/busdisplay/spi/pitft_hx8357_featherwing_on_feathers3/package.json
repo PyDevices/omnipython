@@ -2,24 +2,24 @@
   "urls": [
     [
       "board_config.py",
-      "github:PyDevices/pydevices/board_configs/busdisplay/spi/pitft_hx8357_featherwing_on_feathers3/board_config.py"
+      "github:PyDevices/omnipython/board_configs/busdisplay/spi/pitft_hx8357_featherwing_on_feathers3/board_config.py"
     ],
     [
       "board_peripherals.py",
-      "github:PyDevices/pydevices/board_configs/busdisplay/spi/pitft_hx8357_featherwing_on_feathers3/board_peripherals.py"
+      "github:PyDevices/omnipython/board_configs/busdisplay/spi/pitft_hx8357_featherwing_on_feathers3/board_peripherals.py"
     ],
     [
       "ili9341.py",
-      "github:PyDevices/pydevices/drivers/display/ili9341.py"
+      "github:PyDevices/omnipython/drivers/display/ili9341.py"
     ],
     [
       "stmpe610.py",
-      "github:PyDevices/pydevices/drivers/touch/stmpe610.py"
+      "github:PyDevices/omnipython/drivers/touch/stmpe610.py"
     ]
   ],
   "deps": [
     [
-      "pydevices",
+      "omnipython",
       "latest"
     ]
   ],

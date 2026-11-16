@@ -1,6 +1,6 @@
 # Publish a palettes, pdwidgets or iconkit release: build the distribution from the
 # package's folder at the release tag, check the wheel installs and imports,
-# upload it to TestPyPI, and attach it to the GitHub Release. pydevices' own
+# upload it to TestPyPI, and attach it to the GitHub Release. OmniPython's own
 # releases (vX.Y.Z tags) go through publish-release-packages.yml instead.
 #
 # Production PyPI isn't here. The library index (PyDevices/lib) is asked for
@@ -49,20 +49,14 @@ jobs:
           {
             echo "tag=$RELEASE_TAG"
             echo "package=${BASH_REMATCH[1]}"
-            # New libraries take the omnipython- prefix; palettes and pdwidgets
-            # keep the pydevices- names they were published under.
-            if [[ "${BASH_REMATCH[1]}" == iconkit ]]; then
-              echo "distribution=omnipython-iconkit"
-            else
-              echo "distribution=pydevices-${BASH_REMATCH[1]}"
-            fi
+            echo "distribution=omnipython-${BASH_REMATCH[1]}"
             echo "version=${BASH_REMATCH[2]}"
             if [[ -n "${BASH_REMATCH[3]}" ]]; then echo "prerelease=true"; else echo "prerelease=false"; fi
           } >> "$GITHUB_OUTPUT"
 
   build:
     needs: resolve
-    uses: PyDevices/.github/.github/workflows/reusable-build-pure-python-distribution.yml@publishing-v22
+    uses: PyDevices/.github/.github/workflows/reusable-build-pure-python-distribution.yml@publishing-v26
     with:
       distribution-name: ${{ needs.resolve.outputs.distribution }}
       import-name: ${{ needs.resolve.outputs.package }}
@@ -114,7 +108,7 @@ jobs:
     # pdwidgets profiles are locked to the archived repositories, so those two
     # ask the library index alone.
     needs: [resolve, build, publish-to-testpypi]
-    uses: PyDevices/.github/.github/workflows/reusable-request-mip-publication.yml@publishing-v22
+    uses: PyDevices/.github/.github/workflows/reusable-request-mip-publication.yml@publishing-v26
     with:
       release-ref: ${{ needs.resolve.outputs.tag }}
       version: ${{ needs.resolve.outputs.version }}
@@ -124,7 +118,7 @@ jobs:
     secrets: inherit
 
   report-release-health:
-    # The Release Health dashboard in PyDevices/.github, as the pydevices
+    # The Release Health dashboard in PyDevices/.github, as the OmniPython
     # chain feeds it. A reporting failure never fails the release.
     if: always() && needs.resolve.result == 'success'
     needs: [resolve, build, publish-to-testpypi, attach-release-assets, request-library-publication]

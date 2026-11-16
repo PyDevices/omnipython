@@ -1,4 +1,4 @@
-# Read the Docs builds this site from the pydevices repository, with this
+# Read the Docs builds this site from the OmniPython repository, with this
 # file as the project's configuration file (Settings, "Path for
 # .readthedocs.yaml": packages/palettes/.readthedocs.yaml). Paths here are relative to the
 # repository root, not to this folder.

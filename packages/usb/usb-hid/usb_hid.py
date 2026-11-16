@@ -17,7 +17,7 @@
 #
 # enable() starts the USB device with the board's own serial port kept, as
 # CircuitPython's boot.py does. The computer lists it under the board's name,
-# boarddev.name() from pydevices. To put HID beside other functions (MIDI, a
+# boarddev.name() from OmniPython. To put HID beside other functions (MIDI, a
 # drive), make the interface and start them together:
 #
 #     itf = usb_hid.interface((usb_hid.Device.KEYBOARD, usb_hid.Device.MOUSE))

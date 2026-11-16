@@ -7,7 +7,7 @@ ESP32-C6 for Wi-Fi.
 
 It needs MicroPython firmware built for this board, so that ESP-Hosted uses
 the C6's own pins and the OV2710's driver is in: the `P4X_EYE` variant in
-[micropython-pydevices' boards table](https://github.com/PyDevices/micropython-pydevices/blob/main/docs/reference/boards.md),
+[omnipython-builds' boards table](https://github.com/PyDevices/omnipython-builds/blob/main/docs/reference/boards.md),
 with `--modules all,vision` for the camera, the H.264 encoder and the
 detectors.
 
@@ -16,7 +16,7 @@ detectors.
 ```python
 import omip
 
-omip.install("github:PyDevices/pydevices/board_configs/busdisplay/spi/esp32-p4x-eye")
+omip.install("github:PyDevices/omnipython/board_configs/busdisplay/spi/esp32-p4x-eye")
 ```
 
 ## What it provides

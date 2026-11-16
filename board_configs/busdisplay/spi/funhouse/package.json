@@ -2,40 +2,40 @@
   "urls": [
     [
       "board_config.py",
-      "github:PyDevices/pydevices/board_configs/busdisplay/spi/funhouse/board_config.py"
+      "github:PyDevices/omnipython/board_configs/busdisplay/spi/funhouse/board_config.py"
     ],
     [
       "board_peripherals.py",
-      "github:PyDevices/pydevices/board_configs/busdisplay/spi/funhouse/board_peripherals.py"
+      "github:PyDevices/omnipython/board_configs/busdisplay/spi/funhouse/board_peripherals.py"
     ],
     [
       "st7789.py",
-      "github:PyDevices/pydevices/drivers/display/st7789.py"
+      "github:PyDevices/omnipython/drivers/display/st7789.py"
     ],
     [
       "spibus.py",
-      "github:PyDevices/pydevices/drivers/bus/spibus.py"
+      "github:PyDevices/omnipython/drivers/bus/spibus.py"
     ],
     [
       "keypad_gpio.py",
-      "github:PyDevices/pydevices/drivers/input/keypad_gpio.py"
+      "github:PyDevices/omnipython/drivers/input/keypad_gpio.py"
     ],
     [
       "dotstar.py",
-      "github:PyDevices/pydevices/drivers/led/dotstar.py"
+      "github:PyDevices/omnipython/drivers/led/dotstar.py"
     ],
     [
       "ahtx0.py",
-      "github:PyDevices/pydevices/drivers/env/ahtx0.py"
+      "github:PyDevices/omnipython/drivers/env/ahtx0.py"
     ],
     [
       "dps310.py",
-      "github:PyDevices/pydevices/drivers/env/dps310.py"
+      "github:PyDevices/omnipython/drivers/env/dps310.py"
     ]
   ],
   "deps": [
     [
-      "pydevices",
+      "omnipython",
       "latest"
     ]
   ],

@@ -28,12 +28,12 @@ to be in the `video` and `input` groups, as the Pi's default user is.
 ```bash
 python3 -m venv ~/pitft
 ~/pitft/bin/pip install --pre -i https://test.pypi.org/simple/ \
-    --extra-index-url https://pypi.org/simple/ pydevices-desktop pydevices-lvgl
+    --extra-index-url https://pypi.org/simple/ omnipython-desktop omnipython-lvgl
 ```
 
 Copy `board_config.py` and `board_peripherals.py` from this folder beside
 your program. A `board_config.py` next to the script comes before the desktop
-one that `pydevices-desktop` installs, so you don't need to change anything
+one that `omnipython-desktop` installs, so you don't need to change anything
 else.
 
 ## What it provides

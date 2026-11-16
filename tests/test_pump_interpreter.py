@@ -11,18 +11,18 @@ that a hundred play/stop rounds leave nothing behind.
 
 It needs an interpreter CPython cannot stand in for: a MicroPython or
 CircuitPython build carrying the ``audiodsp`` usermod **and** the
-``audiopump`` driver. Point one out with ``PYDEVICES_PUMP_INTERPRETER``, or
+``audiopump`` driver. Point one out with ``OMNIPYTHON_PUMP_INTERPRETER``, or
 put it on PATH as ``micropython``.
 
 **A skip here is loud on purpose.** No runner in this repository's CI has
 such a binary today, so without the banner below this file would report
 nothing at all, for ever, and read as coverage. It prints what it did not
-run and why, and ``PYDEVICES_REQUIRE_PUMP=1`` turns the skip into a failure
+run and why, and ``OMNIPYTHON_REQUIRE_PUMP=1`` turns the skip into a failure
 -- which is what a CI job that *does* build an interpreter must set.
 
 ``device.py`` needs one thing more than an interpreter: a machine with a
 sound device. A hosted runner has none and never will, so that skip has its
-own switch, ``PYDEVICES_REQUIRE_DEVICE=1``, for a bench that does. It is the
+own switch, ``OMNIPYTHON_REQUIRE_DEVICE=1``, for a bench that does. It is the
 only probe here that opens a real one; the rest record to a WAV.
 """
 
@@ -42,7 +42,7 @@ import _env  # noqa: E402, F401
 PROBES = _TESTS / "pump_probes"
 ROOT = _env.ROOT
 
-#: Names tried on PATH when PYDEVICES_PUMP_INTERPRETER says nothing.
+#: Names tried on PATH when OMNIPYTHON_PUMP_INTERPRETER says nothing.
 CANDIDATES = ("micropython", "micropython.exe", "circuitpython")
 
 #: Every probe run, as (name, arguments, the faults it must fail on).
@@ -63,10 +63,10 @@ RUNS = (
     # The two re-entrancy guards. Both plants have to land in the window that
     # belongs to the guard under test and nowhere else -- planting them where
     # a second guard is already holding is what made them both look like guards
-    # nothing needed (pydevices#37).
+    # nothing needed (omnipython#37).
     ("guards", ["guards.py"], ("no-finally", "no-latch")),
     # What the pump hands a transport when the APP stops draining
-    # (pydevices#55) -- the question `identity.py` cannot ask, because it
+    # (omnipython#55) -- the question `identity.py` cannot ask, because it
     # waits for the pump rather than racing it.
     ("stopped", ["stopped.py"], ("hole", "extra", "short")),
 )
@@ -106,16 +106,16 @@ _THREADED = []
 
 def _interpreter():
     """(path, why-not). Exactly one of the two is None."""
-    named = os.getenv("PYDEVICES_PUMP_INTERPRETER")
+    named = os.getenv("OMNIPYTHON_PUMP_INTERPRETER")
     if named:
         if not Path(named).exists():
-            return None, "PYDEVICES_PUMP_INTERPRETER=%s does not exist" % named
+            return None, "OMNIPYTHON_PUMP_INTERPRETER=%s does not exist" % named
         found = named
     else:
         found = next((shutil.which(name) for name in CANDIDATES
                       if shutil.which(name)), None)
         if found is None:
-            return None, ("no %s on PATH and PYDEVICES_PUMP_INTERPRETER is "
+            return None, ("no %s on PATH and OMNIPYTHON_PUMP_INTERPRETER is "
                           "unset" % "/".join(CANDIDATES))
     probe = ("import audiopump, audiocore\n"
              "print('pump' if hasattr(audiopump, 'spawn') else 'no',\n"
@@ -195,27 +195,27 @@ class ThePumpProbesRunOnARealInterpreter(unittest.TestCase):
         if self.interpreter is None:
             if _MISSED.count(self.why_not) == 0:
                 _MISSED.append(self.why_not)
-            if os.getenv("PYDEVICES_REQUIRE_PUMP") == "1":
-                self.fail("PYDEVICES_REQUIRE_PUMP=1 and " + self.why_not)
+            if os.getenv("OMNIPYTHON_REQUIRE_PUMP") == "1":
+                self.fail("OMNIPYTHON_REQUIRE_PUMP=1 and " + self.why_not)
             self.skipTest("no interpreter with the pump: " + self.why_not)
 
     def _no_device(self, what, result):
         """A probe that could not open a sound device on this host.
 
         Not a failure -- a headless runner has none -- and emphatically not a
-        pass: it goes in the banner, and PYDEVICES_REQUIRE_PUMP=1 turns it
+        pass: it goes in the banner, and OMNIPYTHON_REQUIRE_PUMP=1 turns it
         into a failure, the same way a missing interpreter does.
         """
         why = ("%s found no output device on this host, so nothing here has "
                "reached a real one" % what)
         if why not in _MISSED:
             _MISSED.append(why)
-        # Deliberately NOT PYDEVICES_REQUIRE_PUMP. "This build has no pump" and
+        # Deliberately NOT OMNIPYTHON_REQUIRE_PUMP. "This build has no pump" and
         # "this machine has no sound card" are different facts, and a hosted CI
         # runner has the second one for ever -- tying them together would mean
         # either a permanently red job or quietly dropping the probe. A bench
-        # with speakers sets PYDEVICES_REQUIRE_DEVICE=1 and gets a failure.
-        if os.getenv("PYDEVICES_REQUIRE_DEVICE") == "1":
+        # with speakers sets OMNIPYTHON_REQUIRE_DEVICE=1 and gets a failure.
+        if os.getenv("OMNIPYTHON_REQUIRE_DEVICE") == "1":
             self.fail(why + ":\n" + result.stdout)
 
     def test_the_probes_are_where_the_runner_looks(self):
@@ -291,8 +291,8 @@ def tearDownModule():
         print("         The pump's C half is UNTESTED in this run. Build an "
               "interpreter with", file=sys.stderr)
         print("         the audiodsp usermod, point "
-              "PYDEVICES_PUMP_INTERPRETER at it, and set", file=sys.stderr)
-        print("         PYDEVICES_REQUIRE_PUMP=1 so this can never pass by "
+              "OMNIPYTHON_PUMP_INTERPRETER at it, and set", file=sys.stderr)
+        print("         OMNIPYTHON_REQUIRE_PUMP=1 so this can never pass by "
               "skipping.", file=sys.stderr)
     print("!" * 72, file=sys.stderr)
 

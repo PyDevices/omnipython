@@ -2,16 +2,16 @@
   "urls": [
     [
       "board_config.py",
-      "github:PyDevices/pydevices/board_configs/desktop/board_config.py"
+      "github:PyDevices/omnipython/board_configs/desktop/board_config.py"
     ],
     [
       "board_peripherals.py",
-      "github:PyDevices/pydevices/board_configs/desktop/board_peripherals.py"
+      "github:PyDevices/omnipython/board_configs/desktop/board_peripherals.py"
     ]
   ],
   "deps": [
     [
-      "pydevices-desktop",
+      "omnipython-desktop",
       "latest"
     ]
   ],

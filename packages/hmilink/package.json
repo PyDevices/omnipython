@@ -1,11 +1,11 @@
 {
   "urls": [
-    ["hmilink/__init__.py", "github:PyDevices/pydevices/packages/hmilink/hmilink/__init__.py"],
-    ["hmilink/tcp.py", "github:PyDevices/pydevices/packages/hmilink/hmilink/tcp.py"],
-    ["hmilink/local.py", "github:PyDevices/pydevices/packages/hmilink/hmilink/local.py"],
-    ["hmilink/stream.py", "github:PyDevices/pydevices/packages/hmilink/hmilink/stream.py"],
-    ["hmilink/osc.py", "github:PyDevices/pydevices/packages/hmilink/hmilink/osc.py"]
+    ["hmilink/__init__.py", "github:PyDevices/omnipython/packages/hmilink/hmilink/__init__.py"],
+    ["hmilink/tcp.py", "github:PyDevices/omnipython/packages/hmilink/hmilink/tcp.py"],
+    ["hmilink/local.py", "github:PyDevices/omnipython/packages/hmilink/hmilink/local.py"],
+    ["hmilink/stream.py", "github:PyDevices/omnipython/packages/hmilink/hmilink/stream.py"],
+    ["hmilink/osc.py", "github:PyDevices/omnipython/packages/hmilink/hmilink/osc.py"]
   ],
-  "deps": [["github:PyDevices/pydevices/packages/_boardname", "main"]],
+  "deps": [["github:PyDevices/omnipython/packages/_boardname", "main"]],
   "version": "0.0.1"
 }

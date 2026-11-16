@@ -2,11 +2,11 @@
   "urls": [
     [
       "board_config.py",
-      "github:PyDevices/pydevices/board_configs/cp/busdisplay/spi/hallowing_m4/board_config.py"
+      "github:PyDevices/omnipython/board_configs/cp/busdisplay/spi/hallowing_m4/board_config.py"
     ],
     [
       "st7735.py",
-      "github:PyDevices/pydevices/drivers/display/st7735.py"
+      "github:PyDevices/omnipython/drivers/display/st7735.py"
     ]
   ],
   "deps": [],

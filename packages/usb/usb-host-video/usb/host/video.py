@@ -15,7 +15,7 @@
 #     while True:
 #         n = cam.read(buf)            # a whole frame (a JPEG, or YUY2), or 0
 #
-# Any class-compliant camera: a Logitech, or a PyDevices board running
+# Any class-compliant camera: a Logitech, or a OmniPython board running
 # usb-device-video. The camera's descriptors are read here, a mode is
 # negotiated with it (UVC's PROBE and COMMIT: the camera says what a mode
 # costs on the bus), and its frames stream in over isochronous transfers,

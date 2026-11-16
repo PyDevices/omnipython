@@ -17,7 +17,7 @@ classifiers = [
     "Programming Language :: Python :: Implementation :: MicroPython",
     "Programming Language :: Python :: Implementation :: CPython",
 ]
-urls = { Homepage = "https://github.com/PyDevices/pydevices/tree/main/packages/iconkit", Issues = "https://github.com/PyDevices/pydevices/issues" }
+urls = { Homepage = "https://github.com/PyDevices/omnipython/tree/main/packages/iconkit", Issues = "https://github.com/PyDevices/omnipython/issues" }
 
 [tool.setuptools.packages.find]
 where = ["lib"]

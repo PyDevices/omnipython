@@ -7,7 +7,7 @@
 The shield's 480x800 ST7701S panel on 2-lane MIPI DSI, through displayif's
 ``mipidsi`` (the STM32H747's DSI host and LTDC, scanning a framebuffer in the
 GIGA's SDRAM), and its GT911 touch on I2C4. Needs a firmware with displayif
-built for the shield (micropython-pydevices' ``ARDUINO_GIGA`` board,
+built for the shield (omnipython-builds' ``ARDUINO_GIGA`` board,
 ``DISPLAY_SHIELD`` variant).
 """
 
@@ -67,7 +67,7 @@ backlight.value(1)
 display_drv = FBDisplay(fb)
 display_drv.lvgl_rotation = LVGL_ROTATION
 
-# 400 kHz: I2C(freq=400_000) runs this bus near 1 MHz (micropython-pydevices#278).
+# 400 kHz: I2C(freq=400_000) runs this bus near 1 MHz (omnipython-builds#278).
 i2c = I2C(TOUCH_I2C, timingr=I2C_TIMINGR)
 touch = GT911(
     i2c,

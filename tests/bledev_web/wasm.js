@@ -1,4 +1,4 @@
-// The direct MicroPython WebAssembly runtime, as Workbench and the PyDevices
+// The direct MicroPython WebAssembly runtime, as Workbench and the OmniPython
 // gallery load it: loadMicroPython() from micropython.mjs, files written into
 // its filesystem, Python run with runPythonAsync(). serve.py maps /wasm/ to
 // the workspace's bin/ directory.

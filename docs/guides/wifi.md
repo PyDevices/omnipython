@@ -12,18 +12,18 @@ import wifi_manager
 ip = wifi_manager.connect()
 ```
 
-It runs on MicroPython and CircuitPython. It's part of the `pydevices`
-package, so a firmware that freezes pydevices already has it. Otherwise:
+It runs on MicroPython and CircuitPython. It's part of the `omnipython`
+package, so a firmware that freezes OmniPython already has it. Otherwise:
 
 ```python
 import omip
-omip.install("pydevices")
+omip.install("omnipython")
 ```
 
 `omip` comes with OmniPython firmware. On other MicroPython firmware, run
-`mip.install("github:PyDevices/pydevices/lib/omip.py")` once to put it on the board.
+`mip.install("github:PyDevices/omnipython/lib/omip.py")` once to put it on the board.
 
-On CircuitPython, copy [`lib/wifi_manager.py`](https://github.com/PyDevices/pydevices/blob/main/lib/wifi_manager.py) to the board's `/lib`.
+On CircuitPython, copy [`lib/wifi_manager.py`](https://github.com/PyDevices/omnipython/blob/main/lib/wifi_manager.py) to the board's `/lib`.
 
 ## Three kinds of app
 
@@ -104,7 +104,7 @@ on, because a light sleep drops the link.
 
 ## Reaching the board over Wi-Fi
 
-With the board's remote access on, [mpftp](https://github.com/PyDevices/mpftp)
+With the board's remote access on, [mpftp](https://github.com/PyDevices/mcuctl)
 and Workbench can reach it without a cable. Each interpreter uses the files it
 already reads, so stock firmware needs nothing from PyDevices.
 
@@ -135,7 +135,7 @@ CircuitPython has no WebREPL, so `webrepl_cfg.py` is MicroPython-only.
 
 WebREPL and the web workflow have no encryption, so treat their passwords as a
 courtesy lock on your own network. mpftp's
-[Connect over Wi-Fi](https://github.com/PyDevices/mpftp/blob/main/docs/guides/connect-over-wifi.md)
+[Connect over Wi-Fi](https://github.com/PyDevices/mcuctl/blob/main/docs/guides/connect-over-wifi.md)
 has the details.
 
 ## Slow replies: turn off power saving

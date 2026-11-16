@@ -24,7 +24,7 @@ dist/
 # Repo-specific
 .DS_Store
 _site/
-.pydevices-desktop-build/
+.omnipython-desktop-build/
 .pydevices-bundle-build/
 python/
 

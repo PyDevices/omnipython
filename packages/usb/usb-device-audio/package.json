@@ -1,6 +1,6 @@
 {
   "urls": [
-    ["usb/device/audio.py", "github:PyDevices/pydevices/packages/usb/usb-device-audio/usb/device/audio.py"]
+    ["usb/device/audio.py", "github:PyDevices/omnipython/packages/usb/usb-device-audio/usb/device/audio.py"]
   ],
   "deps": [["usb-device", "latest"]],
   "version": "0.2.0"

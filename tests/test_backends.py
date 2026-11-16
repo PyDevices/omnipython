@@ -25,9 +25,9 @@ class RegistryCase(unittest.TestCase):
         self._entries = {k: [list(e) for e in v] for k, v in backends._entries.items()}
         self._required = {k: list(v) for k, v in backends._required.items()}
         self._env = dict(boarddev._overrides)
-        for var in ("PYDEVICES_DISPLAY", "PYDEVICES_AUDIO"):
+        for var in ("OMNIPYTHON_DISPLAY", "OMNIPYTHON_AUDIO"):
             boarddev._overrides.pop(var, None)
-        self._environ = {k: os.environ.pop(k) for k in ("PYDEVICES_DISPLAY", "PYDEVICES_AUDIO") if k in os.environ}
+        self._environ = {k: os.environ.pop(k) for k in ("OMNIPYTHON_DISPLAY", "OMNIPYTHON_AUDIO") if k in os.environ}
 
     def tearDown(self):
         backends._entries.clear()
@@ -263,26 +263,26 @@ class TestAutoDisplayRegistry(RegistryCase):
 
     def test_env_override_names_a_backend_that_nothing_required(self):
         backends.register("display", "fake", "bk_fake_display:Fake", probe=lambda: False)
-        self.set_env("PYDEVICES_DISPLAY", "fake")
+        self.set_env("OMNIPYTHON_DISPLAY", "fake")
         self.assertIsInstance(ad.AutoDisplay(10, 20), self.Fake)
 
     def test_env_override_beats_a_required_backend(self):
         backends.register("display", "fake", "bk_fake_display:Fake")
         backends.require("display", "fake")
-        self.set_env("PYDEVICES_DISPLAY", "sdl")
+        self.set_env("OMNIPYTHON_DISPLAY", "sdl")
         self.assertEqual(ad.AutoDisplay(10, 20), "sdl-display")
         self.assertEqual(self.made, [])
 
     def test_env_override_that_declines_is_an_error_not_a_fallback(self):
         pg = sys.modules["displaydev.pgdisplay"]
         sys.modules["displaydev.pgdisplay"] = None
-        self.set_env("PYDEVICES_DISPLAY", "pygame")
-        with self.assertRaisesRegex(ImportError, "pygame.*PYDEVICES_DISPLAY"):
+        self.set_env("OMNIPYTHON_DISPLAY", "pygame")
+        with self.assertRaisesRegex(ImportError, "pygame.*OMNIPYTHON_DISPLAY"):
             ad.AutoDisplay(10, 20)
         sys.modules["displaydev.pgdisplay"] = pg
 
     def test_unknown_env_override_names_what_is_missing(self):
-        self.set_env("PYDEVICES_DISPLAY", "bk_no_such_backend")
+        self.set_env("OMNIPYTHON_DISPLAY", "bk_no_such_backend")
         with self.assertRaisesRegex(ImportError, "bk_no_such_backend"):
             ad.AutoDisplay(10, 20)
 
@@ -411,10 +411,10 @@ class TestAudioRegistry(RegistryCase):
         self.assertEqual(audio_auto.select_backend(), "sdl2_audio")
 
     def test_env_override(self):
-        self.set_env("PYDEVICES_AUDIO", "pygame_audio")
+        self.set_env("OMNIPYTHON_AUDIO", "pygame_audio")
         self.assertEqual(audio_auto.select_backend(), "pygame_audio")
         backends.register("audio", "fake", "bk_fake_audio", probe=lambda: False)
-        self.set_env("PYDEVICES_AUDIO", "fake")
+        self.set_env("OMNIPYTHON_AUDIO", "fake")
         self.assertEqual(audio_auto.select_backend(), "fake")
 
     def test_nothing_usable_is_still_the_actionable_error(self):

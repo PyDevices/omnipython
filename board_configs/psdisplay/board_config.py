@@ -12,8 +12,8 @@ from displaydev.psdisplay import PSDisplay
 width = 320
 height = 480
 
-width = env_int("PYDEVICES_WIDTH", width)
-height = env_int("PYDEVICES_HEIGHT", height)
+width = env_int("OMNIPYTHON_WIDTH", width)
+height = env_int("OMNIPYTHON_HEIGHT", height)
 
 display_drv = PSDisplay("display_canvas", width, height)
 

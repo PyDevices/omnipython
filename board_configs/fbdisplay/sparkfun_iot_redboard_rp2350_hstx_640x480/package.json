@@ -2,11 +2,11 @@
   "urls": [
     [
       "board_config.py",
-      "github:PyDevices/pydevices/board_configs/fbdisplay/sparkfun_iot_redboard_rp2350_hstx_640x480/board_config.py"
+      "github:PyDevices/omnipython/board_configs/fbdisplay/sparkfun_iot_redboard_rp2350_hstx_640x480/board_config.py"
     ],
     [
       "board_peripherals.py",
-      "github:PyDevices/pydevices/board_configs/fbdisplay/sparkfun_iot_redboard_rp2350_hstx_640x480/board_peripherals.py"
+      "github:PyDevices/omnipython/board_configs/fbdisplay/sparkfun_iot_redboard_rp2350_hstx_640x480/board_peripherals.py"
     ],
     [
       "sdcard.py",
@@ -15,7 +15,7 @@
   ],
   "deps": [
     [
-      "pydevices",
+      "omnipython",
       "latest"
     ]
   ],

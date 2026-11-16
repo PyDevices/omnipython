@@ -13,14 +13,14 @@ backend. See `pcm_out`.
 
 And it is where the portable environment helpers live -- `env_get`,
 `env_int`, `env_float`, `env_bool` and `env_set` --
-because a board config, an app and every PyDevices package read their
-``PYDEVICES_*`` settings through them, on interpreters where ``os.environ``
+because a board config, an app and every OmniPython package read their
+``OMNIPYTHON_*`` settings through them, on interpreters where ``os.environ``
 may not exist::
 
     from boarddev import env_int, env_set
 
-    env_set("PYDEVICES_WIDTH", 800)   # before board_config is imported
-    period = env_int("PYDEVICES_REFRESH_MS", 0)
+    env_set("OMNIPYTHON_WIDTH", 800)   # before board_config is imported
+    period = env_int("OMNIPYTHON_REFRESH_MS", 0)
 
 This module imports nothing at module scope, so any package -- ``displaydev``
 included -- can import from it without a cycle. Keep it that way.
@@ -152,7 +152,7 @@ def replace_role(peripherals_mod, name, role):
 # Both getattrs there are symptoms. The second is this question -- host or
 # board -- and it cannot be answered inside ``audiodev``: importing board
 # configs from there would cost audiodev its standalone-ness, and audiodev is
-# meant to be usable with no pydevices board tree at all. ``boarddev`` is
+# meant to be usable with no OmniPython board tree at all. ``boarddev`` is
 # already the seam between the two, so it answers here.
 #
 # Note it resolves to ``board_peripherals``, never ``board_config``. On some

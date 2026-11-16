@@ -1,6 +1,6 @@
 # Roadmap
 
-pydevices is heading toward covering more of the hardware a board can carry,
+OmniPython is heading toward covering more of the hardware a board can carry,
 with each kind of peripheral described honestly by its role.
 
 ## Audio
@@ -52,4 +52,4 @@ with each kind of peripheral described honestly by its role.
   board's own REPL.
 
 Bugs, and things you need that don't work yet, go to
-[issues](https://github.com/PyDevices/pydevices/issues).
+[issues](https://github.com/PyDevices/omnipython/issues).

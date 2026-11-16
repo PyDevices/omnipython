@@ -5,7 +5,7 @@
 """BLE keyboards and game controllers, both ways: HID over GATT (HOGP).
 
 **As a host** (central), a board or a laptop connects to a BLE keyboard,
-remote or gamepad and gets PyDevices events, the same ``events.Key`` and
+remote or gamepad and gets OmniPython events, the same ``events.Key`` and
 ``events.Joy*`` records a USB keyboard gives through usbif or SDL gives on the
 desktop::
 
@@ -37,7 +37,7 @@ as it drives USB::
     KeyboardLayoutUS(kb).write("Hello\\n")
     Mouse(per.devices).move(x=40)
 
-Install ``adafruit_hid`` with ``mip.install("github:PyDevices/pydevices/bledev_hid")``.
+Install ``adafruit_hid`` with ``mip.install("github:PyDevices/omnipython/bledev_hid")``.
 The gamepad, which ``adafruit_hid`` no longer has, is `bledev.hid_gamepad`.
 
 Its name, appearance and Report Map follow from which functions it offers,
@@ -380,7 +380,7 @@ class Peripheral:
 
 
 class Host:
-    """One connected HID device, as a stream of PyDevices events.
+    """One connected HID device, as a stream of OmniPython events.
 
     Make it with `connect`, or `start` it on a connection you
     already have. ``report_map`` is the parsed `ReportMap`;

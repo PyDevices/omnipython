@@ -11,7 +11,7 @@
 #
 # WHY IT EXISTS
 # -------------
-# pydevices#37: both guards "survived their planted faults, which means either
+# omnipython#37: both guards "survived their planted faults, which means either
 # the plants were wrong or the guards are not load-bearing". The plants were
 # wrong, and in the same way -- they landed where a DIFFERENT guard was already
 # holding, so the guard under test was never the thing being asked.

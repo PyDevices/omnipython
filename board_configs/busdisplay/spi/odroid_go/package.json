@@ -2,19 +2,19 @@
   "urls": [
     [
       "board_config.py",
-      "github:PyDevices/pydevices/board_configs/busdisplay/spi/odroid_go/board_config.py"
+      "github:PyDevices/omnipython/board_configs/busdisplay/spi/odroid_go/board_config.py"
     ],
     [
       "board_peripherals.py",
-      "github:PyDevices/pydevices/board_configs/busdisplay/spi/odroid_go/board_peripherals.py"
+      "github:PyDevices/omnipython/board_configs/busdisplay/spi/odroid_go/board_peripherals.py"
     ],
     [
       "ili9341.py",
-      "github:PyDevices/pydevices/drivers/display/ili9341.py"
+      "github:PyDevices/omnipython/drivers/display/ili9341.py"
     ],
     [
       "battery_adc.py",
-      "github:PyDevices/pydevices/drivers/power/battery_adc.py"
+      "github:PyDevices/omnipython/drivers/power/battery_adc.py"
     ],
     [
       "sdcard.py",
@@ -22,16 +22,16 @@
     ],
     [
       "keypad_gpio.py",
-      "github:PyDevices/pydevices/drivers/input/keypad_gpio.py"
+      "github:PyDevices/omnipython/drivers/input/keypad_gpio.py"
     ],
     [
       "gpiojoystick.py",
-      "github:PyDevices/pydevices/drivers/joystick/gpiojoystick.py"
+      "github:PyDevices/omnipython/drivers/joystick/gpiojoystick.py"
     ]
   ],
   "deps": [
     [
-      "pydevices",
+      "omnipython",
       "latest"
     ]
   ],

@@ -2,23 +2,23 @@
   "urls": [
     [
       "board_config.py",
-      "github:PyDevices/pydevices/board_configs/busdisplay/spi/t-embed/board_config.py"
+      "github:PyDevices/omnipython/board_configs/busdisplay/spi/t-embed/board_config.py"
     ],
     [
       "board_peripherals.py",
-      "github:PyDevices/pydevices/board_configs/busdisplay/spi/t-embed/board_peripherals.py"
+      "github:PyDevices/omnipython/board_configs/busdisplay/spi/t-embed/board_peripherals.py"
     ],
     [
       "st7789.py",
-      "github:PyDevices/pydevices/drivers/display/st7789.py"
+      "github:PyDevices/omnipython/drivers/display/st7789.py"
     ],
     [
       "dotstar.py",
-      "github:PyDevices/pydevices/drivers/led/dotstar.py"
+      "github:PyDevices/omnipython/drivers/led/dotstar.py"
     ],
     [
       "es7210.py",
-      "github:PyDevices/pydevices/drivers/codec/es7210.py"
+      "github:PyDevices/omnipython/drivers/codec/es7210.py"
     ],
     [
       "sdcard.py",
@@ -26,12 +26,12 @@
     ],
     [
       "battery_adc.py",
-      "github:PyDevices/pydevices/drivers/power/battery_adc.py"
+      "github:PyDevices/omnipython/drivers/power/battery_adc.py"
     ]
   ],
   "deps": [
     [
-      "pydevices",
+      "omnipython",
       "latest"
     ]
   ],

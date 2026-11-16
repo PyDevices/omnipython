@@ -94,11 +94,11 @@ class DesktopBoardConfigContractTests(unittest.TestCase):
             import board_config  # noqa: F401
         return displaydev_auto.AutoDisplay.call_args.kwargs
 
-    def test_pydevices_maximized_opens_maximised(self):
-        self.assertTrue(self._load_with_env({"PYDEVICES_MAXIMIZED": "1"})["maximized"])
+    def test_omnipython_maximized_opens_maximised(self):
+        self.assertTrue(self._load_with_env({"OMNIPYTHON_MAXIMIZED": "1"})["maximized"])
 
     def test_not_maximised_by_default(self):
-        env = {k: v for k, v in os.environ.items() if k != "PYDEVICES_MAXIMIZED"}
+        env = {k: v for k, v in os.environ.items() if k != "OMNIPYTHON_MAXIMIZED"}
         with mock.patch.dict(os.environ, env, clear=True):
             self.assertFalse(self._load_with_env({})["maximized"])
 

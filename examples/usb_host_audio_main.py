@@ -10,7 +10,7 @@ or ``pcm_out``, or records through ``pcm_in``, then uses the sound card
 without a change. The program plays three notes through the new role, so
 you hear that it worked, and then imports your app.
 
-Needs: an ESP32-S2, S3 or P4 board running MicroPython with the PyDevices
+Needs: an ESP32-S2, S3 or P4 board running MicroPython with the OmniPython
 USB host and audiodsp, and a class-compliant USB sound card on the host
 port. The port must supply 5 V. On a board whose only USB port carries the
 REPL, use the UART or WebREPL instead, because the host takes that port.

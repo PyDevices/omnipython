@@ -1,8 +1,8 @@
 {
   "urls": [
-    ["usb/host/video.py", "github:PyDevices/pydevices/packages/usb/usb-host-video/usb/host/video.py"],
-    ["usb/host/_uvc.py", "github:PyDevices/pydevices/packages/usb/usb-host-video/usb/host/_uvc.py"]
+    ["usb/host/video.py", "github:PyDevices/omnipython/packages/usb/usb-host-video/usb/host/video.py"],
+    ["usb/host/_uvc.py", "github:PyDevices/omnipython/packages/usb/usb-host-video/usb/host/_uvc.py"]
   ],
-  "deps": [["github:PyDevices/pydevices/packages/usb/usb-core", "main"]],
+  "deps": [["github:PyDevices/omnipython/packages/usb/usb-core", "main"]],
   "version": "0.1.0"
 }

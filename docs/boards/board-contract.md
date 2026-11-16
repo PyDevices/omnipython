@@ -5,9 +5,9 @@ stable role names, and a clear split between eager UI devices and lazy extras.
 
 This is the **target** contract for **MicroPython** boards. Board configs and
 drivers live in
-[`pydevices`](https://github.com/PyDevices/pydevices).
+[`omnipython`](https://github.com/PyDevices/omnipython).
 
-**CircuitPython** ([`board_configs/cp/`](https://github.com/PyDevices/pydevices/tree/main/board_configs/cp)) uses the same role names but leans on
+**CircuitPython** ([`board_configs/cp/`](https://github.com/PyDevices/omnipython/tree/main/board_configs/cp)) uses the same role names but leans on
 its native `board` module. A CP `board_config.py` constructs `display_drv` and
 the eager UI hardware (`touch`, `keypad`, `encoder`, `joystick`) with neutral
 read aliases. A CP `board_peripherals.py` is optional: add one for roles that
@@ -194,7 +194,7 @@ for a role that is constructed, such as `sdcard`.
 
 ## Boards with no display
 
-[`board_configs/nodisplay/`](https://github.com/PyDevices/pydevices/tree/main/board_configs/nodisplay) holds boards that are only peripherals — an audio
+[`board_configs/nodisplay/`](https://github.com/PyDevices/omnipython/tree/main/board_configs/nodisplay) holds boards that are only peripherals — an audio
 DAC or amplifier on a QT Py, say. They ship a `board_peripherals.py` and **no
 `board_config.py`**, because there is nothing eager to construct. Apps import
 `board_peripherals` directly, which is the non-graphics idiom with nothing
@@ -214,8 +214,8 @@ from board_peripherals import PERIPHERALS, load_peripherals
 load_peripherals(globals())
 ```
 
-Shared boilerplate is [`boarddev`](https://github.com/PyDevices/pydevices/blob/main/lib/boarddev.py),
-a `lib/` module shipped by the `pydevices` meta package (the name signals
+Shared boilerplate is [`boarddev`](https://github.com/PyDevices/omnipython/blob/main/lib/boarddev.py),
+a `lib/` module shipped by the `omnipython` meta package (the name signals
 *devices*, not `board_config`). Typical
 `board_peripherals.load_peripherals` is a thin wrapper around `boarddev.bind_lazy`.
 A board may replace `load_peripherals` and skip `boarddev` entirely.
@@ -243,7 +243,7 @@ A driver handed pins opens its own controller on them. Two I2C masters on one
 pair of wires don't raise an error: the new device works and the old one stops
 answering. On the Waveshare P4 panel the camera did this to the touchscreen,
 and it was reported as a slowdown somewhere else entirely
-([pydevices#22](https://github.com/PyDevices/pydevices/issues/22)).
+([omnipython#22](https://github.com/PyDevices/omnipython/issues/22)).
 
 If a hook must work without `board_config` (a non-graphics app that must not
 start the display), it may open the bus itself, but on the **same port**
@@ -307,13 +307,13 @@ if "wlan" in board.PERIPHERALS:
 ## Rollout
 
 Board configs and drivers live in
-[`PyDevices/pydevices`](https://github.com/PyDevices/pydevices).
+[`PyDevices/omnipython`](https://github.com/PyDevices/omnipython).
 MicroPython campaign + product boards use the split layout
 (`board_config.py` + `board_peripherals.py`). CircuitPython twins under `cp/` are
 single-file (eager UI only), except the few that add an optional
 `board_peripherals.py`.
 
-| In pydevices | Still to do |
+| In OmniPython | Still to do |
 |-----------------------------|-------------|
 | MP split layout for matrix product boards | Fill remaining lazy factories (`NotImplementedError`) |
 | CP eager UI parity (`touch` / `keypad` / `encoder` / `joystick`) | CP non-UI stays on `board` |

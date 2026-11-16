@@ -2,12 +2,12 @@
   "urls": [
     [
       "board_peripherals.py",
-      "github:PyDevices/pydevices/board_configs/nodisplay/qtpy_esp32_pico_audio_bff/board_peripherals.py"
+      "github:PyDevices/omnipython/board_configs/nodisplay/qtpy_esp32_pico_audio_bff/board_peripherals.py"
     ]
   ],
   "deps": [
     [
-      "pydevices",
+      "omnipython",
       "latest"
     ]
   ],

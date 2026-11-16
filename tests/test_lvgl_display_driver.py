@@ -23,7 +23,7 @@ way they did in the LVGL bindings before the file moved here. Four things are he
   area; the frame's last area is one present, by ``show()`` when
   ``flush_rect`` could not sync the area or ``frame_done()`` when it could.
 * **The frame period.** LVGL's refresh timer runs at the display's
-  ``refresh_period_ms``, which ``PYDEVICES_REFRESH_MS`` overrides.
+  ``refresh_period_ms``, which ``OMNIPYTHON_REFRESH_MS`` overrides.
 * **Hover.** The pointer follows the mouse with its button up too, so LVGL
   can hover (``HOVER_OVER``, ``HOVER_LEAVE``, the ``HOVERED`` state); only a
   press makes it PRESSED.
@@ -596,7 +596,7 @@ class _ColorP:
 
 
 class TestFlushAlwaysEnds(unittest.TestCase):
-    """LVGL spins until the flush is ready (micropython-pydevices#48).
+    """LVGL spins until the flush is ready (omnipython-builds#48).
 
     machine.soft_reset() raises SystemExit, and Ctrl-C KeyboardInterrupt;
     neither is an Exception, so either one raised from show() or blit_rect()
@@ -667,8 +667,8 @@ class _Display(DisplayDriver):
 
 class TestFramePeriod(unittest.TestCase):
     def _lvgl_period(self, **env):
-        boarddev._overrides.pop("PYDEVICES_REFRESH_MS", None)
-        clean = {k: v for k, v in os.environ.items() if not k.startswith("PYDEVICES_")}
+        boarddev._overrides.pop("OMNIPYTHON_REFRESH_MS", None)
+        clean = {k: v for k, v in os.environ.items() if not k.startswith("OMNIPYTHON_")}
         clean.update(env)
         with mock.patch.dict(os.environ, clean, clear=True), quiet():
             panel = _Display()
@@ -682,9 +682,9 @@ class TestFramePeriod(unittest.TestCase):
     def test_lvgl_refreshes_at_the_display_period(self):
         self.assertEqual((33, 33), self._lvgl_period())
 
-    def test_pydevices_refresh_ms_reaches_lvgl(self):
-        self.assertEqual((16, 16), self._lvgl_period(PYDEVICES_REFRESH_MS="16"))
-        self.assertEqual((50, 50), self._lvgl_period(PYDEVICES_REFRESH_MS="50"))
+    def test_omnipython_refresh_ms_reaches_lvgl(self):
+        self.assertEqual((16, 16), self._lvgl_period(OMNIPYTHON_REFRESH_MS="16"))
+        self.assertEqual((50, 50), self._lvgl_period(OMNIPYTHON_REFRESH_MS="50"))
 
     def test_a_display_without_a_period_uses_the_fallback(self):
         cls = _display_driver_class()

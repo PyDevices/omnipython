@@ -30,7 +30,7 @@ and opens a window with this in it:
 ## What each line does
 
 `from board_config import display_drv` loads the board config. On a desktop
-that's the one `pydevices-desktop` installed, which opens a window; on a board
+that's the one `omnipython-desktop` installed, which opens a window; on a board
 it's the one you installed for that board, which sets up its display bus and
 panel. Either way you get `display_drv`, the display to draw on.
 

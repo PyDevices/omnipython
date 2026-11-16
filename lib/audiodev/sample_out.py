@@ -198,7 +198,7 @@ class AudioOut:
         #: How many times the pump started feeding past the cap because the
         #: transport had stopped consuming -- episodes, not ticks. A number
         #: above 0 means the sink was not draining: a wrapper that does not
-        #: forward `prebuffer_bytes` (pydevices#54), or a device that died.
+        #: forward `prebuffer_bytes` (omnipython#54), or a device that died.
         self.stalls = 0
         # --- the audio pump, if this firmware has one --------------------
         # ``pump=False`` is for a caller that has a reason (a test proving
@@ -394,7 +394,7 @@ class AudioOut:
             # The pump is still holding whatever broke. Falling back is
             # right; falling back SILENTLY is what cost a board sitting an
             # hour -- the speaker works, `pumped` is False, the DMA counter
-            # never moves and nothing anywhere says why (pydevices#45). Same
+            # never moves and nothing anywhere says why (omnipython#45). Same
             # shape as the no-`wire=` note below, said once per fault.
             self._pump_refused = engine.fault()
             if not _SAID or _SAID[-1] != self._pump_refused:
@@ -481,7 +481,7 @@ class AudioOut:
             # for everything that goes through `Pump.play`, and this except is
             # what catches the rest -- so recording a lost race as blocking
             # meant the process never reached for the pump again, on any
-            # player, until it exited (pydevices#52).
+            # player, until it exited (omnipython#52).
             transient = isinstance(exc, _pump_mod.StartFailed)
             engine.note_fault(str(exc), blocking=not transient)
             print("audiodev: the audio pump would not start -", exc,
@@ -857,7 +857,7 @@ class AudioOut:
             # strands every byte it made: measured under seven busy loops on
             # one core as a round that wrote nothing at all while the pump's
             # own counter said it had pulled 9600 of 9600 bytes
-            # (pydevices#52). The pump has stopped, so this drain empties the
+            # (omnipython#52). The pump has stopped, so this drain empties the
             # ring and cannot wait on anything.
             self._drain_at = 0
             self._drain_len = got = self._engine.produce(self._drain)

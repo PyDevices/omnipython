@@ -2,24 +2,24 @@
   "urls": [
     [
       "board_config.py",
-      "github:PyDevices/pydevices/board_configs/busdisplay/i80/t-display-s3/board_config.py"
+      "github:PyDevices/omnipython/board_configs/busdisplay/i80/t-display-s3/board_config.py"
     ],
     [
       "board_peripherals.py",
-      "github:PyDevices/pydevices/board_configs/busdisplay/i80/t-display-s3/board_peripherals.py"
+      "github:PyDevices/omnipython/board_configs/busdisplay/i80/t-display-s3/board_peripherals.py"
     ],
     [
       "st7789.py",
-      "github:PyDevices/pydevices/drivers/display/st7789.py"
+      "github:PyDevices/omnipython/drivers/display/st7789.py"
     ],
     [
       "battery_adc.py",
-      "github:PyDevices/pydevices/drivers/power/battery_adc.py"
+      "github:PyDevices/omnipython/drivers/power/battery_adc.py"
     ]
   ],
   "deps": [
     [
-      "pydevices",
+      "omnipython",
       "latest"
     ]
   ],

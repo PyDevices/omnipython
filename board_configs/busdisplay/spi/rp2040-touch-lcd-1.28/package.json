@@ -2,32 +2,32 @@
   "urls": [
     [
       "board_config.py",
-      "github:PyDevices/pydevices/board_configs/busdisplay/spi/rp2040-touch-lcd-1.28/board_config.py"
+      "github:PyDevices/omnipython/board_configs/busdisplay/spi/rp2040-touch-lcd-1.28/board_config.py"
     ],
     [
       "board_peripherals.py",
-      "github:PyDevices/pydevices/board_configs/busdisplay/spi/rp2040-touch-lcd-1.28/board_peripherals.py"
+      "github:PyDevices/omnipython/board_configs/busdisplay/spi/rp2040-touch-lcd-1.28/board_peripherals.py"
     ],
     [
       "gc9a01.py",
-      "github:PyDevices/pydevices/drivers/display/gc9a01.py"
+      "github:PyDevices/omnipython/drivers/display/gc9a01.py"
     ],
     [
       "cst8xx.py",
-      "github:PyDevices/pydevices/drivers/touch/cst8xx.py"
+      "github:PyDevices/omnipython/drivers/touch/cst8xx.py"
     ],
     [
       "qmi8658.py",
-      "github:PyDevices/pydevices/drivers/imu/qmi8658.py"
+      "github:PyDevices/omnipython/drivers/imu/qmi8658.py"
     ],
     [
       "battery_adc.py",
-      "github:PyDevices/pydevices/drivers/power/battery_adc.py"
+      "github:PyDevices/omnipython/drivers/power/battery_adc.py"
     ]
   ],
   "deps": [
     [
-      "pydevices",
+      "omnipython",
       "latest"
     ]
   ],

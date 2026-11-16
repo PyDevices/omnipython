@@ -306,7 +306,7 @@ class FinishesUnwatched(FakeEngine):
     still comes back empty, because the player looked before the bytes were
     there. The second hands the sample over.
 
-    Those two looks are the whole of pydevices#52. Between them the player
+    Those two looks are the whole of omnipython#52. Between them the player
     decides twice whether it has a pump and whether the sample is finished,
     and both readings used to be wrong.
     """
@@ -362,7 +362,7 @@ class NeverStarts(FakeEngine):
 class SharesTheCore(FakeEngine):
     """A pump thread that can only run once the interpreter gives the core up.
 
-    What `lifecycle.py` hit on a loaded machine (pydevices#56): the pump and
+    What `lifecycle.py` hit on a loaded machine (omnipython#56): the pump and
     the interpreter on one core, and the interpreter waiting for the pump's
     first block by spinning. A spin never hands the core over, so the pump
     never ran, the wait ran out, and a round played nothing. Here "the core
@@ -756,7 +756,7 @@ class PauseParksTheThread(PumpFixture):
 
 
 class AStartTheInterpreterMissedCostsNoAudio(PumpFixture):
-    """pydevices#52: a pump can finish the job before the player looks.
+    """omnipython#52: a pump can finish the job before the player looks.
 
     A short sample is one block. On a busy core the pump can spawn, pull the
     whole thing into the ring, reach the end of the source and leave its loop
@@ -800,7 +800,7 @@ class AStartTheInterpreterMissedCostsNoAudio(PumpFixture):
 
 
 class AWaitForThePumpGivesTheCoreUp(PumpFixture):
-    """pydevices#56: waiting for the pump's first block must not starve it.
+    """omnipython#56: waiting for the pump's first block must not starve it.
 
     Measured before the fix with the probe pinned to one core: 303 waits in
     ten runs of `lifecycle.py` spun out their whole budget with the pump still
@@ -831,7 +831,7 @@ class AWaitForThePumpGivesTheCoreUp(PumpFixture):
 
 
 class AStartThatReallyFailedIsNotSticky(PumpFixture):
-    """The other half of pydevices#52, and why the two need telling apart.
+    """The other half of omnipython#52, and why the two need telling apart.
 
     A pump that left no trace at all did not start, so the player falls back
     -- and the loss is this afternoon's CPU, not this graph, so it must not
@@ -1352,7 +1352,7 @@ class TheBoardPlaysThroughAudiobusio(PumpFixture):
         self.assertEqual(prefetch.wrote, 40 * 1024,
                          "the file stopped being read part way through")
 
-    # --- a fault that has been torn down is over (pydevices#45) ----------
+    # --- a fault that has been torn down is over (omnipython#45) ----------
 
     def test_the_next_player_gets_the_pump_back_once_the_fault_is_torn_down(
             self):
@@ -1950,7 +1950,7 @@ class ATickInsideAnyOfThem(PumpFixture):
                            "being held across anything")
 
     def test_health_carries_the_counter_that_had_no_reader(self):
-        """`reentered()` was a number nothing surfaced (pydevices#38).
+        """`reentered()` was a number nothing surfaced (omnipython#38).
 
         Same answer audiocomponents#97 reached one layer up: not dropped, and
         not shown as a missed step either -- a refused tick costs nothing --

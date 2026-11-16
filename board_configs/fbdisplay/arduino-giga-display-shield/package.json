@@ -2,19 +2,19 @@
   "urls": [
     [
       "board_config.py",
-      "github:PyDevices/pydevices/board_configs/fbdisplay/arduino-giga-display-shield/board_config.py"
+      "github:PyDevices/omnipython/board_configs/fbdisplay/arduino-giga-display-shield/board_config.py"
     ],
     [
       "board_peripherals.py",
-      "github:PyDevices/pydevices/board_configs/fbdisplay/arduino-giga-display-shield/board_peripherals.py"
+      "github:PyDevices/omnipython/board_configs/fbdisplay/arduino-giga-display-shield/board_peripherals.py"
     ],
     [
       "gt911.py",
-      "github:PyDevices/pydevices/drivers/touch/gt911.py"
+      "github:PyDevices/omnipython/drivers/touch/gt911.py"
     ],
     [
       "giga_display_shield_init.py",
-      "github:PyDevices/pydevices/drivers/display/giga_display_shield_init.py"
+      "github:PyDevices/omnipython/drivers/display/giga_display_shield_init.py"
     ],
     [
       "bmi270.py",
@@ -23,7 +23,7 @@
   ],
   "deps": [
     [
-      "pydevices",
+      "omnipython",
       "latest"
     ]
   ],

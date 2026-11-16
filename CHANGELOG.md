@@ -155,7 +155,7 @@
 - midiports: the mip install line names the package's folder (#497)
 - Library: audioinstruments v0.5.2.dev4 and audioeffects v0.5.2.dev2 (#495)
 - omip on CircuitPython brings Adafruit's libraries (#494)
-- pydevices-desktop: no portable mip; omip installs on every host (#492)
+- omnipython-desktop: no portable mip; omip installs on every host (#492)
 
 ## v0.8.0.dev6 (2026-11-10)
 
@@ -195,12 +195,12 @@
 - display_driver: one-finger swipes take 50 px on a touch panel, not 255 (#458)
 - display_driver: quitting from inside LVGL no longer crashes on exit (#457)
 - medialink: Intercom ends a hands-free turn when voice is set to None (#452)
-- Stack: midiports comes with pydevices-desktop (#456)
-- midiports: pip install pydevices-desktop brings midiports and adafruit_midi (#453)
+- Stack: midiports comes with omnipython-desktop (#456)
+- midiports: pip install omnipython-desktop brings midiports and adafruit_midi (#453)
 - audiodev: a stall no longer cuts the lookahead back to max_catchup_chunks (#450)
 - Publishing: medialink, sayso and midiports reach the mip index (#455)
 - medialink: MicroWakeWord reports the model's latest probability (#454)
-- pydevices-desktop: install Pillow, which jpegio and pngio need on a desktop (#451)
+- omnipython-desktop: install Pillow, which jpegio and pngio need on a desktop (#451)
 - display_driver: no timer callback runs while LVGL is inside a callback (#449)
 - GIGA Display Shield: audioeffects and audioinstruments in the ROMFS recipe (#447)
 
@@ -376,9 +376,9 @@
 - Every board config and every driver is a package of the library index, named by its folder or module. A board's `manifest.py` requires the driver packages it uses, and mip installs them as `deps` from the same index, so a driver fixed once reaches every board. Drivers are listed in `drivers/drivers.toml`. Boards with a `tested.json` (written by `tools/mark_tested.py` after the smoke test passes) publish to the main index with their drivers; the rest are in the index's `untested/` folder. [CONTRIBUTING.md](https://github.com/PyDevices/pydevices/blob/main/CONTRIBUTING.md) says how to add one
 - Each board's `package.json` (its GitHub installer) is now written from its `manifest.py` by `python tools/libbuild.py installers`; `tools/libbuild.py check` is the shape check CI runs on a board or driver change
 - **Breaking change:** `drivers/storage/sdcard.py` and `drivers/imu/bmi270.py` are gone; boards require micropython-lib's `sdcard` and `bmi270` packages instead (`mip.install("sdcard")` first on stock MicroPython). The nRF52 keeps its fix as `sdcard_nrf`. `drivers/display/ssd1306.py` is now `ssd1306_bus.py` (`from ssd1306_bus import SSD1306`), so it can't shadow micropython-lib's `ssd1306`
-- `pydevices-desktop` from the index no longer carries the desktop board config; the `desktop` board package does, and depends on it. Before, a desktop board package for another host (`pgdisplay`, `windisplay`) could end up with the generic `board_config`
+- `omnipython-desktop` from the index no longer carries the desktop board config; the `desktop` board package does, and depends on it. Before, a desktop board package for another host (`pgdisplay`, `windisplay`) could end up with the generic `board_config`
 - The M5Stack Tab5 display init tables (`tab5_ili9881c_init.py`, `tab5_st7123_init.py`) parse again: their bytes had lost their quotes
-- palettes, pdwidgets and appkit live here now, each in its own folder with its own version, tests and docs. palettes and pdwidgets keep their PyPI names (`pydevices-palettes`, `pydevices-pdwidgets`) and version numbers, and release from this repository with tags named `palettes-vX.Y.Z` and `pdwidgets-vX.Y.Z`
+- palettes, pdwidgets and appkit live here now, each in its own folder with its own version, tests and docs. palettes and pdwidgets keep their PyPI names (`omnipython-palettes`, `omnipython-pdwidgets`) and version numbers, and release from this repository with tags named `palettes-vX.Y.Z` and `pdwidgets-vX.Y.Z`
 - sayso, a lightweight Spotify Web API client for CPython, MicroPython and CircuitPython with a touch-screen remote app, lives here now, in `sayso/` with its own version (0.1.0), tests and examples. It has no PyPI or mip release yet. See [sayso/README.md](https://github.com/PyDevices/pydevices/blob/main/sayso/README.md)
 - **Breaking change** (pydevices is under 1.0, so it lands without waiting for 2.0): `usb.host.hid` returns key presses, mouse buttons and movement as events named the way `adafruit_hid` names them, and no longer returns raw reports. In 0.7.6, `Device.read()` returned the report's bytes (a keyboard's modifier byte, a reserved byte, then the keys held); it now returns `None` or a tuple: `(KEY_DOWN, keycode, modifiers)`, `(KEY_UP, ...)`, `(CONSUMER_DOWN, code, 0)`, `(CONSUMER_UP, ...)`, or `(MOUSE_EVENT, buttons, dx, dy, wheel)`. Code that unpacked report bytes has to change; there is no switch to get the bytes back. `Device(dev, KEYBOARD)` and `Device.match()` work as before. See [docs/usb.md](https://github.com/PyDevices/pydevices/blob/main/docs/guides/usb.md).
 - usb-host-hid: new `usb.host.hid_codes` with `Keycode`, `ConsumerControlCode` and `Mouse`'s button names, at `adafruit_hid`'s values, so nothing needs `adafruit_hid` installed
@@ -464,7 +464,7 @@
 - web_audio: convert each write's PCM16 to float in one JS call, not sample by sample in Python (#206)
 - T-Watch S3: switch off unused power rails, power the radio, amplifier and haptic driver only while used, and wake on USB (#202)
 - Roadmap: MIDI follows adafruit_midi's API over any transport; bledev's MIDI and HID ends meet Adafruit's (#205)
-- mdns moves to pydevices-desktop: CircuitPython's mdns API over python-zeroconf (#204)
+- mdns moves to omnipython-desktop: CircuitPython's mdns API over python-zeroconf (#204)
 - audiodev: play a VorbisDecoder through the pump's prefetcher, as an MP3 (#203)
 - multimer: Ctrl-C after a long timer callback ends the program; no stray tracebacks (#201)
 - sys.exit() or Ctrl-C from a timer callback now ends the program every time (#200)
@@ -783,7 +783,7 @@ against the old path's 234 µs.
 - Regenerate the ecosystem map: the pygraphics and palettes descriptions
 - Regenerate the ecosystem map: lvgl-python no longer claims macOS wheels
 - tests: the pump job checks out audiodsp at v0.5.1, not its default branch (#48)
-- The core's distribution is pydevices-audiodsp (#47)
+- The core's distribution is omnipython-audiodsp (#47)
 - audioif is audiodsp: links, names and the CPython extension follow the core's rename (#46)
 - t-embed: publish wire= and audio_power= so the pump owns I2S(1) (#41) (#44)
 - board-bringup: reset after installing, and bring the display up before Wi-Fi (#43)

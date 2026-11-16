@@ -3,24 +3,24 @@ requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "pydevices-pdwidgets"
+name = "omnipython-pdwidgets"
 dynamic = ["version"]
-description = "Cross-platform widget toolkit for PyDevices"
+description = "Cross-platform widget toolkit for OmniPython"
 readme = "README.md"
 license = "MIT"
-# The dependency floor, not an aspiration: pydevices-pygraphics declares
+# The dependency floor, not an aspiration: omnipython-pygraphics declares
 # >=3.11 (org-wide Drop Python 3.10, 2026-09-10) and publishes no sdist, so
 # a 3.10 resolve breaks as soon as it releases again.
 requires-python = ">=3.11"
 authors = [{ name = "Brad Barnett" }]
 dependencies = [
-  # appdev and multimer both come from "pydevices": all of pydevices/lib ships
+  # appdev and multimer both come from "omnipython": all of omnipython/lib ships
   # as one distribution on PyPI, while MIP keeps them as separate packages.
-  "pydevices",
-  "pydevices-pygraphics",
-  "pydevices-palettes",
+  "omnipython",
+  "omnipython-pygraphics",
+  "omnipython-palettes",
 ]
-urls = { Homepage = "https://github.com/PyDevices/pydevices/tree/main/pdwidgets", Issues = "https://github.com/PyDevices/pydevices/issues" }
+urls = { Homepage = "https://github.com/PyDevices/omnipython/tree/main/pdwidgets", Issues = "https://github.com/PyDevices/omnipython/issues" }
 
 [tool.setuptools.packages.find]
 where = ["lib"]
