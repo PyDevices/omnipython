@@ -485,6 +485,9 @@ class AudioOut:
             # player, until it exited (omnipython#52).
             transient = isinstance(exc, _pump_mod.StartFailed)
             engine.note_fault(str(exc), blocking=not transient)
+            # The sentence goes on the player too. A refusal that is only a
+            # print looks, to an app, exactly like a firmware with no pump.
+            self._pump_refused = str(exc)
             print("audiodev: the audio pump would not start -", exc,
                   "- playing on the interpreter thread instead"
                   + ("; the next play will try again" if transient else ""))
@@ -553,6 +556,8 @@ class AudioOut:
             # that predates `wire=` looks exactly like a working board: it
             # plays, on machine.I2S, and nothing anywhere says why the pump
             # is idle. That silence cost a board session an hour.
+            self._pump_refused = ("this board's board_peripherals publishes "
+                                  "no `wire=` on its audio transport")
             if not _WARNED:
                 _WARNED.append(1)
                 print("audiodev: this firmware has the audio pump but this "
@@ -649,6 +654,9 @@ class AudioOut:
         if engine is not None:
             engine.note_fault(why)
             engine.shutdown()
+        # `pumped` goes False here, so this is the only place an app can
+        # learn why: without it the player reads as never having had a pump.
+        self._pump_refused = why
         print("audiodev: the audio pump stopped -", why,
               "- playing on the interpreter thread instead")
         # Carry on from wherever the sample is. The pump consumed some of it
