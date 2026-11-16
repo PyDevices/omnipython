@@ -2,13 +2,14 @@
 #
 # SPDX-License-Identifier: MIT
 
-"""svgio.py (pydevices-desktop): MicroPython's svgio API over resvg and Pillow.
+"""svgio.py (pydevices-desktop) on a desktop: MicroPython's svgio API over resvg and Pillow.
 
 The full test is micropython-pydevices' modules/svgio/tests/test_svgio.py,
 which runs unchanged on CPython against this file, and whose renders its
 check_svgio_references.py compares. What is here is the CPython-only part:
 sizes, the three ways to decode, placement, and the message a desktop
-without resvg-py gets.
+without resvg-py gets. The backend a browser uses instead has its own tests,
+test_svgio_canvas.py and test_svgio_browser.py.
 """
 
 import importlib
@@ -149,6 +150,47 @@ class Decode(unittest.TestCase):
         with self.assertRaises(ValueError):
             d.decode(red, colors={0x1000000: 0})
 
+    def test_colours_swapped_however_they_are_written(self):
+        d = self.d
+        want = {0xFF0000: 0x0000FF, 0x00FF00: 0xFFFFFF}
+
+        def centre(svg, colors=None):
+            w, h = d.open(svg.encode())
+            pixels = bytearray(w * h * 2)
+            d.decode(pixels, bytearray(w * h), colors=colors)
+            return px(pixels, 5 * w + 10)
+
+        def icon(paint, style=""):
+            return (
+                '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="12"><style>%s</style>'
+                '<rect class="c" x="2" y="2" width="20" height="8" %s/></svg>' % (style, paint)
+            )
+
+        for paint in (
+            'fill="#ff0000"', 'fill="#FF0000"', 'fill="#f00"', 'fill="#F00"', "fill='red'", 'fill = " red "',
+            'fill="rgb(255, 0, 0)"', 'fill="rgb(100%, 0%, 0%)"', 'style="fill:red"', 'style="stroke:none; fill: #f00;"',
+        ):  # fmt: skip
+            self.assertEqual((centre(icon(paint)), centre(icon(paint), want)), (0xF800, 0x001F), paint)
+        self.assertEqual(centre(icon("", ".c { fill: red }"), want), 0x001F)
+        # a stroke, and a gradient's stops with the opacity they had
+        self.assertEqual(centre(icon('fill="none" stroke="red" stroke-width="30"'), want), 0x001F)
+        stops = (
+            '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="12"><linearGradient id="g">'
+            '<stop offset="0" stop-color="red"/><stop offset="1" style="stop-color:rgb(255,0,0)"/></linearGradient>'
+            '<rect x="2" y="2" width="20" height="8" fill="url(#g)"/></svg>'
+        )
+        self.assertEqual((centre(stops), centre(stops, want)), (0xF800, 0x001F))
+        w, h = d.open(icon('fill="red" fill-opacity="0.5"').encode())
+        alpha = bytearray(w * h)
+        d.decode(bytearray(w * h * 2), alpha, colors=want)
+        self.assertIn(alpha[5 * w + 10], (127, 128))
+        # what isn't in the map, isn't a paint, or isn't a colour every runtime reads, is left alone
+        for paint, colour in (
+            ('fill="blue"', 0x001F), ('fill="#00f" data-fill="red" id="red"', 0x001F),
+            ('fill="tomato"', 0xFB08), ('fill="none" stroke="none"', 0),
+        ):  # fmt: skip
+            self.assertEqual(centre(icon(paint), {0xFF0000: 0x00FF00, 0x808080: 0x00FF00}), colour, paint)
+
     def test_buffer_and_close(self):
         import svgio
 
@@ -180,7 +222,7 @@ class Decode(unittest.TestCase):
 
 class WithoutResvg(unittest.TestCase):
     def test_the_message_says_how_to_install_it(self):
-        saved = {k: sys.modules.pop(k) for k in list(sys.modules) if k in ("svgio", "resvg_py")}
+        saved = {k: sys.modules.pop(k) for k in list(sys.modules) if k in ("svgio", "_svgio_resvg", "resvg_py")}
         sys.modules["resvg_py"] = None  # import resvg_py now raises ImportError
         try:
             with self.assertRaises(ImportError) as cm:
@@ -189,6 +231,7 @@ class WithoutResvg(unittest.TestCase):
         finally:
             sys.modules.pop("resvg_py", None)
             sys.modules.pop("svgio", None)
+            sys.modules.pop("_svgio_resvg", None)
             sys.modules.update(saved)
 
 

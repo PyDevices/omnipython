@@ -57,5 +57,5 @@ class SvgDecoder:
         """Write RGB565 into `target` and coverage into `alpha`; `target` alone blends over what it holds.
 
         `rows=(first, end)` draws only those rows of the image, where they sit in the whole picture.
-        `colors={0xRRGGBB: 0xRRGGBB}` draws it with those colours swapped, where the SVG writes them as hex.
+        `colors={0xRRGGBB: 0xRRGGBB}` draws it with those colours swapped: each fill, stroke and gradient stop that is one of the keys.
         """

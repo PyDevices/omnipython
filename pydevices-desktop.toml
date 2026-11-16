@@ -2,6 +2,10 @@
 # Sources intentionally track the main branch for the PyScript gallery.
 
 [files]
+"https://raw.githubusercontent.com/PyDevices/pydevices/main/utils/_svgio_canvas.py" = "/lib/_svgio_canvas.py"
+"https://raw.githubusercontent.com/PyDevices/pydevices/main/utils/_svgio_colour.py" = "/lib/_svgio_colour.py"
+"https://raw.githubusercontent.com/PyDevices/pydevices/main/utils/_svgio_compact.py" = "/lib/_svgio_compact.py"
+"https://raw.githubusercontent.com/PyDevices/pydevices/main/utils/_svgio_resvg.py" = "/lib/_svgio_resvg.py"
 "https://raw.githubusercontent.com/PyDevices/pydevices/main/lib/appdev/__init__.py" = "/lib/appdev/__init__.py"
 "https://raw.githubusercontent.com/PyDevices/pydevices/main/lib/appdev/app.py" = "/lib/appdev/app.py"
 "https://raw.githubusercontent.com/PyDevices/pydevices/main/lib/appdev/devices.py" = "/lib/appdev/devices.py"
