@@ -1272,6 +1272,11 @@ class SinkDriver(_Driver):
             is kept, so its stream lasts as long as this driver.
         ahead_ms: Sound kept queued in the output. The default is the
             transport's ``c_sink_ahead_ms``, or 10.
+
+    A transport may also name the priority the pump's thread should run at
+    while it writes there, as ``c_sink_prio``. A USB speaker does: the task
+    that sends its packets must be able to interrupt the pump, or packets go
+    missing while a block renders.
     """
 
     needs_service = False
@@ -1311,8 +1316,12 @@ class SinkDriver(_Driver):
         if room > capacity:
             raise ValueError("the output's buffer is smaller than one block of the graph")
         self._status = status
+        kwargs = {}
+        prio = getattr(t, "c_sink_prio", None)
+        if prio is not None:
+            kwargs["prio"] = prio
         module().spawn(sample, _BLOCKS_FOREVER, status, sink=blob, loop=loop,
-                       timeout_ms=200, sink_room=room, sink_gain=self._gain())
+                       timeout_ms=200, sink_room=room, sink_gain=self._gain(), **kwargs)
 
     def _gain(self):
         t = self.transport

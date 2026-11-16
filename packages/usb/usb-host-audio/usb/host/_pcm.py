@@ -25,6 +25,11 @@ class SpeakerOutput(PCMOutput):
 
     #: Sound the audio pump keeps queued when it writes to `c_sink`.
     c_sink_ahead_ms = 10
+    #: The priority the audio pump runs at while it writes to `c_sink`: one
+    #: below the USB host's task, which sends the packets. At its usual
+    #: priority the pump held that task off while it rendered, and an
+    #: ESP32-P4 host sent 10% fewer packets than the speaker played.
+    c_sink_prio = 6
 
     def __init__(self, speaker, **kwargs):
         PCMOutput.__init__(self, AudioFormat(speaker.rate, speaker.channels, speaker.bits), **kwargs)
