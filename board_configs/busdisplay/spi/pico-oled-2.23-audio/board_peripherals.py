@@ -158,7 +158,10 @@ class _PIOStream:
         self._base = start + offset
         self._ring = memoryview(self._store)[offset : offset + ring]
         self._size = ring
-        self._zeros = bytes(1024)
+        # A memoryview, so _clear's slices don't copy: as bytes they cost
+        # 2 KB a write, and a collection on an 8 MB heap stops the feed
+        # for about 150 ms.
+        self._zeros = memoryview(bytes(1024))
         self._dma = DMA()
         self._ctrl = self._dma.pack_ctrl(
             size=2, inc_read=True, inc_write=False, treq_sel=dreq, ring_size=_log2(ring), ring_sel=False
