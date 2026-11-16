@@ -53,6 +53,8 @@ and Android.
   Get it: `mip pydevices`, `pip pydevices`, firmware build. Runs on: MP, CP, Desktop, Web.
 - [`boarddev`](https://github.com/PyDevices/pydevices/blob/main/docs/boards/board-contract.md): Bring up a board's extra devices, such as its camera or sensors, only when you ask for them.\
   Get it: `mip pydevices`, `pip pydevices`, firmware build. Runs on: MP, CP, Desktop, Web, Android.
+- [`_boardname`](https://github.com/PyDevices/pydevices/tree/main/packages/_boardname): Give the board's name to packages that name a USB device or cast target after it, with one plain error on firmware whose `boarddev` is too old.\
+  Get it: `mip _boardname`. Runs on: MP, CP.
 
 ## Draw on a screen
 
@@ -430,6 +432,7 @@ and Android.
 
 ## A to Z
 
+- **_:** [`_boardname`](#set-up-a-board)
 - **A:** [`android-runner`](#run-somewhere-other-than-a-board), [`android-template`](#run-somewhere-other-than-a-board), [`android.py`](#run-somewhere-other-than-a-board), [`appdev`](#write-an-app), [`appkit`](#write-an-app), [`applibs`](#write-an-app), [`Audio codecs`](#drive-a-chip), [`audioairwindows`](#make-and-shape-sound), [`audiobiquad`](#make-and-shape-sound), [`audioconvolve`](#make-and-shape-sound), [`audiocore`](#make-and-shape-sound), [`audiodelays`](#make-and-shape-sound), [`audiodev`](#make-and-shape-sound), [`audiodsp_util`](#make-and-shape-sound), [`audiodynamics`](#make-and-shape-sound), [`audioecho`](#make-and-shape-sound), [`audioeffects`](#make-and-shape-sound), [`audiofeatures`](#make-and-shape-sound), [`audiofilters`](#make-and-shape-sound), [`audiofreeverb`](#make-and-shape-sound), [`audiograph`](#make-and-shape-sound), [`audioif`](#make-and-shape-sound), [`audioinstruments`](#make-and-shape-sound), [`audioladder`](#make-and-shape-sound), [`audiomath`](#make-and-shape-sound), [`audiometer`](#make-and-shape-sound), [`audiomixer`](#make-and-shape-sound), [`audiomodal`](#make-and-shape-sound), [`audiomp3`](#make-and-shape-sound), [`audiooscillator`](#make-and-shape-sound), [`audiopump`](#make-and-shape-sound), [`audiorender`](#make-and-shape-sound), [`audioroute`](#make-and-shape-sound), [`audiosampler`](#make-and-shape-sound), [`audioshaper`](#make-and-shape-sound), [`audiospeed`](#make-and-shape-sound), [`audioverb`](#make-and-shape-sound), [`audiovorbis`](#make-and-shape-sound)
 - **B:** [`Baby monitor`](#run-a-finished-app), [`backends`](#write-an-app), [`Bit World`](#run-a-finished-app), [`bledev`](#connect-devices), [`bledev_hid`](#connect-devices), [`Bluetooth speaker`](#run-a-finished-app), [`Board configs`](#set-up-a-board), [`boarddev`](#set-up-a-board), [`btclassic`](#make-and-shape-sound), [`Bus drivers`](#drive-a-chip), [`Buttons and keypads`](#drive-a-chip)
 - **C:** [`Camera`](#run-a-finished-app), [`Camera for the ESP32-P4`](#run-a-finished-app), [`Camera sensors`](#drive-a-chip), [`cameraif`](#use-cameras-video-and-ai-on-a-board), [`Cast`](#run-a-finished-app), [`castdisplay`](#use-cameras-video-and-ai-on-a-board), [`castif`](#use-cameras-video-and-ai-on-a-board), [`Clock`](#run-a-finished-app), [`controlkit`](#draw-on-a-screen)
