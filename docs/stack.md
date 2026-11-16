@@ -425,11 +425,11 @@ and Android.
 
 ## Find the project's own sites
 
-- [`PyDevices.github.io`](https://pydevices.github.io/): Read the website: the front page, a page for each project and the live demos.\
+- [`PyDevices.github.io`](https://omnipython.org/): Read the website: the front page, a page for each project and the live demos.\
   Get it: open in a browser. Runs on: Web.
 - [`lib`](https://lib.omnipython.org): Browse the `mip` index for the libraries, board configs and drivers.\
   Get it: open in a browser. Runs on: Web.
-- [`mip`](https://pydevices.github.io/mip/): Read the old package mirror, which no longer takes releases: install from lib instead.\
+- [`mip`](https://omnipython.org/mip/): Read the old package mirror, which no longer takes releases: install from lib instead.\
   Get it: open in a browser. Runs on: Web.
 
 ## A to Z
