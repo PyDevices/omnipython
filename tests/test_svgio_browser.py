@@ -37,7 +37,7 @@ import _env  # noqa: F401
 
 ROOT = Path(__file__).resolve().parents[1]
 PYODIDE_CDN = "https://cdn.jsdelivr.net/pyodide/v314.0.0/full/"
-MODULES = ("svgio.py", "_svgio_canvas.py", "_svgio_compact.py", "_svgio_resvg.py")
+MODULES = ("svgio.py", "_svgio_canvas.py", "_svgio_colour.py", "_svgio_compact.py", "_svgio_resvg.py")
 BACKGROUND = 0x8410  # the grey each case is also blended over
 MARGIN = (5, 3, 8, 6)  # x, y, extra columns, extra rows of the screen it is blended into
 TOLERANCE = 16  # of 255: two steps of a five-bit channel
@@ -167,6 +167,16 @@ CASES += (
         '<circle cx="16" cy="34" r="10" fill="#d02020" fill-opacity="0.7" stroke="#801010" stroke-width="3"/>'
         '<path d="M30 28h14v14h-14z" fill="#fd0" stroke="#d02020" stroke-width="2"/>'),
      {"width": 96, "colors": {"d02020": "2040d0", "801010": "102080", "ffdd00": "00c060", "123456": "000000"}}, 0.04),
+    # every way of writing a colour: names, rgb(), short and capital hex, in attributes, style="" and a sheet
+    ("colours-swapped-spellings", _svg(
+        '<style>.s { stroke: blue; stroke-width: 3 }</style>'
+        '<linearGradient id="g"><stop offset="0" stop-color="red"/>'
+        '<stop offset="1" style="stop-color: rgb(0, 0, 255); stop-opacity: 0.6"/></linearGradient>'
+        '<rect x="4" y="4" width="40" height="18" rx="4" fill="url(#g)"/>'
+        '<circle class="s" cx="16" cy="34" r="10" fill="rgb(100%, 0%, 0%)" fill-opacity="0.7"/>'
+        '<path d="M30 28h14v14h-14z" style="fill:#FD0;stroke:#F00" stroke-width="2"/>'
+        '<rect x="2" y="44" width="44" height="3" fill="green"/>'),
+     {"width": 96, "colors": {"ff0000": "2040d0", "0000ff": "c08000", "ffdd00": "00c060", "808080": "ff00ff"}}, 0.04),
 )
 
 # Calls that must fail the same way in both: (name, Python that fails, given a decoder d and an SVG text s)
@@ -488,7 +498,7 @@ class InTheBrowser(unittest.TestCase):
             for name, case in result["cases"].items():
                 self.assertTrue(case["empty_colors_is_own"], (where, name))
                 self.assertTrue(case["buffer_closed"], (where, name))
-                self.assertEqual(case["recolored"], name == "colours-swapped", (where, name))
+                self.assertEqual(case["recolored"], name.startswith("colours-swapped"), (where, name))
 
     def test_pixels_are_close_to_the_desktop(self):
         out = os.environ.get("PYDEVICES_SVGIO_OUT")

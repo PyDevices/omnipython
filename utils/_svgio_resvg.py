@@ -23,6 +23,7 @@ strokes, transforms, opacity and gradients, with text turned into paths.
 import io
 import re
 
+from _svgio_colour import colour
 from _svgio_compact import expand
 
 try:
@@ -54,24 +55,40 @@ def _to_565(rgb):
     return Image.merge("LA", (lo, hi)).tobytes()
 
 
-_HEX = re.compile(r"#([0-9a-fA-F]{6}|[0-9a-fA-F]{3})(?![0-9a-fA-F])")
+# A fill, a stroke or a gradient stop's colour, as an attribute and as a
+# declaration in style="" or a <style> sheet.
+_PAINT = re.compile(
+    r"""(?<![\w-])(fill|stroke|stop-color)(\s*=\s*)(["'])(.*?)\3"""
+    r"""|(?<![\w-])(fill|stroke|stop-color)(\s*:\s*)([^;"'}]+)"""
+)
 
 
 def _recolored(text, colors):
-    """*text* with each colour written as hex swapped for its value in *colors*."""
+    """*text* with each fill, stroke and stop colour that is a key of *colors* written as its value.
+
+    A colour is matched by what it is, however the SVG spells it: ``#rgb``,
+    ``#rrggbb``, ``rgb()`` or one of the ten names MicroPython's svgio reads.
+    Its opacity is a separate attribute and stays.
+    """
     if not isinstance(colors, dict):
         raise TypeError("colors is a dict of 0xRRGGBB to 0xRRGGBB")
     if any(not 0 <= c <= 0xFFFFFF for pair in colors.items() for c in pair):
         raise ValueError("colors is a dict of 0xRRGGBB to 0xRRGGBB")
 
     def swap(m):
-        digits = m.group(1)
-        if len(digits) == 3:
-            digits = "".join(c * 2 for c in digits)
-        value = int(digits, 16)
-        return "#%06x" % colors[value] if value in colors else m.group(0)
+        value = m.group(4) if m.group(1) else m.group(7)
+        rgb = colour(value)
+        if rgb is None:
+            return m.group(0)
+        key = rgb[0] << 16 | rgb[1] << 8 | rgb[2]
+        if key not in colors:
+            return m.group(0)
+        new = "#%06x" % colors[key]
+        if m.group(1):
+            return m.group(1) + m.group(2) + m.group(3) + new + m.group(3)
+        return m.group(5) + m.group(6) + new
 
-    return _HEX.sub(swap, text) if colors else text
+    return _PAINT.sub(swap, text) if colors else text
 
 
 class Buffer(bytearray):
@@ -169,8 +186,8 @@ class SvgDecoder:
 
         ``rows=(first, end)`` draws only those rows of the image, where they
         sit in the whole picture. ``colors={0xRRGGBB: 0xRRGGBB}`` draws it
-        with those colours swapped; here that reaches colours the SVG writes
-        as ``#rrggbb`` or ``#rgb``, not ones it names or writes as ``rgb()``.
+        with those colours swapped: each fill, stroke and gradient stop that
+        is one of the keys, however the SVG wrote it, keeping its opacity.
         """
         if self._text is None:
             raise RuntimeError("decode() needs a successful open()")

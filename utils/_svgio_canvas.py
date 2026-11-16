@@ -24,6 +24,7 @@ import math
 import re
 import xml.etree.ElementTree as ET
 
+from _svgio_colour import colour
 from _svgio_compact import expand
 
 try:
@@ -47,21 +48,7 @@ _PATH_COMMAND = re.compile(r"[\s,]*([MmLlHhVvCcSsQqTtAaZz])")
 _PATH_ARGS = {"M": 2, "L": 2, "H": 1, "V": 1, "C": 6, "S": 4, "Q": 4, "T": 2, "A": 7}
 _TRANSFORM = re.compile(r"(matrix|translate|scale|rotate|skewX|skewY)\s*\(([^)]*)\)")
 _HEX = re.compile(r"#([0-9a-fA-F]+)")
-_RGB = re.compile(r"rgb\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)")
-_RGB_PERCENT = re.compile(r"rgb\(\s*\+?(\d+(?:\.\d+)?)%\s*,\s*\+?(\d+(?:\.\d+)?)%\s*,\s*\+?(\d+(?:\.\d+)?)%\s*\)")
 _GREY = (128, 128, 128)
-_NAMED = {
-    "red": (255, 0, 0),
-    "green": (0, 128, 0),
-    "blue": (0, 0, 255),
-    "yellow": (255, 255, 0),
-    "cyan": (0, 255, 255),
-    "magenta": (255, 0, 255),
-    "black": (0, 0, 0),
-    "grey": _GREY,
-    "gray": _GREY,
-    "white": (255, 255, 255),
-}
 _UNITS = ("px", "pt", "pc", "mm", "cm", "in", "em", "ex")
 _CAPS = ("butt", "round", "square")
 _JOINS = ("miter", "round", "bevel")
@@ -117,24 +104,17 @@ def _unit_interval(text):
 
 def _colour(text):
     """A colour as (r, g, b). What MicroPython's svgio can't read is grey there, and here."""
-    text = text.strip()
-    if text.startswith("#"):
-        digits = _HEX.match(text)
-        digits = digits.group(1) if digits else ""
-        if len(digits) >= 5:
-            return int(digits[0:2], 16), int(digits[2:4], 16), int(digits[4:6], 16)
-        if len(digits) >= 3:
-            return int(digits[0], 16) * 17, int(digits[1], 16) * 17, int(digits[2], 16) * 17
-        return _GREY
-    if text.startswith("rgb("):
-        m = _RGB.match(text)
-        if m:
-            return tuple(min(255, int(v)) for v in m.groups())
-        m = _RGB_PERCENT.match(text)
-        if m:
-            return tuple(min(255, int(float(v) * 255 / 100 + 0.5)) for v in m.groups())
-        return _GREY
-    return _NAMED.get(text, _GREY)
+    rgb = colour(text)
+    if rgb is not None:
+        return rgb
+    digits = _HEX.match(text.strip())
+    digits = digits.group(1) if digits else ""
+    # hex of another length, as that module's reader takes it
+    if len(digits) >= 5:
+        return int(digits[0:2], 16), int(digits[2:4], 16), int(digits[4:6], 16)
+    if len(digits) >= 3:
+        return int(digits[0], 16) * 17, int(digits[1], 16) * 17, int(digits[2], 16) * 17
+    return _GREY
 
 
 def _css(rgb, alpha=1.0):

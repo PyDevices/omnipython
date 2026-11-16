@@ -274,6 +274,9 @@ class Reading(unittest.TestCase):
             ("tomato", (128, 128, 128)),
             ("currentColor", (128, 128, 128)),
             ("#zz", (128, 128, 128)),
+            ("#12345678", (0x12, 0x34, 0x56)),
+            ("#abcd", (0xAA, 0xBB, 0xCC)),
+            ("Red", (128, 128, 128)),
         ):
             self.assertEqual(canvas._colour(text), rgb, text)
 
