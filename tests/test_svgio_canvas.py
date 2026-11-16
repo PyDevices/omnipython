@@ -87,13 +87,14 @@ class RecordingJs:
         return _Canvas(self.log, name)
 
 
-def calls(svg, zoom=1.0):
-    """The canvas calls that draw ``svg`` at its own size times ``zoom``."""
+def calls(svg, zoom=1.0, colors=None):
+    """The canvas calls that draw ``svg`` at its own size times ``zoom``, in other colours if given."""
     reader = canvas._Reader(ET.fromstring(svg))
     js = RecordingJs()
     with mock.patch.object(canvas, "js", js):
         w, h = int(reader.size[0] * zoom + 0.5), int(reader.size[1] * zoom + 0.5)
-        canvas._Painter(w, h, canvas._viewport(reader, zoom)).draw(reader.ops)
+        ops = reader.ops if colors is None else canvas._recolored(reader.ops, colors)
+        canvas._Painter(w, h, canvas._viewport(reader, zoom)).draw(ops)
     return js.log
 
 
@@ -222,6 +223,24 @@ class CanvasCalls(unittest.TestCase):
             [c[1:] for c in log if c[0] == "gradient.addColorStop"],
             [(0.0, "#000000"), (0.5, "#ffffff"), (0.5, "#ffffff"), (1.0, "#000000")],
         )
+
+
+    def test_colors_swaps_fills_strokes_and_stops_and_keeps_their_opacity(self):
+        picture = svg(
+            '<linearGradient id="g"><stop offset="0" stop-color="#ff0000"/>'
+            '<stop offset="1" stop-color="rgb(0, 0, 255)" stop-opacity="0.5"/></linearGradient>'
+            '<rect width="4" height="4" fill="red" stroke="#00f" fill-opacity="0.5"/>'
+            '<rect x="6" width="4" height="4" fill="url(#g)"/><rect y="6" width="4" height="4" fill="#00ff00"/>'
+        )
+        log = calls(picture, colors={0xFF0000: 0x102030, 0x0000FF: 0xA0B0C0, 0x123456: 0})
+        styles = [c[1] for c in log if c[0].endswith(("fillStyle =", "strokeStyle =")) and c[1] not in ("#000000", "gradient")]
+        self.assertEqual(styles, ["#102030", "#a0b0c0", "#00ff00"])
+        self.assertIn(("canvas0.globalAlpha =", 0.5), log)
+        self.assertEqual(
+            [c[1:] for c in log if c[0] == "gradient.addColorStop"],
+            [(0.0, "#102030"), (1.0, "rgba(160,176,192,0.5)")],
+        )
+        self.assertEqual(calls(picture, colors={}), calls(picture))
 
 
 class Reading(unittest.TestCase):
@@ -358,6 +377,7 @@ class PaintedJs:
 
     def __init__(self):
         outer = self
+        self.canvases = 0
 
         class Data:
             def __init__(self, pixels):
@@ -391,6 +411,7 @@ class PaintedJs:
 
         class Canvas:
             def __init__(self, w, h):
+                outer.canvases += 1
                 self.context = Context(bytearray(outer.PICTURE[: w * h * 4]))
 
             def getContext(self, kind, options=None):
@@ -412,7 +433,8 @@ class Decode(unittest.TestCase):
     ICON = svg('<rect width="4" height="2"/>', 'width="4" height="2"')
 
     def setUp(self):
-        patch = mock.patch.object(canvas, "js", PaintedJs())
+        self.js = PaintedJs()
+        patch = mock.patch.object(canvas, "js", self.js)
         patch.start()
         self.addCleanup(patch.stop)
         self.d = canvas.SvgDecoder()
@@ -486,6 +508,48 @@ class Decode(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.d.open(b"\x01SVG\x02")
 
+    def test_colors_is_checked_and_draws_the_picture_again_only_when_it_changes(self):
+        d = self.d
+        w, h = d.open(self.ICON)
+        pixels, alpha = bytearray(w * h * 2), bytearray(w * h)
+        d.decode(pixels, alpha)
+        d.decode(pixels, alpha)
+        d.decode(pixels, alpha, colors={})
+        self.assertEqual(self.js.canvases, 1)
+        for rows in ((0, 1), (1, 2)):
+            d.decode(pixels, alpha, rows=rows, colors={0: 0xFF0000})
+        self.assertEqual(self.js.canvases, 2)
+        d.decode(pixels, alpha)
+        self.assertEqual(self.js.canvases, 3)
+        with self.assertRaisesRegex(TypeError, "colors is a dict"):
+            d.decode(pixels, colors=[(1, 2)])
+        with self.assertRaisesRegex(ValueError, "colors is a dict"):
+            d.decode(pixels, colors={0x1000000: 0})
+        with self.assertRaisesRegex(ValueError, "colors is a dict"):
+            d.decode(pixels, colors={0: -1}, rows=(0, 0))
+
+    def test_buffer_and_close(self):
+        w, h = self.d.open(self.ICON)
+        buf = canvas.Buffer(w * h * 3)
+        view = memoryview(buf)
+        self.d.decode(view[: w * h * 2], view[w * h * 2 :])
+        self.assertEqual((len(buf), px(buf, 0), buf[w * h * 2]), (w * h * 3, 0xF800, 255))
+        buf.close()  # a memoryview still shows it
+        self.assertEqual(len(buf), w * h * 3)
+        view = None
+        buf.close()
+        self.assertEqual(len(buf), 0)
+        with self.assertRaises(ValueError):
+            canvas.Buffer(0)
+        d = canvas.SvgDecoder(memory=8192)
+        d.open(self.ICON)
+        d.close()
+        self.assertEqual(d.memory, 0)
+        with self.assertRaises(RuntimeError):
+            d.decode(bytearray(w * h * 2))
+        with self.assertRaises(RuntimeError):
+            d.width
+
     def test_errors(self):
         with self.assertRaisesRegex(RuntimeError, "needs a successful open"):
             canvas.SvgDecoder().decode(bytearray(4))
@@ -508,6 +572,7 @@ class WhichBackend(unittest.TestCase):
                 svgio = importlib.import_module("svgio")
                 self.assertIs(svgio.SvgDecoder, canvas.SvgDecoder)
                 self.assertIs(svgio.expand, canvas.expand)
+                self.assertIs(svgio.Buffer, canvas.Buffer)
         finally:
             sys.modules.pop("svgio", None)
             if saved is not None:

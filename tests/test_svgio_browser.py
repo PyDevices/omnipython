@@ -158,6 +158,17 @@ def _compact():
 
 CASES += (("compact-form", "compact:" + _compact().hex(), {"width": 96}, 0.03),)
 
+# The same picture in other colours: fills, a stroke and gradient stops, one with its own opacity.
+CASES += (
+    ("colours-swapped", _svg(
+        '<linearGradient id="g"><stop offset="0" stop-color="#d02020"/>'
+        '<stop offset="1" stop-color="#801010" stop-opacity="0.6"/></linearGradient>'
+        '<rect x="4" y="4" width="40" height="18" rx="4" fill="url(#g)"/>'
+        '<circle cx="16" cy="34" r="10" fill="#d02020" fill-opacity="0.7" stroke="#801010" stroke-width="3"/>'
+        '<path d="M30 28h14v14h-14z" fill="#fd0" stroke="#d02020" stroke-width="2"/>'),
+     {"width": 96, "colors": {"d02020": "2040d0", "801010": "102080", "ffdd00": "00c060", "123456": "000000"}}, 0.04),
+)
+
 # Calls that must fail the same way in both: (name, Python that fails, given a decoder d and an SVG text s)
 ERRORS = (
     ("two sizes", "d.open(s, width=4, height=4)"),
@@ -174,11 +185,16 @@ ERRORS = (
     ("rows past the end", "d.open(s) and d.decode(bytearray(4096), rows=(0, 13))"),
     ("too little memory", "type(d)(memory=100)"),
     ("not a compact drawing", "d.open(b'\\x01SVG\\x02')"),
+    ("colors not a dict", "d.open(s) and d.decode(bytearray(4096), colors=[(1, 2)])"),
+    ("colors out of range", "d.open(s) and d.decode(bytearray(4096), colors={0x1000000: 0})"),
+    ("decode after close", "d.open(s) and (d.close(), d.decode(bytearray(4096)))"),
+    ("width after close", "d.open(s) and (d.close(), d.width)"),
+    ("empty Buffer", "Buffer(0)"),
 )
 
 # What runs under Pyodide, and here against the desktop backend: every case decoded the three ways.
 DRIVER = '''
-import base64, json, sys, time
+import base64, functools, json, sys, time
 
 
 def run(svgio, cases, errors, background, margin):
@@ -187,10 +203,26 @@ def run(svgio, cases, errors, background, margin):
         d = svgio.SvgDecoder()
         began = time.time()
         source = bytes.fromhex(text[8:]) if text.startswith("compact:") else text.encode()
+        kw = dict(kw)
+        colors = kw.pop("colors", None)
+        if colors is not None:
+            colors = {int(k, 16): int(v, 16) for k, v in colors.items()}
         w, h = d.open(source, **kw)
-        pixels, alpha = bytearray(w * h * 2), bytearray(w * h)
+        # one Buffer holds the colour and the alpha, as a board would have it
+        buffer = svgio.Buffer(w * h * 3)
+        whole = memoryview(buffer)
+        pixels, alpha = whole[: w * h * 2], whole[w * h * 2 :]
         d.decode(pixels, alpha)
         took = time.time() - began
+        own = bytes(buffer)
+        d.decode(pixels, alpha, colors={})
+        same_without = bytes(buffer) == own
+        if colors is not None:
+            d.decode(pixels, alpha, colors=colors)
+        pixels, alpha = bytearray(pixels), bytearray(alpha)
+        whole = None
+        buffer.close()
+        d.decode = functools.partial(d.decode, colors=colors)
         mask = bytearray(w * h)
         d.decode(None, mask)
         band_p, band_a = bytearray(w * h * 2), bytearray(w * h)
@@ -204,6 +236,8 @@ def run(svgio, cases, errors, background, margin):
             d.decode(banded, x=x, y=y, stride=w + wide, rows=rows)
         out["cases"][name] = {
             "size": [w, h, d.width, d.height], "ms": took * 1000, "mask_is_alpha": mask == alpha,
+            "empty_colors_is_own": same_without, "buffer_closed": len(buffer) == 0,
+            "recolored": colors is not None and bytes(pixels) != own[: w * h * 2],
             "bands_are_whole": (band_p, band_a, banded) == (pixels, alpha, screen),
             "pixels": base64.b64encode(pixels).decode(), "alpha": base64.b64encode(alpha).decode(),
             "screen": base64.b64encode(screen).decode(),
@@ -212,7 +246,7 @@ def run(svgio, cases, errors, background, margin):
     for name, code in errors:
         d = svgio.SvgDecoder()
         try:
-            eval(code, {"d": d, "s": s})
+            eval(code, {"d": d, "s": s, "Buffer": svgio.Buffer})
             out["errors"][name] = "no error"
         except Exception as e:
             out["errors"][name] = "%s: %s" % (type(e).__name__, e)
@@ -448,6 +482,13 @@ class InTheBrowser(unittest.TestCase):
         for where, result in self.results.items():
             for name, case in result["cases"].items():
                 self.assertTrue(case["bands_are_whole"], (where, name))
+
+    def test_colors_buffer_and_close(self):
+        for where, result in self.results.items():
+            for name, case in result["cases"].items():
+                self.assertTrue(case["empty_colors_is_own"], (where, name))
+                self.assertTrue(case["buffer_closed"], (where, name))
+                self.assertEqual(case["recolored"], name == "colours-swapped", (where, name))
 
     def test_pixels_are_close_to_the_desktop(self):
         out = os.environ.get("PYDEVICES_SVGIO_OUT")

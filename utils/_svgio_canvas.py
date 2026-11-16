@@ -1010,6 +1010,61 @@ def _from_565(pixels):
     return out
 
 
+def _swapped(colour, colors):
+    """A colour as the canvas reads it, changed for its value in ``colors`` with its opacity kept."""
+    if colour.startswith("#"):
+        value = int(colour[1:], 16)
+        return "#%06x" % colors[value] if value in colors else colour
+    r, g, b, alpha = colour[5:-1].split(",")
+    value = int(r) << 16 | int(g) << 8 | int(b)
+    if value not in colors:
+        return colour
+    new = colors[value]
+    return "rgba(%d,%d,%d,%s)" % (new >> 16, (new >> 8) & 0xFF, new & 0xFF, alpha)
+
+
+def _recolored(ops, colors):
+    """``ops`` with each fill, stroke and gradient stop that is a key of ``colors`` drawn as its value."""
+    if not isinstance(colors, dict):
+        raise TypeError("colors is a dict of 0xRRGGBB to 0xRRGGBB")
+    if any(not 0 <= c <= 0xFFFFFF for pair in colors.items() for c in pair):
+        raise ValueError("colors is a dict of 0xRRGGBB to 0xRRGGBB")
+    if not colors:
+        return ops
+    out = []
+    for op in ops:
+        at = 4 if op[0] == "fill" else 3 if op[0] == "stroke" else None
+        if at is not None:
+            paint = op[at]
+            if isinstance(paint, str):
+                paint = _swapped(paint, colors)
+            else:
+                paint = paint[:2] + (tuple((offset, _swapped(c, colors)) for offset, c in paint[2]),) + paint[3:]
+            op = op[:at] + (paint,) + op[at + 1 :]
+        out.append(op)
+    return out
+
+
+class Buffer(bytearray):
+    """Bytes to draw pictures into.
+
+    On a board these come from outside MicroPython's heap, where its
+    collector doesn't read them. Here it is a ``bytearray`` with ``close()``.
+    """
+
+    def __init__(self, size):
+        if size < 1:
+            raise ValueError("svgio: a Buffer has at least one byte")
+        super().__init__(size)
+
+    def close(self):
+        """Let the bytes go, unless a memoryview still shows them."""
+        try:
+            self.clear()
+        except BufferError:
+            pass
+
+
 class SvgDecoder:
     """``SvgDecoder()``: ``open(source, width=)``, then ``decode(target, alpha)``."""
 
@@ -1022,7 +1077,8 @@ class SvgDecoder:
         self._reader = None
         self._size = None
         self._zoom = 1.0
-        self._canvas = None
+        self._canvas = None  # the picture as drawn last, and the colours it was drawn in
+        self._drawn = None
 
     @property
     def memory(self):
@@ -1045,11 +1101,16 @@ class SvgDecoder:
             raise RuntimeError("height needs a successful open()")
         return self._size[1]
 
+    def close(self):
+        """Let go of the SVG."""
+        self._reader = self._size = self._canvas = self._drawn = None
+        self._memory = 0
+
     def open(self, source, *, width=None, height=None, scale=None):
         """``source``: bytes-like, a path, or a binary stream. Returns (width, height)."""
         if sum(v is not None for v in (width, height, scale)) > 1:
             raise ValueError("give one of width, height and scale")
-        self._reader = self._size = self._canvas = None
+        self._reader = self._size = self._canvas = self._drawn = None
         if isinstance(source, str):
             with open(source, "rb") as f:
                 data = f.read()
@@ -1079,11 +1140,13 @@ class SvgDecoder:
         self._reader, self._size, self._zoom = reader, (w, h), zoom
         return w, h
 
-    def decode(self, target, alpha=None, *, x=0, y=0, stride=None, rows=None):
+    def decode(self, target, alpha=None, *, x=0, y=0, stride=None, rows=None, colors=None):
         """RGB565 into ``target`` and coverage into ``alpha``; ``target`` alone blends.
 
         ``rows=(first, end)`` draws only those rows of the image, where they
-        sit in the whole picture.
+        sit in the whole picture. ``colors={0xRRGGBB: 0xRRGGBB}`` draws it
+        with those colours swapped: each fill, stroke and gradient stop that
+        is one of the keys, however the SVG wrote it, keeping its opacity.
         """
         if self._reader is None:
             raise RuntimeError("decode() needs a successful open()")
@@ -1105,13 +1168,17 @@ class SvgDecoder:
             raise ValueError("target has %d bytes; it needs %d" % (pix.nbytes, last * 2))
         if cov is not None and cov.nbytes < last:
             raise ValueError("alpha has %d bytes; it needs %d" % (cov.nbytes, last))
+        ops = self._reader.ops if colors is None else _recolored(self._reader.ops, colors)
         if y1 == y0:
             return
 
-        if self._canvas is None:
-            # drawn once: the same picture goes into every buffer after this
+        drawn = sorted(colors.items()) if colors else None
+        if self._canvas is None or drawn != self._drawn:
+            # drawn once: the same picture goes into every buffer after this,
+            # until it is asked for in other colours
             view = _viewport(self._reader, self._zoom)
-            self._canvas = _Painter(w, h, view).draw(self._reader.ops)
+            self._canvas = _Painter(w, h, view).draw(ops)
+            self._drawn = drawn
         rows = range(y0, y1)
 
         if cov is not None:

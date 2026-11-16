@@ -11,6 +11,7 @@ built-in svgio (micropython-pydevices' modules/svgio).
     d.decode(fb_buf, x=10, y=10, stride=480)     # blended over what's there
     d.decode(fb_buf, rows=(0, 120))              # a band of the picture
     d.open(drawing)                              # or a drawing in the compact form
+    d.decode(pixels, alpha, colors={0xFF0000: 0x00A0FF})    # in other colours
 
 An app imports svgio and doesn't care which runtime it's on. On a desktop
 resvg and Pillow draw (``pip install resvg-py pillow``). In a browser, under
@@ -24,6 +25,6 @@ import sys
 from _svgio_compact import expand  # noqa: F401
 
 if sys.platform == "emscripten":
-    from _svgio_canvas import SvgDecoder  # noqa: F401
+    from _svgio_canvas import Buffer, SvgDecoder  # noqa: F401
 else:
-    from _svgio_resvg import SvgDecoder  # noqa: F401
+    from _svgio_resvg import Buffer, SvgDecoder  # noqa: F401
