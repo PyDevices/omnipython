@@ -516,7 +516,7 @@ class TestAudiodev(unittest.TestCase):
         host.gone = None
         out.close()
 
-    def test_audio_out_wraps_the_speaker_in_a_player_off_the_pump(self):
+    def test_audio_out_wraps_the_speaker_in_a_player(self):
         fake = types.ModuleType("audiocore")
         saved = sys.modules.get("audiocore")
         sys.modules["audiocore"] = fake
@@ -525,6 +525,8 @@ class TestAudiodev(unittest.TestCase):
 
             host.reset(_uac2_blob())
             out = audio.audio_out(dev=device())
+            host.reset(_uac2_blob())
+            off_pump = audio.audio_out(dev=device(), pump=False)
             host.reset(_uac2_blob())
             buffered = audio.audio_out(dev=device(), latency="buffered")
             host.reset(_uac2_blob())
@@ -537,9 +539,11 @@ class TestAudiodev(unittest.TestCase):
                 sys.modules["audiocore"] = saved
         self.assertIsInstance(out, AudioOut)
         self.assertEqual(out.format.rate, 48000)
-        self.assertFalse(out._want_pump)
+        # The pump plays to the speaker where the firmware's can; pump=False keeps it off.
+        self.assertTrue(out._want_pump)
+        self.assertFalse(off_pump._want_pump)
         self.assertEqual(out.transport.speaker.dev.idVendor, 0x08BB)
-        # The default keeps 80 ms queued, for an instrument.
+        # Off the pump, the default keeps 80 ms queued, for an instrument.
         self.assertEqual(out.chunk_ms * out._lookahead_chunks, 80)
         # "buffered" queues past a collection, and its ring holds that and the catch-up.
         self.assertGreaterEqual(buffered.chunk_ms * buffered._lookahead_chunks, 300)
