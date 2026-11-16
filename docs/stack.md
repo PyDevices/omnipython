@@ -144,7 +144,7 @@ and Android.
   Get it: `pip omnipython-audiodsp`, firmware build. Runs on: MP, CP, Desktop.
 - [`audioecho`](https://github.com/PyDevices/audiodsp/blob/main/docs/reference/filters-and-effects.md): Add a delay with a filter, a soft-clip and a cross-feed in its feedback loop.\
   Get it: `pip omnipython-audiodsp`, firmware build. Runs on: MP, CP, Desktop.
-- [`audioroute`](https://github.com/PyDevices/audiodsp/blob/main/docs/guides/swap-what-plays.md): Fan a stream out, scale stereo width, or re-point a wire while it plays.\
+- [`audioroute`](https://github.com/PyDevices/audiodsp/blob/main/docs/guides/change-without-a-click.md): Fan a stream out, scale stereo width, or re-point a wire while it plays.\
   Get it: `pip omnipython-audiodsp`, firmware build. Runs on: MP, CP, Desktop.
 - [`audioshaper`](https://github.com/PyDevices/audiodsp/blob/main/docs/reference/filters-and-effects.md): Waveshape with a curve that is data, and sample-and-hold at an exact ratio.\
   Get it: `pip omnipython-audiodsp`, firmware build. Runs on: MP, CP, Desktop.
