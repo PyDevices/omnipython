@@ -19,8 +19,6 @@ try:
     sys.path.insert(0, __file__.rsplit("/", 2)[0])
     # OmniPython's lib/, for boarddev.name() when a device announces itself.
     sys.path.insert(0, __file__.rsplit("/", 1)[0] + "/../../../lib")
-    # The board's name with the older-firmware check, which hmilink requires.
-    sys.path.insert(0, __file__.rsplit("/", 1)[0] + "/../../_boardname")
 except (NameError, IndexError):
     pass
 

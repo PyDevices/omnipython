@@ -21,7 +21,6 @@ import unittest
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 SOURCE = ROOT / "packages" / "usb" / "usb-hid" / "usb_hid.py"
 sys.path.insert(0, str(ROOT / "lib"))
-sys.path.insert(0, str(ROOT / "packages" / "_boardname"))
 
 import events  # noqa: E402
 from bledev.hidreport import INPUT, Decoder, ReportMap  # noqa: E402
@@ -212,18 +211,6 @@ class NameTests(unittest.TestCase):
     def test_disable_keeps_the_board_name(self):
         self.usb_hid.disable()
         self.assertEqual(self.inits[-1], {"builtin_driver": True, "product_str": "den-pad"})
-
-    def test_an_older_boarddev_says_to_update_the_firmware(self):
-        # Firmware frozen before boarddev.name() existed runs its own boarddev
-        # ahead of a newer one in /lib.
-        sys.modules["boarddev"] = types.SimpleNamespace()
-        with self.assertRaises(AttributeError) as caught:
-            self.usb_hid.enable((self.usb_hid.Device.GAMEPAD,))
-        message = str(caught.exception)
-        self.assertIn("boarddev.name()", message)
-        self.assertIn("firmware", message)
-        self.assertIn("name=", message)
-        self.assertEqual(self.inits, [])
 
     def test_an_older_boarddev_is_fine_with_a_name_given(self):
         sys.modules["boarddev"] = types.SimpleNamespace()

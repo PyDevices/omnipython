@@ -6,6 +6,6 @@
     ["hmilink/stream.py", "github:PyDevices/omnipython/packages/hmilink/hmilink/stream.py"],
     ["hmilink/osc.py", "github:PyDevices/omnipython/packages/hmilink/hmilink/osc.py"]
   ],
-  "deps": [["github:PyDevices/omnipython/packages/_boardname", "main"]],
+  "deps": [],
   "version": "0.0.1"
 }

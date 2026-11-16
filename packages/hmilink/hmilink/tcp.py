@@ -341,12 +341,11 @@ class Listener:
 
     def _announce(self, name):
         if name is None:
-            import _boardname
-
             try:
-                name = _boardname.name("announce=True names the link", "hmilink", 'pass announce="a-name"')
+                import boarddev
             except ImportError:
                 raise ImportError("announce=True needs OmniPython's boarddev for the board's name; or pass announce=\"a-name\"")
+            name = boarddev.name()
         server = _mdns_server()
         try:
             server.instance_name = name

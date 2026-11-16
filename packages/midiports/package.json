@@ -105,6 +105,6 @@
       "https://raw.githubusercontent.com/adafruit/Adafruit_CircuitPython_MIDI/1.6.0/adafruit_midi/timing_clock.py"
     ]
   ],
-  "deps": [["github:PyDevices/omnipython/packages/_boardname", "main"]],
+  "deps": [],
   "version": "0.0.1"
 }
