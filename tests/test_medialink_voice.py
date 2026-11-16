@@ -70,6 +70,23 @@ class Level(unittest.TestCase):
     def test_digital_silence_is_not_the_rooms_quiet_to_audiofeatures(self):
         self.assertFalse(any(self.a_microphone_starting_up("audiofeatures")))
 
+    def a_faint_tone_in_a_silent_room(self, detector, **kw):
+        """A sine whose mean absolute sample is about 51 (-56 dBFS), well
+        over the room's hiss but at or under the default ``quiet``."""
+        voice = medialink.VoiceActivity(detector=detector, hold_ms=50, **kw)
+        for f in frames(hiss(16000, level=4)):
+            voice.feed(f)
+        return [voice.feed(f) for f in frames(tone(8000, level=80))]
+
+    def test_a_frame_under_quiet_is_never_speech(self):
+        self.assertFalse(any(self.a_faint_tone_in_a_silent_room("level")))
+        self.assertTrue(any(self.a_faint_tone_in_a_silent_room("level", quiet=20)))
+
+    @unittest.skipUnless(HAVE_FEATURES, "needs audiofeatures with voice activity")
+    def test_a_frame_under_quiet_is_never_speech_to_audiofeatures(self):
+        self.assertFalse(any(self.a_faint_tone_in_a_silent_room("audiofeatures")))
+        self.assertTrue(any(self.a_faint_tone_in_a_silent_room("audiofeatures", quiet=20)))
+
     @unittest.skipUnless(HAVE_FEATURES, "needs audiofeatures with voice activity")
     def test_audiofeatures_is_the_default_where_there_is_one(self):
         voice = medialink.VoiceActivity(hold_ms=0)

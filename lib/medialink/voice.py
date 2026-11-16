@@ -18,7 +18,11 @@ level gate stands in: a noise floor that follows the quiet, and sound
 the detector can, mostly.
 
 Either way a frame counts for ``hold_ms`` after the last one that held
-speech, so the pauses between words don't end a turn.
+speech, so the pauses between words don't end a turn, and a frame no louder
+than ``quiet`` is never speech. The detector scores sound against the room's
+own floor, so in a very quiet room a small rise in the hiss reads as 10 dB
+over it: a P4X-EYE's microphone hears a quiet room at about -72 dBFS, and a
+rise of 2 dB there started a turn.
 
 Both learn the room's quiet from the first frames they hear, so a frame in
 which every sample is the same is passed over: that is a microphone not yet
@@ -38,12 +42,16 @@ class VoiceActivity:
     ``rate`` and ``channels`` are the microphone's. ``hold_ms`` is how long
     a turn lasts after the last speech. ``detector`` picks
     ``"audiofeatures"`` or ``"level"``; by default the first there is.
+    ``quiet`` is the loudest frame that is never speech, as a mean absolute
+    sample: 60 is about -55 dBFS, under a voice at arm's length and over a
+    quiet room's hiss.
     """
 
-    def __init__(self, rate=16000, channels=1, *, hold_ms=600, detector=None):
+    def __init__(self, rate=16000, channels=1, *, hold_ms=600, detector=None, quiet=60):
         self.rate = rate
         self.channels = channels
         self.hold_ms = hold_ms
+        self.quiet = quiet
         self._frontend = None
         if detector in (None, "audiofeatures"):
             try:
@@ -77,10 +85,12 @@ class VoiceActivity:
             # Digital silence, from a microphone still starting: not the room.
             return self.speaking
         if self._frontend is not None:
+            # The detector hears every frame, quiet ones too, so its floor
+            # keeps following the room.
             voiced = self._voiced_frontend(pcm)
         else:
             voiced = self._voiced_level()
-        if voiced:
+        if voiced and self.level > self.quiet:
             self._heard = ticks_ms()
         return self.speaking
 
@@ -112,9 +122,9 @@ class VoiceActivity:
         # The first few frames only learn the floor, as audiofeatures does.
         if self._warm < 8:
             return False
-        # 10 dB over the floor, and over a level near the quietest a
-        # microphone gives, so hiss in a silent room isn't speech.
-        return level > floor * 3.16 and level > 60
+        # 10 dB over the floor; feed() also wants it over `quiet`, so hiss
+        # in a silent room isn't speech.
+        return level > floor * 3.16
 
     def reset(self):
         """Forget the room: for a new microphone, or a new place."""
