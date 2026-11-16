@@ -1,3 +1,11 @@
+## v0.8.0.dev22 (2026-11-16)
+
+- OmniPython: the library takes its new names (#656)
+- Stack: the portal and the old mip mirror at omnipython.org (#655)
+- Links: library, gallery and Workbench links to their new addresses (#489)
+- pdwidgets: font writer links to the pdwidgets docs, not two pages that never existed (#654)
+- Docs: shared theme docs-v0.3.1, which links to docs.omnipython.org (#653)
+
 ## v0.8.0.dev21 (2026-11-16)
 
 - Docs: links point at docs.omnipython.org (#651)
