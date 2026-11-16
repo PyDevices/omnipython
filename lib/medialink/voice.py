@@ -20,6 +20,15 @@ the detector can, mostly.
 Either way a frame counts for ``hold_ms`` after the last one that held
 speech, so the pauses between words don't end a turn.
 
+The detector scores each slice against a floor of its own, and in a very
+quiet room that floor is so low that a rise of 2 dB in the hiss can score as
+speech: a P4X-EYE's microphone hears a quiet room at a mean absolute sample
+of 5 to 11, and such a rise started a turn there. So a frame the detector
+calls speech also has to be 10 dB over the room's level floor, as the level
+gate asks, and its first second, when the same microphone clicks as
+it opens, is never speech. A fixed level would do it too, but one over the
+hiss of a quiet microphone is over a voice across the room as well.
+
 Both learn the room's quiet from the first frames they hear, so a frame in
 which every sample is the same is passed over: that is a microphone not yet
 running, not a room. An ES7210 on a P4 board sends 100 to 280 ms of it the
@@ -30,6 +39,11 @@ from that took the room's own hiss for 3.4 s of speech.
 import struct
 
 from medialink._compat import ticks_diff, ticks_ms
+
+# What the detector calls speech must also be this far over the room's level
+# floor (10 dB), and over a level a quiet room's hiss doesn't reach.
+_OVER_FLOOR = 3.16
+_LEAST = 12
 
 
 class VoiceActivity:
@@ -60,6 +74,7 @@ class VoiceActivity:
         self.detector = "audiofeatures" if self._frontend is not None else "level"
         self._floor = None
         self._warm = 0
+        self._samples = 0
         self._heard = None
         #: The last frame's level, mean absolute sample, for a meter.
         self.level = 0
@@ -77,8 +92,17 @@ class VoiceActivity:
             # Digital silence, from a microphone still starting: not the room.
             return self.speaking
         if self._frontend is not None:
+            # The detector hears every frame, so its own floor keeps
+            # following the room. The level floor climbs only while the
+            # detector hears no speech, so a long cry doesn't become the room.
             voiced = self._voiced_frontend(pcm)
+            self._follow_floor(rise=not voiced)
+            settled = self._samples >= self.rate
+            if not settled:
+                self._samples += len(pcm) // step
+            voiced = voiced and settled and self.level > max(_LEAST, self._floor * _OVER_FLOOR)
         else:
+            self._follow_floor()
             voiced = self._voiced_level()
         if voiced:
             self._heard = ticks_ms()
@@ -94,23 +118,24 @@ class VoiceActivity:
                 return True
         return False
 
-    def _voiced_level(self):
+    def _follow_floor(self, rise=True):
         level = self.level
         floor = self._floor
-        if floor is None:
-            self._floor = level
-            return False
         # The floor drops to the quiet at once and climbs back slowly, so a
         # steady noise becomes the floor in a few seconds and a voice
         # doesn't.
-        if level < floor:
+        if floor is None or level < floor:
             floor = level
-        else:
+        elif rise:
             floor += (level - floor) / 200
         self._floor = floor
+
+    def _voiced_level(self):
+        level = self.level
+        floor = self._floor
         self._warm += 1
         # The first few frames only learn the floor, as audiofeatures does.
-        if self._warm < 8:
+        if self._warm < 9:
             return False
         # 10 dB over the floor, and over a level near the quietest a
         # microphone gives, so hiss in a silent room isn't speech.
@@ -122,15 +147,19 @@ class VoiceActivity:
             self._frontend.reset()
         self._floor = None
         self._warm = 0
+        self._samples = 0
         self._heard = None
 
 
 def _level(pcm, channels):
-    """The mean absolute value of a frame, from every eighth sample."""
+    """The mean absolute value of a frame, from every seventh sample.
+
+    Not every eighth: at 16 kHz that lands on the same two points of each
+    cycle of a 1 kHz tone, and a loud one can read as silence."""
     count = len(pcm) // 2
     if not count:
         return 0
-    step = 8 if count >= 64 else 1
+    step = 7 if count >= 64 else 1
     total = 0
     taken = 0
     for i in range(0, count, step):
