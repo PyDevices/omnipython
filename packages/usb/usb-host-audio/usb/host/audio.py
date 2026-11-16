@@ -375,10 +375,9 @@ def audio_out(format=None, *, latency=None, pump=True, **kwargs):
     Where the firmware's audio pump can write to a USB speaker, it does: the
     graph is rendered and sent off the interpreter thread, with about 10 ms
     queued, and ``latency`` and the chunk keywords below don't apply. The
-    graph must be 16-bit at the speaker's rate and channel count, and the
-    volume at 100 and unmuted; otherwise, or with ``pump=False``, or on a
-    firmware without that pump, the graph is pulled on the interpreter
-    thread as follows.
+    graph must be 16-bit at the speaker's rate and channel count;
+    otherwise, or with ``pump=False``, or on a firmware without that pump,
+    the graph is pulled on the interpreter thread as follows.
 
     The default, and ``latency="low"``, keep 80 ms of sound queued, so a
     note sounds soon after it's struck. Nothing is pulled while the

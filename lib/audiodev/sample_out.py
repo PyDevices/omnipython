@@ -213,6 +213,7 @@ class AudioOut:
         self._pumped = 0         # bytes a prefetcher's file has handed over
         self._sinking = False    # esp32: the pump owns I2S, we write nothing
         self._on_speaker = False  # Windows: the pump writes to WASAPI itself
+        self._sink_driver = None  # the pump writes to the transport's C sink
         self._engine_seen = False  # sticky: this player has used the pump
         self._block = 0          # bytes in one pull of the graph
         self._drain_len = 0
@@ -493,8 +494,9 @@ class AudioOut:
         self._pump_refused = None
         self._pumped = 0
         self._sinking = not driver.needs_service
-        self._on_speaker = (isinstance(driver, _pump_mod.SinkDriver) or isinstance(
-            getattr(driver, "wire", None), _pump_mod.SpeakerWire))
+        self._on_speaker = isinstance(
+            getattr(driver, "wire", None), _pump_mod.SpeakerWire)
+        self._sink_driver = driver if isinstance(driver, _pump_mod.SinkDriver) else None
         if driver.needs_service:
             # The block is the unit the OLD path hands the transport, because
             # that is what get_buffer() returns, and the schedule's "pull until
@@ -519,11 +521,9 @@ class AudioOut:
 
     def _driver_for(self, pump_mod, tail):
         """The driver this transport wants, or None to stay on the old path."""
-        if pump_mod.c_sink() and self._full_level():
+        if pump_mod.c_sink():
             # An output native code can write to, a USB speaker: the pump
-            # writes the graph into it. Only at full volume and unmuted,
-            # because the level is the transport's to apply in software and
-            # the pump's bytes don't pass through it.
+            # writes the graph into it, at the transport's volume.
             inner = self.transport
             for _ in range(4):
                 if hasattr(inner, "c_sink"):
@@ -612,6 +612,10 @@ class AudioOut:
         sample-exact, which is the price of a level change while it plays.
         """
         engine = self._engine
+        if engine is not None and self._sink_driver is not None:
+            # The pump applies this transport's level itself.
+            self._sink_driver.level()
+            return
         if (engine is None or not self._on_speaker
                 or self._full_level()):
             return
@@ -627,6 +631,7 @@ class AudioOut:
         self._engine = None
         self._sinking = False
         self._on_speaker = False
+        self._sink_driver = None
         if engine is not None:
             engine.stop(self)
         self._release_prefetch()

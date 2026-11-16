@@ -1263,6 +1263,10 @@ class SinkDriver(_Driver):
     it instead. The pump keeps only ``ahead_ms`` of sound queued in it,
     which is the delay this path adds.
 
+    The transport's volume and mute are software here, and the pump's bytes
+    don't pass through the transport, so the pump applies them: `level`
+    hands it the transport's current setting.
+
     Args:
         transport: A ``PCMOutput`` with ``c_sink()`` and ``capacity()``. It
             is kept, so its stream lasts as long as this driver.
@@ -1308,7 +1312,16 @@ class SinkDriver(_Driver):
             raise ValueError("the output's buffer is smaller than one block of the graph")
         self._status = status
         module().spawn(sample, _BLOCKS_FOREVER, status, sink=blob, loop=loop,
-                       timeout_ms=200, sink_room=room)
+                       timeout_ms=200, sink_room=room, sink_gain=self._gain())
+
+    def _gain(self):
+        t = self.transport
+        return 0.0 if t.muted else t.volume / 100
+
+    def level(self):
+        """Take the transport's volume and mute to the playing pump."""
+        if self._status is not None:
+            module().sink_gain(self._gain())
 
     def status(self):
         return self._status
