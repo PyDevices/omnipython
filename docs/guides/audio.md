@@ -88,6 +88,11 @@ from audiodev.accel import best_remix
 pcm = adapt_channels(pcm, fmt, remix=best_remix())
 ```
 
+Capture works the same way in reverse. `adapt_input_channels()` reads the
+microphone at the wire's channel count and hands you the count you asked for:
+a stereo wire averages to mono, and a mono wire copies to both channels. A
+board config's `pcm_in` does this for you.
+
 **"Slow" is measured, not hand-waved.** On a QT Py ESP32 Pico at 240 MHz, one
 10 ms chunk of stereo→mono costs 0.63× realtime at 16 kHz, 0.94× at 24 kHz and
 1.73× at 44.1 kHz. So `pcm_out` needing no audiodsp holds *while the format

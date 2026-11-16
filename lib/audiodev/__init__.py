@@ -1089,6 +1089,103 @@ def adapt_channels(pcm, source_format, remix=None):
     return ChannelAdapter(pcm, source_format, remix=remix)
 
 
+class InputChannelAdapter(PCMInput):
+    """Hand ``readinto()`` the channel count asked for; read the inner
+    device's.
+
+    A board whose capture wire is stereo can give a caller mono, and the other
+    way round: two channels mix down to their mean, one channel is copied to
+    both. Gain, mute and power stay the inner device's, so nothing is scaled
+    twice.
+    """
+
+    def __init__(self, inner, target_format, remix=None):
+        super().__init__(target_format, session=None)
+        self._inner = inner
+        self._wire = bytearray()
+        self.remix = remix or _remix_s16_py
+        self.codec = getattr(inner, "codec", None)
+
+    @property
+    def gain(self):
+        return self._inner.gain
+
+    @property
+    def muted(self):
+        return self._inner.muted
+
+    def set_gain(self, percent):
+        return self._inner.set_gain(percent)
+
+    def mute(self, value=True):
+        return self._inner.mute(value)
+
+    def open(self):
+        self._inner.open()
+        self.is_open = True
+        self.codec = getattr(self._inner, "codec", None)
+        return self
+
+    def close(self):
+        if not self.is_open:
+            return
+        try:
+            self._inner.close()
+        finally:
+            self.is_open = False
+
+    def _wire_view(self, buf):
+        if len(buf) % self.format.frame_size:
+            raise ValueError("PCM buffer must hold complete frames")
+        need = len(buf) // self.format.frame_size * self._inner.format.frame_size
+        if len(self._wire) < need:
+            self._wire = bytearray(need)
+        return memoryview(self._wire)[:need]
+
+    def _converted(self, buf, got):
+        inner_frame = self._inner.format.frame_size
+        got -= got % inner_frame
+        if got <= 0:
+            return 0
+        self.remix(memoryview(self._wire)[:got], self._inner.format.channels, self.format.channels, buf)
+        return got // inner_frame * self.format.frame_size
+
+    def readinto(self, buf):
+        self.open()
+        wire = self._wire_view(buf)
+        return self._converted(buf, self._inner.readinto(wire))
+
+    async def areadinto(self, buf):
+        self.open()
+        wire = self._wire_view(buf)
+        return self._converted(buf, await self._inner.areadinto(wire))
+
+
+def adapt_input_channels(pcm, target_format, remix=None):
+    """Return *pcm* unchanged, or a wrapper whose ``readinto()`` gives
+    *target_format*'s channel count from *pcm*'s.
+
+    ``pcm.format`` is the wire. Channel counts must be 1 or 2, and rates and
+    widths must already match; this does not resample. ``remix`` is as for
+    `adapt_channels`.
+    """
+    if not isinstance(target_format, AudioFormat):
+        raise TypeError("target_format must be AudioFormat")
+    if target_format.channels == pcm.format.channels:
+        return pcm
+    if target_format.rate != pcm.format.rate:
+        raise ValueError("adapt_input_channels does not resample")
+    if (
+        target_format.bits != pcm.format.bits
+        or target_format.signed != pcm.format.signed
+        or target_format.byteorder != pcm.format.byteorder
+    ):
+        raise ValueError("adapt_input_channels converts channels only")
+    if target_format.channels not in (1, 2) or pcm.format.channels not in (1, 2):
+        raise ValueError("channel_count must be 1 or 2")
+    return InputChannelAdapter(pcm, target_format, remix=remix)
+
+
 class PaceOutput(PCMOutput):
     """Take write() without blocking ``machine.I2S`` until DMA is full.
 
@@ -1450,6 +1547,8 @@ __all__ = (
     "AudioSession",
     "ChannelAdapter",
     "adapt_channels",
+    "InputChannelAdapter",
+    "adapt_input_channels",
     "PaceOutput",
     "pace_output",
     "PCMInput",

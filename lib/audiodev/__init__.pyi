@@ -24,6 +24,8 @@ __all__ = (
     "AudioSession",
     "ChannelAdapter",
     "adapt_channels",
+    "InputChannelAdapter",
+    "adapt_input_channels",
     "PaceOutput",
     "pace_output",
     "PCMInput",
@@ -297,6 +299,36 @@ def adapt_channels(
     remix: Callable[..., Any] | None = None,
 ) -> PCMOutput:
     """Return `pcm` unchanged, or a wrapper that converts `source_format` to it."""
+
+class InputChannelAdapter(PCMInput):
+    """Hand `readinto()` the channel count asked for; read the inner device's."""
+
+    remix: Callable[..., Any]
+    codec: Any
+    is_open: bool
+    def __init__(
+        self,
+        inner: PCMInput,
+        target_format: AudioFormat,
+        remix: Callable[..., Any] | None = None,
+    ) -> None: ...
+    @property
+    def gain(self) -> int: ...
+    @property
+    def muted(self) -> bool: ...
+    def set_gain(self, percent: int | float) -> int: ...
+    def mute(self, value: bool = True) -> bool: ...
+    def open(self) -> Self: ...
+    def close(self) -> None: ...
+    def readinto(self, buf: bytearray | memoryview) -> int: ...
+    async def areadinto(self, buf: bytearray | memoryview) -> int: ...
+
+def adapt_input_channels(
+    pcm: PCMInput,
+    target_format: AudioFormat,
+    remix: Callable[..., Any] | None = None,
+) -> PCMInput:
+    """Return `pcm` unchanged, or a wrapper whose `readinto()` gives `target_format`'s channels."""
 
 class PaceOutput(PCMOutput):
     """Take `write()` without blocking `machine.I2S` until DMA is full."""

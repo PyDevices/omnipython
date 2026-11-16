@@ -27,6 +27,7 @@ from audiodev import (
     PCMOutput,
     ToneOutput,
     adapt_channels,
+    adapt_input_channels,
     pace_output,
 )
 from audiodev.i2s_audio import I2SPCMInput, I2SPCMOutput  # noqa: E402
@@ -905,6 +906,66 @@ class ChannelAdapterTests(unittest.TestCase):
         # 4 source bytes remix to 2 dest; inner takes both dest bytes.
         self.assertEqual(4, pcm.try_write(bytes((100, 0, 50, 0))))
         self.assertEqual(2, len(inner.data))
+
+
+class InputChannelAdapterTests(unittest.TestCase):
+    @staticmethod
+    def s16(*values):
+        return b"".join(int(v).to_bytes(2, "little", signed=True) for v in values)
+
+    def test_identity_when_channels_match(self):
+        fmt = AudioFormat(16000, 2, 16)
+        pcm = FakePCMInput(fmt, b"")
+        self.assertIs(pcm, adapt_input_channels(pcm, fmt))
+
+    def test_stereo_capture_averages_to_mono(self):
+        inner = FakePCMInput(AudioFormat(16000, 2, 16), self.s16(100, 50, -3, 0))
+        pcm = adapt_input_channels(inner, AudioFormat(16000, 1, 16))
+        buf = bytearray(4)
+        self.assertEqual(4, pcm.readinto(buf))
+        # -3 and 0 truncate toward zero, as the C remix does.
+        self.assertEqual(self.s16(75, -1), bytes(buf))
+        self.assertTrue(inner.is_open)
+
+    def test_mono_capture_copies_to_stereo(self):
+        inner = FakePCMInput(AudioFormat(16000, 1, 16), self.s16(7, -8))
+        pcm = adapt_input_channels(inner, AudioFormat(16000, 2, 16))
+        buf = bytearray(8)
+        self.assertEqual(8, pcm.readinto(buf))
+        self.assertEqual(self.s16(7, 7, -8, -8), bytes(buf))
+
+    def test_short_read_counts_whole_frames(self):
+        inner = FakePCMInput(AudioFormat(16000, 2, 16), self.s16(10, 20))
+        pcm = adapt_input_channels(inner, AudioFormat(16000, 1, 16))
+        buf = bytearray(8)
+        self.assertEqual(2, pcm.readinto(buf))
+        self.assertEqual(self.s16(15), bytes(buf[:2]))
+
+    def test_gain_and_mute_are_the_inner_devices(self):
+        inner = FakePCMInput(AudioFormat(16000, 2, 16), self.s16(1000, 1000))
+        pcm = adapt_input_channels(inner, AudioFormat(16000, 1, 16))
+        pcm.set_gain(50)
+        self.assertEqual(50, inner.gain)
+        buf = bytearray(2)
+        pcm.readinto(buf)
+        self.assertEqual(self.s16(500), bytes(buf))  # scaled once, by the inner device
+        pcm.mute()
+        self.assertTrue(inner.muted)
+
+    def test_async_capture(self):
+        async def run():
+            inner = FakePCMInput(AudioFormat(16000, 2, 16), self.s16(4, 2))
+            pcm = adapt_input_channels(inner, AudioFormat(16000, 1, 16))
+            buf = bytearray(2)
+            self.assertEqual(2, await pcm.areadinto(buf))
+            self.assertEqual(self.s16(3), bytes(buf))
+
+        asyncio.run(run())
+
+    def test_refuses_another_rate(self):
+        inner = FakePCMInput(AudioFormat(16000, 2, 16), b"")
+        with self.assertRaises(ValueError):
+            adapt_input_channels(inner, AudioFormat(48000, 1, 16))
 
 
 class NegotiateTests(unittest.TestCase):

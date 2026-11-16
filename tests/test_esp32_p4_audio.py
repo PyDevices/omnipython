@@ -180,17 +180,17 @@ class ESP32P4AudioTests(P4BoardFixture):
         self.assertEqual(13, wire.mck)
         self.assertEqual([], FakeI2S.constructed)
 
-    def test_input_refuses_stereo_that_output_accepts(self):
-        """Not a contradiction any more: the capabilities differ and say so.
+    def test_input_copies_mono_to_the_stereo_asked_for(self):
+        """The capabilities still differ and say so: the microphone's wire is
+        mono. A stereo request opens it at mono and copies each sample to
+        both channels, as ``audio_out`` adapts the other way."""
+        from audiodev import AudioFormat, InputChannelAdapter
 
-        Before, ``_MAX_CHANNELS = 1`` sat beside an ``audio_out`` accepting 2
-        while ``audio_in`` raised on the same request, from one constant.
-        """
-        from audiodev import AudioFormat
-
+        self.assertEqual((1,), self.board.AUDIO_IN.channels)
         self.board.pcm_out(AudioFormat(44100, 2, 16))
-        with self.assertRaises(ValueError):
-            self.board.pcm_in(AudioFormat(44100, 2, 16))
+        pcm = self.board.pcm_in(AudioFormat(44100, 2, 16))
+        self.assertIsInstance(pcm, InputChannelAdapter)
+        self.assertEqual(2, pcm.format.channels)
 
     def test_output_has_codec_controls_and_amplifier_lifecycle(self):
         output = self.board.audio_out()
