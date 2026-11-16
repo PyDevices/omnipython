@@ -493,8 +493,8 @@ class AudioOut:
         self._pump_refused = None
         self._pumped = 0
         self._sinking = not driver.needs_service
-        self._on_speaker = isinstance(
-            getattr(driver, "wire", None), _pump_mod.SpeakerWire)
+        self._on_speaker = (isinstance(driver, _pump_mod.SinkDriver) or isinstance(
+            getattr(driver, "wire", None), _pump_mod.SpeakerWire))
         if driver.needs_service:
             # The block is the unit the OLD path hands the transport, because
             # that is what get_buffer() returns, and the schedule's "pull until
@@ -519,6 +519,18 @@ class AudioOut:
 
     def _driver_for(self, pump_mod, tail):
         """The driver this transport wants, or None to stay on the old path."""
+        if pump_mod.c_sink() and self._full_level():
+            # An output native code can write to, a USB speaker: the pump
+            # writes the graph into it. Only at full volume and unmuted,
+            # because the level is the transport's to apply in software and
+            # the pump's bytes don't pass through it.
+            inner = self.transport
+            for _ in range(4):
+                if hasattr(inner, "c_sink"):
+                    return pump_mod.SinkDriver(inner)
+                inner = getattr(inner, "_inner", None)
+                if inner is None:
+                    break
         if pump_mod.on_board():
             # esp32: `audiobusio.I2SOut` owns the I2S peripheral outright. It
             # needs the board's pin map, which travels on the transport

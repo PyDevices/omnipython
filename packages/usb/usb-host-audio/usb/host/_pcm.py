@@ -23,6 +23,9 @@ class SpeakerOutput(PCMOutput):
     ``open()`` starts the stream and ``close()`` parks the device again.
     ``speaker`` is the ``usb.host.audio.Speaker`` underneath."""
 
+    #: Sound the audio pump keeps queued when it writes to `c_sink`.
+    c_sink_ahead_ms = 10
+
     def __init__(self, speaker, **kwargs):
         PCMOutput.__init__(self, AudioFormat(speaker.rate, speaker.channels, speaker.bits), **kwargs)
         self.speaker = speaker

@@ -136,6 +136,7 @@ _ERRORS = {
     3: "the source ran out",
     4: "the graph's memory was re-used under it",
     5: "a node in the graph faulted",
+    6: "the output it was writing to closed",
 }
 _FAULTS = {
     1: "something in the chain is not an audio node",
@@ -335,6 +336,18 @@ def speaker():
     mod = driver()
     return (mod is not None and hasattr(mod, "sink_stats")
             and busio() is not None)
+
+
+def c_sink():
+    """True when the pump can write to a C sink from its own thread.
+
+    A USB speaker on the host port publishes one (``c_sink()`` on its
+    output). The engine says whether its ``spawn`` takes it, and it needs a
+    thread to write from.
+    """
+    mod = module()
+    return bool(mod is not None and getattr(mod, "C_SINK", False)
+                and threaded())
 
 
 class SpeakerWire:
@@ -1238,6 +1251,72 @@ class BusioDriver(_Driver):
             self._power(False)
 
 
+class SinkDriver(_Driver):
+    """The graph goes to an output's C sink, written by the pump's thread.
+
+    For an output that isn't the board's own I2S but can take PCM from
+    native code: a USB speaker on the host port. The pump renders the graph
+    and writes each block into the speaker's stream itself, so no audio
+    waits for the interpreter.
+
+    The output's buffer may be large, for the times the interpreter fills
+    it instead. The pump keeps only ``ahead_ms`` of sound queued in it,
+    which is the delay this path adds.
+
+    Args:
+        transport: A ``PCMOutput`` with ``c_sink()`` and ``capacity()``. It
+            is kept, so its stream lasts as long as this driver.
+        ahead_ms: Sound kept queued in the output. The default is the
+            transport's ``c_sink_ahead_ms``, or 10.
+    """
+
+    needs_service = False
+
+    def __init__(self, transport, ahead_ms=None):
+        self.transport = transport
+        if ahead_ms is None:
+            ahead_ms = getattr(transport, "c_sink_ahead_ms", 10)
+        self.ahead_ms = ahead_ms
+        self._status = None
+
+    def _check(self, sample):
+        fmt = self.transport.format
+        if (sample.sample_rate != fmt.rate or sample.channel_count != fmt.channels
+                or sample.bits_per_sample != 16 or fmt.bits != 16):
+            raise ValueError(
+                "the output is %d Hz, %d channels, %d-bit and the pump writes the "
+                "graph as it is: %d Hz, %d channels, %d-bit"
+                % (fmt.rate, fmt.channels, fmt.bits, sample.sample_rate,
+                   sample.channel_count, sample.bits_per_sample))
+
+    def retarget(self, sample, loop=False):
+        self._check(sample)
+        retarget(module(), sample, loop)
+
+    def spawn(self, sample, status, loop=False):
+        self._check(sample)
+        t = self.transport
+        fmt = t.format
+        blob = t.c_sink()           # opens the stream
+        capacity = t.capacity()
+        ahead = fmt.rate * self.ahead_ms // 1000 * fmt.frame_size
+        block = block_size(sample)
+        # Room for a whole block when the pump starts one, and never more
+        # asked for than the output can have.
+        room = max(block, capacity - ahead)
+        if room > capacity:
+            raise ValueError("the output's buffer is smaller than one block of the graph")
+        self._status = status
+        module().spawn(sample, _BLOCKS_FOREVER, status, sink=blob, loop=loop,
+                       timeout_ms=200, sink_room=room)
+
+    def status(self):
+        return self._status
+
+    def close(self):
+        self._status = None
+
+
 _TAKES = {"left": 0, "right": 1, "mix": 2}
 _OPENERS = {"i2s": "rx_open", "pdm": "pdm_open", "adc": "adc_open"}
 _WHAT = {"i2s": "the pump's I2S channel", "pdm": "a PDM microphone",
@@ -1572,6 +1651,11 @@ class PumpPCMOutput(PCMOutput):
         return self.queued_size() > 0
 
 
+def _output_of(driver):
+    """What a driver writes to when it isn't the board's own output."""
+    return driver.transport if isinstance(driver, SinkDriver) else None
+
+
 class _Client:
     """One thing sounding through the pump, and whether it is paused."""
 
@@ -1705,6 +1789,12 @@ class Pump:
             client.loop = bool(loop)
         if self._driver is None:
             self._driver = driver
+        elif driver is not None and _output_of(driver) is not _output_of(self._driver):
+            # There is one pump and it is writing to another output. Mixing
+            # this client in would play it there.
+            self._clients.remove(client)
+            self._fault = "the pump is playing to another output"
+            return False
         try:
             self._retarget()
         except Exception as exc:          # noqa: BLE001 - reported, not raised
