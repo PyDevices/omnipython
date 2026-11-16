@@ -13,6 +13,7 @@ and blending half. ``test_svgio_browser.py`` is the same module in Chromium.
 
 import importlib
 import json
+import struct
 import sys
 import unittest
 import xml.etree.ElementTree as ET
@@ -382,15 +383,15 @@ class PaintedJs:
                 self.pixels[:] = image.data.pixels
 
             def drawImage(self, other, x, y):
-                top = other.context.pixels
-                for i in range(0, len(top), 4):
+                top = other.context.pixels[-y * 16 :]  # the picture is 4 wide: 16 bytes a row
+                for i in range(0, len(self.pixels), 4):
                     a = top[i + 3]
                     for c in range(3):
                         self.pixels[i + c] = (top[i + c] * a + self.pixels[i + c] * (255 - a) + 127) // 255
 
         class Canvas:
             def __init__(self, w, h):
-                self.context = Context(bytearray(outer.PICTURE))
+                self.context = Context(bytearray(outer.PICTURE[: w * h * 4]))
 
             def getContext(self, kind, options=None):
                 return self.context
@@ -455,6 +456,36 @@ class Decode(unittest.TestCase):
         self.assertEqual(rows[2], [blue, blue, blue, 0x040F, blue, blue, blue])
         self.assertEqual(rows[3], [blue] * sw)
 
+    def test_bands_are_the_whole_picture(self):
+        d = self.d
+        w, h = d.open(self.ICON)
+        whole_p, whole_a = bytearray(w * h * 2), bytearray(w * h)
+        d.decode(whole_p, whole_a)
+        band_p, band_a = bytearray(w * h * 2), bytearray(w * h)
+        blend_whole, blend_bands = bytearray(b"\x1f\x00" * (w * h)), bytearray(b"\x1f\x00" * (w * h))
+        d.decode(blend_whole)
+        for y0, y1 in ((0, 1), (1, 1), (1, h)):
+            d.decode(band_p, band_a, rows=(y0, y1))
+            d.decode(blend_bands, rows=(y0, y1))
+        self.assertEqual((band_p, band_a), (whole_p, whole_a))
+        self.assertEqual(blend_bands, blend_whole)
+        d.decode(bytearray(w * 1 * 2), rows=(0, 1))  # a target only as tall as the rows
+        for bad in ((2, 1), (0, h + 1), (1,)):
+            with self.assertRaises(ValueError):
+                d.decode(whole_p, rows=bad)
+
+    def test_memory_is_accepted(self):
+        d = canvas.SvgDecoder(memory=64 * 1024 + 3)
+        self.assertEqual((d.memory, d.memory_peak, self.d.memory), (64 * 1024, 0, 0))
+        with self.assertRaises(ValueError):
+            canvas.SvgDecoder(memory=100)
+
+    def test_a_compact_drawing_opens(self):
+        drawing = b"\x01SVG\x04" + struct.pack("<B4f", 10, 0, 0, 4, 2) + b"\x0d\x0e"
+        self.assertEqual(self.d.open(drawing, width=8), (8, 4))
+        with self.assertRaises(ValueError):
+            self.d.open(b"\x01SVG\x02")
+
     def test_errors(self):
         with self.assertRaisesRegex(RuntimeError, "needs a successful open"):
             canvas.SvgDecoder().decode(bytearray(4))
@@ -474,7 +505,9 @@ class WhichBackend(unittest.TestCase):
         saved = sys.modules.pop("svgio", None)
         try:
             with mock.patch.object(sys, "platform", "emscripten"):
-                self.assertIs(importlib.import_module("svgio").SvgDecoder, canvas.SvgDecoder)
+                svgio = importlib.import_module("svgio")
+                self.assertIs(svgio.SvgDecoder, canvas.SvgDecoder)
+                self.assertIs(svgio.expand, canvas.expand)
         finally:
             sys.modules.pop("svgio", None)
             if saved is not None:

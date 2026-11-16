@@ -3,6 +3,7 @@
 
 [files]
 "https://raw.githubusercontent.com/PyDevices/pydevices/main/utils/_svgio_canvas.py" = "/lib/_svgio_canvas.py"
+"https://raw.githubusercontent.com/PyDevices/pydevices/main/utils/_svgio_compact.py" = "/lib/_svgio_compact.py"
 "https://raw.githubusercontent.com/PyDevices/pydevices/main/utils/_svgio_resvg.py" = "/lib/_svgio_resvg.py"
 "https://raw.githubusercontent.com/PyDevices/pydevices/main/lib/appdev/__init__.py" = "/lib/appdev/__init__.py"
 "https://raw.githubusercontent.com/PyDevices/pydevices/main/lib/appdev/app.py" = "/lib/appdev/app.py"

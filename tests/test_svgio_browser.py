@@ -37,7 +37,7 @@ import _env  # noqa: F401
 
 ROOT = Path(__file__).resolve().parents[1]
 PYODIDE_CDN = "https://cdn.jsdelivr.net/pyodide/v314.0.0/full/"
-MODULES = ("svgio.py", "_svgio_canvas.py", "_svgio_resvg.py")
+MODULES = ("svgio.py", "_svgio_canvas.py", "_svgio_compact.py", "_svgio_resvg.py")
 BACKGROUND = 0x8410  # the grey each case is also blended over
 MARGIN = (5, 3, 8, 6)  # x, y, extra columns, extra rows of the screen it is blended into
 TOLERANCE = 16  # of 255: two steps of a five-bit channel
@@ -138,6 +138,26 @@ CASES = (
                               'viewBox="0 0 30 20"'), {"height": 50}, 0.03),
 )
 
+def _compact():
+    """A drawing in svgio's compact form: a red rect, and a green stroke in a moved group."""
+    import struct
+
+    return b"".join(
+        (
+            b"\x01SVG\x04",
+            struct.pack("<B4f", 10, 0, 0, 24, 12),
+            b"\x0d",
+            struct.pack("<B5fII2fH", 3, 2, 2, 20, 8, 2, 0xFF0000, 0xFFFFFFFE, 1, 1, 0),
+            struct.pack("<B4fB", 8, 1.5, 2, 0, 1, 0),
+            struct.pack("<BI", 4, 1 + 2 * 4 + 6) + struct.pack("<B2f", 77, 0, 0) + struct.pack("<BH", 84, 3) + b"h4z",
+            struct.pack("<II2fH", 0xFFFFFFFF, 0x00FF00, 0.5, 0.25, 0),
+            b"\x07\x0e",
+        )
+    )
+
+
+CASES += (("compact-form", "compact:" + _compact().hex(), {"width": 96}, 0.03),)
+
 # Calls that must fail the same way in both: (name, Python that fails, given a decoder d and an SVG text s)
 ERRORS = (
     ("two sizes", "d.open(s, width=4, height=4)"),
@@ -151,6 +171,9 @@ ERRORS = (
     ("small target", "d.open(s) and d.decode(bytearray(10))"),
     ("small alpha", "d.open(s) and d.decode(None, bytearray(10))"),
     ("stride too narrow", "d.open(s) and d.decode(bytearray(4096), x=4, stride=24)"),
+    ("rows past the end", "d.open(s) and d.decode(bytearray(4096), rows=(0, 13))"),
+    ("too little memory", "type(d)(memory=100)"),
+    ("not a compact drawing", "d.open(b'\\x01SVG\\x02')"),
 )
 
 # What runs under Pyodide, and here against the desktop backend: every case decoded the three ways.
@@ -163,17 +186,25 @@ def run(svgio, cases, errors, background, margin):
     for name, text, kw in cases:
         d = svgio.SvgDecoder()
         began = time.time()
-        w, h = d.open(text.encode(), **kw)
+        source = bytes.fromhex(text[8:]) if text.startswith("compact:") else text.encode()
+        w, h = d.open(source, **kw)
         pixels, alpha = bytearray(w * h * 2), bytearray(w * h)
         d.decode(pixels, alpha)
         took = time.time() - began
         mask = bytearray(w * h)
         d.decode(None, mask)
+        band_p, band_a = bytearray(w * h * 2), bytearray(w * h)
+        for rows in ((0, h // 3), (h // 3, h // 3), (h // 3, h)):
+            d.decode(band_p, band_a, rows=rows)
         x, y, wide, tall = margin
         screen = bytearray(background.to_bytes(2, "little") * ((w + wide) * (h + tall)))
         d.decode(screen, x=x, y=y, stride=w + wide)
+        banded = bytearray(background.to_bytes(2, "little") * ((w + wide) * (h + tall)))
+        for rows in ((0, h // 2), (h // 2, h)):
+            d.decode(banded, x=x, y=y, stride=w + wide, rows=rows)
         out["cases"][name] = {
             "size": [w, h, d.width, d.height], "ms": took * 1000, "mask_is_alpha": mask == alpha,
+            "bands_are_whole": (band_p, band_a, banded) == (pixels, alpha, screen),
             "pixels": base64.b64encode(pixels).decode(), "alpha": base64.b64encode(alpha).decode(),
             "screen": base64.b64encode(screen).decode(),
         }
@@ -412,6 +443,11 @@ class InTheBrowser(unittest.TestCase):
         for where, result in self.results.items():
             for name, case in result["cases"].items():
                 self.assertTrue(case["mask_is_alpha"], (where, name))
+
+    def test_bands_are_the_whole_picture(self):
+        for where, result in self.results.items():
+            for name, case in result["cases"].items():
+                self.assertTrue(case["bands_are_whole"], (where, name))
 
     def test_pixels_are_close_to_the_desktop(self):
         out = os.environ.get("PYDEVICES_SVGIO_OUT")

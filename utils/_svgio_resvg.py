@@ -9,6 +9,8 @@ svgio (micropython-pydevices' modules/svgio), over resvg and Pillow.
     w, h = d.open("wifi.svg", width=48)          # or bytes, or a stream
     d.decode(pixels, alpha)                      # RGB565 and coverage
     d.decode(fb_buf, x=10, y=10, stride=480)     # blended over what's there
+    d.decode(fb_buf, rows=(0, 120))              # a band of the picture
+    d.open(drawing)                              # or a drawing in the compact form
 
 An app imports svgio and doesn't care which runtime it's on. Pixels are
 native-order (little-endian) RGB565, as displaydev framebuffers hold them.
@@ -18,6 +20,8 @@ strokes, transforms, opacity and gradients, with text turned into paths.
 """
 
 import io
+
+from _svgio_compact import expand
 
 try:
     import resvg_py
@@ -51,10 +55,24 @@ def _to_565(rgb):
 class SvgDecoder:
     """``SvgDecoder()``: ``open(source, width=)``, then ``decode(target, alpha)``."""
 
-    def __init__(self):
+    def __init__(self, *, memory=None):
+        # The firmware module works inside `memory` bytes of its own. Here
+        # resvg has its own memory, so the argument is checked and kept.
+        if memory is not None and memory < 4096:
+            raise ValueError("svgio: memory must be at least 4096 bytes")
+        self._memory = 0 if memory is None else memory & ~7
         self._text = None
         self._size = None
         self._zoom = 1.0
+
+    @property
+    def memory(self):
+        return self._memory
+
+    @property
+    def memory_peak(self):
+        """Always 0 here: the working memory is resvg's, not this decoder's."""
+        return 0
 
     @property
     def width(self):
@@ -80,6 +98,8 @@ class SvgDecoder:
             data = source.read()
         else:
             data = bytes(memoryview(source).cast("B"))
+        if data[:4] == b"\x01SVG":
+            data = expand(data)
         try:
             text = data.decode("utf-8")
         except UnicodeDecodeError:
@@ -97,23 +117,34 @@ class SvgDecoder:
         self._text, self._size, self._zoom = text, (w, h), zoom
         return w, h
 
-    def decode(self, target, alpha=None, *, x=0, y=0, stride=None):
-        """RGB565 into ``target`` and coverage into ``alpha``; ``target`` alone blends."""
+    def decode(self, target, alpha=None, *, x=0, y=0, stride=None, rows=None):
+        """RGB565 into ``target`` and coverage into ``alpha``; ``target`` alone blends.
+
+        ``rows=(first, end)`` draws only those rows of the image, where they
+        sit in the whole picture.
+        """
         if self._text is None:
             raise RuntimeError("decode() needs a successful open()")
         if target is None and alpha is None:
             raise ValueError("give a target, an alpha buffer, or both")
         w, h = self._size
+        y0, y1 = 0, h
+        if rows is not None:
+            if len(rows) != 2 or not 0 <= rows[0] <= rows[1] <= h:
+                raise ValueError("rows is (first, end) within the image's height")
+            y0, y1 = rows
         stride = w if stride is None else stride
         if x < 0 or y < 0 or x + w > stride:
             raise ValueError("the image doesn't fit across the target at that x and stride")
         pix = memoryview(target).cast("B") if target is not None else None
         cov = memoryview(alpha).cast("B") if alpha is not None else None
-        last = (y + h - 1) * stride + x + w
+        last = (y + y1 - 1) * stride + x + w if y1 > y0 else 0
         if pix is not None and pix.nbytes < last * 2:
             raise ValueError("target has %d bytes; it needs %d" % (pix.nbytes, last * 2))
         if cov is not None and cov.nbytes < last:
             raise ValueError("alpha has %d bytes; it needs %d" % (cov.nbytes, last))
+        if y1 == y0:
+            return
 
         image = _render(self._text, self._zoom)
         if image.size != (w, h):
@@ -122,7 +153,7 @@ class SvgDecoder:
             canvas.paste(image.crop((0, 0, min(w, image.width), min(h, image.height))), (0, 0))
             image = canvas
         a = image.getchannel("A")
-        rows = range(h)
+        rows = range(y0, y1)
 
         if cov is not None:
             mask = a.tobytes()
@@ -138,8 +169,9 @@ class SvgDecoder:
 
         # Blended over what the target holds, widened to 8 bits a channel.
         under = b"".join(bytes(pix[((y + j) * stride + x) * 2 : ((y + j) * stride + x + w) * 2]) for j in rows)
-        back = Image.frombuffer("RGB", (w, h), under, "raw", "BGR;16", 0, 1)
-        px = _to_565(Image.composite(image.convert("RGB"), back, a))
+        back = Image.frombuffer("RGB", (w, y1 - y0), under, "raw", "BGR;16", 0, 1)
+        band = (0, y0, w, y1)
+        px = _to_565(Image.composite(image.convert("RGB").crop(band), back, a.crop(band)))
         for j in rows:
             at = ((y + j) * stride + x) * 2
-            pix[at : at + w * 2] = px[j * w * 2 : (j + 1) * w * 2]
+            pix[at : at + w * 2] = px[(j - y0) * w * 2 : (j - y0 + 1) * w * 2]

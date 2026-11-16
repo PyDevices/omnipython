@@ -24,6 +24,8 @@ import math
 import re
 import xml.etree.ElementTree as ET
 
+from _svgio_compact import expand
+
 try:
     import js
 except ImportError:  # CPython: only the reading half works, which the tests use
@@ -960,14 +962,14 @@ def _rgba(canvas, width, height):
     return canvas.getContext("2d").getImageData(0, 0, width, height).data.to_bytes()
 
 
-def _over(canvas, under, width, height):
-    """The picture drawn over ``under``, opaque RGBA bytes, by the browser."""
+def _over(canvas, under, width, height, top):
+    """Rows ``top`` to ``top + height`` of the picture drawn over ``under``, opaque RGBA bytes, by the browser."""
     base = js.OffscreenCanvas.new(width, height)
     ctx = base.getContext("2d", js.JSON.parse('{"willReadFrequently": true}'))
     pixels = js.Uint8ClampedArray.new(width * height * 4)
     pixels.assign(under)
     ctx.putImageData(js.ImageData.new(pixels, width, height), 0, 0)
-    ctx.drawImage(canvas, 0, 0)
+    ctx.drawImage(canvas, 0, -top)
     return ctx.getImageData(0, 0, width, height).data.to_bytes()
 
 
@@ -1011,11 +1013,25 @@ def _from_565(pixels):
 class SvgDecoder:
     """``SvgDecoder()``: ``open(source, width=)``, then ``decode(target, alpha)``."""
 
-    def __init__(self):
+    def __init__(self, *, memory=None):
+        # The firmware module works inside `memory` bytes of its own. Here
+        # the browser has its own memory, so the argument is checked and kept.
+        if memory is not None and memory < 4096:
+            raise ValueError("svgio: memory must be at least 4096 bytes")
+        self._memory = 0 if memory is None else memory & ~7
         self._reader = None
         self._size = None
         self._zoom = 1.0
         self._canvas = None
+
+    @property
+    def memory(self):
+        return self._memory
+
+    @property
+    def memory_peak(self):
+        """Always 0 here: the working memory is the browser's, not this decoder's."""
+        return 0
 
     @property
     def width(self):
@@ -1041,6 +1057,8 @@ class SvgDecoder:
             data = source.read()
         else:
             data = bytes(memoryview(source).cast("B"))
+        if data[:4] == b"\x01SVG":
+            data = expand(data)
         try:
             data.decode("utf-8")
             reader = _Reader(ET.fromstring(data))
@@ -1061,29 +1079,40 @@ class SvgDecoder:
         self._reader, self._size, self._zoom = reader, (w, h), zoom
         return w, h
 
-    def decode(self, target, alpha=None, *, x=0, y=0, stride=None):
-        """RGB565 into ``target`` and coverage into ``alpha``; ``target`` alone blends."""
+    def decode(self, target, alpha=None, *, x=0, y=0, stride=None, rows=None):
+        """RGB565 into ``target`` and coverage into ``alpha``; ``target`` alone blends.
+
+        ``rows=(first, end)`` draws only those rows of the image, where they
+        sit in the whole picture.
+        """
         if self._reader is None:
             raise RuntimeError("decode() needs a successful open()")
         if target is None and alpha is None:
             raise ValueError("give a target, an alpha buffer, or both")
         w, h = self._size
+        y0, y1 = 0, h
+        if rows is not None:
+            if len(rows) != 2 or not 0 <= rows[0] <= rows[1] <= h:
+                raise ValueError("rows is (first, end) within the image's height")
+            y0, y1 = rows
         stride = w if stride is None else stride
         if x < 0 or y < 0 or x + w > stride:
             raise ValueError("the image doesn't fit across the target at that x and stride")
         pix = memoryview(target).cast("B") if target is not None else None
         cov = memoryview(alpha).cast("B") if alpha is not None else None
-        last = (y + h - 1) * stride + x + w
+        last = (y + y1 - 1) * stride + x + w if y1 > y0 else 0
         if pix is not None and pix.nbytes < last * 2:
             raise ValueError("target has %d bytes; it needs %d" % (pix.nbytes, last * 2))
         if cov is not None and cov.nbytes < last:
             raise ValueError("alpha has %d bytes; it needs %d" % (cov.nbytes, last))
+        if y1 == y0:
+            return
 
         if self._canvas is None:
             # drawn once: the same picture goes into every buffer after this
             view = _viewport(self._reader, self._zoom)
             self._canvas = _Painter(w, h, view).draw(self._reader.ops)
-        rows = range(h)
+        rows = range(y0, y1)
 
         if cov is not None:
             rgba = _rgba(self._canvas, w, h)
@@ -1100,7 +1129,7 @@ class SvgDecoder:
 
         # Blended over what the target holds, widened to 8 bits a channel.
         under = b"".join(bytes(pix[((y + j) * stride + x) * 2 : ((y + j) * stride + x + w) * 2]) for j in rows)
-        px = _to_565(_over(self._canvas, _from_565(under), w, h))
+        px = _to_565(_over(self._canvas, _from_565(under), w, y1 - y0, y0))
         for j in rows:
             at = ((y + j) * stride + x) * 2
-            pix[at : at + w * 2] = px[j * w * 2 : (j + 1) * w * 2]
+            pix[at : at + w * 2] = px[(j - y0) * w * 2 : (j - y0 + 1) * w * 2]
