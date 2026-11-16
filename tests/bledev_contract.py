@@ -1196,6 +1196,19 @@ async def midi_overflow_is_counted(air):
 
 
 @check
+async def midi_take_never_waits(air):
+    server, client = await midi_pair(air)
+    equal(server.take(), None, "take() is None when nothing has come")
+    client.send(b"\x90\x3c\x64", timestamp=1234)
+    for _ in range(200):
+        if server.any():
+            break
+        await asyncio.sleep(0.001)
+    equal(server.take(), (1234, b"\x90\x3c\x64"), "take() gives the sender's timestamp and the message")
+    equal(server.any(), 0, "and takes it off the queue")
+
+
+@check
 async def auto_picks_or_explains(air):
     import bledev.auto as auto
 

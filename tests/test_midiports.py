@@ -33,6 +33,7 @@ from _mprun import need_micropython, run
 ROOT = Path(__file__).resolve().parents[1]
 PACKAGE = ROOT / "packages" / "midiports"
 CONTRACT = Path(__file__).resolve().parent / "midiports_contract.py"
+BLE_CHECKS = Path(__file__).resolve().parent / "midiports_ble_checks.py"
 ADAFRUIT_PREFIX = "https://raw.githubusercontent.com/adafruit/Adafruit_CircuitPython_MIDI/"
 OURS_PREFIX = "github:PyDevices/omnipython/"
 
@@ -155,6 +156,35 @@ class Contract(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0, "the plant went unnoticed:\n" + result.stdout)
         self.assertIn("FAIL usb_host all_ports: two devices merged whole", result.stdout)
         self.assertIn("FAIL usb_host all_ports: a SysEx that stops", result.stdout)
+
+
+class BleMidi(unittest.TestCase):
+    """``midiports.ble`` over bledev's fake radio (``midiports_ble_checks.py``)."""
+
+    def assertPasses(self, result):
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn(" 0 failed", result.stdout)
+
+    def test_cpython(self):
+        self.assertPasses(run([sys.executable, BLE_CHECKS]))
+
+    def test_micropython(self):
+        result = run([need_micropython(self), BLE_CHECKS])
+        self.assertPasses(result)
+        self.assertIn("PASS pumped", result.stdout)
+
+    def test_every_plant_fails(self):
+        expected = {
+            "no-release": "FAIL a_dropped_link_lets_every_held_note_go",
+            "flat-stamps": "FAIL a_packets_spacing_survives_in_its_stamps",
+            "split-message": "FAIL running_status_comes_out_whole",
+        }
+        for plant, line in expected.items():
+            with self.subTest(plant=plant):
+                result = run([sys.executable, BLE_CHECKS, "--plant=" + plant])
+                self.assertIn("PLANTED " + plant, result.stdout)
+                self.assertNotEqual(result.returncode, 0, "the plant went unnoticed:\n" + result.stdout)
+                self.assertIn(line, result.stdout)
 
 
 def _make_asound(root, entries):

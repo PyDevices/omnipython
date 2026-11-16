@@ -44,6 +44,8 @@ class Port:
         """Up to `nbytes` waiting MIDI bytes (everything waiting when `None`), or `None`."""
     def any(self) -> int:
         """How many MIDI bytes are waiting to be read."""
+    def take(self) -> tuple[int, bytes] | None:
+        """The next `(timestamp, message)` if one has arrived, else `None`; never waits."""
     async def receive(self, timeout_ms: int | None = None) -> tuple[int, bytes]:
         """The next `(timestamp, message)`. Raises `DisconnectedError` once the link has closed and everything that arrived is read."""
     def __aiter__(self) -> Self: ...

@@ -17,6 +17,10 @@
       "github:PyDevices/omnipython/packages/midiports/midiports/usb_host.py"
     ],
     [
+      "midiports/ble.py",
+      "github:PyDevices/omnipython/packages/midiports/midiports/ble.py"
+    ],
+    [
       "midiports/windows.py",
       "github:PyDevices/omnipython/packages/midiports/midiports/windows.py"
     ],
