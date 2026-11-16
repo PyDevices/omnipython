@@ -100,7 +100,7 @@ class Peripheral:
         name: str | None = None,
         encrypted: bool = False,
         battery: int = 100,
-        manufacturer: str = 'OmniPython',
+        manufacturer: str = 'PyDevices',
         service_uuid: UUID | int | str | bytes = ...,
     ) -> None: ...
     async def serve(self, timeout_ms: int | None = None) -> Connection:
