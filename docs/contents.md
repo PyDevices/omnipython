@@ -24,6 +24,7 @@ guides/upgrade-multimer-from-0.5
 guides/audio
 guides/usb
 guides/bluetooth-le
+guides/bluetooth-le-services
 guides/board-name
 guides/wifi
 guides/mdns
@@ -45,8 +46,7 @@ guides/troubleshooting
 
 stack
 reference/index
-reference/usb-host-support
-reference/usb-device-support
+reference/usb-support
 reference/bluetooth-le-support
 reference/vtterm-escape-codes
 reference/vtterm-keys
@@ -54,8 +54,7 @@ reference/castdisplay
 modules
 boards/board-contract
 boards/board-configs
-boards/device-matrix
-boards/display-boards
+boards/arduino-giga-display-shield
 boards/display-drivers
 boards/touch-drivers
 boards/wokwi

@@ -53,8 +53,7 @@ also need the OmniPython overlay's streaming endpoints (`USBDevice.Ring`,
 Both come with omnipython-builds' `build_mp.py`.
 
 Which classes each package drives, which boards run them and what a board
-can't do are in two tables: [USB host support](../reference/usb-host-support.md)
-and [USB device support](../reference/usb-device-support.md).
+can't do are in two tables: [USB support](../reference/usb-support.md), one section for the host and one for the device.
 
 ## The board as a USB device
 

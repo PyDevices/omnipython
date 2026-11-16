@@ -50,3 +50,62 @@ What `bledev` can do on each host, and what it can't. The
 | Bluetooth 5 features: extended and periodic advertising, the 2M and Coded PHYs, LE Audio | MicroPython | The `bluetooth` module has no calls for them |
 | Resolvable and non-resolvable private addresses | Pico W on MicroPython; CircuitPython; laptop; browser | BTstack has no RPA or NRPA, `_bleio` has no call for them, and a laptop or browser leaves the address to the operating system |
 | A BLE radio | ESP32-P4 on CircuitPython | CircuitPython builds no Bluetooth for the P4 |
+
+## On CircuitPython
+
+On CircuitPython, `adafruit_midi` and `adafruit_hid` are already the way to do MIDI and HID over `usb_midi` and `usb_hid`; over BLE, use `bledev.midi` and `bledev.hid`. The CircuitPython-compatible build for the ESP32-P4 has no Bluetooth at all, so there is no BLE MIDI or HID there, and no USB device either until CircuitPython gives the P4 one.
+
+### Installing bledev
+
+
+On a laptop, bledev is inside the `omnipython` wheel. `pip install "omnipython[ble]"`
+adds bleak, which the laptop backend needs.
+
+With Wi-Fi, `omip.install("bledev")` runs on the board once
+`boot.py` has made the drive writable, and `omip` tells you how if it isn't. It
+leaves aioble out, because CircuitPython's Bluetooth is its own, and brings
+Adafruit's `asyncio` library and `adafruit_ticks` in its place. At around -70 dBm
+it usually loses the connection partway and raises `OSError`. Run it again: it
+keeps the files it already has. Or copy the files
+yourself: bledev isn't in a circup bundle. With the board's CIRCUITPY drive mounted, make a
+[`lib/bledev/`](https://github.com/PyDevices/omnipython/tree/main/lib/bledev) folder on it and copy these into it from
+[`lib/bledev/`](https://github.com/PyDevices/omnipython/tree/main/lib/bledev), as `.py` source (MicroPython's `.mpy` files
+won't load on CircuitPython):
+
+- `__init__.py` and `cpble.py`, always;
+- `auto.py`, if you'd rather not name the backend;
+- the parts you use, with what they import: `nus.py`; `midi.py` with
+  `midi_codec.py`; `filetransfer.py` with `nus.py`, `repl.py` and
+  `security.py`. Those are the parts measured on CircuitPython (see
+  [What differs](#what-differs)).
+
+Leave out `mpble.py`, `bleak.py`, `webble.py` and `fake.py`; they're for other
+hosts. bledev also needs CircuitPython's `asyncio` library: `circup install
+asyncio`, which brings `adafruit_ticks`, or `omip.install("asyncio")` on the board.
+
+### What differs
+
+The same code runs with `bledev.cpble`, in either role: nus, MIDI, the contract's checks and the file client all pass over the radio. `_bleio` works differently from aioble underneath, so:
+
+- Connecting, discovery, a read, a write with response and subscribing each
+  hold up your other tasks until the radio answers, usually a connection
+  interval or two. `_bleio` has no async calls.
+- It pairs "just works" only. `authenticated=True` and passkeys raise
+  `UnsupportedError`, and it always bonds.
+- A central there can't receive indications, and the MTU is 247 at most.
+- `Characteristic.write()` on a characteristic that notifies sends the value
+  to subscribed centrals even without `send_update`.
+- CircuitPython 10.3's `PacketBuffer` can stall or fault the board when a
+  notification stream outruns the radio. bledev steps around the stall; the
+  fault needs a CircuitPython fix. On the official build, 2 of 11 fast 16 KB
+  streams restarted the board in safe mode; on a patched build, none did.
+- A central there waits 2 s on every read and every write with a response
+  (subscribing is one), so connecting and setting up takes several seconds.
+
+CircuitPython's own BLE file service, the one its supervisor serves, is
+reached with the same `bledev.filetransfer.connect()` a MicroPython board
+uses; it pairs by itself. The service is only public in CircuitPython's
+discovery mode, it won't write while a computer has the CIRCUITPY drive
+mounted, and on the official 10.3.0 build a 20 KB download stalls (the same
+`PacketBuffer` fault). What cpble does about each of these, and why, is in
+[bledev-internals.md](../how-it-works/bledev-internals.md#how-cpble-gets-there).
