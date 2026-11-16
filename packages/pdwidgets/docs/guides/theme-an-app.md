@@ -28,7 +28,7 @@ cancel = pd.Button(screen, label="Cancel", bg=md.GREY_S200, fg=md.GREY_S800,
 ```
 
 Names are the color, `_S`, then the shade, as in `BLUE_S700`. The
-[palettes docs](https://palettes.readthedocs.io) list every name and show how
+[palettes docs](https://docs.omnipython.org/en/latest/palettes/) list every name and show how
 to build other palettes with `get_palette`.
 
 ## Use the built-in color roles

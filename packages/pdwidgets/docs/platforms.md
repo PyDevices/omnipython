@@ -12,7 +12,7 @@ dependencies do. What differs is how each runtime is checked.
 | CircuitPython | none | `manifest.py` can be frozen into a firmware build, but no such build has been run and there is no `circup` route. Treat it as unsupported. |
 
 The desktop and browser paths need `pydevices-pygraphics`, whose
-[docs](https://pygraphics.readthedocs.io) list the platforms it ships wheels for.
+[docs](https://docs.omnipython.org/en/latest/pygraphics/) list the platforms it ships wheels for.
 
 Current releases are on TestPyPI. PyPI holds an older release, which installs
 and works, so a plain `pip install pydevices-pdwidgets` gives you that one.

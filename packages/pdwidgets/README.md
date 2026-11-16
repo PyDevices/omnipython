@@ -55,6 +55,6 @@ Taps: 3
 That opens a window with a button in it, and each click prints a line. The
 picture at the top of this page is the window after three clicks.
 
-[Docs](https://pdwidgets.readthedocs.io) · [Examples](https://pydevices.github.io/gallery/pyscript/) · [Roadmap](ROADMAP.md)
+[Docs](https://docs.omnipython.org/en/latest/pdwidgets/) · [Examples](https://pydevices.github.io/gallery/pyscript/) · [Roadmap](ROADMAP.md)
 
 OmniPython is made by [PyDevices](https://pydevices.com).
