@@ -23,7 +23,8 @@ The ports keep the package's contract. ``read``, ``readinto`` and ``any``
 never block and hand out whole messages, running status expanded, SysEx in
 one piece. When a link drops with notes still sounding, the input hands out a
 note-off for each of them, and a sustain-pedal release for each channel that
-had the pedal down, so no note is left hanging. ``take_timestamp`` gives each
+had the pedal down, so no note is left hanging; so does closing the port, or
+the link stopping on an error, and those last messages can still be read. ``take_timestamp`` gives each
 message's arrival time: the time the board picked up its packet, less how much
 earlier the sender stamped it than the packet's last message, so notes sent
 together in one packet keep their spacing.
@@ -36,7 +37,7 @@ the tasks.
 
 ``state`` says what the link is doing: ``"advertising"``, ``"connected"`` or
 ``"closed"``. ``error`` holds what stopped it, if something did, and
-``any()`` raises it.
+``any()`` raises it once what arrived before it has been read.
 
 Needs ``bledev`` and a firmware with Bluetooth LE: MicroPython with
 ``aioble``, or CircuitPython. A computer's own Bluetooth MIDI devices
@@ -248,6 +249,7 @@ class BleIn(PortIn):
         except Exception as e:  # noqa: BLE001 - kept, said by state, and raised by any()
             self.error = e
             self.state = "stopped: %s" % (e,)
+            self._queue(self._held.release(), ticks_us())
 
     def _queue(self, messages, now):
         held = self._held
@@ -296,12 +298,12 @@ class BleIn(PortIn):
     # -- the port contract
 
     def any(self):
-        """How many MIDI bytes are waiting, after running the link's tasks."""
-        if self.error is not None:
+        """How many MIDI bytes are waiting, after running the link's tasks.
+        Raises what stopped the link once nothing is left to read."""
+        if not self._closed and self.error is None:
+            self._service()
+        if not self._waiting and self.error is not None:
             raise self.error
-        if self._closed:
-            return 0
-        self._service()
         return self._waiting
 
     def readinto(self, buf, nbytes=None):
@@ -337,15 +339,18 @@ class BleIn(PortIn):
         return port.write(buf, nbytes)
 
     def close(self):
-        """Stop advertising and drop the link. The radio stays on."""
+        """Stop advertising and drop the link. The radio stays on. A note
+        still sounding gets its note-off, left to be read."""
         if self._closed:
             return
         self._closed = True
         self.state = "closed"
+        self._drain()
         port = self._port
         self._port = None
         if port is not None:
             port.close()
+        self._queue(self._held.release(), ticks_us())
         self._task.cancel()
         if self._pump:
             try:

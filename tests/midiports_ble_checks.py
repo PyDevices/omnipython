@@ -247,7 +247,18 @@ async def a_dropped_link_lets_every_held_note_go(air):
     equal(await messages(midi_in, 1), [b"\x90\x45\x60"], "the next controller's note")
     midi_in.close()
     equal(midi_in.state, "closed", "state after close")
-    equal(midi_in.any(), 0, "a closed port has nothing")
+    equal(await messages(midi_in, 1), [b"\x80\x45\x00"], "the note-off closing left")
+    equal(midi_in.any(), 0, "then a closed port has nothing")
+
+
+@check
+async def closing_lets_every_held_note_go(air):
+    midi_in, _, client, _ = await pair(air)
+    client.write(b"\x90\x3c\x64\xb3\x40\x7f")
+    await messages(midi_in, 2)
+    midi_in.close()  # notes 60 and the pedal on channel 4 still down
+    equal(await messages(midi_in, 2), [b"\x80\x3c\x00", b"\xb3\x40\x00"], "note-off and pedal up after close")
+    equal(midi_in.any(), 0, "then nothing")
 
 
 @check
@@ -274,12 +285,13 @@ async def a_failure_is_raised_not_hidden(air):
     midi_in, _ = ble.ports(NAME, adapter=Broken(air=air))
     await asyncio.sleep(0.01)
     expect(midi_in.state.startswith("stopped"), "state says it stopped: %r" % midi_in.state)
-    try:
-        midi_in.any()
-    except OSError:
-        pass
-    else:
-        raise Failed("any() raises what stopped the link")
+    for _ in range(2):  # and keeps saying so
+        try:
+            midi_in.any()
+        except OSError:
+            pass
+        else:
+            raise Failed("any() raises what stopped the link")
 
 
 def pumped(air):
