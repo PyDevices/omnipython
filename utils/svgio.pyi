@@ -7,6 +7,9 @@ from typing import BinaryIO
 
 _Buffer = bytes | bytearray | memoryview
 
+def expand(drawing: _Buffer) -> bytes:
+    """Give the SVG text a drawing in the firmware module's compact form stands for."""
+
 class SvgDecoder:
     """Call `open`, then `decode`."""
 
