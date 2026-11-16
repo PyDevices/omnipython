@@ -1,6 +1,6 @@
-# pydevices
+# OmniPython
 
-pydevices is the part of OmniPython that talks to hardware: displays, touch,
+This library is the part of OmniPython that talks to hardware: displays, touch,
 audio, USB, Bluetooth LE, Wi-Fi and timers, with one board config per board
 and the same program on MicroPython-compatible boards, CircuitPython-compatible
 boards, a desktop, a browser and an Android phone.
@@ -17,15 +17,19 @@ boards, a desktop, a browser and an Android phone.
 - [Displays](guides/displays.md)
 - [appdev](guides/the-app-loop.md)
 - [multimer](guides/timers.md)
-- [Upgrade multimer from pydevices 0.5](guides/upgrade-multimer-from-0.5.md)
+- [Upgrade multimer from OmniPython 0.5](guides/upgrade-multimer-from-0.5.md)
 - [Portable audio](guides/audio.md)
 - [USB, both ways round](guides/usb.md)
 - [bledev: Bluetooth Low Energy](guides/bluetooth-le.md)
+- [Bluetooth LE: REPL, files, pairing, MIDI and HID](guides/bluetooth-le-services.md)
+- [The board's name](guides/board-name.md)
 - [wifi_manager](guides/wifi.md)
 - [mdns](guides/mdns.md)
 - [medialink: audio between devices](guides/medialink.md)
-- [Using LVGL with PyDevices](guides/lvgl.md)
-- [pydevices-desktop](guides/run-on-the-desktop.md)
+- [Using LVGL with OmniPython](guides/lvgl.md)
+- [vtterm: a terminal on a display](guides/vtterm.md)
+- [castdisplay: cast an app to a TV](guides/cast-to-a-tv.md)
+- [omnipython-desktop](guides/run-on-the-desktop.md)
 - [Direct MicroPython WebAssembly](guides/run-in-the-browser.md)
 - [PyScript and Pyodide](guides/run-in-pyscript.md)
 - [Android](guides/run-on-android.md)
@@ -35,23 +39,29 @@ boards, a desktop, a browser and an Android phone.
 ## Reference
 
 - [The stack: everything you can import or run](stack.md)
+- [USB support](reference/usb-support.md)
+- [Bluetooth LE support](reference/bluetooth-le-support.md)
+- [vtterm escape codes](reference/vtterm-escape-codes.md)
+- [vtterm keys](reference/vtterm-keys.md)
+- [castdisplay](reference/castdisplay.md)
 - [Other modules](modules.md)
 - [Board peripherals contract](boards/board-contract.md)
 - [Board configs](boards/board-configs.md)
-- [Device matrix](boards/device-matrix.md)
-- [Display boards — bring-up notes](boards/display-boards.md)
+- [Arduino GIGA R1 WiFi with the Display Shield](boards/arduino-giga-display-shield.md)
 - [Display drivers](boards/display-drivers.md)
 - [Touch drivers](boards/touch-drivers.md)
 - [Wokwi hardware reference](boards/wokwi.md)
 
 ## How it works
 
-- [How pydevices fits together](how-it-works/index.md)
+- [How OmniPython fits together](how-it-works/index.md)
 - [Architecture](how-it-works/architecture.md)
 - [The PyDevices ecosystem](how-it-works/ecosystem.md)
 - [Display backend internals](how-it-works/displaydev-internals.md)
 - [multimer internals: the dispatcher and the wake sources](how-it-works/multimer-internals.md)
 - [bledev internals: writing a backend](how-it-works/bledev-internals.md)
+- [vtterm internals](how-it-works/vtterm-internals.md)
+- [How casting works](how-it-works/casting.md)
 
 ## Changelog
 

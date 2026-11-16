@@ -1,10 +1,11 @@
-# Publish a palettes or pdwidgets release: build the distribution from the
+# Publish a palettes, pdwidgets or iconkit release: build the distribution from the
 # package's folder at the release tag, check the wheel installs and imports,
-# upload it to TestPyPI, and attach it to the GitHub Release. pydevices' own
+# upload it to TestPyPI, and attach it to the GitHub Release. OmniPython's own
 # releases (vX.Y.Z tags) go through publish-release-packages.yml instead.
 #
-# Production PyPI isn't here, and neither is the mip index. The library index
-# (PyDevices/lib) is asked for the folder at its tag.
+# Production PyPI isn't here. The library index (PyDevices/lib) is asked for
+# the folder at its tag, and so is the mip index for iconkit, the one folder
+# package its profiles take.
 name: Publish package release
 
 on:
@@ -27,6 +28,7 @@ jobs:
       github.event_name == 'workflow_dispatch'
       || startsWith(github.event.release.tag_name, 'palettes-v')
       || startsWith(github.event.release.tag_name, 'pdwidgets-v')
+      || startsWith(github.event.release.tag_name, 'iconkit-v')
     runs-on: ubuntu-latest
     outputs:
       tag: ${{ steps.release.outputs.tag }}
@@ -40,27 +42,27 @@ jobs:
         env:
           RELEASE_TAG: ${{ github.event.release.tag_name || inputs.release-ref }}
         run: |
-          if [[ ! "$RELEASE_TAG" =~ ^(palettes|pdwidgets)-v([0-9]+\.[0-9]+\.[0-9]+((a|b|rc)[0-9]+|\.dev[0-9]+)?)$ ]]; then
-            echo "Release ref must be palettes-vX.Y.Z or pdwidgets-vX.Y.Z[{a|b|rc}N|.devN]: $RELEASE_TAG" >&2
+          if [[ ! "$RELEASE_TAG" =~ ^(palettes|pdwidgets|iconkit)-v([0-9]+\.[0-9]+\.[0-9]+((a|b|rc)[0-9]+|\.dev[0-9]+)?)$ ]]; then
+            echo "Release ref must be palettes-vX.Y.Z, pdwidgets-vX.Y.Z or iconkit-vX.Y.Z[{a|b|rc}N|.devN]: $RELEASE_TAG" >&2
             exit 1
           fi
           {
             echo "tag=$RELEASE_TAG"
             echo "package=${BASH_REMATCH[1]}"
-            echo "distribution=pydevices-${BASH_REMATCH[1]}"
+            echo "distribution=omnipython-${BASH_REMATCH[1]}"
             echo "version=${BASH_REMATCH[2]}"
             if [[ -n "${BASH_REMATCH[3]}" ]]; then echo "prerelease=true"; else echo "prerelease=false"; fi
           } >> "$GITHUB_OUTPUT"
 
   build:
     needs: resolve
-    uses: PyDevices/.github/.github/workflows/reusable-build-pure-python-distribution.yml@publishing-v22
+    uses: PyDevices/.github/.github/workflows/reusable-build-pure-python-distribution.yml@publishing-v27
     with:
       distribution-name: ${{ needs.resolve.outputs.distribution }}
       import-name: ${{ needs.resolve.outputs.package }}
       release-ref: ${{ needs.resolve.outputs.tag }}
       version: ${{ needs.resolve.outputs.version }}
-      working-directory: ${{ needs.resolve.outputs.package }}
+      working-directory: packages/${{ needs.resolve.outputs.package }}
       # pdwidgets' smoke test imports it, and it imports its dependencies.
       install-dependencies: ${{ needs.resolve.outputs.package == 'pdwidgets' }}
 
@@ -101,20 +103,22 @@ jobs:
 
   request-library-publication:
     # The library index (PyDevices/lib) builds this folder at this tag. The mip
-    # index doesn't take it: its palettes and pdwidgets profiles are locked to
-    # the archived repositories.
+    # index also takes iconkit (its `folder` profile, finals only: the
+    # reusable workflow skips the request for a pre-release). Its palettes and
+    # pdwidgets profiles are locked to the archived repositories, so those two
+    # ask the library index alone.
     needs: [resolve, build, publish-to-testpypi]
-    uses: PyDevices/.github/.github/workflows/reusable-request-mip-publication.yml@publishing-v22
+    uses: PyDevices/.github/.github/workflows/reusable-request-mip-publication.yml@publishing-v27
     with:
       release-ref: ${{ needs.resolve.outputs.tag }}
       version: ${{ needs.resolve.outputs.version }}
       profile: ${{ needs.resolve.outputs.package }}
       prerelease: ${{ needs.resolve.outputs.prerelease == 'true' }}
-      legacy-index: false
+      legacy-index: ${{ needs.resolve.outputs.package == 'iconkit' }}
     secrets: inherit
 
   report-release-health:
-    # The Release Health dashboard in PyDevices/.github, as the pydevices
+    # The Release Health dashboard in PyDevices/.github, as the OmniPython
     # chain feeds it. A reporting failure never fails the release.
     if: always() && needs.resolve.result == 'success'
     needs: [resolve, build, publish-to-testpypi, attach-release-assets, request-library-publication]

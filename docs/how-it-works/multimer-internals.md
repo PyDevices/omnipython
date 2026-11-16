@@ -38,7 +38,7 @@ set and a timer is armed. `_inputhook.py` is the CPython REPL hook.
 |---|---|---|---|---|
 | `machine` | MicroPython on a board | one `machine.Timer`, ONE_SHOT, re-armed to the next deadline; its callback is `micropython.schedule`d. The nrf port's timer has no `init()` and a hard callback, so there the source rebuilds it per deadline and its callback only schedules | bytecode boundary | yes: the REPL and `sleep_ms` run pending callbacks |
 | `signal` | unix / macOS CPython and MicroPython | `timer_create` on `SIGRTMIN+4` (Linux) or `setitimer` (elsewhere). CPython: a Python handler at the next bytecode; MicroPython: an ffi handler that only calls `micropython.schedule` | bytecode boundary | yes: EINTR, then the interrupted call is retried (PEP 475 on CPython, `MP_HAL_RETRY_SYSCALL` on unix MicroPython) |
-| `native` | MicroPython windows | the `_timing` module from the micropython-pydevices overlay: a Win32 timer queue whose expiry calls `mp_sched_schedule` | bytecode boundary | yes, with the console wait servicing pending callbacks |
+| `native` | MicroPython windows | the `_timing` module from the omnipython-builds overlay: a Win32 timer queue whose expiry calls `mp_sched_schedule` | bytecode boundary | yes, with the console wait servicing pending callbacks |
 | `wasm` | direct MicroPython WebAssembly | `_wasm_bridge.timer_start`, one browser timer; the bridge calls in once the VM is idle, or queues the firing for `sleep_ms` to poll | idle (the page loop) | the loop owns the thread |
 | `pending` | CPython Windows, Android (and anywhere as a fallback) | a daemon thread keeps time and calls `Py_AddPendingCall`, at most one outstanding | bytecode boundary | no; `sleep_ms` sleeps only until the next deadline, and the input hook covers the prompt |
 | `asyncio` | CPython with a running loop | `loop.call_later` | idle (await points) | the loop owns the thread |
@@ -74,13 +74,47 @@ drain on the worker. None of those paths exists any more.
 ## The overrun rule
 
 After a callback ends, its next slot is `due += period`. If that slot has
-already passed (the callback overran), the grid is stepped past now (each
-skipped slot counts in `missed`), and if the callback took longer than a
-period, the next slot is pushed to at least `end + min(took, yield_cap)`.
-This is the LVGL frame gate of lvgl-bindings#15 and its cap from #19,
-applied to every timer: a slow pass halves its own rate rather than taking
-the thread, and a pass much longer than a period does not idle the thread
-for as long again. `yield_cap = 0` keeps the grid only.
+already passed but the pass took no longer than a period, the callback only
+started late, behind another one: the grid is stepped past now, each skipped
+slot counting in `missed`, so a late timer never bursts to catch up.
+
+A pass longer than its period has lost its grid, and where the next one goes
+depends on whether the program's own code may want the thread. While the
+main thread waits inside multimer, it can't: the next pass is due the moment
+this one ends. The waits that count are `run_until`, the exit-hook loop,
+CPython's input hook and `repl()` waiting for input, and a `sleep_ms` while
+more of it is left than the pause below would last, so running back to back
+never makes the sleep later than the pause would have. Anywhere else the
+next pass waits `min(took, yield_cap)` from the end of this one. That pause
+is the LVGL frame gate of lvgl-bindings#15 and its cap from #19, applied to
+every timer: a slow pass halves its own rate rather than taking the thread,
+and a pass much longer than a period does not idle the thread for as long
+again. `yield_cap = 0` waives the pause everywhere, which leaves the
+program's own code about a millisecond between passes.
+
+A timer that skipped its pause remembers it. When a wait returns to the
+program's code (the predicate came true, a key or a line arrived), it takes
+the pause from the end of its last pass, so the code the wait returns to has
+the thread first.
+
+A delivery is one round: every due timer fires at most once in it, earliest
+deadline first. A timer due again the moment it returns waits for the next
+delivery, so other due timers get a turn between its passes and a wait checks
+its condition between them.
+
+A board's own REPL is outside multimer, but firmware with
+`micropython.repl_idle_ms()` says how long it has waited for a new command:
+-1 while one runs, otherwise the milliseconds since the prompt came back or
+input last arrived. A WebREPL file transfer counts as input, though it never
+reaches the REPL as characters. Once that reaches 500 ms, a few Wi-Fi round
+trips and longer than the gaps inside a tool's burst of commands, the REPL
+counts as a wait like the ones above. Input that comes before the next pass
+takes the pause back, as a returning wait does: the pass checks the REPL
+again when it comes due.
+
+In an asyncio or browser loop, at the REPL of firmware without that call, or
+in a program's own loop that calls `pump()`, multimer can't tell idle from
+busy, so the pause applies.
 
 ## `schedule()`
 

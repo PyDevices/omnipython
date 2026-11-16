@@ -1,14 +1,15 @@
 {
   "repo": {
-    "pydevices": {
-      "description": "Portable display, audio, event, and timing foundations for PyDevices"
+    "omnipython": {
+      "description": "Portable display, audio, event, and timing foundations for OmniPython"
     },
-    "pydevices-desktop": {
-      "description": "Complete PyDevices desktop stack and board configuration"
+    "omnipython-desktop": {
+      "description": "Complete OmniPython desktop stack and board configuration"
     },
     "bledev": {
-      "description": "Portable async Bluetooth Low Energy for PyDevices, over aioble on boards",
-      "upstream": ["aioble"]
+      "description": "Portable async Bluetooth Low Energy for OmniPython, over aioble on boards",
+      "upstream": ["aioble"],
+      "circuitpython": ["asyncio"]
     },
     "medialink": {
       "description": "Live audio and video between boards and computers: a walkie-talkie, an intercom, a baby monitor"
@@ -16,42 +17,63 @@
   },
   "folders": {
     "palettes": {
-      "description": "Color palette toolkit for PyDevices (wheel, cube, material_design)",
-      "pypi": "pydevices-palettes"
+      "description": "Color palette toolkit for OmniPython (wheel, cube, material_design)",
+      "pypi": "omnipython-palettes"
     },
     "pdwidgets": {
-      "description": "Cross-platform widget toolkit for PyDevices",
-      "pypi": "pydevices-pdwidgets"
+      "description": "Cross-platform widget toolkit for OmniPython",
+      "pypi": "omnipython-pdwidgets"
+    },
+    "iconkit": {
+      "description": "Material Design icons as flash-resident alpha masks, drawn in LVGL or pygraphics",
+      "pypi": "omnipython-iconkit"
     }
   },
   "pinned": {
     "pygraphics": {
       "repository": "PyDevices/pygraphics",
-      "ref": "v0.1.2",
+      "ref": "v0.1.6",
       "description": "Pure-Python pygraphics for MicroPython/CircuitPython/CPython (FrameBuffer, Draw, fonts); import as pygraphics"
     },
     "audioinstruments": {
       "repository": "PyDevices/audioinstruments",
-      "ref": "v0.5.1",
+      "ref": "v0.5.2.dev4",
       "description": "Playable synthesizers, organs, electric pianos and drum machines on audiodsp; import as audioinstruments"
     },
     "audioeffects": {
       "repository": "PyDevices/audioeffects",
-      "ref": "v0.5.1",
+      "ref": "v0.5.2.dev2",
       "description": "Studio and guitar-pedal effects on audiodsp (reverbs, delays, compressors, overdrive, EQs); import as audioeffects"
     },
     "applibs": {
       "repository": "PyDevices/apps",
-      "ref": "v0.1.1",
+      "ref": "v0.1.2.dev12",
       "description": "The libraries apps share; installs each of them",
       "packages": {
         "appkit": "Apps you can switch between, and a launcher to run them",
         "controlkit": "LVGL controls: encoders, sliders, meters, lamp buttons, pad grids and a dot-matrix display",
+        "deskkit": "A clock and the weather on a screen that sits on a desk",
+        "programkit": "Reach a board's display, keys and touch from a program that runs without Home",
         "sayso": "Lightweight Spotify Web API client for CPython, MicroPython and CircuitPython",
         "songmodel": "The song a groovebox edits, and the link that carries it to a front panel",
         "soundmodule": "A sound module that plays MIDI, headless from a port or through files",
         "spectrum": "A spectrum analyzer in an app's area, sharing the panel with LVGL",
         "touchkit": "What the apps on an ESP32-P4 touch board share"
+      },
+      "requires": {
+        "appkit": ["iconkit"],
+        "deskkit": ["appkit"],
+        "programkit": ["pygraphics"],
+        "songmodel": ["hmilink"],
+        "soundmodule": ["audioinstruments", "audioeffects"],
+        "spectrum": ["pygraphics", "touchkit"],
+        "touchkit": ["appkit", "deskkit"]
+      },
+      "upstream": {
+        "deskkit": ["requests"]
+      },
+      "circuitpython": {
+        "deskkit": ["adafruit_requests"]
       }
     }
   }

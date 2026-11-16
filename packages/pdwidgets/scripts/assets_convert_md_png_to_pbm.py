@@ -14,7 +14,7 @@ Source path shape::
 For the curated runtime set under ``lib/pdwidgets/icons/``, use
 ``assets_generate_pdwidgets_icons.py`` instead.
 
-Run from packages/pdwidgets/ (needs ``gallery`` beside the pydevices repository for
+Run from packages/pdwidgets/ (needs ``gallery`` beside the OmniPython repository for
 ``png``, and ``pygraphics`` there for the framebuffer)::
 
     .venv/bin/python scripts/assets_convert_md_png_to_pbm.py
@@ -30,7 +30,7 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 
 
 def resolve_pydevices_examples_root() -> Path:
-    env_root = os.environ.get("PYDEVICES_EXAMPLES_ROOT")
+    env_root = os.environ.get("OMNIPYTHON_EXAMPLES_ROOT")
     candidates = []
     if env_root:
         candidates.append(Path(env_root))
@@ -41,7 +41,7 @@ def resolve_pydevices_examples_root() -> Path:
     tried = ", ".join(str(p) for p in candidates)
     raise SystemExit(
         "gallery checkout not found (needed for png utilities). "
-        f"Set PYDEVICES_EXAMPLES_ROOT or clone sibling gallery. Tried: {tried}"
+        f"Set OMNIPYTHON_EXAMPLES_ROOT or clone sibling gallery. Tried: {tried}"
     )
 
 

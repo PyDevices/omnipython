@@ -17,7 +17,7 @@ firing.** On esp32 a virtual timer's callback runs on the ``esp_timer`` task,
 on the other core from the interpreter, and ``init()`` begins with a
 ``deinit()`` that clears the port's handler pointer before setting it again.
 A fire that lands in that gap calls a NULL pointer and the board reboots
-(micropython-pydevices#14; the drum machine did it within seconds). So the
+(omnipython-builds#14; the drum machine did it within seconds). So the
 source keeps the hardware deadline it armed and re-inits only when that
 deadline is comfortably far away, or long past:
 

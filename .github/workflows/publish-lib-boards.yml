@@ -11,8 +11,6 @@ name: Publish boards to the library index
 # No test runs here. The pull request's checks (lib-index.yml, tests.yml) are
 # the gate; the index's build fails, and the live index stays as it was, if the
 # merged files don't build over the released core.
-#
-# The mip index (PyDevices.github.io/mip) takes releases only and isn't asked.
 
 on:
   push:
@@ -44,7 +42,7 @@ jobs:
 
   request-library-publication:
     needs: version
-    uses: PyDevices/.github/.github/workflows/reusable-request-mip-publication.yml@publishing-v22
+    uses: PyDevices/.github/.github/workflows/reusable-request-mip-publication.yml@publishing-v27
     with:
       release-ref: ${{ github.sha }}
       version: ${{ needs.version.outputs.version }}

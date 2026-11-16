@@ -8,7 +8,7 @@ metadata(
     version="0.2",
 )
 
-require("pydevices")
+require("omnipython")
 require("ch422g")
 require("gt911")
 require("sdcard")  # micropython-lib's: frozen into OmniPython firmware, or mip.install("sdcard") first

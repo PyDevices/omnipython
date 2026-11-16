@@ -8,6 +8,6 @@ metadata(
     version="0.1",
 )
 
-require("pydevices-desktop")
+require("omnipython-desktop")
 
 module("board_config.py")

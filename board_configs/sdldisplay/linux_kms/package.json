@@ -2,12 +2,12 @@
   "urls": [
     [
       "board_config.py",
-      "github:PyDevices/pydevices/board_configs/sdldisplay/linux_kms/board_config.py"
+      "github:PyDevices/omnipython/board_configs/sdldisplay/linux_kms/board_config.py"
     ]
   ],
   "deps": [
     [
-      "pydevices-desktop",
+      "omnipython-desktop",
       "latest"
     ]
   ],

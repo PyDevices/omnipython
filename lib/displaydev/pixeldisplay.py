@@ -7,7 +7,7 @@ displaydev.pixeldisplay — addressable LED grids (NeoPixel, DotStar, etc.).
 
 MicroPython: ``PixelFramebuffer`` (RGB888 grid + strip map) and ``PixelDisplay``
 live here.  CircuitPython board configs use
-``adafruit_pixel_framebuf.PixelFramebuffer`` with PyDevices ``PixelDisplay``.
+``adafruit_pixel_framebuf.PixelFramebuffer`` with OmniPython ``PixelDisplay``.
 """
 
 try:
@@ -230,7 +230,12 @@ class PixelDisplay(DisplayDriver):
 
     Args:
         pixel_buffer: ``PixelFramebuffer`` (or Adafruit equivalent on CircuitPython).
+
+    ``can_rotate`` is False: the matrix's wiring sets its orientation, taken
+    from ``pixel_buffer`` when the driver starts.
     """
+
+    can_rotate = False
 
     def __init__(self, pixel_buffer, *, quiet=False):
         self._raw_buffer = pixel_buffer

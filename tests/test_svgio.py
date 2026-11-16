@@ -1,0 +1,239 @@
+# SPDX-FileCopyrightText: 2026 Brad Barnett
+#
+# SPDX-License-Identifier: MIT
+
+"""svgio.py (omnipython-desktop) on a desktop: MicroPython's svgio API over resvg and Pillow.
+
+The full test is omnipython-builds' modules/svgio/tests/test_svgio.py,
+which runs unchanged on CPython against this file, and whose renders its
+check_svgio_references.py compares. What is here is the CPython-only part:
+sizes, the three ways to decode, placement, and the message a desktop
+without resvg-py gets. The backend a browser uses instead has its own tests,
+test_svgio_canvas.py and test_svgio_browser.py.
+"""
+
+import importlib
+import sys
+import unittest
+
+import _env  # noqa: F401
+
+try:
+    import resvg_py  # noqa: F401
+    import PIL  # noqa: F401
+except ImportError:
+    resvg_py = None
+
+ICON = (
+    b'<svg xmlns="http://www.w3.org/2000/svg" width="24" height="12" viewBox="0 0 24 12">'
+    b'<rect x="2" y="2" width="20" height="8" fill="#ff0000"/></svg>'
+)
+
+
+def px(buf, i):
+    return buf[2 * i] | buf[2 * i + 1] << 8
+
+
+@unittest.skipIf(resvg_py is None, "resvg-py or Pillow isn't installed")
+class Decode(unittest.TestCase):
+    def setUp(self):
+        import svgio
+
+        self.d = svgio.SvgDecoder()
+
+    def test_sizes(self):
+        d = self.d
+        self.assertEqual(d.open(ICON), (24, 12))
+        self.assertEqual((d.width, d.height), (24, 12))
+        self.assertEqual(d.open(ICON, width=48), (48, 24))
+        self.assertEqual(d.open(ICON, height=6), (12, 6))
+        self.assertEqual(d.open(ICON, scale=0.5), (12, 6))
+        with self.assertRaises(ValueError):
+            d.open(ICON, width=4, height=4)
+        with self.assertRaises(ValueError):
+            d.open(b"hello, not an svg")
+
+    def test_colour_alpha_and_mask(self):
+        d = self.d
+        w, h = d.open(ICON)
+        pixels, alpha = bytearray(w * h * 2), bytearray(w * h)
+        d.decode(pixels, alpha)
+        i = 5 * w + 10
+        self.assertEqual((alpha[i], px(pixels, i)), (255, 0xF800))
+        self.assertEqual(alpha[0], 0)
+        mask = bytearray(w * h)
+        d.decode(None, mask)
+        self.assertEqual(mask, alpha)
+
+    def test_blended_and_placed(self):
+        d = self.d
+        w, h = d.open(ICON)
+        sw, sh, x, y = 40, 20, 5, 3
+        screen = bytearray(b"\x1f\x00" * (sw * sh))  # blue
+        d.decode(screen, x=x, y=y, stride=sw)
+        self.assertEqual(px(screen, 0), 0x001F)
+        self.assertEqual(px(screen, (y + 5) * sw + x + 10), 0xF800)
+        self.assertEqual(px(screen, (y + 5) * sw + x + w), 0x001F)
+
+    def test_bands_are_the_whole_picture(self):
+        d = self.d
+        w, h = d.open(ICON, width=96)
+        whole_p, whole_a = bytearray(w * h * 2), bytearray(w * h)
+        d.decode(whole_p, whole_a)
+        band_p, band_a = bytearray(w * h * 2), bytearray(w * h)
+        blend_whole, blend_bands = bytearray(b"\x1f\x00" * (w * h)), bytearray(b"\x1f\x00" * (w * h))
+        d.decode(blend_whole)
+        for y0, y1 in ((0, 7), (7, 7), (7, 30), (30, h)):
+            d.decode(band_p, band_a, rows=(y0, y1))
+            d.decode(blend_bands, rows=(y0, y1))
+        self.assertEqual((band_p, band_a), (whole_p, whole_a))
+        self.assertEqual(blend_bands, blend_whole)
+        d.decode(bytearray(w * 10 * 2), rows=(0, 10))  # a target only as tall as the rows
+        for bad in ((5, 2), (0, h + 1), (1,)):
+            with self.assertRaises(ValueError):
+                d.decode(whole_p, rows=bad)
+
+    def test_memory_is_accepted(self):
+        import svgio
+
+        d = svgio.SvgDecoder(memory=64 * 1024)
+        self.assertEqual((d.memory, d.memory_peak, self.d.memory), (64 * 1024, 0, 0))
+        w, h = d.open(ICON)
+        pixels, alpha = bytearray(w * h * 2), bytearray(w * h)
+        d.decode(pixels, alpha)
+        self.assertEqual(px(pixels, 5 * w + 10), 0xF800)
+        with self.assertRaises(ValueError):
+            svgio.SvgDecoder(memory=100)
+
+    def test_the_compact_form(self):
+        import struct
+
+        import svgio
+
+        for f, size in (("f", 4), ("d", 8)):
+            drawing = b"".join(
+                (
+                    b"\x01SVG" + bytes((size,)),
+                    struct.pack("<B4" + f, 10, 0, 0, 24, 12),
+                    b"\x0d",
+                    struct.pack("<B5" + f + "II2" + f + "H", 3, 2, 2, 20, 8, 0, 0xFF0000, 0xFFFFFFFE, 1, 1, 0),
+                    struct.pack("<B4" + f + "B", 8, 1.5, 2, 0, 1, 0),
+                    struct.pack("<BI", 4, 1 + 2 * size + 6) + struct.pack("<B2" + f, 77, 0, 0) + struct.pack("<BH", 84, 3) + b"h4z",
+                    struct.pack("<II2" + f + "H", 0xFFFFFFFF, 0x00FF00, 0.5, 0.25, 0),
+                    b"\x07\x0e",
+                )
+            )
+            self.assertEqual(
+                svgio.expand(drawing),
+                b'<svg xmlns="http://www.w3.org/2000/svg" width="24" height="12" viewBox="0 0 24 12"><defs></defs>'
+                b'<rect x="2" y="2" width="20" height="8" fill="#ff0000"/><g transform="translate(1.5 2)">'
+                b'<path d="M0 0h4z" fill="none" stroke="#00ff00" stroke-width="0.5" stroke-linecap="round"'
+                b' stroke-linejoin="round" opacity="0.25"/></g></svg>',
+            )
+            w, h = self.d.open(drawing)
+            pixels, alpha = bytearray(w * h * 2), bytearray(w * h)
+            self.d.decode(pixels, alpha)
+            self.assertEqual((w, h, px(pixels, 5 * w + 10)), (24, 12, 0xF800))
+        for bad in (b"<svg/>", drawing[:-9], drawing[:5] + b"\x63", b"\x01SVG\x02"):
+            with self.assertRaises(ValueError):
+                svgio.expand(bad)
+
+    def test_colours_swapped(self):
+        d = self.d
+        w, h = d.open(ICON, width=48)
+        red, blue = bytearray(w * h * 2), bytearray(w * h * 2)
+        d.decode(red, bytearray(w * h))
+        d.decode(blue, bytearray(w * h), colors={0xFF0000: 0x0000FF, 0x123456: 0})
+        self.assertEqual((px(red, 12 * w + 24), px(blue, 12 * w + 24)), (0xF800, 0x001F))
+        with self.assertRaises(TypeError):
+            d.decode(red, colors=[(1, 2)])
+        with self.assertRaises(ValueError):
+            d.decode(red, colors={0x1000000: 0})
+
+    def test_colours_swapped_however_they_are_written(self):
+        d = self.d
+        want = {0xFF0000: 0x0000FF, 0x00FF00: 0xFFFFFF}
+
+        def centre(svg, colors=None):
+            w, h = d.open(svg.encode())
+            pixels = bytearray(w * h * 2)
+            d.decode(pixels, bytearray(w * h), colors=colors)
+            return px(pixels, 5 * w + 10)
+
+        def icon(paint, style=""):
+            return (
+                '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="12"><style>%s</style>'
+                '<rect class="c" x="2" y="2" width="20" height="8" %s/></svg>' % (style, paint)
+            )
+
+        for paint in (
+            'fill="#ff0000"', 'fill="#FF0000"', 'fill="#f00"', 'fill="#F00"', "fill='red'", 'fill = " red "',
+            'fill="rgb(255, 0, 0)"', 'fill="rgb(100%, 0%, 0%)"', 'style="fill:red"', 'style="stroke:none; fill: #f00;"',
+        ):  # fmt: skip
+            self.assertEqual((centre(icon(paint)), centre(icon(paint), want)), (0xF800, 0x001F), paint)
+        self.assertEqual(centre(icon("", ".c { fill: red }"), want), 0x001F)
+        # a stroke, and a gradient's stops with the opacity they had
+        self.assertEqual(centre(icon('fill="none" stroke="red" stroke-width="30"'), want), 0x001F)
+        stops = (
+            '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="12"><linearGradient id="g">'
+            '<stop offset="0" stop-color="red"/><stop offset="1" style="stop-color:rgb(255,0,0)"/></linearGradient>'
+            '<rect x="2" y="2" width="20" height="8" fill="url(#g)"/></svg>'
+        )
+        self.assertEqual((centre(stops), centre(stops, want)), (0xF800, 0x001F))
+        w, h = d.open(icon('fill="red" fill-opacity="0.5"').encode())
+        alpha = bytearray(w * h)
+        d.decode(bytearray(w * h * 2), alpha, colors=want)
+        self.assertIn(alpha[5 * w + 10], (127, 128))
+        # what isn't in the map, isn't a paint, or isn't a colour every runtime reads, is left alone
+        for paint, colour in (
+            ('fill="blue"', 0x001F), ('fill="#00f" data-fill="red" id="red"', 0x001F),
+            ('fill="tomato"', 0xFB08), ('fill="none" stroke="none"', 0),
+        ):  # fmt: skip
+            self.assertEqual(centre(icon(paint), {0xFF0000: 0x00FF00, 0x808080: 0x00FF00}), colour, paint)
+
+    def test_buffer_and_close(self):
+        import svgio
+
+        w, h = self.d.open(ICON)
+        buf = svgio.Buffer(w * h * 3)
+        view = memoryview(buf)
+        self.d.decode(view[: w * h * 2], view[w * h * 2 :])
+        self.assertEqual((len(buf), px(buf, 5 * w + 10), buf[w * h * 2 + 5 * w + 10]), (w * h * 3, 0xF800, 255))
+        view = None
+        buf.close()
+        self.assertEqual(len(buf), 0)
+        with self.assertRaises(ValueError):
+            svgio.Buffer(0)
+        self.d.close()
+        with self.assertRaises(RuntimeError):
+            self.d.decode(bytearray(w * h * 2))
+
+    def test_errors(self):
+        import svgio
+
+        with self.assertRaises(RuntimeError):
+            svgio.SvgDecoder().decode(bytearray(4))
+        w, h = self.d.open(ICON)
+        with self.assertRaises(ValueError):
+            self.d.decode(None)
+        with self.assertRaises(ValueError):
+            self.d.decode(bytearray(10))
+
+
+class WithoutResvg(unittest.TestCase):
+    def test_the_message_says_how_to_install_it(self):
+        saved = {k: sys.modules.pop(k) for k in list(sys.modules) if k in ("svgio", "_svgio_resvg", "resvg_py")}
+        sys.modules["resvg_py"] = None  # import resvg_py now raises ImportError
+        try:
+            with self.assertRaises(ImportError) as cm:
+                importlib.import_module("svgio")
+            self.assertIn("pip install resvg-py pillow", str(cm.exception))
+        finally:
+            sys.modules.pop("resvg_py", None)
+            sys.modules.pop("svgio", None)
+            sys.modules.pop("_svgio_resvg", None)
+            sys.modules.update(saved)
+
+
+if __name__ == "__main__":
+    unittest.main()

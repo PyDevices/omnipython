@@ -23,7 +23,7 @@ way they did in the LVGL bindings before the file moved here. Four things are he
   area; the frame's last area is one present, by ``show()`` when
   ``flush_rect`` could not sync the area or ``frame_done()`` when it could.
 * **The frame period.** LVGL's refresh timer runs at the display's
-  ``refresh_period_ms``, which ``PYDEVICES_REFRESH_MS`` overrides.
+  ``refresh_period_ms``, which ``OMNIPYTHON_REFRESH_MS`` overrides.
 * **Hover.** The pointer follows the mouse with its button up too, so LVGL
   can hover (``HOVER_OVER``, ``HOVER_LEAVE``, the ``HOVERED`` state); only a
   press makes it PRESSED.
@@ -596,7 +596,7 @@ class _ColorP:
 
 
 class TestFlushAlwaysEnds(unittest.TestCase):
-    """LVGL spins until the flush is ready (micropython-pydevices#48).
+    """LVGL spins until the flush is ready (omnipython-builds#48).
 
     machine.soft_reset() raises SystemExit, and Ctrl-C KeyboardInterrupt;
     neither is an Exception, so either one raised from show() or blit_rect()
@@ -667,8 +667,8 @@ class _Display(DisplayDriver):
 
 class TestFramePeriod(unittest.TestCase):
     def _lvgl_period(self, **env):
-        boarddev._overrides.pop("PYDEVICES_REFRESH_MS", None)
-        clean = {k: v for k, v in os.environ.items() if not k.startswith("PYDEVICES_")}
+        boarddev._overrides.pop("OMNIPYTHON_REFRESH_MS", None)
+        clean = {k: v for k, v in os.environ.items() if not k.startswith("OMNIPYTHON_")}
         clean.update(env)
         with mock.patch.dict(os.environ, clean, clear=True), quiet():
             panel = _Display()
@@ -682,9 +682,9 @@ class TestFramePeriod(unittest.TestCase):
     def test_lvgl_refreshes_at_the_display_period(self):
         self.assertEqual((33, 33), self._lvgl_period())
 
-    def test_pydevices_refresh_ms_reaches_lvgl(self):
-        self.assertEqual((16, 16), self._lvgl_period(PYDEVICES_REFRESH_MS="16"))
-        self.assertEqual((50, 50), self._lvgl_period(PYDEVICES_REFRESH_MS="50"))
+    def test_omnipython_refresh_ms_reaches_lvgl(self):
+        self.assertEqual((16, 16), self._lvgl_period(OMNIPYTHON_REFRESH_MS="16"))
+        self.assertEqual((50, 50), self._lvgl_period(OMNIPYTHON_REFRESH_MS="50"))
 
     def test_a_display_without_a_period_uses_the_fallback(self):
         cls = _display_driver_class()
@@ -717,7 +717,7 @@ class PointerHoverTest(unittest.TestCase):
 
         lv = types.SimpleNamespace(point_t=_Point,
                                    INDEV_STATE=types.SimpleNamespace(PRESSED="pressed", RELEASED="released"))
-        ns = {"lv": lv, "events": events}
+        ns = {"lv": lv, "events": events, "_PARKED": (-1, -1)}
         for name in ("_touch_state_for", "_make_touch_cb"):
             exec(compile(_function_source(name), str(DISPLAY_DRIVER), "exec"), ns)
         self.events = events
@@ -784,6 +784,42 @@ class PointerHoverTest(unittest.TestCase):
         self.read(e.Button(e.MOUSEBUTTONDOWN, (10, 10), 1, False, None))
         self.assertEqual(self.read(self.motion((15, 12), (1, 0, 0))), ((15, 12), "pressed"))
         self.assertEqual(self.read(e.Button(e.MOUSEBUTTONUP, (16, 12), 1, False, None)), ((16, 12), "released"))
+    def touch_lift(self, touch=True):
+        e = self.events
+        self.read(e.Button(e.MOUSEBUTTONDOWN, (10, 10), 1, touch, None))
+        return self.read(e.Button(e.MOUSEBUTTONUP, (10, 10), 1, touch, None))
+
+    def test_a_lifted_finger_leaves_the_pointer_off_every_widget(self):
+        # The lift itself still reports the touched point, so the click lands.
+        # Then the pointer steps one pixel (so LVGL notes what it hovers) and
+        # is parked, which ends the hover.
+        self.assertEqual(self.touch_lift(), ((10, 10), "released"))
+        self.assertEqual(self.read(None), ((10, 10), "released"))
+        self.assertEqual(self.read(None), ((11, 10), "released"))
+        self.assertEqual(self.read(None), ((-1, -1), "released"))
+        self.assertEqual(self.read(None), ((-1, -1), "released"))
+
+    def test_a_touch_screen_with_no_flag_is_parked_too(self):
+        # A pointer that has never moved with the button up is a touch screen.
+        self.touch_lift(touch=False)
+        for _ in range(2):
+            self.read(None)
+        self.assertEqual(self.read(None), ((-1, -1), "released"))
+
+    def test_a_mouse_stays_where_it_clicked(self):
+        e = self.events
+        self.read(self.motion((10, 10)))
+        self.read(e.Button(e.MOUSEBUTTONDOWN, (10, 10), 1, False, None))
+        self.read(e.Button(e.MOUSEBUTTONUP, (10, 10), 1, False, None))
+        self.read(None)
+        self.assertEqual(self.read(None), ((10, 10), "released"))
+
+    def test_a_new_press_cancels_the_park(self):
+        e = self.events
+        self.touch_lift()
+        self.read(e.Button(e.MOUSEBUTTONDOWN, (50, 60), 1, True, None))
+        self.assertEqual(self.read(None), ((50, 60), "pressed"))
+
 
 if __name__ == "__main__":
     unittest.main()

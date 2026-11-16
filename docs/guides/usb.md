@@ -6,23 +6,25 @@ directory each, installed with `omip`:
 
 | Package | Import | What it gives you |
 |---|---|---|
-| [`usb-core`](https://github.com/PyDevices/pydevices/tree/main/packages/usb/usb-core) | `usb.core`, `usb.util`, `usb_host` | Talk to USB devices from the board's host port, in PyUSB's and CircuitPython's shape |
-| [`usb-host-msc`](https://github.com/PyDevices/pydevices/tree/main/packages/usb/usb-host-msc) | `usb.host.msc` | Mount a flash drive |
-| [`usb-host-hid`](https://github.com/PyDevices/pydevices/tree/main/packages/usb/usb-host-hid) | `usb.host.hid` | Read a keyboard or mouse: keys, buttons and movement named the way `adafruit_hid` names them |
-| [`usb-host-cdc`](https://github.com/PyDevices/pydevices/tree/main/packages/usb/usb-host-cdc) | `usb.host.cdc` | A USB serial device |
-| [`usb-host-audio`](https://github.com/PyDevices/pydevices/tree/main/packages/usb/usb-host-audio) | `usb.host.audio` | Play to a USB speaker, record from a USB microphone |
-| [`usb-host-video`](https://github.com/PyDevices/pydevices/tree/main/packages/usb/usb-host-video) | `usb.host.video` | Frames from a USB webcam |
-| [`usb-host-mtp`](https://github.com/PyDevices/pydevices/tree/main/packages/usb/usb-host-mtp) | `usb.host.mtp` | Photos and files off a phone or a camera, over MTP |
-| [`usb-host-net`](https://github.com/PyDevices/pydevices/tree/main/packages/usb/usb-host-net) | `usb.host.net` | The internet through a phone's USB tethering |
-| [`usb-device-audio`](https://github.com/PyDevices/pydevices/tree/main/packages/usb/usb-device-audio) | `usb.device.audio` | The board as a USB sound card |
-| [`usb-device-video`](https://github.com/PyDevices/pydevices/tree/main/packages/usb/usb-device-video) | `usb.device.video` | The board as a USB webcam, YUY2 or MJPEG |
-| [`usb-device-msc`](https://github.com/PyDevices/pydevices/tree/main/packages/usb/usb-device-msc) | `usb.device.msc` | The board as a USB drive, from any block device |
-| [`usb-hid`](https://github.com/PyDevices/pydevices/tree/main/packages/usb/usb-hid) | `usb_hid` | CircuitPython's `usb_hid`, so `adafruit_hid` types and moves the mouse |
+| [`usb-core`](https://github.com/PyDevices/omnipython/tree/main/packages/usb/usb-core) | `usb.core`, `usb.util`, `usb_host` | Talk to USB devices from the board's host port, in PyUSB's and CircuitPython's shape |
+| [`usb-host-msc`](https://github.com/PyDevices/omnipython/tree/main/packages/usb/usb-host-msc) | `usb.host.msc` | Mount a flash drive |
+| [`usb-host-hid`](https://github.com/PyDevices/omnipython/tree/main/packages/usb/usb-host-hid) | `usb.host.hid` | Read a keyboard or mouse: keys, buttons and movement named the way `adafruit_hid` names them. `usb.host.hid_generic` reads a gamepad or joystick |
+| [`usb-host-cdc`](https://github.com/PyDevices/omnipython/tree/main/packages/usb/usb-host-cdc) | `usb.host.cdc` | A USB serial device: a CDC-ACM port, or a CH340, CP210x, FTDI or PL2303 adapter |
+| [`usb-host-audio`](https://github.com/PyDevices/omnipython/tree/main/packages/usb/usb-host-audio) | `usb.host.audio` | Play to a USB speaker, record from a USB microphone |
+| [`usb-host-video`](https://github.com/PyDevices/omnipython/tree/main/packages/usb/usb-host-video) | `usb.host.video` | Frames from a USB webcam |
+| [`usb-host-mtp`](https://github.com/PyDevices/omnipython/tree/main/packages/usb/usb-host-mtp) | `usb.host.mtp` | Photos and files off a phone or a camera, over MTP |
+| [`usb-host-dfu`](https://github.com/PyDevices/omnipython/tree/main/packages/usb/usb-host-dfu) | `usb.host.dfu` | Read the flash of a board sitting in its DFU bootloader |
+| [`usb-host-net`](https://github.com/PyDevices/omnipython/tree/main/packages/usb/usb-host-net) | `usb.host.net` | The internet through a phone's USB tethering |
+| [`usb-device-audio`](https://github.com/PyDevices/omnipython/tree/main/packages/usb/usb-device-audio) | `usb.device.audio` | The board as a USB sound card, a microphone, or both as a headset |
+| [`usb-device-video`](https://github.com/PyDevices/omnipython/tree/main/packages/usb/usb-device-video) | `usb.device.video` | The board as a USB webcam, YUY2 or MJPEG |
+| [`usb-device-msc`](https://github.com/PyDevices/omnipython/tree/main/packages/usb/usb-device-msc) | `usb.device.msc` | The board as a USB drive, from any block device |
+| [`usb-device-net`](https://github.com/PyDevices/omnipython/tree/main/packages/usb/usb-device-net) | `usb.device.net` | A network link to the computer over the cable, with no Wi-Fi |
+| [`usb-hid`](https://github.com/PyDevices/omnipython/tree/main/packages/usb/usb-hid) | `usb_hid` | CircuitPython's `usb_hid`, so `adafruit_hid` types and moves the mouse |
 
-MIDI is [`midiports`](https://github.com/PyDevices/pydevices/blob/main/packages/midiports/README.md): `midiports.usb_device` and
+MIDI is [`midiports`](https://github.com/PyDevices/omnipython/blob/main/packages/midiports/README.md): `midiports.usb_device` and
 `midiports.usb_host`. It installs by name the same way.
 
-Each package is in the PyDevices index under the name in the table, and one
+Each package is in the OmniPython index under the name in the table, and one
 install brings what it builds on with it, including `usb-device` from
 micropython-lib for the device packages:
 
@@ -36,17 +38,22 @@ A board config or your own `manifest.py` can `require("usb-core")` by the same
 names. To install whatever is on `main`, fetch the directory from GitHub instead:
 
 ```python
-omip.install("github:PyDevices/pydevices/packages/usb/usb-host-msc")
+omip.install("github:PyDevices/omnipython/packages/usb/usb-host-msc")
 ```
 
 ## What your firmware needs
 
-The host packages run on a PyDevices MicroPython firmware built with
-`usbhost`, the C module under `usb.core`, on an ESP32-S2, S3 or P4. The
-device packages run on MicroPython's own `machine.USBDevice`; audio and video
-also need the PyDevices overlay's streaming endpoints (`USBDevice.Ring`,
+The host packages run on a OmniPython firmware built with
+`usbhost`, the C module under `usb.core`, on an ESP32-S2, S3 or P4, or on
+the Arduino GIGA R1 Display Shield's USB-A port, where it runs on TinyUSB's
+host with no isochronous transfers: a drive, keyboard or MIDI controller works
+there, and audio, video and tethering don't. The device packages run on MicroPython's own `machine.USBDevice`; audio and video
+also need the OmniPython overlay's streaming endpoints (`USBDevice.Ring`,
 `USBDevice.stream()`), which move their packets in C from the USB interrupt.
-Both come with micropython-pydevices' `build_mp.py`.
+Both come with omnipython-builds' `build_mp.py`.
+
+Which classes each package drives, which boards run them and what a board
+can't do are in two tables: [USB support](../reference/usb-support.md), one section for the host and one for the device.
 
 ## The board as a USB device
 
@@ -59,14 +66,87 @@ usb.device.get().init(spk, builtin_driver=True)  # the REPL stays on the cable
 ```
 
 `init()` re-enumerates the board, because a USB device can't change what it
-is in place. Put several interfaces in one `init()` to present them together.
+is in place. Pass `product_str=boarddev.name()` and the computer lists the
+board under [its name](board-name.md); `usb_hid.enable()` and
+`midiports.usb_device.ports()` do that for you. Put several interfaces in one `init()` to present them together.
 A controller has a fixed number of endpoints (the ESP32-S3 drives IN
-endpoints 1 to 4), and `machine.USBDevice` refuses a set that doesn't fit
-with a `ValueError` naming the endpoint.
+endpoints 1 to 4, and the REPL's serial port takes two), and `init()` refuses
+a set that doesn't fit before anything changes:
+
+```text
+ValueError: 2 IN endpoints left (4 on this chip, the REPL's serial port takes 2): NCMInterface needs 2, MIDIInterface needs 1
+```
+
+`builtin_driver=False` leaves out the REPL's serial port for that set, which
+frees its two endpoints. The REPL stays on the UART and WebREPL, and the next
+reset brings the serial port back.
+
+`usb-hid` also has a gamepad and a pointer that says where it is, as a touch
+screen does, in the shape of CircuitPython's custom `usb_hid.Device`s:
+
+```python
+import struct
+import usb_hid
+from usb_hid import Device
+
+usb_hid.enable((Device.GAMEPAD, Device.ABSOLUTE_POINTER))
+# Buttons 1 and 3, the hat pointing east, X at full left.
+Device.GAMEPAD.send_report(struct.pack("<HBbbbb", 0b101, 3, -127, 0, 0, 0))
+# X and Y run 0 to 32767 across the screen; this is the middle.
+Device.ABSOLUTE_POINTER.send_report(struct.pack("<BHH", 0, 16384, 16384))
+```
+
+[`usb_hid_gamepad.py`](https://github.com/PyDevices/omnipython/blob/main/examples/usb_hid_gamepad.py)
+and
+[`usb_hid_absolute_pointer.py`](https://github.com/PyDevices/omnipython/blob/main/examples/usb_hid_absolute_pointer.py)
+run each through its controls. Windows ignores a pointer report that is all
+zeros, so ask for 1, 1 where you mean the top-left corner.
+
+`usb-device-net` gives the computer a network link to the board over the
+cable. The board runs a DHCP server on the link, so the computer gets an
+address by itself, and sockets, WebREPL and web servers on the board work over
+it as over Wi-Fi:
+
+```python
+import usb.device
+from usb.device.net import NCMInterface
+
+net = NCMInterface()
+usb.device.get().init(net, builtin_driver=True)
+print(net.nic.ipconfig("addr4"))  # the board's address on the link
+```
+
+[`usb_device_net_simpletest.py`](https://github.com/PyDevices/omnipython/blob/main/examples/usb_device_net_simpletest.py)
+serves a web page over it. To send more than a page, use asyncio or
+non-blocking sockets with `select`: USB is serviced between Python steps, and a
+blocking `send` holds it up. On an ESP32-P4, 200 KB took about 30 seconds
+through a blocking socket and 2 seconds through a non-blocking one.
 
 `usb-device-msc` serves a RAM disk, an SD card or a flash partition: anything
 with `readblocks`, `writeblocks` and `ioctl`. When the computer ejects it,
 the board can mount it again.
+
+A microphone is the same stream the other way round. Write 16-bit stereo
+frames into `mic.mic`, a ring, at the sample rate, and the computer records
+them. A headset is both in one device, and `ring` and `mic` are the two
+directions:
+
+```python
+from usb.device.audio import HeadsetInterface, MicrophoneInterface
+
+mic = MicrophoneInterface()      # the computer records from the board
+headset = HeadsetInterface()     # it plays to the board and records from it
+```
+
+[`usb_device_audio_simpletest.py`](https://github.com/PyDevices/omnipython/blob/main/examples/usb_device_audio_simpletest.py)
+sends a tone, and
+[`usb_device_audio_headset.py`](https://github.com/PyDevices/omnipython/blob/main/examples/usb_device_audio_headset.py)
+plays back whatever the computer plays. The microphone sends one millisecond of
+sound a frame, so keep its ring a few milliseconds ahead and don't let a
+garbage collection stall the loop that feeds it: on a board with a big heap one
+takes about 20 ms. A speaker or a microphone takes one IN endpoint number and a
+headset takes two. The ESP32-S3 and the ESP32-P4 at full speed have IN
+endpoints 1 to 4 and the REPL takes two, so a headset fills what's left.
 
 The sound card sizes its packets from the link's speed: 196 bytes a
 millisecond at full speed, 28 bytes every 125 us at high speed. A board can't
@@ -78,6 +158,14 @@ link, say so and skip that step: `SpeakerInterface(high_speed=False)`.
 
 The sound card wants TinyUSB 0.19 or later, which re-arms its endpoint in the
 USB interrupt. The ESP32-P4, S3 and S2 builds all carry 0.21.
+
+On an ESP32-P4 at high speed, writing to the board's own flash while the sound
+card plays costs about 80 ms of audio per 8 KB written: an erase keeps the
+cache off for about 35 ms a sector, and the USB interrupt can't run until it
+ends ([#451](https://github.com/PyDevices/omnipython-builds/issues/451)).
+The ESP32-P4X-EYE's image lets the flash controller pause an erase when the
+CPU reads flash, and it loses nothing. On the other P4 boards, keep what you
+record in RAM and write it out after the stream stops.
 
 ## The board as a USB host
 
@@ -114,8 +202,27 @@ net.active(True)        # the phone gives the board an address by DHCP
 Sockets, `requests` and `mip` then work over it, on an ESP32-P4 (directly or
 through a high-speed hub) or on an ESP32-S3, whose host port is full speed.
 It speaks RNDIS, which Samsung and
-many other Android phones use; CDC-ECM, CDC-NCM and iPhone tethering are not
-implemented.
+many other Android phones use, and CDC-ECM, which a USB Ethernet adapter or a board
+presenting one uses: `Tether.match` takes either, and `net.kind` says which it found.
+CDC-NCM and iPhone tethering are not implemented, nor are the adapters whose chips
+need a driver of their own.
+
+A USB-serial adapter reads and writes the same way whatever chip is inside it. `Serial` takes
+a CDC-ACM port, a microcontroller's own console say, or a CH340/CH341, CP210x, FTDI or PL2303
+adapter, and asks the chip for the baud rate and for DTR and RTS in the way that chip understands:
+
+```python
+import usb.core
+from usb.host.cdc import Serial
+
+port = Serial(usb.core.find(custom_match=Serial.match), baudrate=115200)
+print(port.chip)                     # "CH34x", "CP210x", "FT232R", "CDC-ACM", ...
+port.write(b"hello\r\n")
+print(port.read(64))
+```
+
+`Serial.match` doesn't take a CDC-ECM or NCM network device, which has the same class as a serial
+port but no serial requests.
 
 A keyboard or mouse plugged into the host port comes back as events, with
 the key and button names `adafruit_hid` uses, so code that reads a keyboard
@@ -164,8 +271,60 @@ media-key array or one bit per key) and raises a `ValueError` for a device
 whose descriptor it can't, such as a keyboard that reports a bit per key; use
 boot protocol for that one.
 
+A gamepad or joystick comes back as events too, whatever its report layout, because
+`usb.host.hid_generic` reads the buttons, axes and hats from the device's own report
+descriptor:
+
+```python
+import usb.core
+from usb.host.hid_generic import Gamepad, BUTTON_DOWN, AXIS, HAT, Axis
+
+pad = Gamepad(usb.core.find(custom_match=Gamepad.match))
+while True:
+    ev = pad.read(50)                       # None if nothing happened
+    if ev and ev[0] == BUTTON_DOWN:
+        print("button", ev[1])
+    elif ev and ev[0] == AXIS and ev[1] == Axis.X:
+        print("left stick", pad.scaled(Axis.X))     # -1.0 to 1.0
+    elif ev and ev[0] == HAT:
+        print("hat", ev[2])                         # 0 up, clockwise, -1 centred
+```
+
+The first report gives an event for every axis and hat, so a program learns where each rests.
+It doesn't read a D-pad reported as four buttons, an array of buttons or a vendor-defined
+field, and a controller that needs a start-up message before it sends full reports (a
+DualShock 4, a Switch Pro controller) doesn't work.
+
+This decoder is tested against report descriptors, with the events worked out by hand. It
+hasn't run against a real gamepad on a host board yet.
+
 Up to 0.7.6, `read()` returned the report's raw bytes. It no longer
 does; the CHANGELOG has the details.
+
+A microcontroller sitting in its DFU bootloader (an Arduino GIGA after a double tap of reset, an STM32 held
+in its system bootloader) can be read the same way, a block at a time. Each alternate setting is one memory, and
+for an STM32 the address is a flash address:
+
+```python
+import hashlib
+import usb.core
+from usb.host.dfu import Dfu
+
+dfu = Dfu(usb.core.find(custom_match=Dfu.match))
+print(dfu.alternates())                         # [(0, "Internal Flash"), (1, "External Flash"), ...]
+digest = hashlib.sha256()
+for chunk in dfu.chunks(0x08000000, 0x1000):    # a multiple of dfu.transfer_size from the start
+    digest.update(chunk)
+print(digest.hexdigest())
+```
+
+`usb.host.dfu` only reads. It sends no download or erase and doesn't tell the bootloader to leave, so the
+board stays in its bootloader, and unchanged, until it's reset.
+
+A bootloader reads from its own address pointer, and only a download can move
+it. An STM32's ROM bootloader starts at the memory's first address. An Arduino
+GIGA's starts at its firmware, 0x08040000, so on a GIGA the read above returns
+the first bytes of firmware0.
 
 A USB speaker or microphone can also stand in for a board's own codec, as an
 audiodev output or input, so code written for `audio_out` and `pcm_in` runs
@@ -186,7 +345,15 @@ n = mic.readinto(buf)         # what has arrived, in whole frames; 0 if nothing 
 `pcm_out()` and `pcm_in()` start the host for audio if it isn't running, wait
 up to three seconds for a device, and take an `audiodev.AudioFormat` to
 choose the stream (the device's best offer if you leave it out). Volume and
-gain are in software. They need audiodev, which PyDevices firmware carries.
+gain are in software. They need audiodev, which OmniPython firmware carries.
+
+`audio_out()` keeps 80 ms of sound queued, so a note sounds soon after it's
+struck. Nothing is rendered while the interpreter collects garbage, though,
+and on a board with an 8 MB PSRAM heap a collection takes 260 to 300 ms, so
+the speaker goes quiet through each one. If your program draws a busy screen
+or makes a lot of garbage, and a moment's delay doesn't matter, as with music
+behind an animation, ask for `audio_out(latency="buffered")`: it keeps 300 ms
+queued, which carries the speaker through a collection.
 
 If you feed a hosted speaker from the interpreter while it also draws or
 talks to the network, open it with `Speaker(dev, ring_ms=2000)` and write
@@ -204,10 +371,62 @@ and says so. Stopping and starting at the same speed is fine.
 
 Keyboards and MIDI controllers behind a hub on the ESP32-P4, the DEV-KIT's
 hub, the host's limits, and why its events are drained rather than called back
-are on the host's own page, in micropython-pydevices'
+are on the host's own page, in omnipython-builds'
 `modules/usbhost/docs/host.md`.
+
+### Make it the board's audio
+
+A store-bought USB sound card, such as a USB-C headphone dongle, USB speakers
+or a headset, can be the board's audio for every app at once. Replace the
+board's audio roles in `main.py`, before the app is imported:
+
+```python
+import board_peripherals
+import boarddev
+from usb.host import audio
+
+boarddev.replace_role(board_peripherals, "audio_out", audio.audio_out)
+boarddev.replace_role(board_peripherals, "pcm_out", audio.pcm_out)
+boarddev.replace_role(board_peripherals, "pcm_in", audio.pcm_in)
+
+import my_app
+```
+
+An app that calls `board_peripherals.audio_out()` when it plays now gets the
+sound card. [Replacing a role at run time](../boards/board-contract.md#replacing-a-role-at-run-time)
+says why that works, what an app must not do, and what happens to the board's
+`AUDIO_OUT` capability. [`usb_host_audio_main.py`](https://github.com/PyDevices/omnipython/blob/main/examples/usb_host_audio_main.py)
+is a `main.py` that does this and plays three notes before starting your app.
+
+Things to know before you buy or plug in:
+
+- The ESP32-S2 and S3 host at full speed only, so a USB Audio 2.0 device that
+  works only at high speed won't play there. Most dongles are USB Audio 1.0 at
+  full speed. The ESP32-P4's port takes either speed.
+- Leave `format` out. The output takes the sound card's own rate and doesn't
+  resample, so an app that asks for 44100 Hz fails on a card that offers only
+  48000. Read `out.format` to see what it took.
+- The host port has to supply 5 V to the sound card.
+- Volume is in software: the output scales the samples before they're sent.
+- A headset's buttons are a HID interface beside its audio. The host's
+  channels are few on the S3, so starting the host for `hid` as well costs one
+  of them; the host's page has the budget.
+- On a board whose only USB port carries the REPL, the host takes that port.
+  Reach the board over its UART or WebREPL instead.
+- On a board with its own codec, the sound card replaces it for every app that
+  goes through the roles.
+- `pcm_in` replaces the board's microphone the same way, from the sound
+  card's microphone.
+
+This covers MicroPython. CircuitPython's USB host isn't covered here.
 
 ## Examples
 
 One script per use, device and host, beside the C module in
-micropython-pydevices' `modules/usbhost/examples/`.
+omnipython-builds' `modules/usbhost/examples/`.
+
+The smallest program for each device package is in
+[`examples/`](https://github.com/PyDevices/omnipython/tree/main/examples):
+`usb_device_cdc_simpletest.py`, `usb_device_midi_simpletest.py`,
+`usb_device_net_simpletest.py`, `usb_device_audio_simpletest.py` and
+`usb_device_video_simpletest.py`.

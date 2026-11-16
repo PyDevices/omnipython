@@ -18,10 +18,8 @@ Generate glyph modules with Russ Hughes's
 ``OFFSET_WIDTH``, ``BITMAPS``). Example output lives in gallery's
 ``src/examples/chango/`` (``chango_16.py``, etc.).
 
-See also gallery docs:
-
-- `Drawing and fonts <https://pydevices.github.io/gallery/concepts/drawing-and-fonts/>`_
-- `TFT GUI / font tools <https://pydevices.github.io/gallery/guis/tft-gui/>`_
+See also the pdwidgets docs:
+`pdwidgets <https://docs.omnipython.org/en/latest/pdwidgets/>`_
 
 History
 -------

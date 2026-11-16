@@ -27,6 +27,7 @@ from audiodev import (
     PCMOutput,
     ToneOutput,
     adapt_channels,
+    adapt_input_channels,
     pace_output,
 )
 from audiodev.i2s_audio import I2SPCMInput, I2SPCMOutput  # noqa: E402
@@ -601,7 +602,7 @@ class AudioOutTests(unittest.TestCase):
             "pump stopped feeding a still-priming transport (deadlock)")
 
     def test_a_wrapper_that_forwards_the_interface_does_not_deadlock(self):
-        # pydevices#54. Put anything between AudioOut and a queued transport
+        # omnipython#54. Put anything between AudioOut and a queued transport
         # -- a tee, a logger, a volume shim -- and the audio used to stop
         # after about a tenth of a second, with no exception and no message,
         # because the backpressure cap read the priming threshold off a
@@ -663,7 +664,7 @@ class AudioOutTests(unittest.TestCase):
                          "it should not have needed the stall guard")
 
     def test_a_transport_that_stops_consuming_is_pushed_past_the_cap(self):
-        # The other half of pydevices#54, and the more valuable one: a cap is
+        # The other half of omnipython#54, and the more valuable one: a cap is
         # a latency guard, not a fact about the device. A wrapper that cannot
         # say what it needs to prime -- every wrapper written before
         # `prebuffer_bytes` existed -- still caps below the threshold and
@@ -755,7 +756,7 @@ class AudioOutTests(unittest.TestCase):
                          "the pump pulled against a draining backlog")
 
     def test_a_stall_keeps_a_lookahead_above_the_catchup_limit(self):
-        # pydevices#394: the catch-up limit counts from the lookahead, so a
+        # omnipython#394: the catch-up limit counts from the lookahead, so a
         # lookahead larger than `max_catchup_chunks` survives a stall. The
         # device here plays its queue in real time, so what it holds after
         # each tick is the latency the pump really keeps.
@@ -785,7 +786,7 @@ class AudioOutTests(unittest.TestCase):
     def test_channel_adapter_forwards_the_priming_threshold(self):
         # `ChannelAdapter` is not hypothetical: this repository ships it and
         # calls it "the producer-facing PCMOutput". It is what a mono graph
-        # on a stereo device gets, and before pydevices#54 it answered 0.
+        # on a stereo device gets, and before omnipython#54 it answered 0.
         stereo = AudioFormat(rate=48000, channels=2, bits=16)
         mono = AudioFormat(rate=48000, channels=1, bits=16)
 
@@ -905,6 +906,66 @@ class ChannelAdapterTests(unittest.TestCase):
         # 4 source bytes remix to 2 dest; inner takes both dest bytes.
         self.assertEqual(4, pcm.try_write(bytes((100, 0, 50, 0))))
         self.assertEqual(2, len(inner.data))
+
+
+class InputChannelAdapterTests(unittest.TestCase):
+    @staticmethod
+    def s16(*values):
+        return b"".join(int(v).to_bytes(2, "little", signed=True) for v in values)
+
+    def test_identity_when_channels_match(self):
+        fmt = AudioFormat(16000, 2, 16)
+        pcm = FakePCMInput(fmt, b"")
+        self.assertIs(pcm, adapt_input_channels(pcm, fmt))
+
+    def test_stereo_capture_averages_to_mono(self):
+        inner = FakePCMInput(AudioFormat(16000, 2, 16), self.s16(100, 50, -3, 0))
+        pcm = adapt_input_channels(inner, AudioFormat(16000, 1, 16))
+        buf = bytearray(4)
+        self.assertEqual(4, pcm.readinto(buf))
+        # -3 and 0 truncate toward zero, as the C remix does.
+        self.assertEqual(self.s16(75, -1), bytes(buf))
+        self.assertTrue(inner.is_open)
+
+    def test_mono_capture_copies_to_stereo(self):
+        inner = FakePCMInput(AudioFormat(16000, 1, 16), self.s16(7, -8))
+        pcm = adapt_input_channels(inner, AudioFormat(16000, 2, 16))
+        buf = bytearray(8)
+        self.assertEqual(8, pcm.readinto(buf))
+        self.assertEqual(self.s16(7, 7, -8, -8), bytes(buf))
+
+    def test_short_read_counts_whole_frames(self):
+        inner = FakePCMInput(AudioFormat(16000, 2, 16), self.s16(10, 20))
+        pcm = adapt_input_channels(inner, AudioFormat(16000, 1, 16))
+        buf = bytearray(8)
+        self.assertEqual(2, pcm.readinto(buf))
+        self.assertEqual(self.s16(15), bytes(buf[:2]))
+
+    def test_gain_and_mute_are_the_inner_devices(self):
+        inner = FakePCMInput(AudioFormat(16000, 2, 16), self.s16(1000, 1000))
+        pcm = adapt_input_channels(inner, AudioFormat(16000, 1, 16))
+        pcm.set_gain(50)
+        self.assertEqual(50, inner.gain)
+        buf = bytearray(2)
+        pcm.readinto(buf)
+        self.assertEqual(self.s16(500), bytes(buf))  # scaled once, by the inner device
+        pcm.mute()
+        self.assertTrue(inner.muted)
+
+    def test_async_capture(self):
+        async def run():
+            inner = FakePCMInput(AudioFormat(16000, 2, 16), self.s16(4, 2))
+            pcm = adapt_input_channels(inner, AudioFormat(16000, 1, 16))
+            buf = bytearray(2)
+            self.assertEqual(2, await pcm.areadinto(buf))
+            self.assertEqual(self.s16(3), bytes(buf))
+
+        asyncio.run(run())
+
+    def test_refuses_another_rate(self):
+        inner = FakePCMInput(AudioFormat(16000, 2, 16), b"")
+        with self.assertRaises(ValueError):
+            adapt_input_channels(inner, AudioFormat(48000, 1, 16))
 
 
 class NegotiateTests(unittest.TestCase):
@@ -1284,6 +1345,50 @@ class PaceOutputTests(unittest.TestCase):
             self.assertLessEqual(pcm._held, pcm._cap)
         finally:
             module._pace_sleep_ms = old
+
+    def test_write_returns_when_the_device_frees_room_a_few_samples_at_a_time(self):
+        # A 16 KB ring draining at 44.1 kHz stereo, where each write costs
+        # 0.5 ms of DAC time: by the next call, 0.5 ms more has played, so a
+        # full ring always takes a few bytes. Before the fix, _flush chased
+        # that trickle until the stash was empty, so every write() waited out
+        # the queue in real time and space() never fell (omnipython#464).
+        class TrickleRing(FakePCMOutput):
+            COST_BYTES = 88  # 0.5 ms at 176400 B/s, whole frames
+
+            def __init__(self, fmt):
+                super().__init__(fmt)
+                self.queued = 0
+                self.calls = 0
+
+            def _write(self, buf):
+                self.calls += 1
+                self.queued = max(0, self.queued - self.COST_BYTES)
+                take = min(len(buf), 16384 - self.queued)
+                take -= take % self.format.frame_size
+                self.queued += take
+                self.data.extend(buf[:take])
+                return take
+
+        inner = TrickleRing(AudioFormat(44100, 2, 16))
+        pcm = pace_output(inner)
+        pcm.open()
+        chunk = bytes(2048)
+        spaces = []
+        # Write the way a player loop does: only while space() has room for
+        # another chunk. space() has to fall for the loop to get a turn.
+        for _ in range(24):
+            if pcm.space() < len(chunk):
+                break
+            before = inner.calls
+            pcm.write(chunk)
+            # Each call is 0.5 ms of DAC time, so a write that waits out the
+            # stash makes dozens of them; one that returns makes a handful.
+            self.assertLessEqual(inner.calls - before, 4)
+            spaces.append(pcm.space())
+        else:
+            self.fail("space() never fell below a chunk: %r" % spaces)
+        self.assertEqual(sorted(spaces, reverse=True), spaces)
+        self.assertEqual(0, pcm.lost_bytes)
 
     def test_space_is_zero_when_stash_is_at_cap(self):
         class Closed(FakePCMOutput):

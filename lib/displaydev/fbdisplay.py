@@ -42,7 +42,15 @@ class FBDisplay(DisplayDriver):
         color_depth (int): The color depth of the display
 
     ``share_framebuffer`` and ``needs_refresh`` are properties, below.
+
+    ``can_rotate`` is False: the framebuffer is laid out at the panel's own
+    size, so `rotation` swaps `width` and `height` but every blit and fill
+    still lands in the panel's orientation. LVGL turns its frames itself
+    (``lvgl_rotation`` on the board's display), and other programs keep the
+    panel's orientation.
     """
+
+    can_rotate = False
 
     @property
     def share_framebuffer(self):

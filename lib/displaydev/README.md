@@ -2,9 +2,9 @@
 
 Cross-platform display drivers for MicroPython, CircuitPython, and CPython — `BusDisplay`, `SDLDisplay`, `PGDisplay`, `WinDisplay`, `PSDisplay`, `JNDisplay`, `FBDisplay`, and more behind one drawing API.
 
-Canonical source: [pydevices/lib/displaydev](https://github.com/PyDevices/pydevices/tree/main/lib/displaydev).
+Canonical source: [omnipython/lib/displaydev](https://github.com/PyDevices/omnipython/tree/main/lib/displaydev).
 
-For a complete program to start from, see [displaydev_simpletest.py](https://github.com/PyDevices/pydevices/blob/main/examples/displaydev_simpletest.py).
+For a complete program to start from, see [displaydev_simpletest.py](https://github.com/PyDevices/omnipython/blob/main/examples/displaydev_simpletest.py).
 
 ## Install
 
@@ -16,29 +16,32 @@ This package is published as a pure-Python wheel to TestPyPI.
 pip install \
   -i https://test.pypi.org/simple/ \
   --extra-index-url https://pypi.org/simple/ \
-  pydevices
+  omnipython
 ```
 
-`pydevices` is one distribution covering the whole core `lib/` tree, so this
+`omnipython` is one distribution covering the whole core `lib/` tree, so this
 also installs `events`, `keys`, `appdev`, `multimer`, `audiodev`, and
-`boarddev`. MIP ships the same set as one `pydevices` package.
+`boarddev`. MIP ships the same set as one `omnipython` package.
 
-Why both indexes: PyDevices wheels are on TestPyPI while some of their
-dependencies are on PyPI only — [details](https://github.com/PyDevices/pydevices/blob/main/docs/guides/troubleshooting.md#pip-cannot-resolve-a-pydevices-distribution).
+Why both indexes: OmniPython wheels are on TestPyPI while some of their
+dependencies are on PyPI only — [details](https://github.com/PyDevices/omnipython/blob/main/docs/guides/troubleshooting.md#pip-cannot-resolve-a-pydevices-distribution).
 
-For desktop SDL, also install [`pydevices-desktop`](https://test.pypi.org/project/pydevices-desktop/) with the same two-index pattern (bundles `usdl2` and the desktop `board_config`). For PyGame, install `pygame-ce` from PyPI (`import pygame`).
+For desktop SDL, also install [`omnipython-desktop`](https://test.pypi.org/project/omnipython-desktop/) with the same two-index pattern (bundles `usdl2` and the desktop `board_config`). For PyGame, install `pygame-ce` from PyPI (`import pygame`).
 
 ### MicroPython (MIP)
 
 ```python
-import mip
+import omip
 
-mip.install("pydevices", index="https://PyDevices.github.io/mip")
+omip.install("omnipython")
 ```
+
+`omip` comes with OmniPython firmware. On other MicroPython firmware, run
+`mip.install("github:PyDevices/omnipython/lib/omip.py")` once to put it on the board.
 
 ## Quick start
 
-Apps normally import a hardware-only `board_config` (from pydevices / `pydevices-desktop`):
+Apps normally import a hardware-only `board_config` (from OmniPython / `omnipython-desktop`):
 
 ```python
 from board_config import display_drv
@@ -51,13 +54,13 @@ display_drv.show()
 Optional host auto-selection lives in `displaydev.auto` (never imported from the
 package root); `AutoDisplay` picks `PSDisplay` on PyScript, `JNDisplay` on
 Jupyter, and `WinDisplay`→`PGDisplay`→`SDLDisplay` on desktop. Explicit boards
-import a backend directly. The choice is a lookup in the [`backends`](../backends.py) registry, which you can add to (experimental): see [Displays](../../docs/guides/displays.md#experimental-your-own-backend).
+import a backend directly. The choice is a lookup in the [`backends`](../backends.py) registry, which you can add to: see [Displays](../../docs/guides/displays.md#write-your-own-backend).
 
-Install a board package for MCU pins, or the desktop bundle from pydevices —
-see [install workflows](https://github.com/PyDevices/pydevices/blob/main/docs/get-started/install.md).
+Install a board package for MCU pins, or the desktop bundle from OmniPython —
+see [install workflows](https://github.com/PyDevices/omnipython/blob/main/docs/get-started/install.md).
 
 **Backends, the input contract, rotation, scrolling, and the internals are in
-[docs/guides/displays.md](https://github.com/PyDevices/pydevices/blob/main/docs/guides/displays.md).**
+[docs/guides/displays.md](https://github.com/PyDevices/omnipython/blob/main/docs/guides/displays.md).**
 
 ## What you get
 
@@ -67,15 +70,15 @@ see [install workflows](https://github.com/PyDevices/pydevices/blob/main/docs/ge
 
 Host backends use `events` and `keys` for event records and key codes, and
 `appdev` when the application chooses that coordinator. All three arrive with
-`pydevices` on pip; on MIP install them by name.
+`omnipython` on pip; on MIP install them by name.
 
 ## Links
 
-- [Documentation — Displays](https://github.com/PyDevices/pydevices/blob/main/docs/guides/displays.md)
-- [Source](https://github.com/PyDevices/pydevices/tree/main/lib/displaydev)
-- [Issues](https://github.com/PyDevices/pydevices/issues)
-- Related: `pydevices-pygraphics`, `pydevices-desktop`
+- [Documentation — Displays](https://github.com/PyDevices/omnipython/blob/main/docs/guides/displays.md)
+- [Source](https://github.com/PyDevices/omnipython/tree/main/lib/displaydev)
+- [Issues](https://github.com/PyDevices/omnipython/issues)
+- Related: `omnipython-pygraphics`, `omnipython-desktop`
 
 ## License
 
-MIT — see [LICENSE](https://github.com/PyDevices/pydevices/blob/main/LICENSE).
+MIT — see [LICENSE](https://github.com/PyDevices/omnipython/blob/main/LICENSE).

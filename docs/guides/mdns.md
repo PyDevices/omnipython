@@ -26,10 +26,10 @@ It's CircuitPython's `mdns` module, and the same code runs everywhere:
 | Where | Where `mdns` comes from |
 |---|---|
 | CircuitPython | Built in. |
-| MicroPython | Built into firmware from [micropython-pydevices](https://github.com/PyDevices/micropython-pydevices/tree/main/modules/mdns), on esp32, rp2 boards with Wi-Fi, unix and Windows. |
-| CPython | `mdns.py` in `pydevices-desktop`, over [python-zeroconf](https://pypi.org/project/zeroconf/), which installs with it. |
+| MicroPython | Built into firmware from [omnipython-builds](https://github.com/PyDevices/omnipython-builds/tree/main/modules/mdns), on esp32, rp2 boards with Wi-Fi, unix and Windows. |
+| CPython | `mdns.py` in `omnipython-desktop`, over [python-zeroconf](https://pypi.org/project/zeroconf/), which installs with it. |
 
-On CPython, install `pydevices-desktop` ([Install](../get-started/install.md#desktop-with-pip)).
+On CPython, install `omnipython-desktop` ([Install](../get-started/install.md#desktop-with-pip)).
 If zeroconf is missing, `import mdns` says how to install it.
 
 ## Finding services
@@ -75,11 +75,11 @@ you're done.
 than one network can name the one to use by its address:
 `mdns.Server("192.168.1.20")`.
 
-## Changes from pydevices 0.7.4
+## Changes from OmniPython 0.7.4
 
-0.7.4 had a pure-Python `mdns.py` in the `pydevices` package that could find
+0.7.4 had a pure-Python `mdns.py` in the `omnipython` package that could find
 services but not advertise them. It's gone: on MicroPython, `mdns` comes
-with the firmware, and on CPython from `pydevices-desktop`. Code written for
+with the firmware, and on CPython from `omnipython-desktop`. Code written for
 it needs these changes:
 
 - `find()` takes keywords: `find(service_type="_http", protocol="_tcp")`.

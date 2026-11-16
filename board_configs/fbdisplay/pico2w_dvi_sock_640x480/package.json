@@ -2,16 +2,16 @@
   "urls": [
     [
       "board_config.py",
-      "github:PyDevices/pydevices/board_configs/fbdisplay/pico2w_dvi_sock_640x480/board_config.py"
+      "github:PyDevices/omnipython/board_configs/fbdisplay/pico2w_dvi_sock_640x480/board_config.py"
     ],
     [
       "board_peripherals.py",
-      "github:PyDevices/pydevices/board_configs/fbdisplay/pico2w_dvi_sock_640x480/board_peripherals.py"
+      "github:PyDevices/omnipython/board_configs/fbdisplay/pico2w_dvi_sock_640x480/board_peripherals.py"
     ]
   ],
   "deps": [
     [
-      "pydevices",
+      "omnipython",
       "latest"
     ]
   ],

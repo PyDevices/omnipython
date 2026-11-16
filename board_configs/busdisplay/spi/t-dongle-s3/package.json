@@ -2,24 +2,24 @@
   "urls": [
     [
       "board_config.py",
-      "github:PyDevices/pydevices/board_configs/busdisplay/spi/t-dongle-s3/board_config.py"
+      "github:PyDevices/omnipython/board_configs/busdisplay/spi/t-dongle-s3/board_config.py"
     ],
     [
       "board_peripherals.py",
-      "github:PyDevices/pydevices/board_configs/busdisplay/spi/t-dongle-s3/board_peripherals.py"
+      "github:PyDevices/omnipython/board_configs/busdisplay/spi/t-dongle-s3/board_peripherals.py"
     ],
     [
       "st7735.py",
-      "github:PyDevices/pydevices/drivers/display/st7735.py"
+      "github:PyDevices/omnipython/drivers/display/st7735.py"
     ],
     [
       "dotstar.py",
-      "github:PyDevices/pydevices/drivers/led/dotstar.py"
+      "github:PyDevices/omnipython/drivers/led/dotstar.py"
     ]
   ],
   "deps": [
     [
-      "pydevices",
+      "omnipython",
       "latest"
     ]
   ],

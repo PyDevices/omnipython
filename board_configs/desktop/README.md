@@ -24,8 +24,8 @@ Run from the directory that should own `./lib`:
 ```bash
 # Shared with CircuitPython (source .py)
 micropython -m mip install --no-mpy -t lib \
-  -i https://PyDevices.github.io/mip \
-  github:PyDevices/pydevices/board_configs/desktop
+  -i https://lib.omnipython.org \
+  github:PyDevices/omnipython/board_configs/desktop
 
 # MicroPython-only (precompiled .mpy) — omit --no-mpy
 # micropython -m mip install -t lib -i … github:…/board_configs/desktop
@@ -58,7 +58,7 @@ This bundle installs:
 - `audiodev/` (package)
 - `usdl2.py`
 - `uwin32.py` (Windows CPython)
-- plus `displaydev`, `events`, `keys`, `multimer`, and `utils` (`byteswap`, `mip`, …) from the PyDevices MIP index / this repo's GitHub packages
+- plus `displaydev`, `events`, `keys`, `multimer`, and `utils` (`byteswap`, `mip`, …) from the OmniPython MIP index / this repo's GitHub packages
 
 Install the optional MIP package `appdev` for non-LVGL applications that use
 the example application coordinator above.

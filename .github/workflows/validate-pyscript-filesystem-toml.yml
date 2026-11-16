@@ -7,20 +7,20 @@ on:
       - "lib/**"
       - "utils/**"
       - "board_configs/desktop/**"
-      - "pydevices-desktop.toml"
+      - "omnipython-desktop.toml"
   pull_request:
     paths:
       - "lib/**"
       - "utils/**"
       - "board_configs/desktop/**"
-      - "pydevices-desktop.toml"
+      - "omnipython-desktop.toml"
   workflow_dispatch:
 
 jobs:
   validate:
-    uses: PyDevices/.github/.github/workflows/reusable-validate-pyscript-filesystem-toml.yml@publishing-v22
+    uses: PyDevices/.github/.github/workflows/reusable-validate-pyscript-filesystem-toml.yml@publishing-v27
     with:
-      config-path: pydevices-desktop.toml
+      config-path: omnipython-desktop.toml
       source-mappings: |
         lib=/lib
         utils=/lib

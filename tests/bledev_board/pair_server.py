@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: MIT
 """The pairing gate, board side: serve the REPL and files with pairing, and return.
 
-Copy it to the board as ``/pair_server.py`` and start it from ``mpftp exec``::
+Copy it to the board as ``/pair_server.py`` and start it from ``mcuctl exec``::
 
     import pair_server; pair_server.start("passkey")
 

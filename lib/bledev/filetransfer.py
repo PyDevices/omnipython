@@ -47,7 +47,7 @@ no ``AUTH`` characteristic, pairs ("just works", as CircuitPython asks) and
 skips the password.
 
 The protocol carries no checksum of its own beyond the link layer's CRC, so a
-client that must be sure checks what landed (mpftp compares SHA-256).
+client that must be sure checks what landed (mcuctl compares SHA-256).
 """
 
 import asyncio
@@ -612,8 +612,10 @@ def _truncate(path, size):
 # ---------------------------------------------------------------- the board side
 
 
-def start(password=None, name="mpy-files", *, console=True, window=WINDOW, **options):
+def start(password=None, name=None, *, console=True, window=WINDOW, **options):
     """Serve files (and, unless ``console=False``, the REPL) over BLE. MicroPython only.
+
+    The board advertises as ``name``, by default its own, ``boarddev.name()``.
 
     The radio, the password and the advertising are `bledev.repl`'s;
     this is ``bledev.repl.start(..., files=True)``. Returns at once;

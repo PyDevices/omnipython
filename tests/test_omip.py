@@ -5,7 +5,8 @@
 
 Two small index trees are served from this machine: "ours", whose packages name
 what they need from the other under `upstream`, and a stand-in for
-micropython-lib. Nothing reaches the internet. CircuitPython's unix build has no
+micropython-lib. CircuitPython runs get a third, a stand-in for the copy of
+Adafruit's bundle. Nothing reaches the internet. CircuitPython's unix build has no
 sockets, so its run replaces socketpool, ssl and wifi with fakes that answer from
 the same trees: that proves omip's HTTP parsing and file handling, not a real TLS
 connection or a real radio.
@@ -26,6 +27,7 @@ import sys
 import tempfile
 import threading
 import unittest
+from unittest import mock
 
 _TESTS = Path(__file__).resolve().parent
 if str(_TESTS) not in sys.path:
@@ -36,8 +38,8 @@ LIB = _TESTS.parent / "lib"
 MPY_CHANNEL = "6"
 
 
-def write_package(root, name, files, **keys):
-    """Add a package to an index tree, on the py and bytecode channels."""
+def write_package(root, name, files, channels=("py", MPY_CHANNEL), **keys):
+    """Add a package to an index tree, on the py and bytecode channels unless told others."""
     hashes = []
     for path, text in files.items():
         data = text.encode()
@@ -47,7 +49,7 @@ def write_package(root, name, files, **keys):
         out.write_bytes(data)
         hashes.append([path, short])
     body = dict(v=1, version="1.0", hashes=hashes, **keys)
-    for channel in ("py", MPY_CHANNEL):
+    for channel in channels:
         folder = root / "package" / channel / name
         folder.mkdir(parents=True, exist_ok=True)
         (folder / "latest.json").write_text(json.dumps(body), encoding="utf-8")
@@ -73,7 +75,13 @@ def build_indexes(scratch):
     )
     write_package(upstream, "sdcard", {"sdcard.py": "CARD = True\n"})
     write_package(upstream, "only-upstream", {"only_upstream.py": "HERE = True\n"})
-    write_package(ours, "bledev", {"bledev/__init__.py": "import aioble\n"}, upstream=[["aioble", "latest"]])
+    write_package(
+        ours,
+        "bledev",
+        {"bledev/__init__.py": "import aioble\n"},
+        upstream=[["aioble", "latest"]],
+        circuitpython=[["asyncio", "latest"]],
+    )
     write_package(ours, "gt911", {"gt911.py": "TOUCH = True\n"})
     write_package(ours, "core", {"core.py": "CORE = True\n"})
     write_package(
@@ -85,6 +93,24 @@ def build_indexes(scratch):
     )
     # Its upstream need sits on a dep, not on the package you asked for.
     write_package(ours, "wrapper", {"wrapper.py": "W = True\n"}, deps=[["bledev", "latest"]])
+    # asyncio is frozen into every unix MicroPython, so these test skipping what the firmware froze.
+    write_package(upstream, "asyncio", {"asyncio/__init__.py": "COPY = True\n", "asyncio/core.py": "COPY = True\n"})
+    write_package(ours, "async-user", {"async_user.py": "import asyncio\n"}, upstream=[["asyncio", "latest"]])
+    write_package(ours, "frozen-core", {"asyncio/__init__.py": "COPY = True\n"})
+    # micropython is built into every unix MicroPython: beside a frozen module it counts, alone it doesn't.
+    write_package(ours, "frozen-and-built-in", {"asyncio/__init__.py": "COPY = True\n", "micropython.py": "COPY = True\n"})
+    write_package(ours, "built-in-only", {"micropython.py": "COPY = True\n"})
+    # The stand-in for a module: skipped where the firmware has it, installed where it doesn't.
+    write_package(ours, "stand-in-built-in", {"micropython.py": "COPY = True\n"}, stands_in_for="micropython")
+    write_package(ours, "stand-in-frozen", {"asyncio/__init__.py": "COPY = True\n"}, stands_in_for="asyncio")
+    write_package(ours, "stand-in-absent", {"absent.py": "COPY = True\n"}, stands_in_for="no_such_module")
+    write_package(ours, "needs-stand-in", {"needs.py": "N = True\n"}, deps=[["stand-in-built-in", "latest"]])
+    write_package(ours, "on-frozen", {"on_frozen.py": "F = True\n"}, deps=[["frozen-core", "latest"], ["gt911", "latest"]])
+    # An app that needs a frozen package twice over: once itself, once through another of its needs.
+    write_package(
+        ours, "frozen-app", {"__init__.py": "A = True\n"}, target="apps/frozen_app",
+        deps=[["frozen-core", "latest"], ["on-frozen", "latest"]],
+    )
     write_package(ours, "broken-dep", {"broken_dep.py": "B = True\n"}, deps=[["no-such-dep", "latest"]])
     write_package(ours, "broken-upstream", {"broken_up.py": "B = True\n"}, upstream=[["no-such-upstream", "latest"]])
     (ours / "repo" / "pkg").mkdir(parents=True)
@@ -94,9 +120,54 @@ def build_indexes(scratch):
         json.dumps({"urls": [["pkg.py", "pkg.py"]], "deps": [["core", "latest"]], "upstream": [["sdcard", "latest"]]}),
         encoding="utf-8",
     )
+    # An app: its own files in a folder of its own, what it needs in the library folder.
+    (ours / "repo" / "app").mkdir(parents=True)
+    (ours / "repo" / "app" / "__init__.py").write_text("APP = True\n", encoding="utf-8")
+    (ours / "repo" / "app" / "app.json").write_text('{"name": "app"}\n', encoding="utf-8")
+    (ours / "repo" / "app" / "package.json").write_text(
+        json.dumps(
+            {
+                "target": "apps/app",
+                "urls": [["__init__.py", "__init__.py"], ["app.json", "app.json"]],
+                "deps": [["bledev", "latest"], ["gt911", "latest"]],
+            }
+        ),
+        encoding="utf-8",
+    )
     write_index(ours, ("bledev", "Bluetooth for boards"), ("gt911", 'Touch, with {braces} and a "quote"'))
     write_index(upstream, ("aioble", "Asyncio Bluetooth"), ("sdcard", "SD cards"))
     return ours, upstream
+
+
+ADAFRUIT_MAJORS = ("9.x", "10.x", "11.x", "12.x")
+
+
+def build_adafruit(scratch):
+    """A stand-in for the copy of Adafruit's bundle: one channel per CircuitPython major version.
+
+    Each channel's adafruit_ticks says which channel it came from.
+    """
+    root = scratch / "adafruit"
+    for channel in ADAFRUIT_MAJORS:
+        write_package(root, "adafruit_ticks", {"adafruit_ticks.py": "CHANNEL = %r\n" % channel}, channels=[channel])
+    write_package(
+        root,
+        "asyncio",
+        {"asyncio/__init__.py": "from adafruit_ticks import CHANNEL\n"},
+        channels=ADAFRUIT_MAJORS,
+        deps=[["adafruit_ticks", "latest"]],
+    )
+    write_package(
+        root,
+        "adafruit_display_text",
+        {"adafruit_display_text/__init__.py": "from adafruit_ticks import CHANNEL\n"},
+        channels=ADAFRUIT_MAJORS,
+        deps=[["adafruit_ticks", "latest"]],
+    )
+    # A name both have: ours is the one a bare name gets.
+    write_package(root, "gt911", {"gt911.py": "ADAFRUITS = True\n"}, channels=ADAFRUIT_MAJORS)
+    write_index(root, ("adafruit_ticks", "Work with intervals and deadlines"), ("asyncio", "Cooperative multitasking"))
+    return root
 
 
 class _Quiet(http.server.SimpleHTTPRequestHandler):
@@ -114,13 +185,43 @@ def serve(directory):
     return server, "http://127.0.0.1:%d" % server.server_address[1]
 
 
+class _Stall(http.server.BaseHTTPRequestHandler):
+    """Sends the start of a file, then nothing, as a download that stalls."""
+
+    def do_GET(self):
+        self.send_response(200)
+        self.send_header("Content-Length", "1000")
+        self.end_headers()
+        self.wfile.write(b"PART = 1\n")
+        self.wfile.flush()
+        self.server.release.wait(10)
+
+    def log_message(self, *args):
+        pass
+
+
+def serve_stall(test):
+    server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), _Stall)
+    server.release = threading.Event()
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+
+    def stop():
+        server.release.set()
+        server.shutdown()
+        server.server_close()
+
+    test.addCleanup(stop)
+    return "http://127.0.0.1:%d/stalled.py" % server.server_address[1]
+
+
 class Indexes(unittest.TestCase):
     def setUp(self):
         self.scratch = Path(tempfile.mkdtemp(prefix="omip-test-"))
         self.ours_dir, self.upstream_dir = build_indexes(self.scratch)
         self.ours, self.ours_url = serve(self.ours_dir)
         self.upstream, self.upstream_url = serve(self.upstream_dir)
-        self.target = self.scratch / "target"
+        # Named lib, as on a board: a package's own folder goes beside it.
+        self.target = self.scratch / "lib"
         self.home = self.scratch / "cwd"
         self.home.mkdir()
         # omip.py alone on the path, as it is on a board that got this one file.
@@ -159,6 +260,10 @@ class CPythonInstall(Indexes):
         self.assertTrue(self.install("bledev"))
         self.assertEqual(self.landed(), ["aioble/__init__.py", "aioble/core.py", "bledev/__init__.py"])
 
+    def test_nothing_is_skipped_where_nothing_is_frozen(self):
+        self.assertTrue(self.install("async-user"))
+        self.assertEqual(self.landed(), ["async_user.py", "asyncio/__init__.py", "asyncio/core.py"])
+
     def search(self, *words, **kwargs):
         out = io.StringIO()
         with contextlib.redirect_stdout(out):
@@ -190,6 +295,28 @@ class CPythonInstall(Indexes):
     def test_upstream_on_a_dep_is_found_too(self):
         self.install("wrapper")
         self.assertIn("aioble/core.py", self.landed())
+
+    def test_a_stalled_download_times_out_and_keeps_the_old_file(self):
+        self.target.mkdir()
+        (self.target / "stalled.py").write_text("OLD = 1\n")
+        self.omip.TIMEOUT = 1
+        with self.assertRaisesRegex(OSError, "nothing came for 1 seconds"):
+            self.install(serve_stall(self))
+        self.assertEqual(self.landed(), ["stalled.py"])
+        self.assertEqual((self.target / "stalled.py").read_text(), "OLD = 1\n")
+
+    def test_a_missing_file_leaves_nothing_behind(self):
+        with self.assertRaisesRegex(OSError, "HTTP 404"):
+            self.install(self.ours_url + "/repo/not-there.py")
+        self.assertEqual(self.landed(), [])
+
+    def test_a_failed_update_keeps_the_file_it_was_replacing(self):
+        self.target.mkdir()
+        (self.target / "not-there.py").write_text("OLD = 1\n")
+        with self.assertRaises(OSError):
+            self.install(self.ours_url + "/repo/not-there.py")
+        self.assertEqual(self.landed(), ["not-there.py"])
+        self.assertEqual((self.target / "not-there.py").read_text(), "OLD = 1\n")
 
     def test_deps_stay_on_the_index_and_upstream_goes_upstream(self):
         self.install("board", index=self.ours_url)
@@ -245,15 +372,237 @@ class CPythonInstall(Indexes):
             self.install("bledev")
         self.assertEqual(self.ours.requests, [])
 
+    def test_a_name_can_carry_its_version(self):
+        write_package(self.ours_dir, "versioned", {"versioned.py": "V = 2\n"})
+        folder = self.ours_dir / "package" / "py" / "versioned"
+        (folder / "latest.json").rename(folder / "2.0.json")
+        self.install("versioned@2.0")
+        self.assertEqual((self.target / "versioned.py").read_text(), "V = 2\n")
+
+    def apps_landed(self):
+        apps = self.scratch / "apps"
+        return sorted(p.relative_to(apps).as_posix() for p in apps.rglob("*") if p.is_file())
+
+    def test_a_package_with_its_own_folder_lands_there_and_its_needs_in_lib(self):
+        self.install(self.ours_url + "/repo/app")
+        self.assertEqual(self.apps_landed(), ["app/__init__.py", "app/app.json"])
+        self.assertEqual(self.landed(), ["aioble/__init__.py", "aioble/core.py", "bledev/__init__.py", "gt911.py"])
+
+    def test_a_target_that_isnt_a_library_folder_gets_the_app_inside_it(self):
+        # An Arduino GIGA's drive is /flash, its libraries in /flash/lib.
+        drive = self.scratch / "flash"
+        self.install(self.ours_url + "/repo/app", target=str(drive))
+        landed = sorted(p.relative_to(drive).as_posix() for p in drive.rglob("*") if p.is_file())
+        self.assertEqual(
+            landed,
+            ["apps/app/__init__.py", "apps/app/app.json", "lib/aioble/__init__.py", "lib/aioble/core.py",
+             "lib/bledev/__init__.py", "lib/gt911.py"],
+        )
+        self.assertFalse((self.scratch / "apps").exists())
+
+    def test_with_no_target_an_app_goes_beside_the_library_folder_on_the_path(self):
+        # The same install with the target left off, as the GIGA's guide has it.
+        drive = self.scratch / "flash"
+        libs = drive / "lib"
+        libs.mkdir(parents=True)
+        sys.path.insert(0, str(libs))
+        self.addCleanup(sys.path.remove, str(libs))
+        self.install(self.ours_url + "/repo/app", target=None)
+        landed = sorted(p.relative_to(drive).as_posix() for p in drive.rglob("*") if p.is_file())
+        self.assertEqual(
+            landed,
+            ["apps/app/__init__.py", "apps/app/app.json", "lib/aioble/__init__.py", "lib/aioble/core.py",
+             "lib/bledev/__init__.py", "lib/gt911.py"],
+        )
+
+    def test_a_library_sent_to_a_target_that_isnt_a_library_folder_lands_in_it(self):
+        drive = self.scratch / "flash"
+        self.install("bledev", target=str(drive))
+        landed = sorted(p.relative_to(drive).as_posix() for p in drive.rglob("*") if p.is_file())
+        self.assertEqual(landed, ["aioble/__init__.py", "aioble/core.py", "bledev/__init__.py"])
+
+    def test_own_folder_beside_the_library_folder(self):
+        beside = self.omip._beside
+        self.assertEqual(beside("/lib", "apps/home"), "/apps/home")
+        self.assertEqual(beside("/flash/lib", "apps/home"), "/flash/apps/home")
+        self.assertEqual(beside("lib", "apps/home/"), "apps/home")
+        self.assertEqual(beside("/lib", "/sd/apps/home/"), "/sd/apps/home")
+
+    def test_own_folder_inside_a_target_that_isnt_a_library_folder(self):
+        # An Arduino GIGA's writable drive is /flash; beside it is the
+        # read-only root, which refuses the write with ENODEV.
+        beside = self.omip._beside
+        self.assertEqual(beside("/flash", "apps/home"), "/flash/apps/home")
+        self.assertEqual(beside("/flash/", "apps/home"), "/flash/apps/home")
+        self.assertEqual(beside("/", "apps/home"), "/apps/home")
+        self.assertEqual(beside("/sd", "/apps/home"), "/apps/home")
+
+    def _android(self, cafile=None, capath=None, folder=True):
+        """Make the omip under test see Android: no CA store of Python's own, a folder of CA files."""
+        certs = self.scratch / "cacerts"
+        certs.mkdir(exist_ok=True)
+        for name in ("a1b2c3d4.0", "e5f6a7b8.0"):
+            (certs / name).write_text("pem\n", encoding="utf-8")
+        self.omip._ANDROID_CACERTS = str(certs if folder else self.scratch / "missing")
+        self.omip._android_context = None
+        paths = mock.Mock(cafile=cafile, capath=capath)
+        patch = mock.patch("ssl.get_default_verify_paths", return_value=paths)
+        patch.start()
+        self.addCleanup(patch.stop)
+
+    def test_android_https_trusts_the_folder_of_ca_files(self):
+        self._android()
+        fake = mock.Mock()
+        with mock.patch("ssl.create_default_context", return_value=fake):
+            context = self.omip._context()
+            self.assertIs(self.omip._context(), context)
+        self.assertIs(context, fake)
+        loaded = sorted(Path(call.kwargs["cafile"]).name for call in fake.load_verify_locations.call_args_list)
+        self.assertEqual(loaded, ["a1b2c3d4.0", "e5f6a7b8.0"])
+
+    def test_one_unreadable_ca_file_doesnt_stop_the_rest(self):
+        self._android()
+        fake = mock.Mock()
+        fake.load_verify_locations.side_effect = [__import__("ssl").SSLError("bad pem"), None]
+        with mock.patch("ssl.create_default_context", return_value=fake):
+            self.assertIs(self.omip._context(), fake)
+        self.assertEqual(fake.load_verify_locations.call_count, 2)
+
+    def test_a_python_with_its_own_ca_store_is_left_alone(self):
+        self._android(capath=str(self.scratch))
+        self.assertIsNone(self.omip._context())
+
+    def test_no_android_folder_means_the_default_context(self):
+        self._android(folder=False)
+        self.assertIsNone(self.omip._context())
+
+    def test_the_context_reaches_the_request(self):
+        self._android()
+        sentinel = object()
+        with mock.patch.object(self.omip, "_context", return_value=sentinel), mock.patch("urllib.request.urlopen") as urlopen:
+            urlopen.return_value.__enter__.return_value.read.return_value = b""
+            self.omip._get("https://lib.omnipython.org/index.json", lambda chunk: None)
+        self.assertIs(urlopen.call_args.kwargs["context"], sentinel)
+
+    def test_url_base_is_where_relative_urls_are_found(self):
+        site = self.ours_dir / "site"
+        (site / "src").mkdir(parents=True)
+        (site / "src" / "hello.py").write_text("HELLO = True\n", encoding="utf-8")
+        (site / "packages").mkdir()
+        (site / "packages" / "demo.json").write_text(json.dumps({"urls": [["hello.py", "./src/hello.py"]]}), encoding="utf-8")
+        manifest = self.ours_url + "/site/packages/demo.json"
+        with self.assertRaisesRegex(OSError, "HTTP 404"):
+            self.install(manifest)
+        self.install(manifest, url_base=self.ours_url + "/site/")
+        self.assertEqual(self.landed(), ["hello.py"])
+
+
+# What a browser hands Pyodide for a request made as x-user-defined: one
+# character per byte, the bytes from 0x80 up moved to U+F780 and on.
+FAKE_JS = """
+from urllib.error import HTTPError
+from urllib.request import urlopen
+class XMLHttpRequest:
+    @classmethod
+    def new(cls):
+        return cls()
+    def open(self, method, url, asynchronous):
+        assert method == "GET" and asynchronous is False
+        self.url = url
+    def overrideMimeType(self, mime):
+        self.mime = mime
+    def send(self, body):
+        try:
+            with urlopen(self.url) as response:
+                data = response.read()
+                self.status = response.status
+        except HTTPError as exc:
+            data, self.status = b"", exc.code
+        if self.mime == "text/plain; charset=x-user-defined":
+            self.responseText = "".join(chr(b) if b < 0x80 else chr(0xF700 + b) for b in data)
+        else:
+            self.responseText = data.decode("utf-8", "replace")
+"""
+
+
+class BrowserInstall(Indexes):
+    """omip under Pyodide, where the browser makes the requests."""
+
+    def setUp(self):
+        super().setUp()
+        fake = Path(tempfile.mkdtemp(prefix="omip-js-"))
+        self.addCleanup(shutil.rmtree, fake, ignore_errors=True)
+        (fake / "js.py").write_text(FAKE_JS, encoding="utf-8")
+        sys.path.insert(0, str(fake))
+        self.addCleanup(sys.path.remove, str(fake))
+        self.addCleanup(sys.modules.pop, "js", None)
+        # The fake keeps the real urlopen; Pyodide's own can't open a socket.
+        importlib.import_module("js")
+        refuse = mock.patch("urllib.request.urlopen", side_effect=OSError("no sockets in a browser"))
+        refuse.start()
+        self.addCleanup(refuse.stop)
+        platform = sys.platform
+        sys.platform = "emscripten"
+        try:
+            spec = importlib.util.spec_from_file_location("omip_in_browser", LIB / "omip.py")
+            self.omip = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(self.omip)
+        finally:
+            sys.platform = platform
+        self.omip.INDEX = self.ours_url
+        self.omip.UPSTREAM = self.upstream_url
+
+    def test_every_byte_arrives_through_the_browser(self):
+        data = bytes(range(256)) * 4
+        short = hashlib.sha256(data).hexdigest()[:8]
+        (self.ours_dir / "file" / short[:2]).mkdir(parents=True, exist_ok=True)
+        (self.ours_dir / "file" / short[:2] / short).write_bytes(data)
+        folder = self.ours_dir / "package" / "py" / "blob"
+        folder.mkdir(parents=True)
+        (folder / "latest.json").write_text(json.dumps({"hashes": [["blob.bin", short]]}), encoding="utf-8")
+        self.omip.install("blob", target=str(self.target), prompt=False)
+        self.assertEqual((self.target / "blob.bin").read_bytes(), data)
+
+    def test_a_package_and_its_upstream_need(self):
+        self.omip.install("bledev", target=str(self.target), prompt=False)
+        self.assertEqual(self.landed(), ["aioble/__init__.py", "aioble/core.py", "bledev/__init__.py"])
+
+    def test_not_found_says_so(self):
+        with self.assertRaisesRegex(OSError, "Package not found: nothing-here"):
+            self.omip.install("nothing-here", target=str(self.target), prompt=False)
+
 
 MP_INSTALL = """
 import sys
 import omip
 omip.UPSTREAM = {upstream!r}
-print("RESULT", omip.install({package!r}, index={index!r}, target={target!r}, prompt=False))
+# Ahead of .frozen, so a firmware that froze bledev or aioble still installs them here.
 sys.path.insert(0, {target!r})
+print("RESULT", omip.install({package!r}, index={index!r}, target={target!r}, prompt=False))
 import aioble
 print("IMPORTED", aioble.NAME)
+"""
+
+MP_FROZEN = """
+import sys
+import omip
+omip.UPSTREAM = {upstream!r}
+{before}
+print("RESULT", omip.install({package!r}, index={index!r}, target={target!r}, prompt=False{extra}))
+import asyncio
+print("ASYNCIO", getattr(asyncio, "COPY", "frozen"))
+"""
+
+# The board's root as the folder it started in: os itself can't be patched on MicroPython.
+MP_AT_ROOT = """
+sys.path.insert(0, "")
+class AtRoot:
+    def __getattr__(self, name):
+        return getattr(omip_os, name)
+    def getcwd(self):
+        return "/"
+omip_os = omip.os
+omip.os = AtRoot()
 """
 
 MP_STOCK = """
@@ -322,6 +671,60 @@ class MicroPythonRun(Indexes):
         self.assertIn("IMPORTED aioble", out)
         self.assertEqual(self.landed(), ["aioble/__init__.py", "aioble/core.py", "bledev/__init__.py"])
 
+    def test_a_version_and_a_url_base(self):
+        write_package(self.ours_dir, "versioned", {"versioned.py": "V = 2\n"})
+        folder = self.ours_dir / "package" / MPY_CHANNEL / "versioned"
+        (folder / "latest.json").rename(folder / "2.0.json")
+        site = self.ours_dir / "site"
+        (site / "src").mkdir(parents=True)
+        (site / "src" / "hello.py").write_text("HELLO = True\n", encoding="utf-8")
+        (self.ours_dir / "demo.json").write_text(json.dumps({"urls": [["hello.py", "./src/hello.py"]]}), encoding="utf-8")
+        out = self.run_mp(
+            "import omip\n"
+            "omip.install('versioned@2.0', index=%r, target=%r, prompt=False)\n"
+            "omip.install(%r, url_base=%r, target=%r, prompt=False)\n"
+            % (self.ours_url, str(self.target), self.ours_url + "/demo.json", self.ours_url + "/site", str(self.target))
+        )
+        self.assertNotIn("Traceback", out, out)
+        self.assertEqual(self.landed(), ["hello.py", "versioned.py"])
+
+    def test_a_package_with_its_own_folder_on_micropython(self):
+        out = self.run_mp(
+            # The target ahead of .frozen, as in MP_INSTALL.
+            "import sys\nimport omip\nomip.INDEX = %r\nomip.UPSTREAM = %r\nsys.path.insert(0, %r)\n"
+            "print('RESULT', omip.install(%r, target=%r, prompt=False))\n"
+            % (self.ours_url, self.upstream_url, str(self.target), self.ours_url + "/repo/app", str(self.target))
+        )
+        self.assertIn("RESULT True", out)
+        self.assertIn("Installed %s/repo/app in %s" % (self.ours_url, self.scratch / "apps" / "app"), out)
+        apps = self.scratch / "apps"
+        landed = sorted(p.relative_to(apps).as_posix() for p in apps.rglob("*") if p.is_file())
+        self.assertEqual(landed, ["app/__init__.py", "app/app.json"])
+        self.assertEqual(self.landed(), ["aioble/__init__.py", "aioble/core.py", "bledev/__init__.py", "gt911.py"])
+
+    def test_the_root_folder_stays_the_root(self):
+        # An empty target would read as the default, /lib: "/" has to stay "/".
+        out = self.run_mp(
+            "import omip\nomip._check_writable = lambda folder: None\n"
+            "omip._fetch = lambda path, source, short, target: print('FETCH', target, path)\n"
+            "try:\n    omip.install(%r, target='/', prompt=False)\nexcept OSError as exc:\n    print('NOT THERE', exc)\n"
+            % (self.ours_url + "/repo/single.py")
+        )
+        self.assertIn("FETCH / single.py\n", out)
+
+    def test_a_stalled_download_times_out_on_micropython(self):
+        self.target.mkdir()
+        (self.target / "stalled.py").write_text("OLD = 1\n")
+        out = self.run_mp(
+            "import omip\nomip.TIMEOUT = 1\n"
+            "try:\n    omip.install(%r, target=%r, prompt=False)\nexcept OSError as exc:\n    print('FAILED', exc)\n"
+            % (serve_stall(self), str(self.target))
+        )
+        self.assertIn("FAILED Couldn't get", out)
+        self.assertIn("nothing came for 1 seconds", out)
+        self.assertEqual(self.landed(), ["stalled.py"])
+        self.assertEqual((self.target / "stalled.py").read_text(), "OLD = 1\n")
+
     def test_search_reads_both_indexes(self):
         out = self.run_mp(MP_SEARCH.format(ours=self.ours_url, upstream=self.upstream_url, words=("BLUETOOTH",)))
         self.assertIn("bledev 1.0  Bluetooth for boards", out)
@@ -340,6 +743,101 @@ class MicroPythonRun(Indexes):
         self.assertNotIn("partially", out)
         self.assertEqual(self.landed(), ["bledev/__init__.py"])
         self.assertEqual(self.upstream.requests, [])
+
+    def frozen(self, package, before="", extra=""):
+        script = MP_FROZEN.format(
+            upstream=self.upstream_url, package=package, index=self.ours_url, target=str(self.target),
+            before=before, extra=extra,
+        )
+        return self.run_mp(script)
+
+    def test_an_upstream_need_the_firmware_froze_is_skipped(self):
+        out = self.frozen("async-user")
+        self.assertIn("Skipping asyncio: it's frozen into this firmware", out)
+        self.assertIn("RESULT True", out)
+        self.assertIn("ASYNCIO frozen", out)
+        self.assertEqual(self.landed(), ["async_user.py"])
+        self.assertNotIn("/package/%s/asyncio/latest.json" % MPY_CHANNEL, self.ours.requests)
+
+    def test_a_frozen_package_says_how_to_run_a_newer_copy(self):
+        # The board's root, on the path as "" ahead of .frozen, takes a newer copy.
+        out = self.frozen("frozen-core", before=MP_AT_ROOT)
+        self.assertIn('install it again with target="/"', out)
+        out = self.frozen("frozen-core")
+        self.assertIn('install it again with target="%s"' % self.home, out)
+        # With nothing ahead of .frozen, only a rebuild does.
+        out = self.frozen("frozen-core", before="sys.path[:] = ['.frozen']")
+        self.assertIn("rebuild the firmware with it", out)
+
+    def test_a_frozen_dep_is_skipped_and_the_rest_of_its_root_still_lands(self):
+        out = self.frozen("on-frozen")
+        self.assertIn("Skipping frozen-core", out)
+        self.assertIn("RESULT True", out)
+        self.assertEqual(self.landed(), ["gt911.py", "on_frozen.py"])
+
+    def test_a_frozen_package_another_need_brings_again_is_skipped_there_too(self):
+        out = self.frozen("frozen-app")
+        self.assertIn("RESULT True", out)
+        self.assertIn("ASYNCIO frozen", out)
+        self.assertEqual(self.landed(), ["gt911.py", "on_frozen.py"])
+
+    def test_a_package_wholly_frozen_installs_nothing_and_says_so(self):
+        out = self.frozen("frozen-core")
+        self.assertIn("Nothing to install: the firmware has frozen-core frozen in", out)
+        self.assertIn("RESULT True", out)
+        self.assertEqual(self.landed(), [])
+
+    def test_a_module_built_in_beside_frozen_ones_counts_as_frozen_in(self):
+        # As CircuitPython's own wifi beside a frozen library that has a wifi.py.
+        out = self.frozen("frozen-and-built-in")
+        self.assertIn("Nothing to install: the firmware has frozen-and-built-in frozen in", out)
+        self.assertEqual(self.landed(), [])
+
+    def test_a_package_of_built_in_modules_alone_still_installs(self):
+        # A package may extend a built-in module, as micropython-lib's time does.
+        out = self.frozen("built-in-only")
+        self.assertNotIn("Skipping", out)
+        self.assertEqual(self.landed(), ["micropython.py"])
+
+    def test_a_stand_in_for_a_built_in_module_is_skipped(self):
+        out = self.frozen("stand-in-built-in")
+        self.assertIn("Skipping stand-in-built-in: it stands in for micropython, which this firmware has built-in", out)
+        self.assertIn("RESULT True", out)
+        self.assertEqual(self.landed(), [])
+
+    def test_a_stand_in_is_skipped_as_a_dep_and_the_rest_lands(self):
+        out = self.frozen("needs-stand-in")
+        self.assertIn("Skipping stand-in-built-in", out)
+        self.assertEqual(self.landed(), ["needs.py"])
+
+    def test_a_stand_in_for_a_frozen_module_is_skipped_where_frozen_wins(self):
+        out = self.frozen("stand-in-frozen")
+        self.assertIn("which this firmware has frozen", out)
+        self.assertEqual(self.landed(), [])
+        out = self.frozen("stand-in-frozen", before="sys.path.insert(0, %r)" % str(self.target))
+        self.assertNotIn("Skipping", out)
+        self.assertEqual(self.landed(), ["asyncio/__init__.py"])
+
+    def test_a_stand_in_for_a_module_the_firmware_lacks_installs(self):
+        out = self.frozen("stand-in-absent")
+        self.assertNotIn("Skipping", out)
+        self.assertEqual(self.landed(), ["absent.py"])
+
+    def test_force_installs_a_stand_in_anyway(self):
+        out = self.frozen("stand-in-built-in", extra=", force=True")
+        self.assertNotIn("Skipping", out)
+        self.assertEqual(self.landed(), ["micropython.py"])
+
+    def test_force_installs_it_anyway(self):
+        out = self.frozen("on-frozen", extra=", force=True")
+        self.assertNotIn("Skipping", out)
+        self.assertEqual(self.landed(), ["asyncio/__init__.py", "gt911.py", "on_frozen.py"])
+
+    def test_a_target_ahead_of_frozen_on_the_path_gets_the_copy(self):
+        out = self.frozen("async-user", before="sys.path.insert(0, %r)" % str(self.target))
+        self.assertNotIn("Skipping", out)
+        self.assertIn("ASYNCIO True", out)
+        self.assertEqual(self.landed(), ["async_user.py", "asyncio/__init__.py", "asyncio/core.py"])
 
     def test_a_missing_upstream_raises_on_micropython_too(self):
         out = self.run_mp(self.script(MP_INSTALL, package="broken-upstream"))
@@ -453,20 +951,25 @@ class SocketPool:
 CP_INSTALL = """
 import omip
 omip.INDEX = "https://ours.test"
+omip.ADAFRUIT = "https://adafruit.test"
 omip.UPSTREAM = "https://upstream.test"
 print("RESULT", omip.install({package!r}, target={target!r}, prompt=False))
 """
 
 
 class CircuitPythonRun(Indexes):
+    def setUp(self):
+        super().setUp()
+        self.adafruit_dir = build_adafruit(self.scratch)
+
     def run_cp(self, script, *, stdin="", address='"10.0.0.1"', env=None):
-        interpreter = os.environ.get("PYDEVICES_CIRCUITPYTHON") or shutil.which("circuitpython")
+        interpreter = os.environ.get("OMNIPYTHON_CIRCUITPYTHON") or shutil.which("circuitpython")
         if not interpreter:
             found = [p / "bin" / "circuitpython" for p in _TESTS.parents if (p / "bin" / "circuitpython").is_file()]
             interpreter = str(found[0]) if found else None
         if not interpreter:
             self.skipTest("no circuitpython binary: this check did NOT run on CircuitPython")
-        trees = {"ours.test": str(self.ours_dir), "upstream.test": str(self.upstream_dir)}
+        trees = {"ours.test": str(self.ours_dir), "upstream.test": str(self.upstream_dir), "adafruit.test": str(self.adafruit_dir)}
         (self.home / "wifi.py").write_text(FAKE_WIFI.format(address=address), encoding="utf-8")
         (self.home / "ssl.py").write_text(FAKE_SSL, encoding="utf-8")
         (self.home / "socketpool.py").write_text(FAKE_SOCKETPOOL.format(trees=repr(trees)), encoding="utf-8")
@@ -479,13 +982,37 @@ class CircuitPythonRun(Indexes):
     def script(self, package="bledev"):
         return CP_INSTALL.format(package=package, target=str(self.target))
 
-    def test_takes_the_py_channel_and_leaves_micropythons_upstream_alone(self):
+    def major(self):
+        out = self.run_cp('import sys\nprint("MAJOR %d.x" % sys.implementation.version[0])\n')
+        return out.split("MAJOR ")[1].split()[0]
+
+    def test_takes_the_py_channel_and_adafruits_libraries_in_place_of_micropythons(self):
         out = self.run_cp(self.script())
         self.assertIn("RESULT True", out, out)
         self.assertIn("TLS ours.test", out)
         self.assertIn("Skipping aioble", out)
-        self.assertEqual(self.landed(), ["bledev/__init__.py"])
+        self.assertEqual(self.landed(), ["adafruit_ticks.py", "asyncio/__init__.py", "bledev/__init__.py"])
         self.assertEqual((self.target / "bledev" / "__init__.py").read_text(), "import aioble\n")
+
+    def test_a_bare_name_ours_lacks_comes_from_adafruits_bundle_for_this_major(self):
+        out = self.run_cp(
+            self.script("adafruit_display_text")
+            + "import sys\nsys.path.insert(0, %r)\nimport adafruit_display_text\n"
+            "print('IMPORTED', adafruit_display_text.CHANNEL)\n" % str(self.target)
+        )
+        self.assertIn("RESULT True", out, out)
+        self.assertIn("IMPORTED %s" % self.major(), out)
+        self.assertEqual(self.landed(), ["adafruit_display_text/__init__.py", "adafruit_ticks.py"])
+
+    def test_ours_comes_first_for_a_name_both_have(self):
+        out = self.run_cp(self.script("gt911"))
+        self.assertIn("RESULT True", out, out)
+        self.assertEqual((self.target / "gt911.py").read_text(), "TOUCH = True\n")
+
+    def test_a_version_adafruits_bundle_lacks_says_where_it_looked(self):
+        out = self.run_cp(self.script("adafruit_ticks@0.1"))
+        self.assertIn("Package not found: adafruit_ticks (looked on https://ours.test, https://adafruit.test", out)
+        self.assertNotIn("RESULT", out)
 
     def test_deps_arrive_byte_for_byte_through_the_http_parser(self):
         big = "".join("line %d\n" % i for i in range(2000))
@@ -517,11 +1044,12 @@ class CircuitPythonRun(Indexes):
     def test_search_through_the_http_parser(self):
         out = self.run_cp(
             'import omip\nomip.INDEX = "https://ours.test"\nomip.UPSTREAM = "https://upstream.test"\n'
-            'omip.search("bluetooth", prompt=False)\nprint("DONE")\n'
+            'omip.ADAFRUIT = "https://adafruit.test"\n'
+            'omip.search(prompt=False)\nprint("DONE")\n'
         )
-        self.assertIn("bledev 1.0  Bluetooth for boards", out)
-        self.assertIn("aioble 1.0  Asyncio Bluetooth", out)
-        self.assertIn("DONE", out)
+        self.assertIn("DONE", out, out)
+        names = [line.split()[0] for line in out.splitlines() if " 1.0  " in line]
+        self.assertEqual(names, ["bledev", "gt911", "adafruit_ticks", "asyncio", "aioble", "sdcard"])
 
     def test_not_found_says_so(self):
         out = self.run_cp(self.script("no-such"))

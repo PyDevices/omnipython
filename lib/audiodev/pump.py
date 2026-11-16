@@ -49,6 +49,11 @@ whether there is a thread to land them from:
     PCM, opens no peripheral, and is left holding the policy -- the codec, two
     clients, a file, the fault sentence.
 
+    Windows uses it too, when the interpreter can play to the computer's
+    speaker itself (`speaker`). The output is then built on a `SpeakerWire`,
+    and the pump writes every block straight into WASAPI on its own thread,
+    with no Python between the graph and the device.
+
 A fault in the pump is a sentence, not a traceback and not a dead speaker:
 `Pump.died` turns the status block's error and fault words into one,
 and the caller that notices is `AudioOut`, which falls back to the old
@@ -66,7 +71,7 @@ _BLOCKS_FOREVER = 0x7FFFFFFF
 
 # How long produce() waits for a pump that has not made its first block, and
 # how it waits. It used to spin 20 000 drains and nothing else, and that spin
-# was the race behind pydevices#56: on a loaded machine the pump thread often
+# was the race behind omnipython#56: on a loaded machine the pump thread often
 # shares a core with the interpreter, and a thread that never gives the core
 # up is exactly what keeps the pump from running. Pinned to one core, 303 of
 # those spins in ten probe runs ended with the pump still at block 0. A round
@@ -131,6 +136,7 @@ _ERRORS = {
     3: "the source ran out",
     4: "the graph's memory was re-used under it",
     5: "a node in the graph faulted",
+    6: "the output it was writing to closed",
 }
 _FAULTS = {
     1: "something in the chain is not an audio node",
@@ -151,7 +157,7 @@ class StartFailed(RuntimeError):
     file-backed source" is a property of the graph and will be true again in a
     millisecond; "the thread lost a race with a busy CPU" is a property of the
     afternoon, and making the second one sticky turns a transient loss into a
-    process that never uses the pump again (pydevices#52).
+    process that never uses the pump again (omnipython#52).
     """
 
 
@@ -159,7 +165,7 @@ def _why_not_running(mod, status):
     """Why a just-spawned pump is not running, as a sentence, or None.
 
     **"Not running" is not the same as "did not start", and the difference is
-    the whole of pydevices#52.** `audiopump.running()` is
+    the whole of omnipython#52.** `audiopump.running()` is
     `live && !finished`, and `live` is set on the CALLING thread before
     `spawn()` returns -- so what this can catch is a pump that has already
     *finished*. Under load that is exactly what happens: a 0.05 s RawSample is
@@ -317,6 +323,55 @@ def on_board():
     mod = driver()
     return mod is not None and (hasattr(mod, "i2s_start")
                                 or hasattr(mod, "dac_stats"))
+
+
+def speaker():
+    """True when the pump can play to the computer's speaker itself.
+
+    Windows: ``audiobusio.I2SOut(..., sink="wasapi")`` opens the default
+    speaker in WASAPI shared mode and the pump writes each block to it from
+    its own thread. Asked of the driver, which has ``sink_stats`` only where
+    a sink can be a speaker.
+    """
+    mod = driver()
+    return (mod is not None and hasattr(mod, "sink_stats")
+            and busio() is not None)
+
+
+def c_sink():
+    """True when the pump can write to a C sink from its own thread.
+
+    A USB speaker on the host port publishes one (``c_sink()`` on its
+    output). The engine says whether its ``spawn`` takes it, and it needs a
+    thread to write from.
+    """
+    mod = module()
+    return bool(mod is not None and getattr(mod, "C_SINK", False)
+                and threaded())
+
+
+class SpeakerWire:
+    """The wire `BusioDriver` builds a desktop speaker output on.
+
+    A board's `I2SWire <audiodev.I2SWire>` names pins; a speaker has none,
+    so the pin numbers are placeholders the desktop ``I2SOut`` ignores and
+    ``sink`` is what picks the device: ``"wasapi"`` is the default speaker,
+    and the firmware's README gives the full path syntax.
+    """
+
+    port = -1
+    sck = 0
+    ws = 1
+    sd = 2
+    mck = None
+    mck_fs = None
+    sd_in = None
+
+    def __init__(self, sink="wasapi"):
+        self.sink = sink
+
+    def __repr__(self):
+        return "SpeakerWire(sink=%r)" % (self.sink,)
 
 
 def duplex():
@@ -608,6 +663,11 @@ class Prefetch:
             frames=frames,
             capacity=int(capacity),
         )
+        # The most one service() call writes: one ring's worth. Without a
+        # bound, a source that decodes slower than the pump drains (an MP3
+        # decoder short of CPU) never fills the ring, so the call never
+        # returned and the app's own tick stopped with it.
+        self._room = int(capacity) * block
         audiocore.reset_buffer(sample)
 
     def service(self, limit=None):
@@ -620,6 +680,11 @@ class Prefetch:
         nothing counts, because ``wrote`` is only told about what reached the
         ring. A tick that finds this busy does nothing and the next one tops
         the ring up instead; the ring is deeper than a tick by construction.
+
+        It always comes back: when the ring is full, when the source has
+        nothing ready (a stream waiting on the network), or after one ring's
+        worth of bytes if *limit* is not given, so a source slower than real
+        time can't hold the caller here.
         """
         if self._feeding:
             return 0
@@ -630,6 +695,8 @@ class Prefetch:
             self._feeding = False
 
     def _service(self, limit=None):
+        if limit is None:
+            limit = self._room
         wrote = 0
         while True:
             if self._held is None:
@@ -645,9 +712,11 @@ class Prefetch:
                     else:
                         self.done = True
                 if not buf:
-                    if self.done:
+                    if self.done or result == GET_BUFFER_MORE_DATA:
+                        # Done, or a stream with nothing ready yet: spinning
+                        # here would hold the caller until data arrived.
                         return wrote
-                    continue
+                    continue       # a looping file just rewound
             view = memoryview(self._held)[self._at :]
             took = self.ring.write(view)
             self._at += took
@@ -658,7 +727,7 @@ class Prefetch:
                 self._at = 0
             if took == 0:
                 return wrote       # the ring is full; come back next tick
-            if limit is not None and wrote >= limit:
+            if wrote >= limit:
                 return wrote
 
     def _flush_tail(self):
@@ -813,13 +882,13 @@ class RingDriver(_Driver):
             # finished, and a short sample under load does that before the
             # interpreter gets its next slice. Asking it as a bare boolean
             # read that as "would not start" and threw away a pump that had
-            # just done the whole job (pydevices#52), so ask the status.
+            # just done the whole job (omnipython#52), so ask the status.
             self._parked = False
             if not mod.running():
                 # It did not fail to start. It started, and it has already
                 # FINISHED -- so ask the status, not the clock. "The pump
                 # would not start" was the wrong sentence and sent three
-                # sessions looking at thread creation (pydevices#52).
+                # sessions looking at thread creation (omnipython#52).
                 why = _why_not_running(mod, status)
                 if why is None:
                     # The pump pulled the whole graph before this thread was
@@ -899,7 +968,7 @@ class RingDriver(_Driver):
             # microseconds and has not finished its first block. Waiting here
             # beats returning a service call that produced nothing -- but not
             # by spinning, which can keep the pump off the very core it needs
-            # (pydevices#56; see _FIRST_BLOCK_WAIT_US).
+            # (omnipython#56; see _FIRST_BLOCK_WAIT_US).
             idle += 1
             if idle <= _FIRST_BLOCK_SPINS:
                 continue
@@ -1182,6 +1251,94 @@ class BusioDriver(_Driver):
             self._power(False)
 
 
+class SinkDriver(_Driver):
+    """The graph goes to an output's C sink, written by the pump's thread.
+
+    For an output that isn't the board's own I2S but can take PCM from
+    native code: a USB speaker on the host port. The pump renders the graph
+    and writes each block into the speaker's stream itself, so no audio
+    waits for the interpreter.
+
+    The output's buffer may be large, for the times the interpreter fills
+    it instead. The pump keeps only ``ahead_ms`` of sound queued in it,
+    which is the delay this path adds.
+
+    The transport's volume and mute are software here, and the pump's bytes
+    don't pass through the transport, so the pump applies them: `level`
+    hands it the transport's current setting.
+
+    Args:
+        transport: A ``PCMOutput`` with ``c_sink()`` and ``capacity()``. It
+            is kept, so its stream lasts as long as this driver.
+        ahead_ms: Sound kept queued in the output. The default is the
+            transport's ``c_sink_ahead_ms``, or 10.
+
+    A transport may also name the priority the pump's thread should run at
+    while it writes there, as ``c_sink_prio``. A USB speaker does: the task
+    that sends its packets must be able to interrupt the pump, or packets go
+    missing while a block renders.
+    """
+
+    needs_service = False
+
+    def __init__(self, transport, ahead_ms=None):
+        self.transport = transport
+        if ahead_ms is None:
+            ahead_ms = getattr(transport, "c_sink_ahead_ms", 10)
+        self.ahead_ms = ahead_ms
+        self._status = None
+
+    def _check(self, sample):
+        fmt = self.transport.format
+        if (sample.sample_rate != fmt.rate or sample.channel_count != fmt.channels
+                or sample.bits_per_sample != 16 or fmt.bits != 16):
+            raise ValueError(
+                "the output is %d Hz, %d channels, %d-bit and the pump writes the "
+                "graph as it is: %d Hz, %d channels, %d-bit"
+                % (fmt.rate, fmt.channels, fmt.bits, sample.sample_rate,
+                   sample.channel_count, sample.bits_per_sample))
+
+    def retarget(self, sample, loop=False):
+        self._check(sample)
+        retarget(module(), sample, loop)
+
+    def spawn(self, sample, status, loop=False):
+        self._check(sample)
+        t = self.transport
+        fmt = t.format
+        blob = t.c_sink()           # opens the stream
+        capacity = t.capacity()
+        ahead = fmt.rate * self.ahead_ms // 1000 * fmt.frame_size
+        block = block_size(sample)
+        # Room for a whole block when the pump starts one, and never more
+        # asked for than the output can have.
+        room = max(block, capacity - ahead)
+        if room > capacity:
+            raise ValueError("the output's buffer is smaller than one block of the graph")
+        self._status = status
+        kwargs = {}
+        prio = getattr(t, "c_sink_prio", None)
+        if prio is not None:
+            kwargs["prio"] = prio
+        module().spawn(sample, _BLOCKS_FOREVER, status, sink=blob, loop=loop,
+                       timeout_ms=200, sink_room=room, sink_gain=self._gain(), **kwargs)
+
+    def _gain(self):
+        t = self.transport
+        return 0.0 if t.muted else t.volume / 100
+
+    def level(self):
+        """Take the transport's volume and mute to the playing pump."""
+        if self._status is not None:
+            module().sink_gain(self._gain())
+
+    def status(self):
+        return self._status
+
+    def close(self):
+        self._status = None
+
+
 _TAKES = {"left": 0, "right": 1, "mix": 2}
 _OPENERS = {"i2s": "rx_open", "pdm": "pdm_open", "adc": "adc_open"}
 _WHAT = {"i2s": "the pump's I2S channel", "pdm": "a PDM microphone",
@@ -1195,6 +1352,17 @@ def _wire_kind(wire):
     if getattr(wire, "pin", None) is not None:
         return "adc"
     return "i2s"
+
+
+def _byte_span(buf):
+    """A view of ``buf``, its item size and its length in bytes.
+
+    The driver counts bytes, but a view of an ``array("h")`` counts items,
+    so the read offset is divided by the item size before slicing.
+    """
+    view = memoryview(buf)
+    size = len(bytes(view[:1])) if len(view) else 1
+    return view, size, len(view) * size
 
 
 class PumpPCMInput(PCMInput):
@@ -1308,11 +1476,11 @@ class PumpPCMInput(PCMInput):
         return driver().rx_read(view)
 
     def _readinto(self, buf):
-        view = memoryview(buf)
+        view, size, total = _byte_span(buf)
         got = 0
         idle_ms = 0
-        while got < len(view):
-            n = self._read_some(view[got:])
+        while got < total:
+            n = self._read_some(view[got // size:])
             if n:
                 got += n
                 idle_ms = 0
@@ -1327,11 +1495,11 @@ class PumpPCMInput(PCMInput):
         return got
 
     async def _areadinto(self, buf):
-        view = memoryview(buf)
+        view, size, total = _byte_span(buf)
         got = 0
         idle_ms = 0
-        while got < len(view):
-            n = self._read_some(view[got:])
+        while got < total:
+            n = self._read_some(view[got // size:])
             if n:
                 got += n
                 idle_ms = 0
@@ -1505,6 +1673,11 @@ class PumpPCMOutput(PCMOutput):
         return self.queued_size() > 0
 
 
+def _output_of(driver):
+    """What a driver writes to when it isn't the board's own output."""
+    return driver.transport if isinstance(driver, SinkDriver) else None
+
+
 class _Client:
     """One thing sounding through the pump, and whether it is paused."""
 
@@ -1547,7 +1720,7 @@ class Pump:
         # way. They came apart because a fault that had already been torn
         # down went on refusing every later `play()` for the rest of the
         # boot, silently, and the speaker came back on `machine.I2S`
-        # (pydevices#45). A pump with no clients, no thread and no driver has
+        # (omnipython#45). A pump with no clients, no thread and no driver has
         # nothing broken left to carry, so `_shutdown` clears this and keeps
         # the sentence for whoever wants to report it.
         self._blocked = False
@@ -1638,6 +1811,12 @@ class Pump:
             client.loop = bool(loop)
         if self._driver is None:
             self._driver = driver
+        elif driver is not None and _output_of(driver) is not _output_of(self._driver):
+            # There is one pump and it is writing to another output. Mixing
+            # this client in would play it there.
+            self._clients.remove(client)
+            self._fault = "the pump is playing to another output"
+            return False
         try:
             self._retarget()
         except Exception as exc:          # noqa: BLE001 - reported, not raised
@@ -1830,7 +2009,7 @@ class Pump:
 
         The counters underneath this were each readable on their own and none
         of them had a reader, which is how `reentered()` came to be a number
-        nobody could see (pydevices#38; audiocomponents#97 is the same shape
+        nobody could see (omnipython#38; audiocomponents#97 is the same shape
         one layer up and chose this surface first).
 
         The entries, and which of them is bad news:
@@ -1970,7 +2149,7 @@ class Pump:
         on `fault()` for whoever reports it, and the next `play()` tries
         again. That is what a transient loss wants -- a pump that lost one
         race with a busy CPU is not a pump that cannot pump this graph, and
-        nothing else ever clears `_blocked` on this path (pydevices#52).
+        nothing else ever clears `_blocked` on this path (omnipython#52).
         """
         self._fault = why
         self._refusal = None
@@ -2003,7 +2182,7 @@ class Pump:
         # after this has no clients, no thread, no driver and no channel, so
         # there is nothing for the next play() to trip over. The sentence
         # stays on `fault()` for whoever wants to report it; what goes is the
-        # refusal that used to outlive it (pydevices#45).
+        # refusal that used to outlive it (omnipython#45).
         self._blocked = False
         if driver is not None:
             driver.close()

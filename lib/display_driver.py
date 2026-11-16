@@ -6,11 +6,11 @@
 """
 display_driver.py - LVGL displaydev/input wiring and event loop for PyDevices.
 
-It lives in PyDevices/pydevices (``lib/display_driver.py``) because it is
-PyDevices plumbing: it needs ``appdev``, ``displaydev``, ``events``, ``keys``,
+It lives in PyDevices/omnipython (``lib/display_driver.py``) because it is
+OmniPython plumbing: it needs ``appdev``, ``displaydev``, ``events``, ``keys``,
 ``multimer`` and the ``board_config`` idiom, and ships with them in the
-``pydevices`` mip package, the ``pydevices`` wheel and the frozen
-``pydevices`` module. The LVGL bindings (lvgl-bindings and the lvgl-micropython,
+``omnipython`` mip package, the ``omnipython`` wheel and the frozen
+``omnipython`` module. The LVGL bindings (lvgl-bindings and the lvgl-micropython,
 lvgl-circuitpython and lvgl-python consumers) carry only ``lvgl`` itself and
 ``fs_driver``, so anyone can use them with plumbing of their own.
 
@@ -938,9 +938,15 @@ def _touch_state_for(device):
     """Per-pointer touch state (must not be module-global — multi-display)."""
     st = getattr(device, "_lv_touch", None)
     if st is None:
-        st = {"x": 0, "y": 0, "pressed": False}
+        st = {"x": 0, "y": 0, "pressed": False, "mouse": False, "park": 0}
         device._lv_touch = st
     return st
+
+
+#: Where a lifted finger leaves the pointer: off every widget, so LVGL ends
+#: the hover the press began. A finger has no hover, and a pointer left at the
+#: spot it touched keeps that widget in the hovered state until the next tap.
+_PARKED = (-1, -1)
 
 
 def _make_touch_cb(device):
@@ -948,19 +954,36 @@ def _make_touch_cb(device):
 
     def _touch_cb(event, indev, data):
         st = _touch_state_for(device)
-        if event is not None:
-            if event.type == events.MOUSEBUTTONDOWN and event.button == 1:
-                st["x"], st["y"] = event.pos
-                st["pressed"] = True
-            elif event.type == events.MOUSEMOTION:
-                # Moves with the button up count too: LVGL hovers a released
-                # pointer (HOVER_OVER / HOVER_LEAVE, the HOVERED state), as its
-                # own desktop drivers do. A finger is a separate event type
-                # and still moves only while it touches.
-                st["x"], st["y"] = event.pos
-            elif event.type == events.MOUSEBUTTONUP and event.button == 1:
-                st["x"], st["y"] = event.pos
-                st["pressed"] = False
+        if event is None:
+            # Idle reads after a lift. The first leaves the pointer where the
+            # finger was, so the click lands. The second moves it one pixel:
+            # LVGL only remembers the widget it hovered when the pointer moves
+            # while released, and without that it never ends the hover. The
+            # third parks it off the screen.
+            if st["park"] and not st["pressed"]:
+                st["park"] -= 1
+                if st["park"] == 1:
+                    st["x"] += 1
+                elif not st["park"]:
+                    st["x"], st["y"] = _PARKED
+        elif event.type == events.MOUSEBUTTONDOWN and event.button == 1:
+            st["x"], st["y"] = event.pos
+            st["pressed"] = True
+            st["park"] = 0
+        elif event.type == events.MOUSEMOTION:
+            # Moves with the button up count too: LVGL hovers a released
+            # pointer (HOVER_OVER / HOVER_LEAVE, the HOVERED state), as its
+            # own desktop drivers do. A finger is a separate event type
+            # and still moves only while it touches.
+            st["x"], st["y"] = event.pos
+            if not st["pressed"] and not getattr(event, "touch", False):
+                st["mouse"] = True
+        elif event.type == events.MOUSEBUTTONUP and event.button == 1:
+            st["x"], st["y"] = event.pos
+            st["pressed"] = False
+            # A pointer that has never moved with the button up is a touch
+            # screen, and so is any lift the OS says came from a finger.
+            st["park"] = 3 if (getattr(event, "touch", False) or not st["mouse"]) else 0
         data.point = lv.point_t({"x": st["x"], "y": st["y"]})
         data.state = lv.INDEV_STATE.PRESSED if st["pressed"] else lv.INDEV_STATE.RELEASED
 
@@ -1583,6 +1606,14 @@ class DisplayDriver:
     _rot_buf = None
     _rot_area = None
 
+    # LVGL 9.6 renamed lv_draw_sw_rgb565_swap and lv_draw_sw_rotate, keeping
+    # the old names only as C macros, which the binding can't see. Take
+    # whichever this binding has, so the driver runs on 9.5 and 9.6 alike.
+    _rgb565_swap = staticmethod(
+        getattr(lv, "draw_rgb565_swap", None) or getattr(lv, "draw_sw_rgb565_swap", None)
+    )
+    _rotate = staticmethod(getattr(lv, "draw_rotate", None) or getattr(lv, "draw_sw_rotate", None))
+
     def __init__(
         self,
         display_drv,
@@ -1766,7 +1797,7 @@ class DisplayDriver:
             # KeyboardInterrupt from Ctrl-C), that wait never ends: the
             # interpreter is stuck inside the timer callback, and neither the
             # REPL nor MicroPython's USB, which runs from the scheduler,
-            # answers again until a hard reset (micropython-pydevices#48).
+            # answers again until a hard reset (omnipython-builds#48).
             # A present that is still on its way is finished by
             # _flush_wait_cb, which LVGL calls before it paints again.
             if (self._blocking or not done) and not (done and self._started_present):
@@ -1836,7 +1867,7 @@ class DisplayDriver:
             height = area.y2 - area.y1 + 1
 
             if self._needs_swap:
-                lv.draw_sw_rgb565_swap(color_p, width * height)
+                self._rgb565_swap(color_p, width * height)
 
             if self._rotation:
                 self._flush_rotated(panel, area, color_p, width, height)
@@ -1867,7 +1898,7 @@ class DisplayDriver:
             # A draw buffer replaced after this one was sized: grow rather
             # than let the rotation write past the end.
             self._rot_buf = bytearray(dest_stride * dest_h)
-        lv.draw_sw_rotate(
+        self._rotate(
             color_p,
             self._rot_buf,
             width,

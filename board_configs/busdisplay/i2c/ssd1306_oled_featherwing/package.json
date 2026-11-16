@@ -2,16 +2,16 @@
   "urls": [
     [
       "board_config.py",
-      "github:PyDevices/pydevices/board_configs/busdisplay/i2c/ssd1306_oled_featherwing/board_config.py"
+      "github:PyDevices/omnipython/board_configs/busdisplay/i2c/ssd1306_oled_featherwing/board_config.py"
     ],
     [
       "ssd1306_bus.py",
-      "github:PyDevices/pydevices/drivers/display/ssd1306_bus.py"
+      "github:PyDevices/omnipython/drivers/display/ssd1306_bus.py"
     ]
   ],
   "deps": [
     [
-      "pydevices",
+      "omnipython",
       "latest"
     ]
   ],

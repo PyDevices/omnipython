@@ -1,7 +1,7 @@
 # multimer
 
 One `Timer` with `machine.Timer`'s shape, one clock, and one place that
-delivers callbacks, on every interpreter PyDevices runs on. The script ends,
+delivers callbacks, on every interpreter OmniPython runs on. The script ends,
 the prompt comes back, and the timers keep firing.
 
 ```python
@@ -63,6 +63,13 @@ when the first timer is armed.
 
 ## What a callback can count on
 
+Every callback is called with the timer as its one argument, so a method
+written `def step(self):` raises `TypeError` on every tick. multimer prints
+that once and then counts the later failures without printing, which looks
+like a frozen or black screen with a single traceback above it. Write
+`def step(self, timer=None)`. `app.every` and `multimer.every` work the same
+way.
+
 A callback runs on the main thread, at a safe point: between two bytecodes
 where the host can interrupt (a board, a signal, a pending call), otherwise
 at the next idle point (`sleep_ms`, `pump()`, the REPL waiting for a key, an
@@ -70,19 +77,37 @@ at the next idle point (`sleep_ms`, `pump()`, the REPL waiting for a key, an
 
 A callback never interrupts another callback. A callback that is still
 running when its next slot comes is not re-entered; the slot is skipped and
-counted in `missed`. After a callback runs longer than its period, its next
-slot is no sooner than `min(overrun, yield_cap)` later (100 ms by default,
-per timer), so a slow pass lowers that timer's rate instead of taking the
-thread. Deadlines are absolute, so delivery latency never drifts the
-schedule. A callback that raises is printed once and keeps its schedule;
-the exception is on `tim.error`. A `KeyboardInterrupt` (Ctrl-C) or
+counted in `missed`. Deadlines are absolute, so delivery latency never
+drifts the schedule. A callback that raises is printed once and keeps its
+schedule; the exception is on `tim.error`. A `KeyboardInterrupt` (Ctrl-C) or
 `SystemExit` raised in a callback is not caught: it reaches your code or the
 REPL, and the timers keep running. Where the callback ran inside the
 interpreter's scheduler (MicroPython) or a C callback, which can't pass an
 exception on, multimer raises it at the main thread's next idle point
 instead: `sleep_ms`, `pump`, `run_until`, or the loop that keeps a script
 running after its last line. So `sys.exit()` from a timer ends the program
-the same way on every host.
+the same way on every host. A board's REPL that is back at its prompt drops
+what multimer kept, because the command it was meant for has ended. On
+[OmniPython firmware](https://github.com/PyDevices/omnipython-builds), a
+Ctrl-C that lands in a callback also stops the code the callback
+interrupted, so one press stops a command at the REPL however much of the
+time your timers take.
+
+A callback that takes longer than its period runs again as soon as it
+returns while your program waits in multimer: in `sleep_ms`, in `run_until`,
+at CPython's prompt or in `multimer.repl()` waiting for input, or in the loop
+that keeps a script running after its last line. While your own code runs,
+the timer pauses after each pass for as long as the pass took, up to
+`yield_cap` (100 ms by default, per timer), so a slow pass lowers its rate
+instead of taking the thread from your code. At a MicroPython board's own
+prompt it runs back to back too once the REPL has waited half a second with
+no input, on firmware that has `micropython.repl_idle_ms()`
+([OmniPython firmware](https://github.com/PyDevices/omnipython-builds)
+for ESP32 boards); a command, a paste or a WebREPL file transfer
+gets the pause while it runs. Other firmware can't tell a waiting REPL from a
+running command, so the pause applies at its prompt; to run a slow timer back
+to back there, end the program in `run_until` or a `sleep_ms` loop. [How the
+overrun rule works](../how-it-works/multimer-internals.md#the-overrun-rule).
 
 On a board whose REPL is its native USB port (TinyUSB CDC, as on the ESP32-S3
 and ESP32-P4), Ctrl-C can't cut a long callback short: the port reads the
@@ -143,7 +168,7 @@ and `multimer.loop_running()` when a library must know whether a loop is up;
 `get_event_loop()` and `get_running_loop()` are not portable enough for that
 test across MicroPython and CircuitPython.
 
-## PyDevices integration
+## OmniPython integration
 
 `appdev.App` is built on this: `app.every()` returns a `multimer.Timer`, the
 device service tick and each display's refresh are ordinary timers you see in
@@ -154,6 +179,6 @@ display's `frame_clock`. Neither needs `app.run()`.
 ## Next
 
 - [Timer internals and the wake sources](../how-it-works/multimer-internals.md)
-- [Upgrading from pydevices 0.5](upgrade-multimer-from-0.5.md)
+- [Upgrading from OmniPython 0.5](upgrade-multimer-from-0.5.md)
 - [App and board config](write-an-application.md)
 - [Displays](displays.md)

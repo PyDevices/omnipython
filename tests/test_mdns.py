@@ -1,7 +1,7 @@
 # SPDX-FileCopyrightText: 2026 Brad Barnett
 #
 # SPDX-License-Identifier: MIT
-"""``mdns.py`` (pydevices-desktop): CircuitPython's mdns API over
+"""``mdns.py`` (omnipython-desktop): CircuitPython's mdns API over
 python-zeroconf.
 
 ``Shim`` runs against a stand-in for zeroconf, so it needs neither the

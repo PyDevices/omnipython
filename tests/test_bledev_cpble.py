@@ -326,6 +326,48 @@ class CPBLEChecks(unittest.TestCase):
 COUNTER = "8e7f0001-6a3c-4b1e-9d2a-5c0e1f2a3b4c"
 
 
+class SigServices(unittest.TestCase):
+    """The SIG services over cpble's stand-in: they fit CircuitPython's table limits
+    and a measurement goes out once, whole."""
+
+    def test_services_register_and_notify(self):
+        from bledev.battery import Battery
+        from bledev.cyclingpower import CyclingPower
+        from bledev.cyclingspeed import CyclingSpeedCadence
+        from bledev.deviceinfo import DeviceInformation
+        from bledev.environmental import EnvironmentalSensing
+        from bledev.heartrate import HeartRate
+        from bledev.runningspeed import RunningSpeedCadence
+
+        async def main():
+            _bleio.adapter = _bleio.Adapter()
+            cpble._shared = None
+            ble = cpble.CPBLE()
+            battery = Battery(50)
+            monitor = HeartRate(location=1, energy_expended=True)
+            meter = CyclingPower(pedal_balance=True, crank=True, location=6, locations=(5, 6))
+            ble.register_services(
+                battery.service,
+                DeviceInformation(manufacturer="PyDevices", pnp_id=(1, 0xFFFF, 1, 1)).service,
+                monitor.service,
+                CyclingSpeedCadence(location=5, locations=(5, 6)).service,
+                meter.service,
+                RunningSpeedCadence(total_distance=True, location=2).service,
+                EnvironmentalSensing(temperature=True, humidity=True, pressure=True).service,
+            )
+            connection = await ble.advertise(name="sig", services=[monitor.SERVICE])
+            battery.set_level(49)
+            monitor.update(80, rr_ms=(750,))
+            meter.update(200, pedal_balance=50, crank_revolutions=3, crank_time_s=1.0)
+            # A control point's response is an indication; cpble sends it, and can't see it acknowledged.
+            await meter._control.indicate(connection, b"\x20\x03\x01\x05\x06")
+            return battery.characteristic._impl._packets.sent, monitor.characteristic._impl._packets.sent
+
+        battery_sent, hr_sent = run(main())
+        self.assertEqual(battery_sent, [b"\x31"])
+        self.assertEqual(hr_sent, [b"\x10\x50\x00\x03"])
+
+
 def _counter_run(extra=False):
     """One run of a counter peripheral, as a script run from the REPL makes
     it: a new CPBLE and new Service objects, over the board's one adapter."""
@@ -401,15 +443,15 @@ class RunTwice(unittest.TestCase):
 
 def _circuitpython():
     """A CircuitPython unix binary and a directory holding Adafruit's asyncio
-    and adafruit_ticks, or ``(None, why)``. ``PYDEVICES_CIRCUITPYTHON`` and
-    ``PYDEVICES_CP_ASYNCIO`` name them; otherwise the workspace layout, where
+    and adafruit_ticks, or ``(None, why)``. ``OMNIPYTHON_CIRCUITPYTHON`` and
+    ``OMNIPYTHON_CP_ASYNCIO`` name them; otherwise the workspace layout, where
     ``bin/circuitpython`` and the ``circuitpython`` checkout (whose ``frozen/``
     carries both libraries) sit beside this repository."""
     import os
     from pathlib import Path
 
-    binary = os.environ.get("PYDEVICES_CIRCUITPYTHON")
-    libs = os.environ.get("PYDEVICES_CP_ASYNCIO")
+    binary = os.environ.get("OMNIPYTHON_CIRCUITPYTHON")
+    libs = os.environ.get("OMNIPYTHON_CP_ASYNCIO")
     here = Path(__file__).resolve().parent
     for parent in here.parents:
         if binary is None and (parent / "bin" / "circuitpython").is_file():
@@ -439,7 +481,7 @@ class OnCircuitPython(unittest.TestCase):
         found, why = _circuitpython()
         if found is None:
             message = why + ": bledev's checks did NOT run on CircuitPython"
-            if os.environ.get("PYDEVICES_REQUIRE_CIRCUITPYTHON") == "1":
+            if os.environ.get("OMNIPYTHON_REQUIRE_CIRCUITPYTHON") == "1":
                 self.fail(message)
             sys.stderr.write("\n*** " + message + " ***\n")
             self.skipTest(message)

@@ -40,6 +40,17 @@ except ImportError:  # pragma: no cover - CPython host
 LATENCIES = (None, "low", "buffered")
 
 
+class AudioLocked(RuntimeError):
+    """The platform won't start audio until the user acts.
+
+    A browser keeps its audio context suspended until a click or key press.
+    A transport raises this from ``open()`` while that holds, and `AudioOut`
+    keeps the sample and starts it on the first tick after the platform
+    unlocks, so an app calls ``play()`` once and needs no retry of its own.
+    It is a `RuntimeError`, so code that catches that keeps working.
+    """
+
+
 def check_latency(latency):
     """Validate a latency profile name, returning it unchanged.
 
@@ -604,7 +615,7 @@ class _Device:
         primed device stays paused until this many bytes are queued, while a
         producer that caps itself lower has already decided the queue is full
         enough. Each waits on the other and the audio stops without an
-        exception (pydevices#54).
+        exception (omnipython#54).
 
         It used to be readable only as ``_prebuffer_bytes``, by ``getattr``
         with a default of 0 -- so a wrapper that forwarded every *documented*
@@ -1004,7 +1015,7 @@ class ChannelAdapter(PCMOutput):
         wire does, and an unscaled threshold would be twice what the
         producer has to clear.
 
-        Not forwarding this at all is pydevices#54: the pump capped itself
+        Not forwarding this at all is omnipython#54: the pump capped itself
         below the inner device's priming threshold, the device stayed
         paused, and the audio stopped after about a tenth of a second with
         no exception and no message.
@@ -1076,6 +1087,103 @@ def adapt_channels(pcm, source_format, remix=None):
     if source_format.channels not in (1, 2) or pcm.format.channels not in (1, 2):
         raise ValueError("channel_count must be 1 or 2")
     return ChannelAdapter(pcm, source_format, remix=remix)
+
+
+class InputChannelAdapter(PCMInput):
+    """Hand ``readinto()`` the channel count asked for; read the inner
+    device's.
+
+    A board whose capture wire is stereo can give a caller mono, and the other
+    way round: two channels mix down to their mean, one channel is copied to
+    both. Gain, mute and power stay the inner device's, so nothing is scaled
+    twice.
+    """
+
+    def __init__(self, inner, target_format, remix=None):
+        super().__init__(target_format, session=None)
+        self._inner = inner
+        self._wire = bytearray()
+        self.remix = remix or _remix_s16_py
+        self.codec = getattr(inner, "codec", None)
+
+    @property
+    def gain(self):
+        return self._inner.gain
+
+    @property
+    def muted(self):
+        return self._inner.muted
+
+    def set_gain(self, percent):
+        return self._inner.set_gain(percent)
+
+    def mute(self, value=True):
+        return self._inner.mute(value)
+
+    def open(self):
+        self._inner.open()
+        self.is_open = True
+        self.codec = getattr(self._inner, "codec", None)
+        return self
+
+    def close(self):
+        if not self.is_open:
+            return
+        try:
+            self._inner.close()
+        finally:
+            self.is_open = False
+
+    def _wire_view(self, buf):
+        if len(buf) % self.format.frame_size:
+            raise ValueError("PCM buffer must hold complete frames")
+        need = len(buf) // self.format.frame_size * self._inner.format.frame_size
+        if len(self._wire) < need:
+            self._wire = bytearray(need)
+        return memoryview(self._wire)[:need]
+
+    def _converted(self, buf, got):
+        inner_frame = self._inner.format.frame_size
+        got -= got % inner_frame
+        if got <= 0:
+            return 0
+        self.remix(memoryview(self._wire)[:got], self._inner.format.channels, self.format.channels, buf)
+        return got // inner_frame * self.format.frame_size
+
+    def readinto(self, buf):
+        self.open()
+        wire = self._wire_view(buf)
+        return self._converted(buf, self._inner.readinto(wire))
+
+    async def areadinto(self, buf):
+        self.open()
+        wire = self._wire_view(buf)
+        return self._converted(buf, await self._inner.areadinto(wire))
+
+
+def adapt_input_channels(pcm, target_format, remix=None):
+    """Return *pcm* unchanged, or a wrapper whose ``readinto()`` gives
+    *target_format*'s channel count from *pcm*'s.
+
+    ``pcm.format`` is the wire. Channel counts must be 1 or 2, and rates and
+    widths must already match; this does not resample. ``remix`` is as for
+    `adapt_channels`.
+    """
+    if not isinstance(target_format, AudioFormat):
+        raise TypeError("target_format must be AudioFormat")
+    if target_format.channels == pcm.format.channels:
+        return pcm
+    if target_format.rate != pcm.format.rate:
+        raise ValueError("adapt_input_channels does not resample")
+    if (
+        target_format.bits != pcm.format.bits
+        or target_format.signed != pcm.format.signed
+        or target_format.byteorder != pcm.format.byteorder
+    ):
+        raise ValueError("adapt_input_channels converts channels only")
+    if target_format.channels not in (1, 2) or pcm.format.channels not in (1, 2):
+        raise ValueError("channel_count must be 1 or 2")
+    return InputChannelAdapter(pcm, target_format, remix=remix)
 
 
 class PaceOutput(PCMOutput):
@@ -1198,7 +1306,7 @@ class PaceOutput(PCMOutput):
     def prebuffer_bytes(self):
         """The inner device's threshold, unscaled: same format either side.
 
-        Forwarded rather than inherited, for pydevices#54's reason -- a
+        Forwarded rather than inherited, for omnipython#54's reason -- a
         wrapper that answers 0 here caps the producer below what the device
         needs to start, and both sides wait.
         """
@@ -1288,6 +1396,12 @@ class PaceOutput(PCMOutput):
                 return
             self._r = (self._r + written) % n
             self._held -= written
+            if written < take:
+                # The device is full: it took only the room that freed up
+                # while it was called. Asking again would chase the DAC a
+                # few samples at a time until the stash ran out, so write()
+                # waited out the whole queue and space() never fell.
+                return
 
     def _drop_to_cap(self):
         if self._held <= self._cap:
@@ -1424,6 +1538,7 @@ __all__ = (
     "AudioFormat",
     "AudioFactory",
     "AudioCapability",
+    "AudioLocked",
     "I2SWire",
     "DACWire",
     "PDMWire",
@@ -1432,6 +1547,8 @@ __all__ = (
     "AudioSession",
     "ChannelAdapter",
     "adapt_channels",
+    "InputChannelAdapter",
+    "adapt_input_channels",
     "PaceOutput",
     "pace_output",
     "PCMInput",

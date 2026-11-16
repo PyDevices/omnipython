@@ -5,7 +5,7 @@
 """BLE keyboards and game controllers, both ways: HID over GATT (HOGP).
 
 **As a host** (central), a board or a laptop connects to a BLE keyboard,
-remote or gamepad and gets PyDevices events, the same ``events.Key`` and
+remote or gamepad and gets OmniPython events, the same ``events.Key`` and
 ``events.Joy*`` records a USB keyboard gives through usbif or SDL gives on the
 desktop::
 
@@ -37,7 +37,7 @@ as it drives USB::
     KeyboardLayoutUS(kb).write("Hello\\n")
     Mouse(per.devices).move(x=40)
 
-Install ``adafruit_hid`` with ``mip.install("github:PyDevices/pydevices/bledev_hid")``.
+Install ``adafruit_hid`` with ``mip.install("github:PyDevices/omnipython/bledev_hid")``.
 The gamepad, which ``adafruit_hid`` no longer has, is `bledev.hid_gamepad`.
 
 Its name, appearance and Report Map follow from which functions it offers,
@@ -52,7 +52,7 @@ testing with the PC you are testing from, or it will type into it.
 
 import asyncio
 
-import struct
+import boarddev
 
 try:
     from time import ticks_diff, ticks_us
@@ -80,6 +80,8 @@ from . import (
     sleep_ms,
     wait_ms,
 )
+from .battery import Battery
+from .deviceinfo import SOURCE_BLUETOOTH_SIG, DeviceInformation
 from .hidreport import INPUT, OUTPUT, Decoder, HIDParseError, ReportMap
 
 # GATT numbers from the HID Service and HOGP specifications.
@@ -90,11 +92,6 @@ HID_CONTROL_POINT = UUID(0x2A4C)
 REPORT = UUID(0x2A4D)
 PROTOCOL_MODE = UUID(0x2A4E)
 REPORT_REFERENCE = UUID(0x2908)
-BATTERY_SERVICE = UUID(0x180F)
-BATTERY_LEVEL = UUID(0x2A19)
-DEVICE_INFORMATION = UUID(0x180A)
-PNP_ID = UUID(0x2A50)
-MANUFACTURER_NAME = UUID(0x2A29)
 
 #: The HID characteristics under a vendor UUID, for inspection from a laptop.
 #: Windows hides the HID service (0x1812) from apps entirely, and Chrome's
@@ -165,19 +162,13 @@ def report_map(keyboard=True, mouse=True, consumer=True, gamepad=False):
 
 
 def identity(keyboard=True, mouse=True, consumer=True, gamepad=False):
-    """``(name, appearance, product_id)`` for a set of functions, derived the same way every time."""
-    parts = []
-    if keyboard:
-        parts.append("Keyboard")
-    if mouse:
-        parts.append("Mouse")
-    if gamepad:
-        parts.append("Gamepad")
-    if consumer and not keyboard:
-        parts.append("Remote")
-    name = "PyDevices " + "+".join(parts) if parts else "PyDevices HID"
-    if len(name) > 29:  # longer won't fit even a scan response
-        name = "PyDevices HID"
+    """``(name, appearance, product_id)`` for a set of functions.
+
+    The name is the board's, ``boarddev.name()``: the appearance already
+    tells a host it's a keyboard, a mouse or a gamepad. The appearance and
+    product ID are derived from the functions the same way every time.
+    """
+    name = boarddev.name()
     if keyboard and not (mouse or gamepad):
         appearance = APPEARANCE_KEYBOARD
     elif mouse and not (keyboard or gamepad or consumer):
@@ -280,6 +271,8 @@ class Peripheral:
     ``service_uuid=INSPECT_SERVICE`` serves the same characteristics under a
     vendor UUID instead of 0x1812, so a laptop can read them (no host will
     treat the board as a keyboard then).
+
+    It advertises as ``name``, by default the board's, ``boarddev.name()``.
     """
 
     def __init__(self, ble, *, keyboard=True, mouse=True, consumer=True, gamepad=False,
@@ -323,14 +316,14 @@ class Peripheral:
             devices.append(Device(self, self._report(hid, GAMEPAD_ID, 7, encrypted), GAMEPAD_ID, 0x01, 0x05, 7))
         #: One :class:`Device` per function, as ``usb_hid.devices`` lists them.
         self.devices = tuple(devices)
-        battery_svc = Service(BATTERY_SERVICE)
-        self.battery = Characteristic(battery_svc, BATTERY_LEVEL, read=True, notify=True, initial=bytes((battery,)))
-        info = Service(DEVICE_INFORMATION)
-        Characteristic(info, MANUFACTURER_NAME, read=True, initial=manufacturer.encode())
+        battery = Battery(battery)
         # PnP ID: vendor ID source 1 (Bluetooth SIG), company 0xFFFF (the
         # number the SIG reserves for testing), product from the function set.
-        Characteristic(info, PNP_ID, read=True, initial=struct.pack("<BHHH", 1, 0xFFFF, product, 0x0100))
-        self.services = (hid, battery_svc, info)
+        info = DeviceInformation(
+            manufacturer=manufacturer, pnp_id=(SOURCE_BLUETOOTH_SIG, 0xFFFF, product, 0x0100)
+        )
+        self.battery = battery.characteristic
+        self.services = (hid, battery.service, info.service)
         self._registered = False
         self._led_task = None
 
@@ -387,7 +380,7 @@ class Peripheral:
 
 
 class Host:
-    """One connected HID device, as a stream of PyDevices events.
+    """One connected HID device, as a stream of OmniPython events.
 
     Make it with `connect`, or `start` it on a connection you
     already have. ``report_map`` is the parsed `ReportMap`;
@@ -576,6 +569,6 @@ async def connect(ble, name=None, *, device=None, timeout_ms=10000, bond=True, i
 
 
 __all__ = [
-    "Host", "Peripheral", "Keyboard", "Consumer", "Gamepad", "connect", "report_map", "identity",
-    "US_LAYOUT", "ticks_us", "ticks_diff",
+    "Host", "Peripheral", "connect", "report_map", "identity",
+    "ticks_us", "ticks_diff",
 ]

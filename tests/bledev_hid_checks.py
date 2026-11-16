@@ -83,12 +83,19 @@ async def c_served_map_parses(air):
     equal(m.report(OUTPUT, 1).size, 1, "LED report")
     m = ReportMap(hid.report_map(gamepad=True))
     equal([(r.report_id, r.size) for r in m.inputs()], [(1, 8), (2, 4), (3, 2), (4, 7)], "with the gamepad")
-    equal(hid.identity(), ("PyDevices Keyboard+Mouse", 0x03C0, 11), "identity, the default three")
-    equal(hid.identity(True, False, False, False), ("PyDevices Keyboard", 0x03C1, 1), "identity, keyboard")
-    equal(hid.identity(False, True, False, False), ("PyDevices Mouse", 0x03C2, 8), "identity, mouse")
-    equal(hid.identity(False, False, False, True), ("PyDevices Gamepad", 0x03C4, 4), "identity, gamepad")
-    equal(hid.identity(False, False, True, False), ("PyDevices Remote", 0x03C0, 2), "identity, remote")
-    equal(hid.identity(True, True, True, True), ("PyDevices HID", 0x03C0, 15), "identity, all four: too long a name")
+    import boarddev
+
+    boarddev.name("desk-keys")
+    try:
+        equal(hid.identity(), ("desk-keys", 0x03C0, 11), "identity, the default three, named after the board")
+        equal(hid.identity(True, False, False, False), ("desk-keys", 0x03C1, 1), "identity, keyboard")
+        equal(hid.identity(False, True, False, False), ("desk-keys", 0x03C2, 8), "identity, mouse")
+        equal(hid.identity(False, False, False, True), ("desk-keys", 0x03C4, 4), "identity, gamepad")
+        equal(hid.identity(False, False, True, False), ("desk-keys", 0x03C0, 2), "identity, remote")
+        equal(hid.identity(True, True, True, True), ("desk-keys", 0x03C0, 15), "identity, all four")
+        equal(hid.Peripheral(FakeBLE(air=air)).name, "desk-keys", "a peripheral advertises the board's name")
+    finally:
+        boarddev.name(None)
 
 
 async def c_devices_have_usb_hids_shape(air):

@@ -17,7 +17,7 @@ the same ``events.Key`` contract every displaydev backend must emit.
 Applications consume these layers via ``app.poll()`` and
 ``app.on(KEYDOWN, …)``.
 
-## Usage (from the ``pydevices`` repo root)
+## Usage (from the ``omnipython`` repo root)
 
 Self-tests (no window focus needed)::
 

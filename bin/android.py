@@ -55,12 +55,12 @@ STDIO_PORT_DEFAULT = 18765
 RUNNER_REPO = "PyDevices/android-runner"
 DEFAULT_APK_CACHE_DIR = pathlib.Path.home() / ".pydevices" / "apk"
 DEFAULT_APK_FILENAME = "pydevices-runner-debug.apk"
-MIP_INDEX_DEFAULT = "https://pydevices.github.io/mip"
+MIP_INDEX_DEFAULT = "https://lib.omnipython.org"
 DEFAULT_DEPS_CACHE_DIR = pathlib.Path.home() / ".pydevices" / "mip"
 # Packages the Runner APK carries: a --deps package that depends on one of
 # these gets it from the APK, never a staged copy that would shadow it.
 RUNNER_BAKED = frozenset((
-    "pydevices", "pydevices-desktop", "audiodsp", "pygraphics", "palettes",
+    "omnipython", "omnipython-desktop", "audiodsp", "pygraphics", "palettes",
     "pdwidgets", "lvgl", "displaydev", "multimer", "audiodev", "appdev",
 ))
 
@@ -644,7 +644,7 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--modules", help="comma-separated example modules or packages to stage beside the entry (looked up beside the entry, then in lib/examples)")
     parser.add_argument("--manifests", help="comma-separated gallery packages/*.json manifests to stage")
     parser.add_argument("--deps", help="comma-separated pure-Python packages to stage for an app that needs more than the APK bakes in (from this computer's Python if installed, else the PyDevices MIP index)")
-    parser.add_argument("--index", default=None, help=f"MIP index --deps fetches from (default: $PYDEVICES_MIP_INDEX or {MIP_INDEX_DEFAULT})")
+    parser.add_argument("--index", default=None, help=f"MIP index --deps fetches from (default: $OMNIPYTHON_MIP_INDEX or {MIP_INDEX_DEFAULT})")
 
     # Positional script and its arguments
     parser.add_argument("script", nargs="?", help="Python script file to execute")
@@ -654,7 +654,7 @@ def build_arg_parser() -> argparse.ArgumentParser:
 
 def _examples_roots() -> List[pathlib.Path]:
     """Candidate gallery checkouts, most explicit first."""
-    env = os.environ.get("PYDEVICES_EXAMPLES_ROOT")
+    env = os.environ.get("OMNIPYTHON_EXAMPLES_ROOT")
     roots = [pathlib.Path(env)] if env else []
     here = pathlib.Path(__file__).resolve()
     roots.append(here.parent.parent.parent / "gallery")
@@ -671,7 +671,7 @@ def _find_in_examples(*parts: str) -> Optional[pathlib.Path]:
 
 
 def _find_quit_inject() -> Optional[pathlib.Path]:
-    """Locate tools/quit_inject.py in a sibling checkout (set PYDEVICES_EXAMPLES_ROOT to the archived pydevices-examples to find it)."""
+    """Locate tools/quit_inject.py in a sibling checkout (set OMNIPYTHON_EXAMPLES_ROOT to the archived pydevices-examples to find it)."""
     return _find_in_examples("tools", "quit_inject.py")
 
 
@@ -816,11 +816,11 @@ def resolve_deps(names: List[str], index: Optional[str] = None, cache_dir: pathl
 
     A package importable by the Python running android.py is staged from
     there (a developer's checkout or venv). Otherwise it is fetched from the
-    PyDevices MIP index, with its own MIP dependencies, skipping the ones the
+    OmniPython MIP index, with its own MIP dependencies, skipping the ones the
     Runner APK carries. Returns ``[(name, [(host, device)], source)]`` and
     raises DepsError for any package that cannot be staged.
     """
-    index = index or os.environ.get("PYDEVICES_MIP_INDEX") or MIP_INDEX_DEFAULT
+    index = index or os.environ.get("OMNIPYTHON_MIP_INDEX") or MIP_INDEX_DEFAULT
     resolved, seen = [], set()
     queue = list(names)
     while queue:

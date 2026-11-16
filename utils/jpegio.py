@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: MIT
 
 """jpegio on CPython: JPEG decode and encode, the same API as MicroPython's
-built-in jpegio (micropython-pydevices' modules/jpegio), over Pillow.
+built-in jpegio (omnipython-builds' modules/jpegio), over Pillow.
 
     d = jpegio.JpegDecoder(); w, h = d.open(jpeg); d.decode(buf, scale)   # RGB565 into buf
     jpeg = jpegio.JpegEncoder(quality=80).encode(buf, w, h)              # bytes

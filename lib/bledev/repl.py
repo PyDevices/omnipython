@@ -9,13 +9,13 @@ On the board, opt in from ``main.py`` (nothing starts it for you)::
     import bledev.repl
     bledev.repl.start(password="correct horse")   # or webrepl_cfg.PASS
 
-The board then advertises the Nordic UART service as ``name`` while the normal
-REPL carries on. A client connects, sends an empty line to get a
-``Password:`` prompt, sends the password and a newline, and gets the prompt. From a
-laptop or another board::
+The board then advertises the Nordic UART service under its name
+(``boarddev.name()``, or ``name=``) while the normal REPL carries on. A
+client connects, sends an empty line to get a ``Password:`` prompt, sends the
+password and a newline, and gets the prompt. From a laptop or another board::
 
     import bledev.repl
-    link = await bledev.repl.connect(ble, "correct horse", name="mpy-repl")
+    link = await bledev.repl.connect(ble, "correct horse", name="omnipython-a1b2c3")
     await link.write(b"1 + 1\\r")
 
 It behaves like WebREPL: one attempt per connection, a wrong password gets
@@ -52,6 +52,8 @@ as it does over USB. ``stop()`` gives the radio back. It's MicroPython only;
 
 import struct
 import sys
+
+import boarddev
 
 from . import BLEError, GattError, NEEDS_PAIRING, PairingError, STALE_BOND, pack_advertisement, wait_ms
 from . import nus
@@ -176,7 +178,7 @@ _server = None
 
 def start(
     password=None,
-    name="mpy-repl",
+    name=None,
     *,
     interval_us=100000,
     dupterm_index=None,
@@ -192,7 +194,8 @@ def start(
     """Serve the REPL over BLE until `stop` or a reset. MicroPython only.
 
     ``password`` defaults to ``webrepl_cfg.PASS`` when that file exists;
-    it must be at least 4 characters. Returns at once.
+    it must be at least 4 characters. The board advertises as ``name``, by
+    default its own, ``boarddev.name()``. Returns at once.
 
     ``files=True`` also serves `bledev.filetransfer` (CircuitPython's
     file-transfer service) behind the same password, with ``window`` bytes
@@ -240,6 +243,8 @@ def start(
     if not (files or console):
         raise ValueError("nothing to serve: files=False and console=False")
     stop()
+    if name is None:
+        name = boarddev.name()
     _server = _Server(password, name, interval_us, dupterm_index, files, console, window, mode)
     _server.start()
     return _server
@@ -962,8 +967,11 @@ def refused(pair, passkey):
     return PairingError(STALE_BOND)
 
 
-async def connect(ble, password=None, name="mpy-repl", *, device=None, timeout_ms=10000, pair=False, passkey=None, **connect_options):
+async def connect(ble, password=None, name=None, *, device=None, timeout_ms=10000, pair=False, passkey=None, **connect_options):
     """Log in to a board's BLE REPL and return the `bledev.nus.Link`, at ``>>>``.
+
+    ``name`` picks the board by the name it advertises; without one, the
+    first board serving the REPL's service is used.
 
     ``pair=True`` pairs first (bonding, so the next connect skips it), for a
     board started with ``pairing=``; ``passkey`` is what its display shows,
@@ -996,7 +1004,8 @@ async def connect(ble, password=None, name="mpy-repl", *, device=None, timeout_m
         if marker == PROMPT:
             if password is None:
                 raise AuthError("the board wants a password")
-            del buffer[: buffer.find(PROMPT) + len(PROMPT)]
+            # Rebind rather than delete a slice: MicroPython's bytearray can't.
+            buffer = buffer[buffer.find(PROMPT) + len(PROMPT) :]
             secret = password.encode() if isinstance(password, str) else bytes(password)
             await link.write(secret + b"\r")
             marker, buffer = await _expect(link, (b">>> ", DENIED.strip(), BUSY.strip()), buffer, timeout_ms)

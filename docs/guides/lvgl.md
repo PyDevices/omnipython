@@ -1,7 +1,7 @@
-# Using LVGL with PyDevices
+# Using LVGL with OmniPython
 
-How to run [LVGL](https://lvgl.io/) on the PyDevices display, input, and timing
-packages, and what [`display_driver.py`](https://github.com/PyDevices/pydevices/blob/main/lib/display_driver.py) does for you.
+How to run [LVGL](https://lvgl.io/) on the OmniPython display, input, and timing
+packages, and what [`display_driver.py`](https://github.com/PyDevices/omnipython/blob/main/lib/display_driver.py) does for you.
 
 ## One binding for three interpreters
 
@@ -12,7 +12,7 @@ integration for each interpreter, from one generated binding:
 |---|---|
 | [`ports/micropython`](https://github.com/PyDevices/omnipython-lvgl/tree/main/ports/micropython) | MicroPython firmware |
 | [`ports/circuitpython`](https://github.com/PyDevices/omnipython-lvgl/tree/main/ports/circuitpython) | CircuitPython firmware |
-| [`ports/cpython`](https://github.com/PyDevices/omnipython-lvgl/tree/main/ports/cpython) | CPython (`pydevices-lvgl` wheels on TestPyPI) |
+| [`ports/cpython`](https://github.com/PyDevices/omnipython-lvgl/tree/main/ports/cpython) | CPython (`omnipython-lvgl` wheels on TestPyPI) |
 
 All three share `displaydev`, neutral board capabilities, and `multimer`, so
 the same LVGL Python code is portable across them. You can even develop it interactively in
@@ -22,13 +22,12 @@ The rest of this page covers wiring LVGL up by hand, which is what you need with
 upstream [lv_micropython](https://github.com/lvgl/lv_micropython) rather than
 omnipython-lvgl.
 
-## 1. Install the minimum PyDevices packages
+## 1. Install the minimum OmniPython packages
 
 ```python
-import mip
-INDEX = "https://PyDevices.github.io/mip"
-mip.install("pydevices", index=INDEX)  # displaydev, appdev, display_driver and the rest of lib/
-mip.install("github:PyDevices/pydevices/board_configs/<your_board>")
+import omip
+omip.install("omnipython")  # displaydev, appdev, display_driver and the rest of lib/
+omip.install("github:PyDevices/omnipython/board_configs/<your_board>")
 ```
 
 Replace `<your_board>` with a path from
@@ -39,7 +38,7 @@ or follow
 ## 2. Build or obtain LVGL firmware
 
 Follow upstream [lv_micropython](https://github.com/lvgl/lv_micropython) for your
-board. PyDevices supplies the flush and input glue via `board_config.py`; LVGL
+board. OmniPython supplies the flush and input glue via `board_config.py`; LVGL
 supplies the UI toolkit.
 
 For production ESP32 projects, consider
@@ -61,9 +60,9 @@ for you.
 
 ## `display_driver`
 
-[`display_driver.py`](https://github.com/PyDevices/pydevices/blob/main/lib/display_driver.py) is the LVGL coordinator. It
-lives in this repository's `lib/` and ships with `pydevices` (the mip package,
-the wheel, and the frozen module in a micropython-pydevices build), beside the
+[`display_driver.py`](https://github.com/PyDevices/omnipython/blob/main/lib/display_driver.py) is the LVGL coordinator. It
+lives in this repository's `lib/` and ships with `omnipython` (the mip package,
+the wheel, and the frozen module in a omnipython-builds build), beside the
 `board_config` idiom, `appdev`, `events`, `keys` and `multimer` it needs. The
 sister projects carry only `lvgl` and `fs_driver`
 ([loading fonts at runtime](https://github.com/PyDevices/omnipython-lvgl/blob/main/docs/reference/fonts.md)).
@@ -129,8 +128,8 @@ Jupyter, and `multimer` picks how callbacks are delivered
 ([timers](timers.md)). `event_loop` still accepts an `asynchronous` argument,
 but only for API parity; it is ignored.
 
-The frame rate is the display's: `PYDEVICES_REFRESH_MS` changes it for LVGL and
-non-LVGL apps alike, and `PYDEVICES_FPS_PRINT` prints it
+The frame rate is the display's: `OMNIPYTHON_REFRESH_MS` changes it for LVGL and
+non-LVGL apps alike, and `OMNIPYTHON_FPS_PRINT` prints it
 ([displaydev](displays.md)).
 
 ## Verifying an integration

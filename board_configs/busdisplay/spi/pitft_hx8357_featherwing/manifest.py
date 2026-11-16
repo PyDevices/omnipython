@@ -8,7 +8,7 @@ metadata(
     version="0.2",
 )
 
-require("pydevices")
+require("omnipython")
 require("ili9341")
 require("stmpe610")
 

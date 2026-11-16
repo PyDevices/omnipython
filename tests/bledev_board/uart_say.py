@@ -5,7 +5,7 @@
 
     python.exe uart_say.py COM17 "import pair_server; pair_server.status()"
 
-Unlike ``mpftp exec``, which enters the raw REPL with a soft reset, this
+Unlike ``mcuctl exec``, which enters the raw REPL with a soft reset, this
 types at the friendly prompt, so a BLE server running from interrupts keeps
 running and its state can be read. Opens the port as mpremote does (pyserial's
 defaults): on the LCD-7's CH343, opening with DTR and RTS released resets

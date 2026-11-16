@@ -2,7 +2,7 @@
 
 Everything you can import or run, in one list. Start from what you want to do,
 or look a name up in the [A to Z](#a-to-z). If something is missing, it's a bug:
-[open an issue](https://github.com/PyDevices/pydevices/issues).
+[open an issue](https://github.com/PyDevices/omnipython/issues).
 
 **Get it** says how to install each one:
 
@@ -11,7 +11,7 @@ or look a name up in the [A to Z](#a-to-z). If something is missing, it's a bug:
 - `pip name` installs on a computer, with the index options
   [Install](get-started/install.md) shows.
 - "Firmware build" means you get it by building
-  [firmware](https://github.com/PyDevices/micropython-pydevices) with that
+  [firmware](https://github.com/PyDevices/omnipython-builds) with that
   module in, and "opt-in" means you have to name it when you build.
 - "From source" means you clone the repository.
 
@@ -36,84 +36,91 @@ and Android.
 - [I want to drive a sensor, radio or other chip](#drive-a-chip)
 - [I want to run on a desktop, in a browser or on a phone](#run-somewhere-other-than-a-board)
 - [I want to run something finished](#run-a-finished-app)
+- [I want to reuse a library the apps share, such as the Spotify client](#libraries-the-apps-use)
 - [I want to find the project's sites](#find-the-projects-own-sites)
 
 ## Set up a board
 
-- [`OmniPython firmware`](https://github.com/PyDevices/micropython-pydevices/blob/main/README.md): Build MicroPython-compatible and CircuitPython-compatible firmware with the C modules below compiled in, for boards, desktops and the browser.\
+- [`OmniPython firmware`](https://github.com/PyDevices/omnipython-builds/blob/main/README.md): Build MicroPython-compatible and CircuitPython-compatible firmware with the C modules below compiled in, for boards, desktops and the browser.\
   Get it: from source. Runs on: Boards, Desktop, Web.
-- [`mpftp`](https://github.com/PyDevices/mpftp/blob/main/README.md): Move files, run code, open the REPL, install packages and flash firmware, from VS Code, a browser tab or a terminal.\
-  Get it: `pip pydevices-mpftp`. Runs on: Desktop, Web.
-- [`Workbench`](https://pydevices.github.io/workbench/): Edit and run MicroPython in a browser, in a built-in simulator or on a real board over USB, Bluetooth or WebREPL.\
+- [`mcuctl`](https://github.com/PyDevices/mcuctl/blob/main/README.md): Move files, run code, open the REPL, install packages and flash firmware, from VS Code, a browser tab or a terminal.\
+  Get it: `pip mcuctl`. Runs on: Desktop, Web.
+- [`Workbench`](https://workbench.pydevices.com/): Edit and run MicroPython in a browser, in a built-in simulator or on a real board over USB, Bluetooth or WebREPL.\
   Get it: open in a browser. Runs on: Web.
-- [`Board configs`](https://github.com/PyDevices/pydevices/blob/main/docs/boards/board-configs.md): Describe one board's display, touch, audio and pins, so a program runs on it unchanged. There is one per board.\
+- [`Board configs`](https://github.com/PyDevices/omnipython/blob/main/docs/boards/board-configs.md): Describe one board's display, touch, audio and pins, so a program runs on it unchanged. There is one per board.\
   Get it: `mip`, from the board's folder. Runs on: MP, CP, Desktop.
-- [`omip`](https://github.com/PyDevices/pydevices/blob/main/docs/guides/bring-up-a-board.md): Install a package on a board in one line, with what it needs from micropython-lib, after getting the board online if it isn't.\
-  Get it: `mip pydevices`, `pip pydevices`, firmware build. Runs on: MP, CP, Desktop.
-- [`boarddev`](https://github.com/PyDevices/pydevices/blob/main/docs/boards/board-contract.md): Bring up a board's extra devices, such as its camera or sensors, only when you ask for them.\
-  Get it: `mip pydevices`, `pip pydevices`, firmware build. Runs on: MP, CP, Desktop, Web, Android.
+- [`omip`](https://github.com/PyDevices/omnipython/blob/main/docs/guides/bring-up-a-board.md): Install a package on a board in one line, with what it needs from micropython-lib, or Adafruit's libraries on CircuitPython, after getting the board online if it isn't.\
+  Get it: `mip omnipython`, `pip omnipython`, firmware build. Runs on: MP, CP, Desktop, Web.
+- [`boarddev`](https://github.com/PyDevices/omnipython/blob/main/docs/boards/board-contract.md): Bring up a board's extra devices, such as its camera or sensors, only when you ask for them.\
+  Get it: `mip omnipython`, `pip omnipython`, firmware build. Runs on: MP, CP, Desktop, Web, Android.
 
 ## Draw on a screen
 
-- [`displaydev`](https://github.com/PyDevices/pydevices/blob/main/docs/guides/displays.md): Drive any display with one API, from an SPI panel on a board to a window on a desktop.\
-  Get it: `mip pydevices`, `pip pydevices`, firmware build. Runs on: MP, CP, Desktop, Web, Android.
-- [`displayif`](https://github.com/PyDevices/micropython-pydevices/tree/main/modules/displayif): Reach display hardware from C: the I80, QSPI, MIPI DSI and RGB panel buses that `displaydev` sits on.\
+- [`displaydev`](https://github.com/PyDevices/omnipython/blob/main/docs/guides/displays.md): Drive any display with one API, from an SPI panel on a board to a window on a desktop.\
+  Get it: `mip omnipython`, `pip omnipython`, firmware build. Runs on: MP, CP, Desktop, Web, Android.
+- [`displayif`](https://github.com/PyDevices/omnipython-builds/tree/main/modules/displayif): Reach display hardware from C: the I80, QSPI, MIPI DSI and RGB panel buses that `displaydev` sits on.\
   Get it: firmware build. Runs on: MP, by chip.
 - [`pygraphics`](https://github.com/PyDevices/pygraphics/blob/main/docs/index.md): Draw shapes, text and images into a framebuffer.\
-  Get it: `mip pygraphics`, `pip pydevices-pygraphics`, firmware build. Runs on: MP, CP, Desktop, Web, Android.
-- [`palettes`](https://github.com/PyDevices/pydevices/tree/main/packages/palettes): Turn a palette index into a color your display can show.\
-  Get it: `mip palettes`, `pip pydevices-palettes`, firmware build. Runs on: MP, CP, Desktop.
-- [`pdwidgets`](https://github.com/PyDevices/pydevices/tree/main/packages/pdwidgets): Build a user interface from labels, buttons and other small widgets, without LVGL.\
-  Get it: `mip pdwidgets`, `pip pydevices-pdwidgets`, firmware build. Runs on: MP, CP, Desktop.
+  Get it: `mip pygraphics`, `pip omnipython-pygraphics`, firmware build. Runs on: MP, CP, Desktop, Web, Android.
+- [`vtterm`](https://github.com/PyDevices/omnipython/blob/main/docs/guides/vtterm.md): Turn a display into a color terminal, for the board's own REPL or another device's.\
+  Get it: `mip vtterm`. Runs on: MP, CP, Desktop.
+- [`palettes`](https://github.com/PyDevices/omnipython/tree/main/packages/palettes): Turn a palette index into a color your display can show.\
+  Get it: `mip palettes`, `pip omnipython-palettes`, firmware build. Runs on: MP, CP, Desktop.
+- [`iconkit`](https://github.com/PyDevices/omnipython/blob/main/packages/iconkit/docs/reference/icons.md): Draw Material icons in any colour, in LVGL or with pygraphics; frozen in, they cost no RAM.\
+  Get it: `mip iconkit`, `pip omnipython-iconkit`, firmware build. Runs on: MP, CP, Desktop.
+- [`pdwidgets`](https://github.com/PyDevices/omnipython/tree/main/packages/pdwidgets): Build a user interface from labels, buttons and other small widgets, without LVGL.\
+  Get it: `mip pdwidgets`, `pip omnipython-pdwidgets`, firmware build. Runs on: MP, CP, Desktop.
 - [`lvgl`](https://github.com/PyDevices/omnipython-lvgl/blob/main/README.md): Use LVGL from Python with the same `import lvgl as lv` everywhere.\
-  Get it: `pip pydevices-lvgl`, firmware build. Runs on: MP, CP, Desktop, Web, Android.
+  Get it: `pip omnipython-lvgl`, firmware build. Runs on: MP, CP, Desktop, Web, Android.
 - [`fs_driver`](https://github.com/PyDevices/omnipython-lvgl/blob/main/python/fs_driver.py): Let LVGL read files through Python.\
-  Get it: `pip pydevices-lvgl`, firmware build. Runs on: MP, CP, Desktop.
-- [`display_driver`](https://github.com/PyDevices/pydevices/blob/main/docs/guides/lvgl.md): Connect LVGL to your board's display, input and event loop by importing one module.\
-  Get it: `mip pydevices`, `pip pydevices`, firmware build. Runs on: MP, CP, Desktop.
+  Get it: `pip omnipython-lvgl`, firmware build. Runs on: MP, CP, Desktop.
+- [`display_driver`](https://github.com/PyDevices/omnipython/blob/main/docs/guides/lvgl.md): Connect LVGL to your board's display, input and event loop by importing one module.\
+  Get it: `mip omnipython`, `pip omnipython`, firmware build. Runs on: MP, CP, Desktop.
 - [`controlkit`](https://github.com/PyDevices/apps/tree/main/lib/controlkit): Add knobs, sliders, meters, lamp buttons, pad grids and a dot-matrix display to an LVGL screen.\
   Get it: `mip controlkit`, `pip omnipython-applibs`. Runs on: MP, CP, Desktop.
 - [`spectrum`](https://github.com/PyDevices/apps/tree/main/lib/spectrum): Show a spectrum analyzer in part of the screen, sharing the panel with LVGL.\
   Get it: `mip spectrum`, `pip omnipython-applibs`. Runs on: MP, Desktop.
-- [`jpegio`](https://github.com/PyDevices/micropython-pydevices/tree/main/modules/jpegio): Decode and encode JPEG, with CircuitPython's `JpegDecoder` API.\
+- [`jpegio`](https://github.com/PyDevices/omnipython-builds/tree/main/modules/jpegio): Decode and encode JPEG, with CircuitPython's `JpegDecoder` API.\
   Get it: firmware build. Runs on: MP.
-- [`jpegio for CPython`](https://github.com/PyDevices/pydevices/blob/main/utils/jpegio.py): Use the `jpegio` API on a desktop.\
-  Get it: `pip pydevices-desktop`. Runs on: Desktop.
-- [`pngio`](https://github.com/PyDevices/micropython-pydevices/tree/main/modules/pngio): Turn an RGB565 framebuffer into a PNG and back.\
+- [`jpegio for CPython`](https://github.com/PyDevices/omnipython/blob/main/utils/jpegio.py): Use the `jpegio` API on a desktop.\
+  Get it: `pip omnipython-desktop`. Runs on: Desktop.
+- [`pngio`](https://github.com/PyDevices/omnipython-builds/tree/main/modules/pngio): Turn an RGB565 framebuffer into a PNG and back.\
   Get it: firmware build. Runs on: MP.
-- [`pngio for CPython`](https://github.com/PyDevices/pydevices/blob/main/utils/pngio.py): Use the `pngio` API on a desktop, over Pillow.\
-  Get it: `pip pydevices-desktop`. Runs on: Desktop.
-- [`ppa`](https://github.com/PyDevices/micropython-pydevices/tree/main/modules/ppa): Scale, rotate, mirror, crop, convert, fill and blend pictures in memory, in hardware on an ESP32-P4.\
+- [`pngio for CPython`](https://github.com/PyDevices/omnipython/blob/main/utils/pngio.py): Use the `pngio` API on a desktop, over Pillow.\
+  Get it: `pip omnipython-desktop`. Runs on: Desktop.
+- [`svgio`](https://github.com/PyDevices/omnipython-builds/tree/main/modules/svgio): Draw an SVG at any size into RGB565 with alpha, for pygraphics or LVGL's `lv.image`.\
   Get it: firmware build. Runs on: MP.
-- [`frame_recorder`](https://github.com/PyDevices/pydevices/blob/main/utils/frame_recorder.py): Record a desktop display to video.\
-  Get it: `pip pydevices-desktop`. Runs on: Desktop.
+- [`svgio for CPython`](https://github.com/PyDevices/omnipython/blob/main/utils/svgio.py): Use the `svgio` API on a desktop, over resvg-py and Pillow, or in a Pyodide page, over the browser's canvas.\
+  Get it: `pip omnipython-desktop`. Runs on: Desktop, Web.
+- [`ppa`](https://github.com/PyDevices/omnipython-builds/tree/main/modules/ppa): Scale, rotate, mirror, crop, convert, fill and blend pictures in memory, in hardware on an ESP32-P4.\
+  Get it: firmware build. Runs on: MP.
+- [`frame_recorder`](https://github.com/PyDevices/omnipython/blob/main/utils/frame_recorder.py): Record a desktop display to video.\
+  Get it: `pip omnipython-desktop`. Runs on: Desktop.
 
 ## Write an app
 
-- [`appdev`](https://github.com/PyDevices/pydevices/blob/main/docs/guides/the-app-loop.md): Get a main loop that gathers input, runs timers and refreshes the display.\
-  Get it: `mip pydevices`, `pip pydevices`, firmware build. Runs on: MP, CP, Desktop, Web, Android.
-- [`multimer`](https://github.com/PyDevices/pydevices/blob/main/docs/guides/timers.md): Use one `machine.Timer`-shaped timer and one clock on every interpreter.\
-  Get it: `mip pydevices`, `pip pydevices`, firmware build. Runs on: MP, CP, Desktop, Web, Android.
-- [`events`](https://github.com/PyDevices/pydevices/blob/main/docs/modules.md): Handle input as SDL2 and PyGame-style event types.\
-  Get it: `mip pydevices`, `pip pydevices`, firmware build. Runs on: MP, CP, Desktop, Web, Android.
-- [`keys`](https://github.com/PyDevices/pydevices/blob/main/docs/modules.md): Name keys with SDL-style key codes and modifier masks.\
-  Get it: `mip pydevices`, `pip pydevices`, firmware build. Runs on: MP, CP, Desktop, Web, Android.
-- [`backends`](https://github.com/PyDevices/pydevices/blob/main/docs/modules.md): Add a display or audio backend of your own, so the automatic choosers can pick it.\
-  Get it: `mip pydevices`, `pip pydevices`, firmware build. Runs on: MP, CP, Desktop, Web, Android.
+- [`appdev`](https://github.com/PyDevices/omnipython/blob/main/docs/guides/the-app-loop.md): Get a main loop that gathers input, runs timers and refreshes the display.\
+  Get it: `mip omnipython`, `pip omnipython`, firmware build. Runs on: MP, CP, Desktop, Web, Android.
+- [`multimer`](https://github.com/PyDevices/omnipython/blob/main/docs/guides/timers.md): Use one `machine.Timer`-shaped timer and one clock on every interpreter.\
+  Get it: `mip omnipython`, `pip omnipython`, firmware build. Runs on: MP, CP, Desktop, Web, Android.
+- [`events`](https://github.com/PyDevices/omnipython/blob/main/docs/modules.md): Handle input as SDL2 and PyGame-style event types.\
+  Get it: `mip omnipython`, `pip omnipython`, firmware build. Runs on: MP, CP, Desktop, Web, Android.
+- [`keys`](https://github.com/PyDevices/omnipython/blob/main/docs/modules.md): Name keys with SDL-style key codes and modifier masks.\
+  Get it: `mip omnipython`, `pip omnipython`, firmware build. Runs on: MP, CP, Desktop, Web, Android.
+- [`orientation`](https://github.com/PyDevices/omnipython/blob/main/docs/modules.md): Turn a screen to 0, 90, 180 or 270 degrees from an accelerometer's tilt, steady against a shaky hand.\
+  Get it: `mip omnipython`, `pip omnipython`, firmware build. Runs on: MP, CP, Desktop.
+- [`backends`](https://github.com/PyDevices/omnipython/blob/main/docs/modules.md): Add a display or audio backend of your own, so the automatic choosers can pick it.\
+  Get it: `mip omnipython`, `pip omnipython`, firmware build. Runs on: MP, CP, Desktop, Web, Android.
 - [`appkit`](https://github.com/PyDevices/apps/tree/main/lib/appkit): Run several apps in one program, switch between them, and get each app's memory back when it closes.\
   Get it: `mip appkit`, `pip omnipython-applibs`. Runs on: MP, CP, Desktop.
 - [`applibs`](https://github.com/PyDevices/apps/tree/main/lib): Install every shared app library at once.\
   Get it: `mip applibs`, `pip omnipython-applibs`. Runs on: MP, CP, Desktop.
-- [`deskkit`](https://github.com/PyDevices/apps/blob/main/docs/guides/put-a-clock-on-your-desk.md): Put a clock and the weather on a screen on your desk, with swipes between them and the screen dark at night.\
-  Get it: from source. Runs on: MP on an LVGL touch board.
-- [`touchkit`](https://github.com/PyDevices/apps/tree/main/lib/touchkit): Reuse what the apps on an ESP32-P4 touch board share: the shell, settings, clock, network and camera helpers.\
-  Get it: `mip touchkit`, `pip omnipython-applibs`. Runs on: MP on an ESP32-P4 touch board.
 
 ## Make and shape sound
 
-- [`audiodev`](https://github.com/PyDevices/pydevices/blob/main/docs/guides/audio.md): Play PCM and tones through one contract on every host.\
-  Get it: `mip pydevices`, `pip pydevices`, firmware build. Runs on: MP, CP, Desktop, Web, Android.
-- [`audioif`](https://github.com/PyDevices/micropython-pydevices/tree/main/modules/audioif): Reach audio hardware from C: the platform drivers under the audio pump, with CircuitPython's `audiobusio.I2SOut` on top.\
+- [`audiodev`](https://github.com/PyDevices/omnipython/blob/main/docs/guides/audio.md): Play PCM and tones through one contract on every host.\
+  Get it: `mip omnipython`, `pip omnipython`, firmware build. Runs on: MP, CP, Desktop, Web, Android.
+- [`audioif`](https://github.com/PyDevices/omnipython-builds/tree/main/modules/audioif): Reach audio hardware from C: the platform drivers under the audio pump, with CircuitPython's `audiobusio.I2SOut` on top.\
   Get it: firmware build. Runs on: MP.
 - [`audiocore`](https://github.com/PyDevices/audiodsp/blob/main/docs/reference/modules.md): Play WAV files and raw samples, as CircuitPython does.\
   Get it: `pip omnipython-audiodsp`, firmware build. Runs on: MP, CP, Desktop.
@@ -137,7 +144,7 @@ and Android.
   Get it: `pip omnipython-audiodsp`, firmware build. Runs on: MP, CP, Desktop.
 - [`audioecho`](https://github.com/PyDevices/audiodsp/blob/main/docs/reference/filters-and-effects.md): Add a delay with a filter, a soft-clip and a cross-feed in its feedback loop.\
   Get it: `pip omnipython-audiodsp`, firmware build. Runs on: MP, CP, Desktop.
-- [`audioroute`](https://github.com/PyDevices/audiodsp/blob/main/docs/guides/swap-what-plays.md): Fan a stream out, scale stereo width, or re-point a wire while it plays.\
+- [`audioroute`](https://github.com/PyDevices/audiodsp/blob/main/docs/guides/change-without-a-click.md): Fan a stream out, scale stereo width, or re-point a wire while it plays.\
   Get it: `pip omnipython-audiodsp`, firmware build. Runs on: MP, CP, Desktop.
 - [`audioshaper`](https://github.com/PyDevices/audiodsp/blob/main/docs/reference/filters-and-effects.md): Waveshape with a curve that is data, and sample-and-hold at an exact ratio.\
   Get it: `pip omnipython-audiodsp`, firmware build. Runs on: MP, CP, Desktop.
@@ -175,17 +182,17 @@ and Android.
   Get it: `mip audioeffects`, `pip omnipython-audioeffects`, firmware build. Runs on: MP, CP, Desktop.
 - [`audioairwindows`](https://github.com/PyDevices/airwindows/blob/main/README.md): Use Chris Johnson's Airwindows plug-ins in an audio graph.\
   Get it: from source, firmware build. Runs on: MP, Desktop.
-- [`btclassic`](https://github.com/PyDevices/micropython-pydevices/tree/main/modules/btclassic): Make a classic ESP32 a Bluetooth speaker and hands-free unit: play from a phone or computer with its track, cover and controls, and take the phone's calls.\
+- [`btclassic`](https://github.com/PyDevices/omnipython-builds/tree/main/modules/btclassic): Make a classic ESP32 a Bluetooth speaker and hands-free unit: play from a phone or computer with its track, cover and controls, and take the phone's calls.\
   Get it: firmware build. Runs on: MP on classic ESP32.
-- [`picotts`](https://github.com/PyDevices/micropython-pydevices/tree/main/modules/picotts): Make a board with PSRAM speak, with no network and no computer.\
+- [`picotts`](https://github.com/PyDevices/omnipython-builds/tree/main/modules/picotts): Make a board with PSRAM speak, with no network and no computer.\
   Get it: firmware build. Runs on: MP.
 - [`mpvst`](https://github.com/PyDevices/mpvst/blob/main/README.md): Run Python instruments and effects in your DAW as a VST3 plug-in.\
   Get it: download. Runs on: Desktop DAW.
 
 ## Play and sequence music
 
-- [`midiports`](https://github.com/PyDevices/pydevices/tree/main/packages/midiports): Connect `adafruit_midi` to USB, UART, Web MIDI or a computer's own MIDI ports.\
-  Get it: `mip midiports`, `pip pydevices-desktop`. Runs on: MP, Desktop, Web.
+- [`midiports`](https://github.com/PyDevices/omnipython/tree/main/packages/midiports): Connect `adafruit_midi` to USB, UART, Web MIDI or a computer's own MIDI ports.\
+  Get it: `mip midiports`, `pip omnipython-desktop`. Runs on: MP, Desktop, Web.
 - [`soundmodule`](https://github.com/PyDevices/apps/blob/main/docs/guides/play-the-sound-module.md): Play MIDI through a sound engine, headless from a port or through files.\
   Get it: `mip soundmodule`, `pip omnipython-applibs`. Runs on: MP, Desktop.
 - [`songmodel`](https://github.com/PyDevices/apps/tree/main/lib/songmodel): Edit a groovebox's song as plain data, and carry it to a front panel.\
@@ -193,129 +200,133 @@ and Android.
 
 ## Connect devices
 
-- [`medialink`](https://github.com/PyDevices/pydevices/blob/main/docs/guides/medialink.md): Send live sound and pictures between boards and computers.\
-  Get it: `mip medialink`, `pip pydevices`, firmware build. Runs on: MP, CP, Desktop.
-- [`hmilink`](https://github.com/PyDevices/pydevices/blob/main/packages/hmilink/README.md): Use any screen as a device's front panel, over Wi-Fi, a UART, OSC or in-process.\
+- [`medialink`](https://github.com/PyDevices/omnipython/blob/main/docs/guides/medialink.md): Send live sound and pictures between boards and computers.\
+  Get it: `mip medialink`, `pip omnipython`, firmware build. Runs on: MP, CP, Desktop.
+- [`hmilink`](https://github.com/PyDevices/omnipython/blob/main/packages/hmilink/README.md): Use any screen as a device's front panel, over Wi-Fi, a UART, OSC or in-process.\
   Get it: `mip hmilink`. Runs on: MP, CP, Desktop.
 - [`lite-assistant`](https://github.com/PyDevices/lite-assistant/blob/main/README.md): Chat, speak, transcribe and see through a local, OpenAI-compatible server that a board can call.\
   Get it: from source. Runs on: Desktop.
-- [`wifi`](https://github.com/PyDevices/pydevices/blob/main/lib/wifi.py): Use CircuitPython's `wifi.radio` API on MicroPython.\
-  Get it: `mip pydevices`, `pip pydevices`, firmware build. Runs on: MP.
-- [`wifi_manager`](https://github.com/PyDevices/pydevices/blob/main/docs/guides/wifi.md): Join a known Wi-Fi network, or ask for a new one on the screen.\
-  Get it: `mip pydevices`, `pip pydevices`, firmware build. Runs on: MP, CP.
-- [`mdns`](https://github.com/PyDevices/pydevices/blob/main/docs/guides/mdns.md): Announce what a device offers on the network, and find what others offer, with CircuitPython's API.\
+- [`wifi`](https://github.com/PyDevices/omnipython/blob/main/lib/wifi.py): Use CircuitPython's `wifi.radio` API on MicroPython.\
+  Get it: `mip omnipython`, `pip omnipython`, firmware build. Runs on: MP.
+- [`wifi_manager`](https://github.com/PyDevices/omnipython/blob/main/docs/guides/wifi.md): Join a known Wi-Fi network, or ask for a new one on the screen.\
+  Get it: `mip omnipython`, `pip omnipython`, firmware build. Runs on: MP, CP.
+- [`mdns`](https://github.com/PyDevices/omnipython/blob/main/docs/guides/mdns.md): Announce what a device offers on the network, and find what others offer, with CircuitPython's API.\
   Get it: firmware build. Runs on: MP.
-- [`mdns for CPython`](https://github.com/PyDevices/pydevices/blob/main/docs/guides/mdns.md): Use the `mdns` API on a desktop, over python-zeroconf.\
-  Get it: `pip pydevices-desktop`. Runs on: Desktop.
-- [`bledev`](https://github.com/PyDevices/pydevices/blob/main/docs/guides/bluetooth-le.md): Write one Bluetooth LE program for a board, a laptop or a browser.\
-  Get it: `mip bledev`, `pip pydevices`, firmware build. Runs on: MP, CP, Desktop, Web.
-- [`bledev_hid`](https://github.com/PyDevices/pydevices/blob/main/docs/guides/bluetooth-le.md): Use `adafruit_hid` over Bluetooth LE, as a keyboard, mouse or media remote.\
+- [`mdns for CPython`](https://github.com/PyDevices/omnipython/blob/main/docs/guides/mdns.md): Use the `mdns` API on a desktop, over python-zeroconf.\
+  Get it: `pip omnipython-desktop`. Runs on: Desktop.
+- [`bledev`](https://github.com/PyDevices/omnipython/blob/main/docs/guides/bluetooth-le.md): Write one Bluetooth LE program for a board, a laptop or a browser.\
+  Get it: `mip bledev`, `pip omnipython`, firmware build. Runs on: MP, CP, Desktop, Web.
+- [`bledev_hid`](https://github.com/PyDevices/omnipython/blob/main/docs/guides/bluetooth-le.md): Use `adafruit_hid` over Bluetooth LE, as a keyboard, mouse or media remote.\
   Get it: from source. Runs on: MP.
-- [`sayso`](https://github.com/PyDevices/apps/tree/main/lib/sayso): Call the Spotify Web API from a small object layer, with sign-in helpers.\
-  Get it: `mip sayso`, `pip omnipython-applibs`. Runs on: MP, CP, Desktop.
 
 ## Use USB
 
-- [`usbhost`](https://github.com/PyDevices/pydevices/blob/main/docs/guides/usb.md): Provide the C host port that the `usb.core` packages use. You don't import it yourself.\
+- [`usbhost`](https://github.com/PyDevices/omnipython/blob/main/docs/guides/usb.md): Provide the C host port that the `usb.core` packages use. You don't import it yourself.\
   Get it: firmware build. Runs on: MP on ESP32-S2, S3, P4; CP on P4.
-- [`usb-core`](https://github.com/PyDevices/pydevices/blob/main/docs/guides/usb.md): Talk to USB devices from a host board, with `usb.core` and `usb.util`, in PyUSB's shape.\
+- [`usb-core`](https://github.com/PyDevices/omnipython/blob/main/docs/guides/usb.md): Talk to USB devices from a host board, with `usb.core` and `usb.util`, in PyUSB's shape.\
   Get it: `mip usb-core`. Runs on: MP.
-- [`usb-host-hid`](https://github.com/PyDevices/pydevices/blob/main/docs/guides/usb.md): Read a keyboard or mouse plugged into the board.\
+- [`usb-host-dfu`](https://github.com/PyDevices/omnipython/blob/main/docs/guides/usb.md): Read the flash of a board sitting in its USB DFU bootloader.\
+  Get it: `mip usb-host-dfu`. Runs on: MP.
+- [`usb-host-hid`](https://github.com/PyDevices/omnipython/blob/main/docs/guides/usb.md): Read a keyboard or mouse plugged into the board.\
   Get it: `mip usb-host-hid`. Runs on: MP.
-- [`usb-host-msc`](https://github.com/PyDevices/pydevices/blob/main/docs/guides/usb.md): Mount a USB flash drive.\
+- [`usb-host-msc`](https://github.com/PyDevices/omnipython/blob/main/docs/guides/usb.md): Mount a USB flash drive.\
   Get it: `mip usb-host-msc`. Runs on: MP.
-- [`usb-host-cdc`](https://github.com/PyDevices/pydevices/blob/main/docs/guides/usb.md): Talk to a USB serial device.\
+- [`usb-host-cdc`](https://github.com/PyDevices/omnipython/blob/main/docs/guides/usb.md): Talk to a USB serial device.\
   Get it: `mip usb-host-cdc`. Runs on: MP.
-- [`usb-host-audio`](https://github.com/PyDevices/pydevices/blob/main/docs/guides/usb.md): Play to a USB speaker or record from a USB microphone.\
+- [`usb-host-audio`](https://github.com/PyDevices/omnipython/blob/main/docs/guides/usb.md): Play to a USB speaker or record from a USB microphone.\
   Get it: `mip usb-host-audio`. Runs on: MP.
-- [`usb-host-video`](https://github.com/PyDevices/pydevices/blob/main/docs/guides/usb.md): Stream a USB webcam.\
+- [`usb-host-video`](https://github.com/PyDevices/omnipython/blob/main/docs/guides/usb.md): Stream a USB webcam.\
   Get it: `mip usb-host-video`. Runs on: MP.
-- [`usb-host-mtp`](https://github.com/PyDevices/pydevices/blob/main/docs/guides/usb.md): Copy photos and files off a phone or camera over MTP.\
+- [`usb-host-mtp`](https://github.com/PyDevices/omnipython/blob/main/docs/guides/usb.md): Copy photos and files off a phone or camera over MTP.\
   Get it: `mip usb-host-mtp`. Runs on: MP.
-- [`usb-host-net`](https://github.com/PyDevices/pydevices/blob/main/docs/guides/usb.md): Get internet through a phone's USB tethering.\
+- [`usb-host-net`](https://github.com/PyDevices/omnipython/blob/main/docs/guides/usb.md): Get internet through a phone's USB tethering.\
   Get it: `mip usb-host-net`. Runs on: MP.
-- [`usb-device-audio`](https://github.com/PyDevices/pydevices/blob/main/docs/guides/usb.md): Make the board a USB sound card.\
+- [`usb-device-audio`](https://github.com/PyDevices/omnipython/blob/main/docs/guides/usb.md): Make the board a USB speaker, microphone or headset.\
   Get it: `mip usb-device-audio`. Runs on: MP.
-- [`usb-device-video`](https://github.com/PyDevices/pydevices/blob/main/docs/guides/usb.md): Make the board a USB webcam.\
+- [`usb-device-video`](https://github.com/PyDevices/omnipython/blob/main/docs/guides/usb.md): Make the board a USB webcam.\
   Get it: `mip usb-device-video`. Runs on: MP.
-- [`usb-device-msc`](https://github.com/PyDevices/pydevices/blob/main/docs/guides/usb.md): Make the board a USB drive, from any block device.\
+- [`usb-device-msc`](https://github.com/PyDevices/omnipython/blob/main/docs/guides/usb.md): Make the board a USB drive, from any block device.\
   Get it: `mip usb-device-msc`. Runs on: MP.
-- [`usb-hid`](https://github.com/PyDevices/pydevices/blob/main/docs/guides/usb.md): Use CircuitPython's `usb_hid` on MicroPython, so `adafruit_hid` can type and move the mouse.\
+- [`usb-device-net`](https://github.com/PyDevices/omnipython/blob/main/docs/guides/usb.md): Give the computer a network link to the board over its USB cable, with no driver to install.\
+  Get it: `mip usb-device-net`. Runs on: MP.
+- [`usb-hid`](https://github.com/PyDevices/omnipython/blob/main/docs/guides/usb.md): Use CircuitPython's `usb_hid` on MicroPython, so `adafruit_hid` can type, move the mouse and be a gamepad or a touch pointer.\
   Get it: `mip usb-hid`. Runs on: MP.
 
 ## Use cameras, video and AI on a board
 
-- [`cameraif`](https://github.com/PyDevices/micropython-pydevices/tree/main/modules/cameraif): Use a MIPI-CSI camera as a Python object, with its sensor found by probing.\
+- [`cameraif`](https://github.com/PyDevices/omnipython-builds/tree/main/modules/cameraif): Use a MIPI-CSI camera as a Python object, with its sensor found by probing.\
   Get it: firmware build. Runs on: MP on ESP32-P4.
-- [`h264enc`](https://github.com/PyDevices/micropython-pydevices/tree/main/modules/h264enc): Encode RGB565 frames as H.264 in hardware.\
+- [`h264enc`](https://github.com/PyDevices/omnipython-builds/tree/main/modules/h264enc): Encode RGB565 frames as H.264 in hardware.\
   Get it: firmware build. Runs on: MP on ESP32-P4.
-- [`tsmux`](https://github.com/PyDevices/micropython-pydevices/tree/main/modules/tsmux): Wrap H.264 in MPEG-TS and cut it into HLS segments, so anything that plays HLS can watch a board.\
+- [`mp4mux`](https://github.com/PyDevices/omnipython/blob/main/packages/mp4mux/README.md): Record H.264 video and PCM sound into an MP4 file that plays everywhere.\
+  Get it: `mip mp4mux`. Runs on: MP, CP, Desktop.
+- [`castdisplay`](https://github.com/PyDevices/omnipython/blob/main/docs/guides/cast-to-a-tv.md): Cast what an app draws to a Roku TV, a Windows laptop or VLC, as a display the app uses unchanged.\
+  Get it: `mip castdisplay`. Runs on: MP on ESP32-P4, Desktop.
+- [`tsmux`](https://github.com/PyDevices/omnipython-builds/tree/main/modules/tsmux): Wrap H.264 in MPEG-TS and cut it into HLS segments, so anything that plays HLS can watch a board.\
   Get it: firmware build. Runs on: MP.
-- [`castif`](https://github.com/PyDevices/micropython-pydevices/tree/main/modules/castif): Stream what your app draws to a screen across the room.\
+- [`castif`](https://github.com/PyDevices/omnipython-builds/tree/main/modules/castif): Stream what your app draws to a screen across the room.\
   Get it: firmware build. Runs on: MP on ESP32-P4.
-- [`vision`](https://github.com/PyDevices/micropython-pydevices/tree/main/modules/vision): Run image models and handle pictures with ESP-DL, plus H.264 and RTSP on the P4.\
+- [`vision`](https://github.com/PyDevices/omnipython-builds/tree/main/modules/vision): Run image models and handle pictures with ESP-DL, plus H.264 and RTSP on the P4.\
   Get it: firmware build, opt-in. Runs on: MP on ESP32-S3, P4.
-- [`tflite`](https://github.com/PyDevices/micropython-pydevices/tree/main/modules/tflite): Run TensorFlow Lite Micro models on a board, from speech to person detection.\
+- [`tflite`](https://github.com/PyDevices/omnipython-builds/tree/main/modules/tflite): Run TensorFlow Lite Micro models on a board, from speech to person detection.\
   Get it: firmware build, opt-in. Runs on: MP on ESP32-S3, P4.
 - [`ulab`](https://github.com/v923z/micropython-ulab): Work with numpy-like arrays.\
   Get it: firmware build. Runs on: MP.
 
 ## Drive a chip
 
-- [`Display drivers`](https://github.com/PyDevices/pydevices/blob/main/docs/boards/display-drivers.md): Drive ILI9341, ST7789, SSD1306, GC9A01 and other panels.\
+- [`Display drivers`](https://github.com/PyDevices/omnipython/blob/main/docs/boards/display-drivers.md): Drive ILI9341, ST7789, SSD1306, GC9A01 and other panels.\
   Get it: `mip` for some chips, otherwise from source. Runs on: MP, CP.
-- [`Touch drivers`](https://github.com/PyDevices/pydevices/blob/main/docs/boards/touch-drivers.md): Read FT6x36, GT911, CST8xx, XPT2046 and other touch panels.\
+- [`Touch drivers`](https://github.com/PyDevices/omnipython/blob/main/docs/boards/touch-drivers.md): Read FT6x36, GT911, CST8xx, XPT2046 and other touch panels.\
   Get it: `mip` for some chips, otherwise from source. Runs on: MP, CP.
-- [`Bus drivers`](https://github.com/PyDevices/pydevices/tree/main/drivers/bus): Talk over SPI, I2C, I80, CAN, RS-485 and GPIO in pure Python.\
+- [`Bus drivers`](https://github.com/PyDevices/omnipython/tree/main/drivers/bus): Talk over SPI, I2C, I80, CAN, RS-485 and GPIO in pure Python.\
   Get it: `mip` for some chips, otherwise from source. Runs on: MP.
-- [`Camera sensors`](https://github.com/PyDevices/pydevices/tree/main/drivers/camera): Set up IMX219 and other CSI sensors.\
+- [`Camera sensors`](https://github.com/PyDevices/omnipython/tree/main/drivers/camera): Set up IMX219 and other CSI sensors.\
   Get it: `mip` for some chips, otherwise from source. Runs on: MP.
-- [`Audio codecs`](https://github.com/PyDevices/pydevices/tree/main/drivers/codec): Set up ES7210, ES8311, ES8388 and AW88298 audio chips.\
+- [`Audio codecs`](https://github.com/PyDevices/omnipython/tree/main/drivers/codec): Set up ES7210, ES8311, ES8388 and AW88298 audio chips.\
   Get it: `mip` for some chips, otherwise from source. Runs on: MP.
-- [`Environment sensors`](https://github.com/PyDevices/pydevices/tree/main/drivers/env): Read temperature, humidity and pressure from AHTx0, BMP280 and DPS310.\
+- [`Environment sensors`](https://github.com/PyDevices/omnipython/tree/main/drivers/env): Read temperature, humidity and pressure from AHTx0, BMP280 and DPS310.\
   Get it: from source. Runs on: MP.
-- [`Haptics`](https://github.com/PyDevices/pydevices/tree/main/drivers/haptic): Buzz a DRV2605 motor driver.\
+- [`Haptics`](https://github.com/PyDevices/omnipython/tree/main/drivers/haptic): Buzz a DRV2605 motor driver.\
   Get it: `mip` for some chips, otherwise from source. Runs on: MP.
-- [`IMUs`](https://github.com/PyDevices/pydevices/tree/main/drivers/imu): Read motion from BMA423, LIS3DH and QMI8658.\
+- [`IMUs`](https://github.com/PyDevices/omnipython/tree/main/drivers/imu): Read motion from BMA423, LIS3DH, QMA6100P and QMI8658.\
   Get it: `mip` for some chips, otherwise from source. Runs on: MP.
-- [`Buttons and keypads`](https://github.com/PyDevices/pydevices/tree/main/drivers/input): Wire physical buttons, keypads and encoders into `appdev`.\
+- [`Buttons and keypads`](https://github.com/PyDevices/omnipython/tree/main/drivers/input): Wire physical buttons, keypads and encoders into `appdev`.\
   Get it: `mip` for some chips, otherwise from source. Runs on: MP.
-- [`I/O expanders`](https://github.com/PyDevices/pydevices/tree/main/drivers/io_expander): Add pins with CH422G, PCA9554, PI4IOE5V and XL9535.\
+- [`I/O expanders`](https://github.com/PyDevices/omnipython/tree/main/drivers/io_expander): Add pins with CH422G, PCA9554, PI4IOE5V and XL9535.\
   Get it: `mip` for some chips, otherwise from source. Runs on: MP.
-- [`Infrared`](https://github.com/PyDevices/pydevices/tree/main/drivers/ir): Send and receive NEC remote-control codes.\
+- [`Infrared`](https://github.com/PyDevices/omnipython/tree/main/drivers/ir): Send and receive NEC remote-control codes.\
   Get it: `mip` for some chips, otherwise from source. Runs on: MP.
-- [`Joysticks`](https://github.com/PyDevices/pydevices/tree/main/drivers/joystick): Read a GPIO joystick.\
+- [`Joysticks`](https://github.com/PyDevices/omnipython/tree/main/drivers/joystick): Read a GPIO joystick.\
   Get it: from source. Runs on: MP.
-- [`LEDs`](https://github.com/PyDevices/pydevices/tree/main/drivers/led): Light DotStar LEDs.\
+- [`LEDs`](https://github.com/PyDevices/omnipython/tree/main/drivers/led): Light DotStar LEDs.\
   Get it: from source. Runs on: MP.
-- [`Power`](https://github.com/PyDevices/pydevices/tree/main/drivers/power): Manage an AXP2101 PMU, or read a battery through a resistor divider.\
+- [`Power`](https://github.com/PyDevices/omnipython/tree/main/drivers/power): Manage an AXP2101 PMU, or read a battery through a resistor divider.\
   Get it: `mip` for some chips, otherwise from source. Runs on: MP.
-- [`Radios`](https://github.com/PyDevices/pydevices/tree/main/drivers/radio): Use an SX1262 radio.\
+- [`Radios`](https://github.com/PyDevices/omnipython/tree/main/drivers/radio): Use an SX1262 radio.\
   Get it: `mip` for some chips, otherwise from source. Runs on: MP.
-- [`Real-time clocks`](https://github.com/PyDevices/pydevices/tree/main/drivers/rtc): Keep time with a PCF8563.\
+- [`Real-time clocks`](https://github.com/PyDevices/omnipython/tree/main/drivers/rtc): Keep time with a PCF8563.\
   Get it: `mip` for some chips, otherwise from source. Runs on: MP.
-- [`Storage`](https://github.com/PyDevices/pydevices/tree/main/drivers/storage): Read SD cards on an nRF52.\
+- [`Storage`](https://github.com/PyDevices/omnipython/tree/main/drivers/storage): Read SD cards on an nRF52.\
   Get it: from source. Runs on: MP.
 
 ## Run somewhere other than a board
 
-- [`pydevices-desktop`](https://github.com/PyDevices/pydevices/blob/main/docs/guides/run-on-the-desktop.md): Install the desktop stack and its board config in one command.\
-  Get it: `pip pydevices-desktop`, `mip pydevices-desktop`. Runs on: Desktop.
-- [`micropython shim`](https://github.com/PyDevices/pydevices/blob/main/utils/micropython.py): Run code written for MicroPython under CPython without import errors.\
-  Get it: `pip pydevices-desktop`. Runs on: Desktop.
-- [`mip for hosts`](https://github.com/PyDevices/pydevices/blob/main/utils/mip.py): Use `mip` on a host that doesn't have it.\
-  Get it: `pip pydevices-desktop`. Runs on: Desktop.
-- [`usdl2`](https://github.com/PyDevices/pydevices/blob/main/utils/usdl2.py): Call a subset of SDL2 from pure Python.\
-  Get it: `pip pydevices-desktop`, firmware build. Runs on: MP, Desktop.
-- [`uwin32`](https://github.com/PyDevices/pydevices/blob/main/utils/uwin32.py): Call a subset of Win32 from pure Python.\
-  Get it: `pip pydevices-desktop`, firmware build. Runs on: MP, Desktop on Windows.
-- [`wasm.py`](https://github.com/PyDevices/pydevices/blob/main/docs/guides/run-in-the-browser.md): Run a script in a browser on direct MicroPython WebAssembly.\
+- [`omnipython-desktop`](https://github.com/PyDevices/omnipython/blob/main/docs/guides/run-on-the-desktop.md): Install the desktop stack and its board config in one command.\
+  Get it: `pip omnipython-desktop`, `mip omnipython-desktop`. Runs on: Desktop.
+- [`micropython shim`](https://github.com/PyDevices/omnipython/blob/main/utils/micropython.py): Run code written for MicroPython under CPython without import errors.\
+  Get it: `pip omnipython-desktop`. Runs on: Desktop.
+- [`usdl2`](https://github.com/PyDevices/omnipython/blob/main/utils/usdl2.py): Call a subset of SDL2 from pure Python.\
+  Get it: `pip omnipython-desktop`, firmware build. Runs on: MP, Desktop.
+- [`uwin32`](https://github.com/PyDevices/omnipython/blob/main/utils/uwin32.py): Call a subset of Win32 from pure Python.\
+  Get it: `pip omnipython-desktop`, firmware build. Runs on: MP, Desktop on Windows.
+- [`wasm.py`](https://github.com/PyDevices/omnipython/blob/main/docs/guides/run-in-the-browser.md): Run a script in a browser on direct MicroPython WebAssembly.\
   Get it: from source. Runs on: Web.
-- [`pyscript.py`](https://github.com/PyDevices/pydevices/blob/main/docs/guides/run-in-pyscript.md): Run a script in a browser on PyScript and Pyodide.\
+- [`pyscript.py`](https://github.com/PyDevices/omnipython/blob/main/docs/guides/run-in-pyscript.md): Run a script in a browser on PyScript and Pyodide.\
   Get it: from source. Runs on: Web.
-- [`jupyter.py`](https://github.com/PyDevices/pydevices/blob/main/docs/guides/run-in-jupyter.md): Run a script in Jupyter.\
+- [`jupyter.py`](https://github.com/PyDevices/omnipython/blob/main/docs/guides/run-in-jupyter.md): Run a script in Jupyter.\
   Get it: from source. Runs on: Desktop.
-- [`android.py`](https://github.com/PyDevices/pydevices/blob/main/docs/guides/run-on-android.md): Run a script on an Android phone, tablet or TV with one command.\
+- [`android.py`](https://github.com/PyDevices/omnipython/blob/main/docs/guides/run-on-android.md): Run a script on an Android phone, tablet or TV with one command.\
   Get it: from source. Runs on: Android.
 - [`android-runner`](https://github.com/PyDevices/android-runner/blob/main/README.md): Build the Runner app that `android.py` installs. You rarely need this yourself.\
   Get it: download. Runs on: Android.
@@ -326,90 +337,121 @@ and Android.
 
 ## Run a finished app
 
-- [`Gallery`](https://pydevices.github.io/gallery/): Try a piano, a spectrum analyzer, games, dashboards, a TV remote and more, on any host.\
+- [`Gallery`](https://gallery.omnipython.org/): Try a piano, a spectrum analyzer, games, dashboards, a TV remote and more, on any host.\
   Get it: open in a browser. Runs on: MP, CP, Desktop, Web, Android.
 - [`Synth Station`](https://github.com/PyDevices/apps/tree/main/apps/synthstation): Pick an instrument and play it from a MIDI keyboard, with a front panel for its knobs and patches.\
-  Get it: from source. Runs on: MP, Desktop, Web.
+  Get it: `omip`, from the app's folder, from source. Runs on: MP, Desktop, Web.
+- [`Huey's Perch`](https://github.com/PyDevices/apps/tree/main/apps/perch): Watch Huey the chameleon walk, catch bugs and change colour in vector art drawn at your screen's size.\
+  Get it: `omip`, from the app's folder, from source. Runs on: MP, Desktop, Web.
+- [`Huey`](https://github.com/PyDevices/apps/tree/main/apps/huey): Hold Huey the chameleon and talk to him; he answers aloud and acts out his reply.\
+  Get it: `omip`, from the app's folder, from source. Runs on: MP with touch, Wi-Fi, a microphone and PSRAM.
+- [`Bit World`](https://github.com/PyDevices/apps/tree/main/apps/bit_world): Watch a pixel robot's world, play its sky game and drive its deck.\
+  Get it: `omip`, from the app's folder, from source. Runs on: MP, Desktop, Web.
 - [`Ostinato`](https://github.com/PyDevices/apps/blob/main/docs/guides/run-ostinato.md): Sequence patterns and edit songs in a groovebox.\
   Get it: from source. Runs on: Desktop, Web.
 - [`Vamp`](https://github.com/PyDevices/apps/blob/main/docs/guides/put-vamp-on-a-board.md): Run a groovebox on a board with no screen of its own.\
   Get it: from source. Runs on: MP.
+- [`Internet radio`](https://github.com/PyDevices/apps/tree/main/programs/internet-radio): Play MP3 streams over Wi-Fi, with a press to change station.\
+  Get it: from source. Runs on: MP with Wi-Fi and audio out.
+- [`MIDI module`](https://github.com/PyDevices/apps/tree/main/programs/midi-module): Play General MIDI from a 5-pin DIN socket through a SoundFont.\
+  Get it: from source. Runs on: MP with audio out and a UART.
+- [`Bluetooth speaker`](https://github.com/PyDevices/apps/tree/main/programs/bt-speaker): Make the board a speaker your phone or computer pairs with.\
+  Get it: from source. Runs on: MP with Bluetooth Classic and audio out.
+- [`Camera for the ESP32-P4`](https://github.com/PyDevices/apps/tree/main/programs/camera): Take photos and H.264 video with sound, keep an album and spot people and faces, as the ESP32-P4X-EYE's own camera app does.\
+  Get it: `omip`, from the app's folder, from source. Runs on: MP on ESP32-P4.
 - [`midiEngine`](https://github.com/PyDevices/apps/tree/main/apps/midiengine): Play General MIDI from a SoundFont and a USB MIDI keyboard.\
-  Get it: from source. Runs on: ESP32-P4 touch board.
+  Get it: `omip`, from the app's folder, from source. Runs on: ESP32-P4 touch board.
 - [`Stompbox`](https://github.com/PyDevices/apps/tree/main/apps/stompbox): Play a guitar or WAV clip through an Airwindows effect, with its knobs on screen.\
-  Get it: from source. Runs on: ESP32-P4 touch board, with `audioairwindows`.
+  Get it: `omip`, from the app's folder, from source. Runs on: ESP32-P4 touch board, with `audioairwindows`.
 - [`MP3 player`](https://github.com/PyDevices/apps/tree/main/apps/mp3): Play the songs on an SD card, with a spectrum.\
-  Get it: from source. Runs on: ESP32-P4 touch board.
+  Get it: `omip`, from the app's folder, from source. Runs on: ESP32-P4 touch board.
 - [`Sound card`](https://github.com/PyDevices/apps/tree/main/apps/card): Make the board a USB speaker for a computer, with a spectrum of what plays.\
-  Get it: from source. Runs on: ESP32-P4 touch board.
+  Get it: `omip`, from the app's folder, from source. Runs on: ESP32-P4 touch board.
 - [`Spotify`](https://github.com/PyDevices/apps/tree/main/apps/spotify): Make the board a Spotify Connect speaker, with the screen as its remote.\
-  Get it: from source. Runs on: ESP32-P4 touch board.
-- [`Walkie-talkie`](https://github.com/PyDevices/pydevices/blob/main/docs/guides/medialink.md): Talk to another device while you hold a button.\
-  Get it: from source. Runs on: Touch boards.
-- [`Hands free`](https://github.com/PyDevices/pydevices/blob/main/docs/guides/medialink.md): Talk to another device without a button.\
-  Get it: from source. Runs on: Touch boards.
-- [`Baby monitor`](https://github.com/PyDevices/pydevices/blob/main/docs/guides/medialink.md): Listen to a room from another one.\
-  Get it: from source. Runs on: Touch boards.
-- [`Doorbell`](https://github.com/PyDevices/pydevices/blob/main/docs/guides/medialink.md): Ring a house over the network, then talk to whoever answers.\
-  Get it: from source. Runs on: Touch boards.
-- [`Video doorbell`](https://github.com/PyDevices/pydevices/blob/main/docs/guides/medialink.md): See who is at the door, and talk to them.\
-  Get it: from source. Runs on: ESP32-P4 with a camera.
-- [`Videophone`](https://github.com/PyDevices/pydevices/blob/main/docs/guides/medialink.md): See each other, and talk while you hold a button.\
-  Get it: from source. Runs on: ESP32-P4 with a camera.
-- [`Surveillance camera`](https://github.com/PyDevices/pydevices/blob/main/docs/guides/medialink.md): Watch and listen to a camera in another room.\
-  Get it: from source. Runs on: ESP32-P4 with a camera.
+  Get it: `omip`, from the app's folder, from source. Runs on: ESP32-P4 touch board.
+- [`Walkie-talkie`](https://github.com/PyDevices/omnipython/blob/main/docs/guides/medialink.md): Talk to another device while you hold a button.\
+  Get it: `omip`, from the app's folder, from source. Runs on: Touch boards.
+- [`Hands free`](https://github.com/PyDevices/omnipython/blob/main/docs/guides/medialink.md): Talk to another device without a button.\
+  Get it: `omip`, from the app's folder, from source. Runs on: Touch boards.
+- [`Baby monitor`](https://github.com/PyDevices/omnipython/blob/main/docs/guides/medialink.md): Listen to a room from another one.\
+  Get it: `omip`, from the app's folder, from source. Runs on: Touch boards.
+- [`Doorbell`](https://github.com/PyDevices/omnipython/blob/main/docs/guides/medialink.md): Ring a house over the network, then talk to whoever answers.\
+  Get it: `omip`, from the app's folder, from source. Runs on: Touch boards.
+- [`Video doorbell`](https://github.com/PyDevices/omnipython/blob/main/docs/guides/medialink.md): See who is at the door, and talk to them.\
+  Get it: `omip`, from the app's folder, from source. Runs on: ESP32-P4 with a camera.
+- [`Videophone`](https://github.com/PyDevices/omnipython/blob/main/docs/guides/medialink.md): See each other, and talk while you hold a button.\
+  Get it: `omip`, from the app's folder, from source. Runs on: ESP32-P4 with a camera.
+- [`Surveillance camera`](https://github.com/PyDevices/omnipython/blob/main/docs/guides/medialink.md): Watch and listen to a camera in another room.\
+  Get it: `omip`, from the app's folder, from source. Runs on: ESP32-P4 with a camera.
 - [`Camera`](https://github.com/PyDevices/apps/tree/main/apps/camera): Preview the CSI camera and take pictures.\
-  Get it: from source. Runs on: ESP32-P4 with a camera.
+  Get it: `omip`, from the app's folder, from source. Runs on: ESP32-P4 with a camera.
 - [`Security camera`](https://github.com/PyDevices/apps/tree/main/apps/security): Stream the CSI camera as MJPEG, with a preview on the panel.\
-  Get it: from source. Runs on: ESP32-P4 with a camera.
+  Get it: `omip`, from the app's folder, from source. Runs on: ESP32-P4 with a camera.
 - [`Object detection`](https://github.com/PyDevices/apps/tree/main/apps/detect): Run the camera through YOLO11n and draw boxes on the preview.\
-  Get it: from source. Runs on: ESP32-P4 with a camera.
+  Get it: `omip`, from the app's folder, from source. Runs on: ESP32-P4 with a camera.
 - [`Cast`](https://github.com/PyDevices/apps/tree/main/apps/cast): Put a screen of its own on a Roku or Windows PC, with the panel as its remote.\
-  Get it: from source. Runs on: ESP32-P4 touch board.
+  Get it: `omip`, from the app's folder, from source. Runs on: ESP32-P4 touch board.
 - [`Clock`](https://github.com/PyDevices/apps/blob/main/docs/guides/put-a-clock-on-your-desk.md): Show an analog clock that fills a round touch screen.\
-  Get it: from source. Runs on: MP on an LVGL touch board.
+  Get it: `omip`, from the app's folder, from source. Runs on: MP on an LVGL touch board.
 - [`Weather`](https://github.com/PyDevices/apps/blob/main/docs/guides/put-a-clock-on-your-desk.md): See the conditions and five days ahead, with no account or key.\
-  Get it: from source. Runs on: MP on an LVGL touch board.
+  Get it: `omip`, from the app's folder, from source. Runs on: MP on an LVGL touch board.
 - [`Roku remote`](https://github.com/PyDevices/apps/tree/main/apps/roku): Control a Roku TV from the touch screen, over your network.\
-  Get it: from source. Runs on: ESP32-P4 touch board.
+  Get it: `omip`, from the app's folder, from source. Runs on: ESP32-P4 touch board.
+- [`REPL`](https://github.com/PyDevices/omnipython/blob/main/docs/guides/vtterm.md): Use the board's Python prompt on its own screen, typed on a USB or Bluetooth keyboard.\
+  Get it: `omip`, from the app's folder, from source. Runs on: MP.
 - [`Wake word`](https://github.com/PyDevices/apps/tree/main/apps/wake): Listen on a USB microphone for "Hey Jarvis" and flash on each detection.\
-  Get it: from source. Runs on: ESP32-P4 touch board.
+  Get it: `omip`, from the app's folder, from source. Runs on: ESP32-P4 touch board.
+- [`Gamepad`](https://github.com/PyDevices/apps/tree/main/apps/gamepad): Make the board a game controller for a computer, or see what a gamepad plugged into it sends.\
+  Get it: `omip`, from the app's folder, from source. Runs on: MP on a touch board with native USB or a USB host port.
+- [`MIDI Controller`](https://github.com/PyDevices/apps/tree/main/apps/midicontroller): Play a synth or a DAW from the touch screen: pads, knobs, faders, a mixer, an XY pad and keys, over USB, BLE MIDI, a computer's MIDI ports or a browser's Web MIDI.\
+  Get it: `omip`, from the app's folder, from source. Runs on: MP on a touch board.
 - [`Home`](https://github.com/PyDevices/apps/tree/main/apps/home): Launch the apps from pages, one page per category.\
-  Get it: from source. Runs on: ESP32-P4 touch board.
+  Get it: `omip`, from the app's folder, from source. Runs on: ESP32-P4 touch board.
 - [`System`](https://github.com/PyDevices/apps/tree/main/apps/system): See the free heap, the last switches and what the apps left running.\
-  Get it: from source. Runs on: ESP32-P4 touch board.
+  Get it: `omip`, from the app's folder, from source. Runs on: ESP32-P4 touch board.
+
+## Libraries the apps use
+
+- [`deskkit`](https://github.com/PyDevices/apps/blob/main/docs/guides/put-a-clock-on-your-desk.md): Put a clock and the weather on a screen on your desk, with swipes between them and the screen dark at night.\
+  Get it: `mip deskkit`, from source. Runs on: MP on an LVGL touch board.
+- [`touchkit`](https://github.com/PyDevices/apps/tree/main/lib/touchkit): Reuse what the apps on an ESP32-P4 touch board share: the shell, settings, clock, network and camera helpers.\
+  Get it: `mip touchkit`, `pip omnipython-applibs`. Runs on: MP on an ESP32-P4 touch board.
+- [`programkit`](https://github.com/PyDevices/apps/tree/main/lib/programkit): Give a program the board it runs on: its roles, a press from any key, touch or Boot button, and rows of text on any display.\
+  Get it: `mip programkit`, from source. Runs on: MP.
+- [`sayso`](https://github.com/PyDevices/apps/tree/main/lib/sayso): Call the Spotify Web API from a small object layer, with sign-in helpers.\
+  Get it: `mip sayso`, `pip omnipython-applibs`. Runs on: MP, CP, Desktop.
 
 ## Find the project's own sites
 
-- [`PyDevices.github.io`](https://pydevices.github.io/): Read the website: the front page, a page for each project and the live demos.\
+- [`PyDevices.github.io`](https://omnipython.org/): Read the website: the front page, a page for each project and the live demos.\
   Get it: open in a browser. Runs on: Web.
 - [`lib`](https://lib.omnipython.org): Browse the `mip` index for the libraries, board configs and drivers.\
   Get it: open in a browser. Runs on: Web.
-- [`mip`](https://pydevices.github.io/mip/): Browse the generated package mirror: micropython-lib and the project's releases.\
+- [`mip`](https://omnipython.org/mip/): Read the old package mirror, which no longer takes releases: install from lib instead.\
   Get it: open in a browser. Runs on: Web.
 
 ## A to Z
 
 - **A:** [`android-runner`](#run-somewhere-other-than-a-board), [`android-template`](#run-somewhere-other-than-a-board), [`android.py`](#run-somewhere-other-than-a-board), [`appdev`](#write-an-app), [`appkit`](#write-an-app), [`applibs`](#write-an-app), [`Audio codecs`](#drive-a-chip), [`audioairwindows`](#make-and-shape-sound), [`audiobiquad`](#make-and-shape-sound), [`audioconvolve`](#make-and-shape-sound), [`audiocore`](#make-and-shape-sound), [`audiodelays`](#make-and-shape-sound), [`audiodev`](#make-and-shape-sound), [`audiodsp_util`](#make-and-shape-sound), [`audiodynamics`](#make-and-shape-sound), [`audioecho`](#make-and-shape-sound), [`audioeffects`](#make-and-shape-sound), [`audiofeatures`](#make-and-shape-sound), [`audiofilters`](#make-and-shape-sound), [`audiofreeverb`](#make-and-shape-sound), [`audiograph`](#make-and-shape-sound), [`audioif`](#make-and-shape-sound), [`audioinstruments`](#make-and-shape-sound), [`audioladder`](#make-and-shape-sound), [`audiomath`](#make-and-shape-sound), [`audiometer`](#make-and-shape-sound), [`audiomixer`](#make-and-shape-sound), [`audiomodal`](#make-and-shape-sound), [`audiomp3`](#make-and-shape-sound), [`audiooscillator`](#make-and-shape-sound), [`audiopump`](#make-and-shape-sound), [`audiorender`](#make-and-shape-sound), [`audioroute`](#make-and-shape-sound), [`audiosampler`](#make-and-shape-sound), [`audioshaper`](#make-and-shape-sound), [`audiospeed`](#make-and-shape-sound), [`audioverb`](#make-and-shape-sound), [`audiovorbis`](#make-and-shape-sound)
-- **B:** [`Baby monitor`](#run-a-finished-app), [`backends`](#write-an-app), [`bledev`](#connect-devices), [`bledev_hid`](#connect-devices), [`Board configs`](#set-up-a-board), [`boarddev`](#set-up-a-board), [`btclassic`](#make-and-shape-sound), [`Bus drivers`](#drive-a-chip), [`Buttons and keypads`](#drive-a-chip)
-- **C:** [`Camera`](#run-a-finished-app), [`Camera sensors`](#drive-a-chip), [`cameraif`](#use-cameras-video-and-ai-on-a-board), [`Cast`](#run-a-finished-app), [`castif`](#use-cameras-video-and-ai-on-a-board), [`Clock`](#run-a-finished-app), [`controlkit`](#draw-on-a-screen)
-- **D:** [`deskkit`](#write-an-app), [`Display drivers`](#drive-a-chip), [`display_driver`](#draw-on-a-screen), [`displaydev`](#draw-on-a-screen), [`displayif`](#draw-on-a-screen), [`Doorbell`](#run-a-finished-app)
+- **B:** [`Baby monitor`](#run-a-finished-app), [`backends`](#write-an-app), [`Bit World`](#run-a-finished-app), [`bledev`](#connect-devices), [`bledev_hid`](#connect-devices), [`Bluetooth speaker`](#run-a-finished-app), [`Board configs`](#set-up-a-board), [`boarddev`](#set-up-a-board), [`btclassic`](#make-and-shape-sound), [`Bus drivers`](#drive-a-chip), [`Buttons and keypads`](#drive-a-chip)
+- **C:** [`Camera`](#run-a-finished-app), [`Camera for the ESP32-P4`](#run-a-finished-app), [`Camera sensors`](#drive-a-chip), [`cameraif`](#use-cameras-video-and-ai-on-a-board), [`Cast`](#run-a-finished-app), [`castdisplay`](#use-cameras-video-and-ai-on-a-board), [`castif`](#use-cameras-video-and-ai-on-a-board), [`Clock`](#run-a-finished-app), [`controlkit`](#draw-on-a-screen)
+- **D:** [`deskkit`](#libraries-the-apps-use), [`Display drivers`](#drive-a-chip), [`display_driver`](#draw-on-a-screen), [`displaydev`](#draw-on-a-screen), [`displayif`](#draw-on-a-screen), [`Doorbell`](#run-a-finished-app)
 - **E:** [`Environment sensors`](#drive-a-chip), [`events`](#write-an-app)
 - **F:** [`frame_recorder`](#draw-on-a-screen), [`fs_driver`](#draw-on-a-screen)
-- **G:** [`Gallery`](#run-a-finished-app)
-- **H:** [`h264enc`](#use-cameras-video-and-ai-on-a-board), [`Hands free`](#run-a-finished-app), [`Haptics`](#drive-a-chip), [`hmilink`](#connect-devices), [`Home`](#run-a-finished-app)
-- **I:** [`I/O expanders`](#drive-a-chip), [`IMUs`](#drive-a-chip), [`Infrared`](#drive-a-chip)
+- **G:** [`Gallery`](#run-a-finished-app), [`Gamepad`](#run-a-finished-app)
+- **H:** [`h264enc`](#use-cameras-video-and-ai-on-a-board), [`Hands free`](#run-a-finished-app), [`Haptics`](#drive-a-chip), [`hmilink`](#connect-devices), [`Home`](#run-a-finished-app), [`Huey`](#run-a-finished-app), [`Huey's Perch`](#run-a-finished-app)
+- **I:** [`I/O expanders`](#drive-a-chip), [`iconkit`](#draw-on-a-screen), [`IMUs`](#drive-a-chip), [`Infrared`](#drive-a-chip), [`Internet radio`](#run-a-finished-app)
 - **J:** [`Joysticks`](#drive-a-chip), [`jpegio`](#draw-on-a-screen), [`jpegio for CPython`](#draw-on-a-screen), [`jupyter.py`](#run-somewhere-other-than-a-board)
 - **K:** [`keys`](#write-an-app)
 - **L:** [`LEDs`](#drive-a-chip), [`lib`](#find-the-projects-own-sites), [`lite-assistant`](#connect-devices), [`lvgl`](#draw-on-a-screen)
-- **M:** [`mdns`](#connect-devices), [`mdns for CPython`](#connect-devices), [`medialink`](#connect-devices), [`micropython shim`](#run-somewhere-other-than-a-board), [`midiEngine`](#run-a-finished-app), [`midiports`](#play-and-sequence-music), [`mip`](#find-the-projects-own-sites), [`mip for hosts`](#run-somewhere-other-than-a-board), [`MP3 player`](#run-a-finished-app), [`mpftp`](#set-up-a-board), [`mpvst`](#make-and-shape-sound), [`multimer`](#write-an-app)
-- **O:** [`Object detection`](#run-a-finished-app), [`omip`](#set-up-a-board), [`OmniPython firmware`](#set-up-a-board), [`Ostinato`](#run-a-finished-app)
-- **P:** [`palettes`](#draw-on-a-screen), [`pdwidgets`](#draw-on-a-screen), [`picotts`](#make-and-shape-sound), [`pngio`](#draw-on-a-screen), [`pngio for CPython`](#draw-on-a-screen), [`Power`](#drive-a-chip), [`ppa`](#draw-on-a-screen), [`pydevices-desktop`](#run-somewhere-other-than-a-board), [`PyDevices.github.io`](#find-the-projects-own-sites), [`pygraphics`](#draw-on-a-screen), [`pyscript-template`](#run-somewhere-other-than-a-board), [`pyscript.py`](#run-somewhere-other-than-a-board)
-- **R:** [`Radios`](#drive-a-chip), [`Real-time clocks`](#drive-a-chip), [`Roku remote`](#run-a-finished-app)
-- **S:** [`sayso`](#connect-devices), [`Security camera`](#run-a-finished-app), [`songmodel`](#play-and-sequence-music), [`Sound card`](#run-a-finished-app), [`soundmodule`](#play-and-sequence-music), [`spectrum`](#draw-on-a-screen), [`Spotify`](#run-a-finished-app), [`Stompbox`](#run-a-finished-app), [`Storage`](#drive-a-chip), [`Surveillance camera`](#run-a-finished-app), [`Synth Station`](#run-a-finished-app), [`synthio`](#make-and-shape-sound), [`System`](#run-a-finished-app)
-- **T:** [`tflite`](#use-cameras-video-and-ai-on-a-board), [`Touch drivers`](#drive-a-chip), [`touchkit`](#write-an-app), [`tsmux`](#use-cameras-video-and-ai-on-a-board)
-- **U:** [`ulab`](#use-cameras-video-and-ai-on-a-board), [`usb-core`](#use-usb), [`usb-device-audio`](#use-usb), [`usb-device-msc`](#use-usb), [`usb-device-video`](#use-usb), [`usb-hid`](#use-usb), [`usb-host-audio`](#use-usb), [`usb-host-cdc`](#use-usb), [`usb-host-hid`](#use-usb), [`usb-host-msc`](#use-usb), [`usb-host-mtp`](#use-usb), [`usb-host-net`](#use-usb), [`usb-host-video`](#use-usb), [`usbhost`](#use-usb), [`usdl2`](#run-somewhere-other-than-a-board), [`uwin32`](#run-somewhere-other-than-a-board)
-- **V:** [`Vamp`](#run-a-finished-app), [`Video doorbell`](#run-a-finished-app), [`Videophone`](#run-a-finished-app), [`vision`](#use-cameras-video-and-ai-on-a-board)
+- **M:** [`mcuctl`](#set-up-a-board), [`mdns`](#connect-devices), [`mdns for CPython`](#connect-devices), [`medialink`](#connect-devices), [`micropython shim`](#run-somewhere-other-than-a-board), [`MIDI Controller`](#run-a-finished-app), [`MIDI module`](#run-a-finished-app), [`midiEngine`](#run-a-finished-app), [`midiports`](#play-and-sequence-music), [`mip`](#find-the-projects-own-sites), [`MP3 player`](#run-a-finished-app), [`mp4mux`](#use-cameras-video-and-ai-on-a-board), [`mpvst`](#make-and-shape-sound), [`multimer`](#write-an-app)
+- **O:** [`Object detection`](#run-a-finished-app), [`omip`](#set-up-a-board), [`OmniPython firmware`](#set-up-a-board), [`omnipython-desktop`](#run-somewhere-other-than-a-board), [`orientation`](#write-an-app), [`Ostinato`](#run-a-finished-app)
+- **P:** [`palettes`](#draw-on-a-screen), [`pdwidgets`](#draw-on-a-screen), [`picotts`](#make-and-shape-sound), [`pngio`](#draw-on-a-screen), [`pngio for CPython`](#draw-on-a-screen), [`Power`](#drive-a-chip), [`ppa`](#draw-on-a-screen), [`programkit`](#libraries-the-apps-use), [`PyDevices.github.io`](#find-the-projects-own-sites), [`pygraphics`](#draw-on-a-screen), [`pyscript-template`](#run-somewhere-other-than-a-board), [`pyscript.py`](#run-somewhere-other-than-a-board)
+- **R:** [`Radios`](#drive-a-chip), [`Real-time clocks`](#drive-a-chip), [`REPL`](#run-a-finished-app), [`Roku remote`](#run-a-finished-app)
+- **S:** [`sayso`](#libraries-the-apps-use), [`Security camera`](#run-a-finished-app), [`songmodel`](#play-and-sequence-music), [`Sound card`](#run-a-finished-app), [`soundmodule`](#play-and-sequence-music), [`spectrum`](#draw-on-a-screen), [`Spotify`](#run-a-finished-app), [`Stompbox`](#run-a-finished-app), [`Storage`](#drive-a-chip), [`Surveillance camera`](#run-a-finished-app), [`svgio`](#draw-on-a-screen), [`svgio for CPython`](#draw-on-a-screen), [`Synth Station`](#run-a-finished-app), [`synthio`](#make-and-shape-sound), [`System`](#run-a-finished-app)
+- **T:** [`tflite`](#use-cameras-video-and-ai-on-a-board), [`Touch drivers`](#drive-a-chip), [`touchkit`](#libraries-the-apps-use), [`tsmux`](#use-cameras-video-and-ai-on-a-board)
+- **U:** [`ulab`](#use-cameras-video-and-ai-on-a-board), [`usb-core`](#use-usb), [`usb-device-audio`](#use-usb), [`usb-device-msc`](#use-usb), [`usb-device-net`](#use-usb), [`usb-device-video`](#use-usb), [`usb-hid`](#use-usb), [`usb-host-audio`](#use-usb), [`usb-host-cdc`](#use-usb), [`usb-host-dfu`](#use-usb), [`usb-host-hid`](#use-usb), [`usb-host-msc`](#use-usb), [`usb-host-mtp`](#use-usb), [`usb-host-net`](#use-usb), [`usb-host-video`](#use-usb), [`usbhost`](#use-usb), [`usdl2`](#run-somewhere-other-than-a-board), [`uwin32`](#run-somewhere-other-than-a-board)
+- **V:** [`Vamp`](#run-a-finished-app), [`Video doorbell`](#run-a-finished-app), [`Videophone`](#run-a-finished-app), [`vision`](#use-cameras-video-and-ai-on-a-board), [`vtterm`](#draw-on-a-screen)
 - **W:** [`Wake word`](#run-a-finished-app), [`Walkie-talkie`](#run-a-finished-app), [`wasm.py`](#run-somewhere-other-than-a-board), [`Weather`](#run-a-finished-app), [`wifi`](#connect-devices), [`wifi_manager`](#connect-devices), [`Workbench`](#set-up-a-board)
 
 <!-- PYDEVICES-STACK: END -->

@@ -3,9 +3,9 @@
 # from exactly these commits, never from a branch tip. Full 40-character
 # SHAs: GitHub serves a fetch by commit only for the whole hash.
 #
-#   micropython-pydevices   build_mp.py, its patches, and its own locks: the
+#   omnipython-builds   build_mp.py, its patches, and its own locks: the
 #                           MicroPython commit, the toolchains, and every module;
-#                           the library (pydevices, palettes, pdwidgets) is the
+#                           the library (OmniPython, palettes, pdwidgets) is the
 #                           release's tag
 #   omnipython-lvgl         LVGL and its bindings, whose ports/circuitpython the
 #                           CircuitPython build compiles
@@ -13,5 +13,5 @@
 # To move them to the current tips of their default branches, run
 #   python3 scripts/release_interpreters/sources.py bump
 # and commit the result. docs/publishing.md has the rest.
-micropython-pydevices   https://github.com/PyDevices/micropython-pydevices.git   363eebf5a56097651e1d949f943160b6f61238d8
+omnipython-builds   https://github.com/PyDevices/omnipython-builds.git   35a295390bbf279208edbb1cfb7d06ff4d395cc8
 omnipython-lvgl         https://github.com/PyDevices/omnipython-lvgl.git         e2254f39a8e548be3e9b886dfef3f84d2155aa27

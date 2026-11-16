@@ -1,12 +1,12 @@
 # multimer
 
 One `machine.Timer`-shaped `Timer`, one clock, and one dispatcher, on every
-interpreter PyDevices runs on: CPython, MicroPython (boards, unix, windows,
+interpreter OmniPython runs on: CPython, MicroPython (boards, unix, windows,
 wasm) and CircuitPython.
 
-Canonical source: [pydevices/lib/multimer](https://github.com/PyDevices/pydevices/tree/main/lib/multimer).
+Canonical source: [omnipython/lib/multimer](https://github.com/PyDevices/omnipython/tree/main/lib/multimer).
 
-For a complete program to start from, see [multimer_simpletest.py](https://github.com/PyDevices/pydevices/blob/main/examples/multimer_simpletest.py).
+For a complete program to start from, see [multimer_simpletest.py](https://github.com/PyDevices/omnipython/blob/main/examples/multimer_simpletest.py).
 
 ## Install
 
@@ -16,19 +16,22 @@ For a complete program to start from, see [multimer_simpletest.py](https://githu
 pip install \
   -i https://test.pypi.org/simple/ \
   --extra-index-url https://pypi.org/simple/ \
-  pydevices
+  omnipython
 ```
 
-`pydevices` is one distribution covering the whole core `lib/` tree. MIP
-ships the same set as one `pydevices` package.
+`omnipython` is one distribution covering the whole core `lib/` tree. MIP
+ships the same set as one `omnipython` package.
 
 ### MicroPython (MIP)
 
 ```python
-import mip
+import omip
 
-mip.install("pydevices", index="https://PyDevices.github.io/mip")
+omip.install("omnipython")
 ```
+
+`omip` comes with OmniPython firmware. On other MicroPython firmware, run
+`mip.install("github:PyDevices/omnipython/lib/omip.py")` once to put it on the board.
 
 ## Quick start
 
@@ -49,15 +52,15 @@ touches nothing until the first timer is armed.
 
 **Everything else — the wake sources per host, `hold()`, `schedule()`,
 `keepalive`, `repl()` for hosts with no prompt, and the introspection — is in
-[docs/guides/timers.md](https://github.com/PyDevices/pydevices/blob/main/docs/guides/timers.md).**
+[docs/guides/timers.md](https://github.com/PyDevices/omnipython/blob/main/docs/guides/timers.md).**
 
 ## Links
 
-- [Documentation — multimer](https://github.com/PyDevices/pydevices/blob/main/docs/guides/timers.md)
-- [Source](https://github.com/PyDevices/pydevices/tree/main/lib/multimer)
-- [Issues](https://github.com/PyDevices/pydevices/issues)
-- Related: `pydevices-pygraphics`, `pydevices-desktop`
+- [Documentation — multimer](https://github.com/PyDevices/omnipython/blob/main/docs/guides/timers.md)
+- [Source](https://github.com/PyDevices/omnipython/tree/main/lib/multimer)
+- [Issues](https://github.com/PyDevices/omnipython/issues)
+- Related: `omnipython-pygraphics`, `omnipython-desktop`
 
 ## License
 
-MIT — see [LICENSE](https://github.com/PyDevices/pydevices/blob/main/LICENSE).
+MIT — see [LICENSE](https://github.com/PyDevices/omnipython/blob/main/LICENSE).

@@ -5,9 +5,9 @@ stable role names, and a clear split between eager UI devices and lazy extras.
 
 This is the **target** contract for **MicroPython** boards. Board configs and
 drivers live in
-[`pydevices`](https://github.com/PyDevices/pydevices).
+[`omnipython`](https://github.com/PyDevices/omnipython).
 
-**CircuitPython** ([`board_configs/cp/`](https://github.com/PyDevices/pydevices/tree/main/board_configs/cp)) uses the same role names but leans on
+**CircuitPython** ([`board_configs/cp/`](https://github.com/PyDevices/omnipython/tree/main/board_configs/cp)) uses the same role names but leans on
 its native `board` module. A CP `board_config.py` constructs `display_drv` and
 the eager UI hardware (`touch`, `keypad`, `encoder`, `joystick`) with neutral
 read aliases. A CP `board_peripherals.py` is optional: add one for roles that
@@ -145,9 +145,56 @@ and tooling USB / UART bridges. Apps may still use those stacks directly.
 `PERIPHERALS` is authored in **`board_peripherals.PERIPHERALS`** only. `board_config`
 re-exports that frozenset; eager UI names are not listed there.
 
+## Replacing a role at run time
+
+You can put something else in place of any role, for every app, from
+`main.py`. Do it before the app is imported:
+
+```python
+import board_peripherals
+import boarddev
+from usb.host import audio
+
+boarddev.replace_role(board_peripherals, "audio_out", audio.audio_out)
+boarddev.replace_role(board_peripherals, "pcm_out", audio.pcm_out)
+
+import my_app
+```
+
+This works because callers look a role up when they use it. An app that calls
+`board_peripherals.audio_out()`, or `boarddev.audio_out()`, which finds the
+same module, gets whatever is there at that moment. So an app must never bind
+a role at import time: `from board_peripherals import audio_out` copies the
+board's own role into the app before `main.py` can replace it.
+
+A plain assignment, `board_peripherals.audio_out = audio.audio_out`, is
+enough for an app that only calls the role. `replace_role` also keeps the rest
+of the board's description true:
+
+- the name joins `PERIPHERALS` and `FACTORY_ROLES`, so an app that checks
+  `"audio_out" in board_config.PERIPHERALS` finds it, and `board_config.audio_out`
+  is the role itself, not one call of it;
+- `board_config` gets the same change if it's already imported;
+- for an audio role, the capability follows the role. `AUDIO_OUT` becomes the
+  new role's `capability`, or None when it has none, once neither `audio_out`
+  nor `pcm_out` is the board's own; `AUDIO_IN` does the same for `pcm_in`.
+
+The capability matters on a board with its own codec. Its `AUDIO_OUT.wire`
+names the codec's I2S pins, and an app that finds a wire drives those pins
+itself, past `audio_out`. Once both output roles are replaced, `AUDIO_OUT` no
+longer names the codec, so that app plays through the replacement too. Replace
+`audio_out` and `pcm_out` together: the board's own roles read `AUDIO_OUT`, so
+it keeps describing the codec while either of them is left.
+
+A USB sound card has no capability until it's plugged in, so its roles carry
+none. Ask the opened output's `format` what the device took.
+
+Pass what callers should get: a factory for an audio role, the object itself
+for a role that is constructed, such as `sdcard`.
+
 ## Boards with no display
 
-[`board_configs/nodisplay/`](https://github.com/PyDevices/pydevices/tree/main/board_configs/nodisplay) holds boards that are only peripherals — an audio
+[`board_configs/nodisplay/`](https://github.com/PyDevices/omnipython/tree/main/board_configs/nodisplay) holds boards that are only peripherals — an audio
 DAC or amplifier on a QT Py, say. They ship a `board_peripherals.py` and **no
 `board_config.py`**, because there is nothing eager to construct. Apps import
 `board_peripherals` directly, which is the non-graphics idiom with nothing
@@ -167,8 +214,8 @@ from board_peripherals import PERIPHERALS, load_peripherals
 load_peripherals(globals())
 ```
 
-Shared boilerplate is [`boarddev`](https://github.com/PyDevices/pydevices/blob/main/lib/boarddev.py),
-a `lib/` module shipped by the `pydevices` meta package (the name signals
+Shared boilerplate is [`boarddev`](https://github.com/PyDevices/omnipython/blob/main/lib/boarddev.py),
+a `lib/` module shipped by the `omnipython` meta package (the name signals
 *devices*, not `board_config`). Typical
 `board_peripherals.load_peripherals` is a thin wrapper around `boarddev.bind_lazy`.
 A board may replace `load_peripherals` and skip `boarddev` entirely.
@@ -196,7 +243,7 @@ A driver handed pins opens its own controller on them. Two I2C masters on one
 pair of wires don't raise an error: the new device works and the old one stops
 answering. On the Waveshare P4 panel the camera did this to the touchscreen,
 and it was reported as a slowdown somewhere else entirely
-([pydevices#22](https://github.com/PyDevices/pydevices/issues/22)).
+([omnipython#22](https://github.com/PyDevices/omnipython/issues/22)).
 
 If a hook must work without `board_config` (a non-graphics app that must not
 start the display), it may open the bus itself, but on the **same port**
@@ -260,19 +307,19 @@ if "wlan" in board.PERIPHERALS:
 ## Rollout
 
 Board configs and drivers live in
-[`PyDevices/pydevices`](https://github.com/PyDevices/pydevices).
+[`PyDevices/omnipython`](https://github.com/PyDevices/omnipython).
 MicroPython campaign + product boards use the split layout
 (`board_config.py` + `board_peripherals.py`). CircuitPython twins under `cp/` are
 single-file (eager UI only), except the few that add an optional
 `board_peripherals.py`.
 
-| In pydevices | Still to do |
+| In OmniPython | Still to do |
 |-----------------------------|-------------|
 | MP split layout for matrix product boards | Fill remaining lazy factories (`NotImplementedError`) |
 | CP eager UI parity (`touch` / `keypad` / `encoder` / `joystick`) | CP non-UI stays on `board` |
 | Sequence-preserving `touch_read` | |
 
-See also [device-matrix.md](device-matrix.md) and the other notes in this `docs/` directory.
+See also [Board configs](board-configs.md), which lists every board with its roles.
 
 ## See also
 

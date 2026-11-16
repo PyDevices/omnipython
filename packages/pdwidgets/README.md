@@ -7,16 +7,19 @@ sliders, lists, dialogs and layouts in pure Python, with the same code on
 MicroPython-compatible boards, CPython and in the browser.
 
 ```bash
-pip install -i https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ pydevices-pdwidgets pydevices-desktop
+pip install -i https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ omnipython-pdwidgets omnipython-desktop
 ```
 
 ```python
-import mip
-for package in ("pydevices", "pygraphics", "palettes", "pdwidgets"):
-    mip.install(package, index="https://PyDevices.github.io/mip")
+import omip
+for package in ("omnipython", "pygraphics", "palettes", "pdwidgets"):
+    omip.install(package)
 ```
 
-The first is for a desktop, and `pydevices-desktop` brings the display it draws
+`omip` comes with OmniPython firmware. On other MicroPython firmware, run
+`mip.install("github:PyDevices/omnipython/lib/omip.py")` once to put it on the board.
+
+The first is for a desktop, and `omnipython-desktop` brings the display it draws
 on. The second installs onto a board, which also needs its board config:
 [Install](docs/get-started/install.md) has every board and channel.
 
@@ -52,6 +55,6 @@ Taps: 3
 That opens a window with a button in it, and each click prints a line. The
 picture at the top of this page is the window after three clicks.
 
-[Docs](https://pdwidgets.readthedocs.io) · [Examples](https://pydevices.github.io/gallery/pyscript/) · [Roadmap](ROADMAP.md)
+[Docs](https://docs.omnipython.org/en/latest/pdwidgets/) · [Examples](https://gallery.omnipython.org/pyscript/) · [Roadmap](ROADMAP.md)
 
 OmniPython is made by [PyDevices](https://pydevices.com).

@@ -6,7 +6,7 @@
 """The pins behind a final release's interpreters.
 
 scripts/release_interpreters/sources.lock names the commits of
-micropython-pydevices and omnipython-lvgl that the interpreters are built
+omnipython-builds and omnipython-lvgl that the interpreters are built
 from. This reads that file for .github/workflows/release-interpreters.yml and
 bin/upload_interpreters.sh, moves it forward, and writes the "sources" record
 that goes into the attached interpreters.json.
@@ -16,7 +16,7 @@ that goes into the attached interpreters.json.
     sources.py bump [--dry-run]          move both pins to the tips of their default branches
     sources.py stale                     print a ::warning:: for each pin behind its default branch
     sources.py verify <name> <dir>       fail unless <dir>'s HEAD is <name>'s pinned commit
-    sources.py record --mpp DIR --omnipython-lvgl DIR --pydevices DIR [--pydevices-ref TAG]
+    sources.py record --mpp DIR --omnipython-lvgl DIR --omnipython DIR [--omnipython-ref TAG]
                                          print the "sources" JSON for those checkouts
 
 Every command takes --lock FILE to read another lock file.
@@ -30,7 +30,7 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 LOCK = HERE / "sources.lock"
-NAMES = ("micropython-pydevices", "omnipython-lvgl")
+NAMES = ("omnipython-builds", "omnipython-lvgl")
 FULL_SHA = re.compile(r"[0-9a-f]{40}")
 
 
@@ -112,38 +112,62 @@ def verify(name, directory, path=LOCK):
     return 0
 
 
-def record(mpp_dir, lvgl_dir, pydevices_dir, pydevices_ref, path=LOCK):
+def mpp_pins(mpp_dir):
+    """(MicroPython commit, CircuitPython version, {module: commit}) from
+    omnipython-builds' pins: its DEPENDENCIES.lock, or in a checkout from
+    before that file, UPSTREAM, deps.lock and modules.lock.
+
+    In DEPENDENCIES.lock a toolchain's line ends in `# tag <tag>` and a
+    download is pinned by version, so the modules (with omnipython-lvgl and
+    omnipython-lib, as modules.lock had them) are the lines left once those,
+    MicroPython and esp-vision are set aside."""
+    mpp_dir = Path(mpp_dir)
+    lock = mpp_dir / "DEPENDENCIES.lock"
+    if not lock.is_file():
+        modules = {name: commit for name, (_, commit) in read_lock(mpp_dir / "modules.lock").items()}
+        deps = {name: version for name, (_, version) in read_lock(mpp_dir / "deps.lock").items()}
+        return (mpp_dir / "UPSTREAM").read_text().strip(), deps.get("circuitpython", ""), modules
+    tags = {}
+    for line in lock.read_text().splitlines():
+        m = re.match(r"\s*(\S+)\s+\S+\s+\S+\s*#\s*tag\s+(\S+)\s*$", line)
+        if m:
+            tags[m.group(1)] = m.group(2)
+    rows = read_lock(lock)
+    modules = {name: commit for name, (_, commit) in rows.items()
+               if FULL_SHA.fullmatch(commit) and name not in tags and name not in ("micropython", "esp-vision")}
+    return rows["micropython"][1], tags.get("circuitpython", ""), modules
+
+
+def record(mpp_dir, lvgl_dir, omnipython_dir, omnipython_ref, path=LOCK):
     """The "sources" object of interpreters.json: every commit the interpreters were built from.
 
     It reads the checkouts themselves. The MicroPython commit, the CircuitPython
-    version and the modules come from micropython-pydevices' own locks. "pinned"
+    version and the modules come from omnipython-builds' own pins. "pinned"
     says whether both checkouts are the commits sources.lock names: a final's
     attachments always are, a hand-run build of another ref says false.
     """
     mpp_dir = Path(mpp_dir)
     mpp_commit = git_head(mpp_dir)
     lvgl_commit = git_head(lvgl_dir)
-    pydevices_commit = git_head(pydevices_dir)
+    omnipython_commit = git_head(omnipython_dir)
     want = pins(path)
-    pinned = (mpp_commit == want["micropython-pydevices"][1] and lvgl_commit == want["omnipython-lvgl"][1])
-    modules = {}
-    for name, (_, commit) in read_lock(mpp_dir / "modules.lock").items():
-        modules[name] = commit
-    deps = {name: version for name, (_, version) in read_lock(mpp_dir / "deps.lock").items()}
-    # The release's own pydevices goes in as the library, not the commit
-    # modules.lock names for it ("omnipython-lib"; "pydevices" in older locks).
+    pinned = (mpp_commit == want["omnipython-builds"][1] and lvgl_commit == want["omnipython-lvgl"][1])
+    micropython, circuitpython, modules = mpp_pins(mpp_dir)
+    # The release's own omnipython goes in as the library, not the commit
+    # the pins name for it ("omnipython-lib"; "pydevices" in older locks).
     modules.pop("omnipython-lib", None)
+    modules.pop("omnipython", None)
     modules.pop("pydevices", None)
-    pydevices = {"commit": pydevices_commit}
-    if pydevices_ref:
-        pydevices["ref"] = pydevices_ref
+    omnipython = {"commit": omnipython_commit}
+    if omnipython_ref:
+        omnipython["ref"] = omnipython_ref
     return {
         "pinned": pinned,
-        "pydevices": pydevices,
-        "micropython-pydevices": {"commit": mpp_commit},
+        "omnipython": omnipython,
+        "omnipython-builds": {"commit": mpp_commit},
         "omnipython-lvgl": {"commit": lvgl_commit},
-        "micropython": {"commit": (mpp_dir / "UPSTREAM").read_text().strip()},
-        "circuitpython": {"version": deps.get("circuitpython", "")},
+        "micropython": {"commit": micropython},
+        "circuitpython": {"version": circuitpython},
         "modules": modules,
     }
 
@@ -162,12 +186,12 @@ def main(argv=None):
     r = sub.add_parser("record")
     r.add_argument("--mpp", required=True)
     r.add_argument("--omnipython-lvgl", required=True)
-    r.add_argument("--pydevices", required=True)
-    r.add_argument("--pydevices-ref", default="")
+    r.add_argument("--omnipython", required=True)
+    r.add_argument("--omnipython-ref", default="")
     a = ap.parse_args(argv)
     if a.cmd == "pins":
         p = pins(a.lock)
-        print(f"mpp={p['micropython-pydevices'][1]}")
+        print(f"mpp={p['omnipython-builds'][1]}")
         print(f"lvgl={p['omnipython-lvgl'][1]}")
         return 0
     if a.cmd == "bump":
@@ -176,7 +200,7 @@ def main(argv=None):
         return stale(a.lock)
     if a.cmd == "verify":
         return verify(a.name, a.directory, a.lock)
-    print(json.dumps(record(a.mpp, a.omnipython_lvgl, a.pydevices, a.pydevices_ref, a.lock), indent=2))
+    print(json.dumps(record(a.mpp, a.omnipython_lvgl, a.omnipython, a.omnipython_ref, a.lock), indent=2))
     return 0
 
 

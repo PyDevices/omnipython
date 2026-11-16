@@ -15,7 +15,7 @@
 #     while True:
 #         n = cam.read(buf)            # a whole frame (a JPEG, or YUY2), or 0
 #
-# Any class-compliant camera: a Logitech, or a PyDevices board running
+# Any class-compliant camera: a Logitech, or a OmniPython board running
 # usb-device-video. The camera's descriptors are read here, a mode is
 # negotiated with it (UVC's PROBE and COMMIT: the camera says what a mode
 # costs on the bus), and its frames stream in over isochronous transfers,
@@ -36,6 +36,8 @@ _COMMIT = 0x0200            # VS_COMMIT_CONTROL << 8
 # answers the first 26, which hold every field read here.
 _PROBE_LEN = 34
 _CTRL_MS = 3000
+_CT_AE_PRIORITY = 0x03      # Camera Terminal control: may exposure slow the frame rate?
+_ITT_CAMERA = 0x0201
 
 
 def _negotiate(dev, itf, format_index, frame_index, interval):
@@ -68,14 +70,26 @@ class Camera:
         (None prefers MJPEG); ``fps`` asks for a rate (None: the highest that
         fits); ``in_limit`` caps the bytes per isochronous packet, for a host
         controller with a small FIFO (an ESP32-S3's is 600 when it streams
-        video)."""
+        video).
+
+        The host takes one transaction per microframe, so only the alternate
+        settings that carry one (up to 944 bytes on a Logitech C920e, 7.5 MB/s
+        at high speed) are used. A camera asks for more than that for its
+        larger MJPEG modes, because it reserves for the worst frame, and
+        a real frame takes far less: with ``in_limit`` left as ``None`` such a
+        mode is streamed on the largest alternate setting there is, and
+        ``best_effort`` says so. Uncompressed modes are never taken
+        that way, since their bandwidth is exactly what the camera says."""
         if dev is None:
             raise ValueError("no camera")
         self.dev = dev
         self._id = dev._id
         blob = dev.configuration_descriptor()
         self._formats = _uvc.formats(blob)
-        self._alts = _uvc.alt_settings(blob)
+        self._blob = blob
+        # A host transaction is one packet a microframe: an alternate setting
+        # that promises two or three is more than it can take.
+        self._alts = tuple(a for a in _uvc.alt_settings(blob) if a.per_frame == 1)
         if not self._formats:
             raise ValueError("not a USB video device")
         self._open = False
@@ -83,6 +97,7 @@ class Camera:
         self._hdr = bytearray(4)
         self._scratch = None
         self._last = (0,) * 8
+        self.best_effort = False
         picked = self._negotiate(encoding, max_size, fps, in_limit)
         if picked is None:
             why = ""
@@ -92,6 +107,7 @@ class Camera:
             raise ValueError("no mode the camera and this bus can both carry%s; it offers: %s"
                              % (why, "; ".join(self.modes())))
         fmt, frame, interval, payload, frame_bytes, alt = picked
+        self.best_effort = alt.max_packet < payload
         self._fmt, self._alt = fmt, alt
         self.encoding = fmt.encoding
         self.width, self.height = frame.width, frame.height
@@ -128,14 +144,64 @@ class Camera:
                         self._over_limit = payload
                     continue
                 alt = _uvc.alt_for_payload(self._alts, payload)
+                if alt is None and not in_limit and fmt.encoding == "mjpeg":
+                    alt = self._largest_alt()
                 if alt is not None:
                     return fmt, frame, interval, payload, frame_bytes, alt
         return None
+
+    def _largest_alt(self):
+        best = None
+        for a in self._alts:
+            if a.transfer == "isoc" and (best is None or a.max_packet > best.max_packet):
+                best = a
+        return best
+
+    def hold_frame_rate(self, hold=True):
+        """Keep the camera at the frame rate it agreed to, or let it lower it.
+
+        Most cameras, in a dim room, lengthen the exposure and send fewer
+        frames than the mode says: a C920e asked for 30 a second gave 22 at
+        640x480. With ``hold`` true, the default, the camera keeps its rate and
+        lets the picture get darker or noisier instead.
+
+        Args:
+            hold: True to hold the rate, False for the camera's own default.
+
+        Returns:
+            True if the camera took the setting, False if it has no such
+            control.
+        """
+        vc = ct = None
+        for length, dtype, body in _uvc.descriptors(self._blob):
+            if dtype == _uvc.DT_INTERFACE and length >= 9:
+                if body[5] == _uvc.CLASS_VIDEO and body[6] == _uvc.SUBCLASS_VIDEOCONTROL:
+                    vc = body[2]
+            elif dtype == _uvc.DT_CS_INTERFACE and vc is not None and length >= 8 and body[2] == 0x02:
+                if body[4] | body[5] << 8 == _ITT_CAMERA:
+                    ct = body[3]
+        if vc is None or ct is None:
+            return False
+        try:
+            self.dev.ctrl_transfer(0x21, _SET_CUR, _CT_AE_PRIORITY << 8, ct << 8 | vc,
+                                   bytes((0 if hold else 1,)), _CTRL_MS)
+        except OSError:
+            return False
+        return True
 
     def start(self):
         if not self._open:
             a = self._alt
             itf = self._fmt.interface
+            # A program cut off mid-stream (Ctrl-C) leaves its stream and the
+            # interface's streaming alternate setting behind, and a second
+            # Camera started on top of them got EBUSY and left the camera in a
+            # state only an unplug cleared. Let go of what is there first.
+            try:
+                _usbhost.host_stream(self._id, a.endpoint, None)
+            except OSError:
+                pass
+            self._park()
             self.dev.set_interface_altsetting(itf, a.alt)
             # Room for a whole frame waiting while the next one builds, each
             # led by its length; the ring rounds up to a power of two.

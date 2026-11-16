@@ -7,10 +7,10 @@ Paints the screen in bands from the wheel palette, then scrolls through
 every colour of a 5x5x5 cube palette with its name and number, then shows
 the Material Design palette, and starts over.
 
-Needs: a board_config with a display_drv, which a PyDevices board
-package or pydevices-desktop provides, appdev and pygraphics, and palettes.
+Needs: a board_config with a display_drv, which a OmniPython board
+package or omnipython-desktop provides, appdev and pygraphics, and palettes.
 
-Run it from pydevices' palettes folder:
+Run it from OmniPython's palettes folder:
     python examples/palettes_demo.py
 
 Tested on: CPython 3.12 on Linux, in an SDL window.

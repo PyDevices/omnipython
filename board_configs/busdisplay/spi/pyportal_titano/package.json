@@ -2,19 +2,19 @@
   "urls": [
     [
       "board_config.py",
-      "github:PyDevices/pydevices/board_configs/busdisplay/spi/pyportal_titano/board_config.py"
+      "github:PyDevices/omnipython/board_configs/busdisplay/spi/pyportal_titano/board_config.py"
     ],
     [
       "board_peripherals.py",
-      "github:PyDevices/pydevices/board_configs/busdisplay/spi/pyportal_titano/board_peripherals.py"
+      "github:PyDevices/omnipython/board_configs/busdisplay/spi/pyportal_titano/board_peripherals.py"
     ],
     [
       "ili9341.py",
-      "github:PyDevices/pydevices/drivers/display/ili9341.py"
+      "github:PyDevices/omnipython/drivers/display/ili9341.py"
     ],
     [
       "tt21100.py",
-      "github:PyDevices/pydevices/drivers/touch/tt21100.py"
+      "github:PyDevices/omnipython/drivers/touch/tt21100.py"
     ],
     [
       "sdcard.py",
@@ -23,7 +23,7 @@
   ],
   "deps": [
     [
-      "pydevices",
+      "omnipython",
       "latest"
     ]
   ],

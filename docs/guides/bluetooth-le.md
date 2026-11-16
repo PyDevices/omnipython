@@ -42,6 +42,8 @@ a board in the central role. `ble.capabilities()` tells you which roles you
 have, and anything a backend can't do raises `bledev.UnsupportedError` rather
 than doing nothing.
 
+[Bluetooth LE support](../reference/bluetooth-le-support.md) lists what each host can do and what it can't.
+
 ## Installing it
 
 On a board:
@@ -51,48 +53,28 @@ import omip
 omip.install("bledev")
 ```
 
-That brings aioble with it, from MicroPython's own index. [Bring up a
+That brings aioble with it. [Bring up a
 board](bring-up-a-board.md#2-installing-over-wi-fi) shows how to get
-`omip` onto a board that doesn't have it.
-
-Plain `mip` takes every file of a package from the one index you give it, so with
-`mip` you install aioble first, once per board:
+`omip` onto a board that doesn't have it. Plain `mip` takes every file from the
+one index you give it, so install aioble first, once per board:
 
 ```python
 import mip
 mip.install("aioble")
-mip.install("bledev", index="https://PyDevices.github.io/mip")
+mip.install("bledev", index="https://lib.omnipython.org")
 ```
 
-Firmware that freezes aioble doesn't need it installed.
+Firmware that freezes aioble doesn't need it. On a laptop, bledev is inside
+the `omnipython` wheel, and `pip install "omnipython[ble]"` adds bleak, which
+the laptop backend needs.
 
-On a laptop, bledev is inside the `pydevices` wheel. `pip install "pydevices[ble]"`
-adds bleak, which the laptop backend needs.
-
-On CircuitPython with Wi-Fi, `omip.install("bledev")` runs on the board too, once
-`boot.py` has made the drive writable, and `omip` tells you how if it isn't. It
-leaves aioble out, because CircuitPython's Bluetooth is its own. At around -70 dBm
-it usually loses the connection partway and raises `OSError`. Run it again: it
-keeps the files it already has. Or copy the files
-yourself: bledev isn't in a circup bundle. With the board's CIRCUITPY drive mounted, make a
-[`lib/bledev/`](https://github.com/PyDevices/pydevices/tree/main/lib/bledev) folder on it and copy these into it from
-[`lib/bledev/`](https://github.com/PyDevices/pydevices/tree/main/lib/bledev), as `.py` source (MicroPython's `.mpy` files
-won't load on CircuitPython):
-
-- `__init__.py` and `cpble.py`, always;
-- `auto.py`, if you'd rather not name the backend;
-- the parts you use, with what they import: `nus.py`; `midi.py` with
-  `midi_codec.py`; `filetransfer.py` with `nus.py`, `repl.py` and
-  `security.py`. Those are the parts measured on CircuitPython (see
-  [On CircuitPython](#on-circuitpython)).
-
-Leave out `mpble.py`, `bleak.py`, `webble.py` and `fake.py`; they're for other
-hosts. bledev also needs CircuitPython's `asyncio` library: `circup install
-asyncio`, which brings `adafruit_ticks`.
+CircuitPython has its own steps: `omip.install("bledev")` works on a board with
+Wi-Fi, and the files can be copied by hand. They are in
+[On CircuitPython](../reference/bluetooth-le-support.md#on-circuitpython).
 
 ## Getting an adapter
 
-The adapter is one radio. On a board with a PyDevices board config, it's the
+The adapter is one radio. On a board with a OmniPython board config, it's the
 `ble` role:
 
 ```python
@@ -117,7 +99,7 @@ import bledev.bleak
 ble = bledev.bleak.BleakBLE()   # central only
 ```
 
-On CircuitPython ([copied onto the board by hand](#installing-it), with the `asyncio` library):
+On CircuitPython ([copied onto the board by hand](../reference/bluetooth-le-support.md#installing-bledev), with the `asyncio` library):
 
 ```python
 import bledev.cpble
@@ -158,6 +140,31 @@ peer, data = await command.written()          # capture=True: every write, in or
 `register_services()` replaces whatever was registered before, so register
 everything at once, before you advertise. Call `advertise()` again to accept
 another connection.
+
+## Standard services
+
+Phones and fitness apps already know the Bluetooth SIG's services, so serving
+one gets you a screen in an app you didn't write. Each is a small class whose
+`service` you pass to `register_services()` with the rest:
+
+The table of services and their modules is in [Bluetooth LE support](../reference/bluetooth-le-support.md#what-the-parts-give-you).
+
+```python
+from bledev.battery import Battery
+from bledev.deviceinfo import DeviceInformation
+
+battery = Battery(level=87)
+info = DeviceInformation(manufacturer="PyDevices", model="rack-1", firmware="0.3.0")
+ble.register_services(battery.service, info.service)
+connection = await ble.advertise(name="rack", services=[battery.SERVICE])
+battery.set_level(86)               # subscribed centrals are notified
+```
+
+The cycling and running services each have a control point that a central
+writes and the board answers by indication: run `sensor.run()` as a task. Each
+module's docstring lists what its measurement carries, and each has an
+example under `examples/` named `bledev_<service>.py` that a phone app can
+read.
 
 ## Connecting to one (central)
 
@@ -231,422 +238,63 @@ can serve several links at once; each gets only its own central's bytes.
 
 On a board, `nus.connect(ble, name=..., min_conn_interval_us=7500,
 max_conn_interval_us=15000)` asks for a short connection interval, which
-raises a round trip's throughput by about half (the numbers are in
-[the measurements](#measured-on-two-esp32-s3s)).
+raises a round trip's throughput by about half (see [How fast it goes](#how-fast-it-goes)).
 
 From a laptop, `nus.connect(ble, name=..., priority="throughput")` asks
 Windows for its short-interval parameters. It speeds up an echo by about a
-fifth and a file transfer by about half (see [the measurements](#measured-on-two-esp32-s3s)).
+fifth and a file transfer by about half (see [How fast it goes](#how-fast-it-goes)).
 
-## A REPL over Bluetooth
+## A changing address
 
-A board can offer its REPL over nus, behind a password, the way WebREPL does
-over Wi-Fi. It's opt-in; put this in `main.py`:
-
-```python
-import bledev.repl
-bledev.repl.start(password="correct horse", name="rack")   # or webrepl_cfg.PASS
-```
-
-`start()` returns at once, and the REPL keeps being served at the `>>>`
-prompt and while your program runs; Ctrl-C over Bluetooth interrupts a running
-program. From a laptop or another board:
+A board that advertises with the same address every time can be followed from
+place to place by anyone who scans. Ask for a resolvable private address and
+it advertises under an address that changes about every fifteen minutes, which
+only a phone that bonded with the board can match to it:
 
 ```python
-import bledev.repl
-link = await bledev.repl.connect(ble, "correct horse", name="rack")
-print(await bledev.repl.run(link, "1 + 1"))    # "2"
+ble.config(addr_mode=bledev.ADDR_MODE_RPA)    # before advertise() or scan()
+connection = await ble.advertise(name="rack", services=[SENSOR])
 ```
 
-Any terminal that speaks Nordic UART works too: send an empty line, and the
-board answers `Password: `. A wrong password gets `Access denied` and a
-disconnect, and nothing sent with it reaches the REPL. The link isn't
-encrypted, as with WebREPL, so someone nearby with a sniffer can read the
-password, unless you [pair](#pairing-and-bonding).
+`ADDR_MODE_NRPA` uses an address that rotates and that nobody can resolve,
+for a broadcaster that never connects. `ADDR_MODE_PUBLIC` is the board's own
+address, and `ADDR_MODE_RANDOM` a fixed random one. `ble.config("addr_mode")`
+reads the mode back. MicroPython on NimBLE (the ESP32 family)
+supports all four; the Pico W's BTstack has no RPA or NRPA, and
+`UnsupportedError` says so. CircuitPython, a laptop and a browser have no such
+setting. [`examples/bledev_private_address.py`](../../examples/bledev_private_address.py)
+shows it running.
 
-It runs beside WebREPL. On a board with one console slot (the ESP32), the
-two take turns: while a WebREPL client is connected, a Bluetooth login gets
-`The REPL is busy` and a disconnect, the way WebREPL turns away a second
-client, and the other way round.
+## More services
 
-While it runs, the REPL owns the radio: it registers its own service and
-advertises whenever nobody is connected. Call `bledev.repl.stop()` to give the
-radio back to your app.
-
-## Files over Bluetooth
-
-`bledev.filetransfer` is the board side of CircuitPython's BLE file-transfer
-protocol, so a MicroPython board serves files the same way a CircuitPython one
-does, and one client reaches both. It's opt-in, like the REPL; in `main.py`:
-
-```python
-import bledev.filetransfer
-bledev.filetransfer.start(password="correct horse", name="rack")   # files and the REPL
-```
-
-From a laptop or another board:
-
-```python
-import bledev.filetransfer as ft
-files = await ft.connect(ble, "correct horse", name="rack")
-await files.write("/lib/app.py", source)
-print(await files.read("/lib/app.py"))
-print(await files.listdir("/lib"))      # [(name, size, is_directory, mtime_ns), ...]
-await files.mkdir("/data/logs")         # parents too
-await files.move("/a.txt", "/data/a.txt")
-await files.delete("/data")             # a directory and everything in it
-```
-
-`write()` takes an `offset`, and the file ends after what you wrote.
-`read()` takes one too. The board paces every write with a free-space count,
-so it never receives more than it can hold.
-
-It's locked the way the REPL is. CircuitPython uses pairing; bledev uses the
-REPL's password by default (or [pairing](#pairing-and-bonding)), sent to one
-extra characteristic, and until it's right
-every command is refused. One attempt per connection, and a wrong one is hung
-up on. Logging in to the REPL over the same connection unlocks files too,
-which is what [mpftp](https://github.com/PyDevices/mpftp) does. The protocol
-has no checksum beyond the radio's own, so check what matters (mpftp compares
-SHA-256 after every transfer).
-
-`start()` serves the REPL beside the files; `console=False` serves files
-alone. It's MicroPython only, and like the REPL it owns the radio while it
-runs.
-
-How fast: 20 KB from a laptop to an ESP32-S3 in about 2 s and back in about
-1.5 s, or about 1.2 s and 0.5 s when the laptop connects with
-`priority="throughput"`.
-
-## Pairing and bonding
-
-Pairing encrypts the link and, with a passkey, proves who's on the other end.
-It's off unless you ask; the password alone stays the default. On a board with
-a display, this is the one to use:
-
-```python
-import bledev.filetransfer
-bledev.filetransfer.start(password=False, name="rack", pairing="passkey")
-```
-
-The first time a computer connects, the board draws a six-digit passkey on its
-screen (and prints it to the console) and the computer asks for it. The board
-asks for pairing as soon as a host connects, so a phone puts up its pairing
-dialog straight away; that's how Workbench in Chrome on Android pairs. After that
-the two are bonded: they reconnect encrypted, with no passkey, until one of
-them forgets. `password=False` means the passkey is the only lock; keep a
-password as well if you like.
-
-From a laptop or another board, pair when you connect, and pass the passkey,
-or a function that asks for it:
-
-```python
-link = await bledev.repl.connect(ble, name="rack", pair=True, passkey=lambda: input("Passkey: "))
-files = await bledev.filetransfer.connect(ble, name="rack", passkey=ask)    # pairs when the board asks it to
-```
-
-On Windows that's WinRT's own pairing, with no system dialog. To pair a
-computer once for tools that don't pair themselves (mpftp),
-`python -m bledev.bleak pair rack` asks for the passkey in the terminal, and
-`python -m bledev.bleak unpair rack` undoes it. Windows Settings, Add device,
-works too.
-
-The other modes, for `bledev.repl.start()` and `bledev.filetransfer.start()`:
-
-| `pairing=` | What the board does | Password |
-|---|---|---|
-| `None` (the default) | no pairing | required |
-| `"passkey"` | shows a passkey the host types in | optional |
-| `"justworks"` | pairs with no passkey; encrypted, but anyone can pair | required |
-| `"numeric"` | shows a number both sides confirm; `confirm(number)` answers for the board (a button) | optional |
-| `"auto"` | `"passkey"` with a display, `"justworks"` without | as above |
-
-Just works on its own would let anyone in range pair and get a REPL, so it
-needs the password too; what it adds is that nobody sniffing can read the
-password or the session. A board draws the passkey on `board_config.display_drv`;
-pass `show(passkey)` and `hide()` to put it somewhere else.
-
-**Where the keys live.** On an ESP32 they're in NVS, not the filesystem, so
-reformatting the filesystem or deleting every file keeps them. A full chip
-erase (`mpftp firmware flash --erase`) loses them, and so does
-`bledev.security.forget()`. On other boards they're in `ble_secrets.json`.
-
-**When the board has lost its keys** and the computer still has its half, the
-computer's reconnect fails: it tries the old keys, the board doesn't know them,
-and the link drops. bledev says so (`PairingError`, "unpair it on this host").
-The fix is on the computer: unpair the board (`python -m bledev.bleak unpair
-rack`, or Settings > Bluetooth > Remove device), then pair again. A phone is the
-same: forget the device, then pair.
-
-A board's name, and the services it serves, follow from what you start: the
-name you pass is both the advertised name and the one a paired computer lists
-(the GAP name, which would otherwise be MicroPython's "MPY ESP32"), and the
-same `console` and `files` give the same table every time, whatever the lock,
-because hosts cache a paired device's table. Serving something else on the same
-board (HID, say) changes it under the same address, and MicroPython doesn't tell
-bonded hosts, so a host that kept the old table may need the board unpaired and
-paired again.
-
-## Wi-Fi setup with Improv
-
-`bledev.improv` speaks [Improv](https://www.improv-wifi.com/ble/), the BLE
-Wi-Fi setup standard ESPHome, WLED and Home Assistant use. A board without
-credentials serves it until someone provisions it:
-
-```python
-import bledev.improv as improv
-url = await improv.serve(ble, name="kitchen")   # returns once the board has joined
-```
-
-Anything that speaks Improv can then set it up: Home Assistant, the Improv web
-page, or another bledev host:
-
-```python
-url = await improv.provision(ble, ssid, password, name="kitchen")
-```
-
-A network the board can't join raises `improv.ImprovError` with
-`code == improv.ERROR_UNABLE_TO_CONNECT`. Saving the credentials for the next
-boot is up to you: pass `on_join=lambda ssid, password, ip: ...` to `serve()`.
-`require_authorization=True` makes the board wait for `server.authorize()`
-(from a button, say) before it accepts credentials. The credentials cross the
-air unencrypted; that's the standard.
-
-## MIDI
-
-`bledev.midi` is BLE-MIDI, the standard every Mac, iPhone, Android phone,
-DAW and Bluetooth MIDI controller speaks. The board advertises it; anything
-else connects:
-
-```python
-import bledev.midi as midi
-
-port = await midi.serve(ble, name="synth")      # on the board
-port = await midi.connect(ble, name="synth")    # on a laptop or another board
-```
-
-What you get is a MIDI port in the shape of CircuitPython's `usb_midi`
-ports, so Adafruit's `adafruit_midi` reads and writes it, and the script you
-run over USB or a 5-pin cable runs over BLE with only the line that opens the
-port changed:
-
-```python
-import adafruit_midi
-from adafruit_midi.note_on import NoteOn
-
-midi = adafruit_midi.MIDI(midi_in=port, midi_out=port, in_buf_size=512)
-midi.send(NoteOn(60, 100))
-while True:
-    if port.any():
-        msg = midi.receive()
-        while msg is not None:
-            ...
-            msg = midi.receive()
-    await asyncio.sleep(0.001)
-```
-
-The port is the contract the [`midiports`](https://github.com/PyDevices/pydevices/blob/main/packages/midiports/README.md) package
-documents: `read(nbytes)` returns MIDI bytes or `None` and never blocks,
-`readinto(buf, nbytes)` does the same into your buffer without allocating,
-`any()` says how many bytes are waiting, and `write(buf, nbytes)` sends.
-Every message comes out whole, with its status byte, and a read takes only
-the whole messages that fit. Give `adafruit_midi` an `in_buf_size` bigger than
-your longest SysEx: its 1.6.0 parser throws away a SysEx that reaches it in
-two reads.
-
-If you'd rather have messages than bytes, with the sender's timestamp, use
-`ts, message = await port.receive()` or `async for ts, message in port`.
-Messages you write go out from a task, packed as many to a packet as fit, and
-`await port.drain()` waits for them.
-
-On a board, ask for the shortest connection interval when you connect:
-`midi.connect(ble, name="synth", min_conn_interval_us=7500,
-max_conn_interval_us=7500)`. The latency that buys is in
-[the measurements](#measured-on-two-esp32-s3s).
-
-The packet format lives in `bledev.midi_codec`, pure Python with no
-imports: timestamps, running status, SysEx split across packets, and clock
-slipped into a SysEx. Its test vectors ([`tests/bledev_midi_vectors.json`](https://github.com/PyDevices/pydevices/blob/main/tests/bledev_midi_vectors.json)) were
-worked out by hand from the specification, and every interpreter checks
-against the same file.
-
-## Keyboards, mice and gamepads (HID)
-
-`bledev.hid` turns a BLE keyboard, mouse, media remote or game controller
-into the same `events` SDL gives you on the desktop: `events.Key` with `keys.K_*` codes and modifiers,
-`events.Motion`, `Button` and `Wheel` for a mouse, and
-`events.JoyAxisMotion`, `JoyHatMotion`, `JoyButtonDown` and `JoyButtonUp`.
-Your app can't tell which one it's talking to.
-
-```python
-import bledev.hid as hid
-
-host = await hid.connect(ble, name="Keyboard K380")   # or no name: any HID device
-while True:
-    for event in await host.events():                 # waits for at least one
-        print(event)
-```
-
-`host.poll()` returns whatever has arrived without waiting, the way usbif's
-`poll()` does, so it fits a frame loop. Media keys arrive as `Key` events
-too (`keys.K_VOLUMEUP`, `K_AUDIOPLAY`). Axes run from -1.0 to 1.0 and are
-numbered X, Y, Z, Rx, Ry, Rz, then triggers; buttons count from 0; a hat is
-an `(x, y)` tuple with y up. A mouse's buttons are numbered as SDL does
-(1 left, 2 middle, 3 right), and since a mouse only reports movement, `pos`
-is where its motion has taken it from (0, 0); set `host.decoder.bounds =
-(width, height)` to keep it on your screen.
-
-A keyboard that wants an encrypted link gets one: the first read it refuses
-pairs the link ("just works", no passkey) and tries again. On a board, call
-`ble.enable_bonding()` once before connecting so the keys are kept, and the
-next connect doesn't pair from scratch. The keys live in NVS on an ESP32
-(see [where the keys live](#pairing-and-bonding)), so a full chip erase
-forgets them, and a keyboard that remembers the board may then need putting
-back into pairing mode.
-
-**A board can be the keyboard, too.** It advertises as a keyboard, mouse and
-media remote (and a gamepad if you ask), and its `devices` are CircuitPython's
-`usb_hid.devices`, so Adafruit's `adafruit_hid` drives them exactly as it
-drives USB:
-
-```python
-from adafruit_hid.consumer_control import ConsumerControl
-from adafruit_hid.consumer_control_code import ConsumerControlCode
-from adafruit_hid.keyboard import Keyboard
-from adafruit_hid.keyboard_layout_us import KeyboardLayoutUS
-from adafruit_hid.keycode import Keycode
-from adafruit_hid.mouse import Mouse
-
-per = hid.Peripheral(ble)                 # keyboard, mouse, consumer control
-await per.serve()                         # returns when a host connects
-kb = Keyboard(per.devices)
-KeyboardLayoutUS(kb).write("Hello\n")
-kb.send(Keycode.CONTROL, Keycode.C)
-ConsumerControl(per.devices).send(ConsumerControlCode.VOLUME_INCREMENT)
-Mouse(per.devices).move(x=40, y=-12)
-```
-
-Install `adafruit_hid` on MicroPython with
-`mip.install("github:PyDevices/pydevices/bledev_hid")`: it fetches
-Adafruit's files at a release tag, with one file patched so
-`consumer_control` imports on MicroPython, and micropython-lib's
-`__future__`. Each `send_report()` returns once the radio has the report,
-waiting briefly if its buffers are full. The keyboard's LED report (Caps
-Lock and friends) reaches `kb.led_on(Keyboard.LED_CAPS_LOCK)` the way it does
-over USB.
-
-`adafruit_hid` has had no gamepad since 5.0, so `bledev.hid_gamepad` gives
-one in the shape of Adafruit's `hid_gamepad.py` example, for a
-`Peripheral(ble, gamepad=True)`: `press_buttons()`, `move_joysticks()`,
-`set_hat()`, and `set()` for everything in one report.
-
-Its name, appearance and Report Map come from which functions you ask for,
-the same way every time, because hosts cache a device against its identity.
-Change the set, and a host that paired with the board before must forget it
-and pair again. Pass `encrypted=True` to make hosts pair first, as real
-keyboards do.
-
-**A paired phone as a presence key.** A phone reconnects to a bonded HID
-device by itself whenever its Bluetooth comes back in range, so a board can
-tell when you walk up, with no app on the phone. Pair once from the phone's
-Bluetooth settings, then wait for each arrival:
-
-```python
-ble = bledev.auto.adapter()
-ble.enable_bonding()
-per = hid.Peripheral(ble, keyboard=False, mouse=False, encrypted=True, name="Presence")
-while True:
-    conn = await per.serve()                # the phone is here
-    screen_on()
-    await conn.disconnected()               # the phone has gone
-    screen_off()
-```
-
-Android gives the phone a new random address over time, so watching
-advertisements for a known address doesn't work; the bonded reconnect does.
-`conn.encrypted` is still False at the moment `serve()` returns. A bonded
-phone re-encrypts the link about 0.3 s later, so wait for it before you treat
-the visitor as the phone you paired.
-
-**Don't pair a test board with the computer you're testing from.** Once
-paired, Windows and phones use it as a real keyboard, and it types into
-them.
-
-The parser underneath, `bledev.hidreport`, knows nothing about Bluetooth.
-Give it any HID report descriptor and it decodes that device's reports, so a
-USB host can use it the same way. How it numbers axes, what it does with a
-rollover, and what a board central can't read are in
-[bledev-internals.md](../how-it-works/bledev-internals.md#how-hid-gets-there).
+A REPL and file transfer over Bluetooth, pairing and bonding, Wi-Fi setup with Improv, BLE-MIDI, and HID keyboards, mice and gamepads are on [their own page](bluetooth-le-services.md).
 
 ## On CircuitPython
 
-On CircuitPython, `adafruit_midi` and `adafruit_hid` are already the way to
-do MIDI and HID, over `usb_midi` and `usb_hid`; over BLE, use
-`bledev.midi` and `bledev.hid` as above. The CircuitPython-compatible build
-for the ESP32-P4 has no Bluetooth at all (CircuitPython builds none for any
-P4), so there is no BLE MIDI or HID there, and no USB device either until
-CircuitPython gives the P4 one.
-
 The same code runs on a CircuitPython board with `bledev.cpble`, in either
-role: nus, MIDI, the contract's checks and the file client all passed over the
-radio there (the numbers are in [the internals](../how-it-works/bledev-internals.md#circuitpython-cpble)). A few
-things differ, because `_bleio` works differently from aioble underneath:
+role, and `adafruit_midi` and `adafruit_hid` work over BLE through
+`bledev.midi` and `bledev.hid`. A few things differ, because `_bleio` has no
+async calls and fewer features; [On CircuitPython](../reference/bluetooth-le-support.md#on-circuitpython)
+lists them, with how to copy bledev onto a board.
 
-- Connecting, discovery, a read, a write with response and subscribing each
-  hold up your other tasks until the radio answers, usually a connection
-  interval or two. `_bleio` has no async calls.
-- It pairs "just works" only. `authenticated=True` and passkeys raise
-  `UnsupportedError`, and it always bonds.
-- A central there can't receive indications, and the MTU is 247 at most.
-- `Characteristic.write()` on a characteristic that notifies sends the value
-  to subscribed centrals even without `send_update`.
-- CircuitPython 10.3's `PacketBuffer` can stall or fault the board when a
-  notification stream outruns the radio. bledev steps around the stall; the
-  fault needs a CircuitPython fix. On the official build, 2 of 11 fast 16 KB
-  streams restarted the board in safe mode; on a patched build, none did.
-- A central there waits 2 s on every read and every write with a response
-  (subscribing is one), so connecting and setting up takes several seconds.
+## How fast it goes
 
-CircuitPython's own BLE file service, the one its supervisor serves, is
-reached with the same `bledev.filetransfer.connect()` a MicroPython board
-uses; it pairs by itself. The service is only public in CircuitPython's
-discovery mode, it won't write while a computer has the CIRCUITPY drive
-mounted, and on the official 10.3.0 build a 20 KB download stalls (the same
-`PacketBuffer` fault). What cpble does about each of these, and why, is in
-[bledev-internals.md](../how-it-works/bledev-internals.md#how-cpble-gets-there).
+Two ESP32-S3s a metre apart, MicroPython 1.30 preview, Wi-Fi off, 16 KB each
+way verified byte for byte. "7.5 ms" is a connection interval of 7.5 to 15 ms
+asked for in `connect()`.
 
-## The rules every backend keeps
+| Over nus | Default interval | 7.5 ms interval |
+|---|---|---|
+| Central to peripheral (writes) | 44-70 KB/s | 57-70 KB/s |
+| Peripheral to central (notifications) | 28-38 KB/s | 34-35 KB/s |
+| Echo round trip, each way | 19-27 KB/s | 31-35 KB/s |
 
-These hold on every backend. The fake enforces the strict version of each, so
-code that passes its tests keeps them:
-
-- **One packet is `connection.mtu - 3` bytes.** A notification or write
-  longer than that raises `BLEError`. Real NimBLE would cut the tail off and
-  say nothing. `exchange_mtu()` asks for more, and the smaller side wins.
-- **A characteristic holds `max_len` bytes**, 20 by default, as on
-  MicroPython. Raise it for anything that takes MTU-sized writes. The fake
-  raises on a longer write; a real board keeps the first `max_len` bytes and
-  says nothing (measured: 29 bytes sent, 20 kept).
-- **Nothing is dropped quietly.** Notifications and captured writes queue in
-  order. If a queue overflows because you stopped reading, the next
-  `notified()` or `written()` raises `BLEError` instead.
-- **`notify()` can say `BusyError`.** It's synchronous, like aioble's, and
-  the transmit buffers are finite. Wait a moment and send again, or use nus,
-  which does. Every async send waits for room itself.
-- **Subscribe before you expect notifications.** Browsers and bleak deliver
-  nothing until you do, and the fake matches them.
-- **Discovery comes back in the server's order** (by handle).
-- **A dropped link ends pending client calls with `DisconnectedError`,** and
-  anything that arrived before the drop is still delivered first. A server's
-  `written()` serves every connection, so it doesn't end on a disconnect; give
-  it a `timeout_ms` or cancel it. With `capture=True`, `written(timeout_ms=0)`
-  returns a write that's already queued, or raises `BLETimeoutError` at once.
-- **Every timeout is `BLETimeoutError`,** and every error is a `BLEError`:
-  `UnsupportedError`, `DisconnectedError`, `BLETimeoutError`, `BusyError`,
-  `GattError` (with `.status`).
-- **`UUID` is one value everywhere.** `UUID(0x180F)`, `UUID("180f")` and the
-  128-bit string are equal. `str()` is always the 128-bit form, which bleak
-  and browsers use, and `to_bytes()` is the little-endian wire form.
+A laptop (Windows, bleak) to an S3 moves 59-68 KB/s up, 40-48 KB/s down and
+32-38 KB/s echoed each way (40-47 with `priority="throughput"`). A single GATT
+read or write takes two connection intervals: 100 ms at the default and 31 ms
+at 7.5 ms. A note crosses a link in a median 46 ms at the default interval and
+9 ms at 7.5 ms, so a MIDI link wants the shortest interval. Turning the radio
+on costs about 62 KB of the S3's internal RAM.
 
 ## Testing without a radio
 
@@ -661,60 +309,15 @@ board = FakeBLE(air=air)                      # either role, like a board
 laptop = FakeBLE(air=air, peripheral=False)   # central only, like bleak
 ```
 
-It's stricter than a radio on purpose (see the rules above), and it models
-what trips people up on hardware: a name that only reaches an active scan, a
-transmit buffer that fills (`notify_buffers`), and a reader that falls behind
-(`queue_limit`).
-
-The contract's own checks are [`tests/bledev_contract.py`](https://github.com/PyDevices/pydevices/blob/main/tests/bledev_contract.py), a plain script so it
-runs on both interpreters. [`tests/test_bledev.py`](https://github.com/PyDevices/pydevices/blob/main/tests/test_bledev.py) runs it on CPython and on a
-unix `micropython`, and then once per planted fault, each of which must make
-it fail:
-
-```bash
-python tests/bledev_contract.py
-micropython tests/bledev_contract.py
-python -m unittest tests.test_bledev
-```
-
-## Measured on two ESP32-S3s
-
-Measured with MicroPython 1.30 preview on two ESP32-S3s about a metre apart,
-with Wi-Fi off. "7.5 ms" means a connection interval of 7.5 to 15 ms asked
-for in `connect()`. The harnesses are in [`tests/bledev_board/`](https://github.com/PyDevices/pydevices/tree/main/tests/bledev_board).
-
-Board to board over nus (16 KB each way, verified byte for byte):
-
-| Direction | Default interval | 7.5 ms interval |
-|---|---|---|
-| Central to peripheral (writes) | 44-70 KB/s | 57-70 KB/s |
-| Peripheral to central (notifications) | 28-38 KB/s | 34-35 KB/s |
-| Echo round trip, each way | 19-27 KB/s | 31-35 KB/s |
-
-A laptop (Windows, bleak) to an S3: 59-68 KB/s up as the board receives it,
-40-48 KB/s down, and 32-38 KB/s echoed each way (40-47 KB/s with
-`priority="throughput"`).
-
-A single GATT read or write takes two connection intervals: a median of 100 ms
-at the default interval, and 31 ms at 7.5 ms, with nothing over 200 ms in a
-minute. Turning the radio on costs about 62 KB of the S3's internal RAM.
-
-**MIDI.** How long a note takes to cross the link, one way, as half a
-note-on's round trip through an echo (400 single notes at random moments,
-then 100 four-note chords, which came out the same, with none lost):
-
-| Link | Median | p90 | p99 | Max |
-|---|---|---|---|---|
-| S3 to S3, default interval | 45.8 ms | 66.8 | 94.8 | 97.8 |
-| S3 to S3, 7.5 ms interval | 8.8 ms | 12.8 | 14.6 | 16.6 |
-| Laptop (bleak) to S3, Windows' defaults | 52.1 ms | 59.8 | 105.0 | 113.7 |
-| Laptop to S3, `priority="throughput"` | 14.0 ms | 18.2 | 25.2 | 28.6 |
-
-So a MIDI link wants the shortest interval. This is BLE's own delay; the
-synth's comes on top.
+It's stricter than a radio on purpose, and it models what trips people up on
+hardware: a name that only reaches an active scan, a transmit buffer that fills
+(`notify_buffers`), and a reader that falls behind (`queue_limit`). The rules
+it enforces are in [the internals page](../how-it-works/bledev-internals.md#the-rules-every-backend-keeps).
+`tests/bledev_contract.py` is a plain script, so it runs on both interpreters:
+`python tests/bledev_contract.py` or `micropython tests/bledev_contract.py`.
 
 ## Writing a backend
 
 A backend subclasses the classes in `bledev/__init__.py` and fills in a few
 hooks. What each hook must do, how the fake and mpble do it, and the checks
-to run are in [bledev-internals.md](../how-it-works/bledev-internals.md).
+to run are in [bledev internals](../how-it-works/bledev-internals.md).

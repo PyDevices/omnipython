@@ -56,9 +56,9 @@ RGB888 unpack (used by `PixelFramebuffer` and `pygraphics.RGB888`) treats the in
 as `0xRRGGBB`. Passing `0xFFFF` (565 white) through that path yields cyan
 (R=0, G=255, B=255), not white.
 
-The shared expand helper is **`color_rgb()`** in [`displaydev/__init__.py`](https://github.com/PyDevices/pydevices/blob/main/lib/displaydev/__init__.py): 565
+The shared expand helper is **`color_rgb()`** in [`displaydev/__init__.py`](https://github.com/PyDevices/omnipython/blob/main/lib/displaydev/__init__.py): 565
 int or 2-byte little-endian slice → `(r, g, b)` with 5/6/5 bit expansion. Tests
-live in [`tests/test_color.py`](https://github.com/PyDevices/pydevices/blob/main/tests/test_color.py).
+live in [`tests/test_color.py`](https://github.com/PyDevices/omnipython/blob/main/tests/test_color.py).
 
 ## Two-stage architecture: logical GRAM + present
 
@@ -112,6 +112,15 @@ layout when scrolled.
 | **PSDisplay** | `_rotation` tracked; **no** `_rotation_helper` (surface dims swap only) |
 | **JNDisplay** | Same as PS — property only, no pixel rotation |
 | **PixelDisplay** | `rotation` on inner framebuf (grid wiring), not LCD-style |
+| **FBDisplay** | `_rotation` tracked; no pixel rotation, and the panel's framebuffer keeps its own layout |
+
+A driver says whether `rotation` turns what you draw in `can_rotate`. It's
+`False` on **FBDisplay** and **PixelDisplay**, where a rotation swaps `width`
+and `height` over a buffer that keeps the panel's layout, so drawing at the
+swapped size runs out of range. A program that wants landscape checks it
+before rotating, and keeps the panel's own orientation when it's `False`.
+LVGL turns its frames itself on those boards, through the display's
+`lvgl_rotation`.
 
 Full rotation matters for **SDL/PG** desktop LCD simulation. Browser and notebook
 backends document that rotation reshapes the surface but does not rotate pointer
@@ -139,7 +148,7 @@ coordinates — see [Displays — Browser / notebook](../guides/displays.md#brow
 | **PixelDisplay** | MCU / CP | NeoPixel / DotStar grids via `displaydev.pixeldisplay` |
 
 CircuitPython Unix **SDLDisplay** forces **software rendering** when accelerated
-GL cannot attach rotated render targets (see comment in [`sdldisplay.py`](https://github.com/PyDevices/pydevices/blob/main/lib/displaydev/sdldisplay.py)).
+GL cannot attach rotated render targets (see comment in [`sdldisplay.py`](https://github.com/PyDevices/omnipython/blob/main/lib/displaydev/sdldisplay.py)).
 MicroPython SDL **`show()`** may defer present on `MemoryError` when the heap is
 locked during scroll rendering.
 
@@ -205,7 +214,7 @@ display_drv = PixelDisplay(_pixel_framebuf)
 
 **Use `display_drv` for all app drawing.** `_pixel_framebuf` is prefixed to
 discourage bypassing the DisplayDriver API (see
-[Board configs — Pixel configs](../boards/board-configs.md#pixel--addressable-led-configs)).
+[Board configs — Pixel configs](../boards/board-configs.md#pixel-and-led-grids)).
 
 `PixelDisplay` exposes the usual **565 `DisplayDriver` API** (`color_depth=16`).
 The inner `PixelFramebuffer` stays **RGB888** for the strip; `fill_rect`,
@@ -246,4 +255,4 @@ Internal buffer format may remain 565 (SDL), RGB (JN), RGBA (PS), or RGB888
 - [Displays](../guides/displays.md) — pick a driver, input, scroll overview
 - [`pydevices_demo.py`](https://github.com/PyDevices/gallery/blob/main/lib/examples/pydevices_demo.py) — scroll bands and redraw rules
 - [Architecture](architecture.md) — how `board_config` wires drivers
-- [`tests/test_color.py`](https://github.com/PyDevices/pydevices/blob/main/tests/test_color.py) — `color_rgb` / `color565` contract tests
+- [`tests/test_color.py`](https://github.com/PyDevices/omnipython/blob/main/tests/test_color.py) — `color_rgb` / `color565` contract tests

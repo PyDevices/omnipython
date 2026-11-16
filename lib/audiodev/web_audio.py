@@ -291,6 +291,15 @@ class WebPCMOutput(PCMOutput):
             print("web_audio: AudioContext suspended — click/tap the page to hear audio")
         self._next_time = float(self._ctx.currentTime)
 
+    def locked(self):
+        """True while the browser keeps the context suspended.
+
+        `AudioOut` holds a sample until this turns False, so nothing is
+        queued onto a clock that is not running. A click or key press
+        resumes the context (armed in ``open()``).
+        """
+        return self._ctx is not None and str(self._ctx.state) == "suspended"
+
     def _write(self, buf):
         frames = len(buf) // self.format.frame_size
         if frames <= 0:

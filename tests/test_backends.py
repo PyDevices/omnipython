@@ -25,9 +25,9 @@ class RegistryCase(unittest.TestCase):
         self._entries = {k: [list(e) for e in v] for k, v in backends._entries.items()}
         self._required = {k: list(v) for k, v in backends._required.items()}
         self._env = dict(boarddev._overrides)
-        for var in ("PYDEVICES_DISPLAY", "PYDEVICES_AUDIO"):
+        for var in ("OMNIPYTHON_DISPLAY", "OMNIPYTHON_AUDIO"):
             boarddev._overrides.pop(var, None)
-        self._environ = {k: os.environ.pop(k) for k in ("PYDEVICES_DISPLAY", "PYDEVICES_AUDIO") if k in os.environ}
+        self._environ = {k: os.environ.pop(k) for k in ("OMNIPYTHON_DISPLAY", "OMNIPYTHON_AUDIO") if k in os.environ}
 
     def tearDown(self):
         backends._entries.clear()
@@ -124,14 +124,33 @@ class TestRequire(RegistryCase):
         self.assertEqual(backends._required["display"], ["b", "a"])
 
 
+class TestPrivateNames(RegistryCase):
+    def test_builtin_and_env_are_not_public(self):
+        with self.assertRaises(TypeError):
+            backends.register("thing", "a", "m:A", builtin=True)
+        self.assertFalse(hasattr(backends, "env"))
+        self.assertNotIn("env", backends.__all__)
+        self.assertTrue(callable(backends._env))
+
+    def test_underscore_builtin_marks_a_box_backend(self):
+        backends.register("thing", "a", "m:A", _builtin=True)
+        self.assertEqual(backends.candidates("thing").__next__(), ("a", "m:A", True))
+
+    def test_candidates_yield_name_spec_builtin(self):
+        backends.register("thing", "a", "m:A")
+        backends.require("thing", "a")
+        self.assertEqual(list(backends.candidates("thing")), [("a", "m:A", False)])
+        self.assertIn("*builtin* is true", backends.candidates.__doc__)
+
+
 class TestSearchOrder(RegistryCase):
     def setUp(self):
         super().setUp()
         backends._entries.pop("thing", None)
         backends._required.pop("thing", None)
-        backends.register("thing", "in1", "m:In1", builtin=True)
-        backends.register("thing", "in2", "m:In2", probe=lambda: True, builtin=True)
-        backends.register("thing", "in3", "m:In3", probe=lambda: False, builtin=True)
+        backends.register("thing", "in1", "m:In1", _builtin=True)
+        backends.register("thing", "in2", "m:In2", probe=lambda: True, _builtin=True)
+        backends.register("thing", "in3", "m:In3", probe=lambda: False, _builtin=True)
         backends.register("thing", "out1", "m:Out1")
         backends.register("thing", "out2", "m:Out2", probe=lambda: True)
 
@@ -244,28 +263,86 @@ class TestAutoDisplayRegistry(RegistryCase):
 
     def test_env_override_names_a_backend_that_nothing_required(self):
         backends.register("display", "fake", "bk_fake_display:Fake", probe=lambda: False)
-        self.set_env("PYDEVICES_DISPLAY", "fake")
+        self.set_env("OMNIPYTHON_DISPLAY", "fake")
         self.assertIsInstance(ad.AutoDisplay(10, 20), self.Fake)
 
     def test_env_override_beats_a_required_backend(self):
         backends.register("display", "fake", "bk_fake_display:Fake")
         backends.require("display", "fake")
-        self.set_env("PYDEVICES_DISPLAY", "sdl")
+        self.set_env("OMNIPYTHON_DISPLAY", "sdl")
         self.assertEqual(ad.AutoDisplay(10, 20), "sdl-display")
         self.assertEqual(self.made, [])
 
     def test_env_override_that_declines_is_an_error_not_a_fallback(self):
         pg = sys.modules["displaydev.pgdisplay"]
         sys.modules["displaydev.pgdisplay"] = None
-        self.set_env("PYDEVICES_DISPLAY", "pygame")
-        with self.assertRaisesRegex(ImportError, "pygame.*PYDEVICES_DISPLAY"):
+        self.set_env("OMNIPYTHON_DISPLAY", "pygame")
+        with self.assertRaisesRegex(ImportError, "pygame.*OMNIPYTHON_DISPLAY"):
             ad.AutoDisplay(10, 20)
         sys.modules["displaydev.pgdisplay"] = pg
 
     def test_unknown_env_override_names_what_is_missing(self):
-        self.set_env("PYDEVICES_DISPLAY", "bk_no_such_backend")
+        self.set_env("OMNIPYTHON_DISPLAY", "bk_no_such_backend")
         with self.assertRaisesRegex(ImportError, "bk_no_such_backend"):
             ad.AutoDisplay(10, 20)
+
+    def test_rotation_reaches_a_third_party_backend(self):
+        backends.register("display", "fake", "bk_fake_display:Fake")
+        backends.require("display", "fake")
+        ad.AutoDisplay(1280, 720, rotation=90)
+        self.assertEqual(self.made, [{"width": 1280, "height": 720, "rotation": 90}])
+
+    def test_window_hints_do_not_reach_a_third_party_backend_but_rotation_does(self):
+        backends.register("display", "fake", "bk_fake_display:Fake")
+        backends.require("display", "fake")
+        ad.AutoDisplay(10, 20, rotation=270, scale=2.0, title="t", quiet=True, maximized=True, tv="x")
+        self.assertEqual(self.made, [{"width": 10, "height": 20, "tv": "x", "rotation": 270}])
+
+    def test_the_stock_desktop_config_call_constructs_a_width_height_backend(self):
+        class Narrow:
+            def __init__(self, width, height):
+                self.size = (width, height)
+
+        sys.modules["bk_fake_display"].Fake = Narrow
+        backends.register("display", "narrow", "bk_fake_display:Fake")
+        backends.require("display", "narrow")
+        result = ad.AutoDisplay(width=320, height=240, rotation=0, scale=2.0, maximized=False, title="x on y")
+        self.assertEqual(result.size, (320, 240))
+
+    def test_no_rotation_is_not_passed_to_a_third_party_backend(self):
+        backends.register("display", "fake", "bk_fake_display:Fake")
+        backends.require("display", "fake")
+        ad.AutoDisplay(10, 20, rotation=0)
+        self.assertEqual(self.made, [{"width": 10, "height": 20}])
+
+    def test_backend_that_does_not_take_an_option_raises_a_typeerror_naming_it(self):
+        class Narrow:
+            def __init__(self, width, height):
+                pass
+
+        sys.modules["bk_fake_display"].Fake = Narrow
+        backends.register("display", "narrow", "bk_fake_display:Fake")
+        backends.require("display", "narrow")
+        self.assertIsInstance(ad.AutoDisplay(10, 20), Narrow)
+        with self.assertRaisesRegex(TypeError, "'narrow'.*rotation"):
+            ad.AutoDisplay(10, 20, rotation=90)
+
+    def test_box_backends_are_still_called_positionally(self):
+        ad.AutoDisplay(10, 20, rotation=90, scale=2.0, title="t", quiet=True)
+        sys.modules["displaydev.pgdisplay"].PGDisplay.assert_called_once_with(
+            width=10, height=20, rotation=90, title="t", scale=2.0, quiet=True
+        )
+
+    def test_extras_error_names_the_required_backend_that_was_skipped(self):
+        backends.register("display", "fake", "bk_fake_display:Fake", probe=lambda: False)
+        backends.require("display", "fake")
+        with self.assertRaisesRegex(TypeError, "tv.*pygame.*required fake backend was skipped"):
+            ad.AutoDisplay(10, 20, tv="x")
+
+    def test_extras_error_names_no_skipped_backend_when_none_was(self):
+        with self.assertRaises(TypeError) as ctx:
+            ad.AutoDisplay(10, 20, tv="x")
+        self.assertNotIn("skipped", str(ctx.exception))
 
     def test_extras_for_a_box_backend_are_an_error(self):
         with self.assertRaisesRegex(TypeError, "tv.*pygame"):
@@ -313,7 +390,7 @@ class TestAudioRegistry(RegistryCase):
         self.assertEqual(audio_auto.select_backend(), "sdl2_audio")
         self.assertEqual(
             [e[0] for e in backends._entries["audio"] if e[3]],
-            ["wasm_audio", "web_audio", "win_audio", "sdl2_audio", "pygame_audio"],
+            ["wasm_audio", "web_audio", "win_audio", "sdl2_audio", "pygame_audio", "alsa_audio"],
         )
 
     def test_unrequired_third_party_is_not_picked(self):
@@ -334,10 +411,10 @@ class TestAudioRegistry(RegistryCase):
         self.assertEqual(audio_auto.select_backend(), "sdl2_audio")
 
     def test_env_override(self):
-        self.set_env("PYDEVICES_AUDIO", "pygame_audio")
+        self.set_env("OMNIPYTHON_AUDIO", "pygame_audio")
         self.assertEqual(audio_auto.select_backend(), "pygame_audio")
         backends.register("audio", "fake", "bk_fake_audio", probe=lambda: False)
-        self.set_env("PYDEVICES_AUDIO", "fake")
+        self.set_env("OMNIPYTHON_AUDIO", "fake")
         self.assertEqual(audio_auto.select_backend(), "fake")
 
     def test_nothing_usable_is_still_the_actionable_error(self):

@@ -1,7 +1,7 @@
 # SPDX-FileCopyrightText: 2026 Brad Barnett
 #
 # SPDX-License-Identifier: MIT
-"""Unit tests for pydevices/bin/android.py CLI parsing and helpers."""
+"""Unit tests for omnipython/bin/android.py CLI parsing and helpers."""
 
 import importlib.util
 import json

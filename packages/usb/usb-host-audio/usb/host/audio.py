@@ -14,7 +14,7 @@
 #     spk.write(pcm)                  # little-endian PCM, whole frames
 #
 # Any class-compliant device, USB Audio 1.0 or 2.0: a headset, a USB DAC, or
-# a PyDevices board running usb-device-audio. Its descriptors are read here,
+# a OmniPython board running usb-device-audio. Its descriptors are read here,
 # a stream is chosen (the rate, channels and bits you ask for, or its best
 # offer), a 2.0 device's clock is asked its rates, and the samples move over
 # isochronous transfers in C, through a ring between your writes and the bus.
@@ -51,6 +51,19 @@ _SAM_FREQ = 0x0100          # SAMPLING_FREQ_CONTROL << 8, both versions
 _CTRL_MS = 3000
 _MAX_SUBRANGES = 8
 _DEFAULT_RING = 8192        # about 43 ms of 48 kHz stereo
+_E2BIG = 7                  # the host refused an endpoint too big for its FIFO
+# What the host answers for a stream whose device has gone: ENOENT once the
+# stream is torn down, ENODEV while it is going.
+_GONE = (2, 19)
+
+
+def _gone(e, what):
+    # Name an unplugged device in the error, keeping its errno; anything
+    # else goes up as it came.
+    code = e.errno if getattr(e, "errno", None) is not None else (e.args[0] if e.args else None)
+    if code in _GONE:
+        raise OSError(code, "the USB %s was disconnected" % what)
+    raise e
 
 
 def _clock_ranges(dev, control, clock):
@@ -163,6 +176,10 @@ class _Stream:
         try:
             self.dev.set_interface_altsetting(s.interface, s.alt)
         except OSError as e:
+            if e.errno == _E2BIG:
+                raise OSError(_E2BIG, "endpoint 0x%02x declares %d-byte packets, more than this board's "
+                              "USB host can buffer (its sizes are printed above)"
+                              % (s.endpoint, s.max_packet & 0x7FF))
             raise OSError("the interface claim was refused (%s); for a speaker, start the host with "
                           "usb.core.start(classes=(\"uac\",))" % e)
         self._set_rate()
@@ -225,11 +242,18 @@ class Speaker(_Stream):
     def write(self, buf):
         """Queue PCM; returns the bytes taken, whole frames, maybe fewer
         than given when the ring is full."""
-        return _usbhost.host_stream_write(self._id, self.stream.endpoint, buf)
+        try:
+            return _usbhost.host_stream_write(self._id, self.stream.endpoint, buf)
+        except OSError as e:
+            _gone(e, "speaker")
 
     def space(self):
-        """Bytes a write can take right now."""
-        return _usbhost.host_stream_space(self._id, self.stream.endpoint)
+        """Bytes a write can take right now. Both raise ``OSError``, with
+        the host's errno, once the speaker is unplugged."""
+        try:
+            return _usbhost.host_stream_space(self._id, self.stream.endpoint)
+        except OSError as e:
+            _gone(e, "speaker")
 
     def queued(self):
         """Bytes written and not yet sent."""
@@ -337,12 +361,39 @@ def pcm_in(format=None, *, dev=None, ring_ms=_PCM_RING_MS, wait_ms=_WAIT_MS, ful
     return _pcm.MicrophoneInput(mic, **kwargs)
 
 
-def audio_out(format=None, **kwargs):
+_CHUNK_MS = 40               # what audio_out() renders per pull
+# What audio_out() keeps queued for each latency profile. "buffered" outlasts
+# a collection on an 8 MB PSRAM heap; the default suits an instrument.
+_LOOKAHEAD_MS = {None: 80, "low": 80, "buffered": 300}
+
+
+def audio_out(format=None, *, latency=None, pump=True, **kwargs):
     """``pcm_out()`` wrapped in an ``audiodev.AudioOut``, the player a
     board's ``audio_out`` role returns: ``play()``, ``stop()``, ``playing``.
-    Call its ``service()`` often, or ``attach()`` it to an app, to keep the
-    speaker fed. The graph is pulled on the interpreter thread: the board's
-    audio pump drives I2S, not this bus."""
+    Call its ``service()`` often, or ``attach()`` it to an app.
+
+    Where the firmware's audio pump can write to a USB speaker, it does: the
+    graph is rendered and sent off the interpreter thread, with about 10 ms
+    queued, and ``latency`` and the chunk keywords below don't apply. The
+    graph must be 16-bit at the speaker's rate and channel count;
+    otherwise, or with ``pump=False``, or on a firmware without that pump,
+    the graph is pulled on the interpreter thread as follows.
+
+    The default, and ``latency="low"``, keep 80 ms of sound queued, so a
+    note sounds soon after it's struck. Nothing is pulled while the
+    interpreter collects garbage, and on a board with an 8 MB PSRAM heap a
+    collection takes 260 to 300 ms, so the speaker runs dry through one.
+    ``latency="buffered"`` keeps 300 ms queued, which carries it through.
+    ``chunk_ms``, ``lookahead_chunks`` and ``max_catchup_chunks`` go to
+    ``AudioOut`` and override the profile, and the ring is sized to hold the
+    lookahead and the catch-up. Other keywords go to ``pcm_out()``."""
+    from audiodev import check_latency
     from audiodev.sample_out import AudioOut
 
-    return AudioOut(pcm_out(format, **kwargs), pump=False)
+    check_latency(latency)
+    chunk_ms = kwargs.pop("chunk_ms", _CHUNK_MS)
+    lookahead_chunks = kwargs.pop("lookahead_chunks", max(1, -(-_LOOKAHEAD_MS[latency] // chunk_ms)))
+    max_catchup_chunks = kwargs.pop("max_catchup_chunks", 5)
+    kwargs.setdefault("ring_ms", max(_PCM_RING_MS, chunk_ms * (lookahead_chunks + max_catchup_chunks + 2)))
+    return AudioOut(pcm_out(format, **kwargs), pump=pump, chunk_ms=chunk_ms,
+                    lookahead_chunks=lookahead_chunks, max_catchup_chunks=max_catchup_chunks)

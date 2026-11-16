@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Verify core PyDevices TestPyPI distributions in isolated environments.
+# Verify core OmniPython TestPyPI distributions in isolated environments.
 #
 # Each package gets a fresh venv with only that wheel (+ pip-resolved deps from its
 # manifest). Fails if import or a minimal smoke check errors.
@@ -14,7 +14,7 @@ set -euo pipefail
 
 TESTPYPI_INDEX="${TESTPYPI_INDEX:-https://test.pypi.org/simple/}"
 PYPI_INDEX="${PYPI_INDEX:-https://pypi.org/simple/}"
-BASE_VENV="${TESTPYPI_STANDALONE_VENV:-/tmp/pydevices-testpypi-standalone}"
+BASE_VENV="${TESTPYPI_STANDALONE_VENV:-/tmp/omnipython-testpypi-standalone}"
 DESKTOP=0
 
 usage() {
@@ -87,7 +87,7 @@ test_package() {
 # One distribution now carries the whole core lib/ tree, so this is a single
 # install exercising every module it should have delivered -- rather than six
 # installs of distributions that no longer exist separately.
-test_package pydevices "
+test_package omnipython "
 import events, keys, displaydev, audiodev, appdev, boarddev
 from multimer import auto as timer
 print('events', events.KEYDOWN)
@@ -103,10 +103,10 @@ r.stop_timer()
 "
 
 if [[ "$DESKTOP" -eq 1 ]]; then
-    # pydevices-desktop supplies its usdl2 fallback; pygame-ce is an optional
+    # omnipython-desktop supplies its usdl2 fallback; pygame-ce is an optional
     # runtime dependency of the explicit PGDisplay stack.
     # Distinct venv labels so the two stacks do not clobber each other.
-    BASE_VENV="${BASE_VENV}-sdl" test_package pydevices-desktop "
+    BASE_VENV="${BASE_VENV}-sdl" test_package omnipython-desktop "
 from board_config import display_drv
 print('sdldisplay', type(display_drv).__name__)
 display_drv.fill(0)
@@ -115,7 +115,7 @@ if hasattr(display_drv, 'quit'):
     display_drv.quit()
 "
 
-    BASE_VENV="${BASE_VENV}-pg" test_package pydevices "
+    BASE_VENV="${BASE_VENV}-pg" test_package omnipython "
 from displaydev.pgdisplay import PGDisplay
 print('pgdisplay', PGDisplay.__name__)
 " pygame-ce

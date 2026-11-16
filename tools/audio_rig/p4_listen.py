@@ -9,7 +9,7 @@
 # the ES8311's own dividers agree. A wrong REG06 clocks correctly and sounds
 # like garbage, so this needs ears.
 #
-#   mpftp run -d COM4 tools/audio_rig/p4_listen.py
+#   mcuctl run -d COM4 tools/audio_rig/p4_listen.py
 #
 # What to listen for, in order:
 #

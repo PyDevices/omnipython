@@ -278,7 +278,7 @@ def _pcm_out(format=None, *, latency=None, queue_ms=None):
         # and never opens ``machine.I2S`` on this port -- the pump's own I2S
         # channel is the only owner. On a firmware without it these two are
         # inert. Without them this board plays every sample on machine.I2S
-        # and the pump sits idle (PyDevices/pydevices#41).
+        # and the pump sits idle (PyDevices/omnipython#41).
         wire=AUDIO_OUT.wire,
         audio_power=_audio_power,
     )
@@ -296,15 +296,12 @@ def _pcm_in(format=None, *, latency=None, queue_ms=None):
     check_latency(latency)
     wire, source = negotiate(AUDIO_IN, format)
     if source is not wire:
-        # Capture has no adapter. negotiate() will happily say "open the wire
-        # at 1 channel and convert to the 2 you asked for", but that machinery
-        # exists only on the push side -- so handing back the wire format here
-        # would give a caller who asked for stereo a mono stream and no error.
-        # Silently-different is the exact failure this contract prevents.
-        raise ValueError(
-            "this board captures %d channel(s); asked for %d, and capture "
-            "cannot be remixed" % (wire.channels, source.channels)
-        )
+        # The wire takes another channel count: open it at its own and mix down
+        # (or copy up) to the one asked for.
+        from audiodev import adapt_input_channels
+        from audiodev.accel import best_remix
+
+        return adapt_input_channels(_pcm_in(wire, latency=latency, queue_ms=queue_ms), source, remix=best_remix())
     ibuf = queue_bytes(wire, latency, queue_ms, default=_IBUF, minimum=_MIN_IBUF)
     codec = _INPUT_SESSION.get_codec()
     return I2SPCMInput(

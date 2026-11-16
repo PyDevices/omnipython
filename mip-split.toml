@@ -1,5 +1,5 @@
 # Which modules in lib/ cannot run on a microcontroller, and which packages in
-# lib/ publish to MIP on their own instead of inside `pydevices` (`own-package`,
+# lib/ publish to MIP on their own instead of inside `omnipython` (`own-package`,
 # bledev), and which top-level directories publish to MIP under their own name
 # (`top-level`, at the end: midiports and the usb-* packages).
 #
@@ -8,13 +8,13 @@
 # is right and is not what this file is about: the question here is only what
 # gets *shipped* to a device. Installing a board config onto an ESP32-S3 used to
 # pull `windisplay`, `jndisplay`, `wasmdisplay`, `pgdisplay`, `sdldisplay`,
-# `androidsdl`, `win_audio`, `pygame_audio`, `wasm_audio`, `web_audio`,
+# `androidsdl`, `alsa_audio`, `win_audio`, `pygame_audio`, `wasm_audio`, `web_audio`,
 # `sdl2_audio`, `android_audio`, `win32`, `sdl2`, `threading` and `wasm` — about
 # half of what landed, none of it able to execute, all of it minutes of install
-# time over WiFi and flash that could hold something (pydevices#30).
+# time over WiFi and flash that could hold something (omnipython#30).
 #
-# Every module named here ships in **pydevices-desktop** instead, which already
-# `require("pydevices")`, so a desktop, browser or Android host gets exactly what
+# Every module named here ships in **omnipython-desktop** instead, which already
+# `require("omnipython")`, so a desktop, browser or Android host gets exactly what
 # it got before, in one install, at the same import paths. An MCU gets the rest.
 #
 # `auto.py` stays in the MCU package in every case. Its host branches import
@@ -54,6 +54,7 @@ host-only = [
 # with them: it is never selected by `auto`, is imported explicitly, and builds
 # on audiodev's own PCM classes with no host dependency.
 host-only = [
+    "alsa_audio",
     "android_audio",
     "pygame_audio",
     "sdl2_audio",
@@ -80,7 +81,7 @@ host-only = [
 ]
 
 [bledev]
-# BLE is its own MIP package rather than part of `pydevices`, so a board
+# BLE is its own MIP package rather than part of `omnipython`, so a board
 # without a radio doesn't carry it (docs/guides/bluetooth-le.md):
 #     omip.install("bledev")
 # bledev needs micropython-lib's aioble, and its manifest doesn't require it: a
@@ -88,32 +89,37 @@ host-only = [
 # lib-lock.json names it as repo.bledev.upstream, which reaches the package JSON
 # under "upstream" for omip. mip ignores that key: with mip, install aioble from
 # micropython-lib first (bledev's docs show the line). Firmware that freezes
-# aioble needs no step.
+# aioble needs no step. On CircuitPython it needs Adafruit's asyncio instead,
+# named as repo.bledev.circuitpython for omip the same way.
 own-package = true
-# The central-only host backends go in pydevices-desktop, as for the other
+# The services advertise the board's name, boarddev.name(), from OmniPython.
+requires = ["omnipython"]
+# The central-only host backends go in omnipython-desktop, as for the other
 # packages here. A name listed before its file exists fails the sync.
 host-only = ["bleak", "webble"]
-# On PyPI bledev stays inside the pydevices wheel. bleak is optional, behind
-# `pip install "pydevices[ble]"`.
+# On PyPI bledev stays inside the OmniPython wheel. bleak is optional, behind
+# `pip install "omnipython[ble]"`.
 pypi-extras = { ble = ["bleak>=1.0"] }
 
 [medialink]
 # Board-to-board audio and video is its own MIP package, as BLE is, so a
 # board that never streams doesn't carry it:
-#     mip.install("medialink", index="https://PyDevices.github.io/mip")
-# It needs no other package. Discovery uses the firmware's mdns module, and
-# the intercom takes any audiodev microphone and speaker it is handed.
+#     omip.install("medialink")
+# Discovery uses the firmware's mdns module and advertises the board's name,
+# boarddev.name(), from OmniPython; the intercom takes any audiodev microphone
+# and speaker it is handed.
 own-package = true
+requires = ["omnipython"]
 
 # midiports and the USB packages are directories at the top of the repository,
 # not in lib/, each with its own manifest.py. `top-level = true` publishes that
 # directory to the index under its own name, so a board installs it with
-#     mip.install("usb-host-msc", index="https://PyDevices.github.io/mip")
+#     omip.install("usb-host-msc")
 # and a board config can require() it by name. The manifest.py is the single
 # source for what a package is, requires and ships: the publisher reads it, and
 # a firmware build freezes the same file. Only the version changes. The index
 # carries the release's version, not the 0.1.0 in the manifest, so every
-# PyDevices package in it is at the same number. A section takes no other keys.
+# OmniPython package in it is at the same number. A section takes no other keys.
 #
 # A package that require()s another here (usb-host-msc needs usb-core) must have
 # that one listed too; the publisher refuses to sync otherwise, and
@@ -124,7 +130,7 @@ own-package = true
 # midiports reaches the index without Adafruit's adafruit_midi, which is not a
 # package in any mip index: install it as packages/midiports/README.md says.
 #
-# `pypi-desktop = true` also ships the package inside pydevices-desktop on PyPI,
+# `pypi-desktop = true` also ships the package inside omnipython-desktop on PyPI,
 # for the people who have no mip: the wheel carries the files its package.json
 # lists, adafruit_midi at its pinned tag among them. The only key a top-level
 # section may add.
@@ -134,6 +140,15 @@ top-level = true
 pypi-desktop = true
 
 [hmilink]
+top-level = true
+
+[mp4mux]
+top-level = true
+
+[vtterm]
+top-level = true
+
+[castdisplay]
 top-level = true
 
 [usb-core]
@@ -146,6 +161,9 @@ top-level = true
 top-level = true
 
 [usb-host-cdc]
+top-level = true
+
+[usb-host-dfu]
 top-level = true
 
 [usb-host-hid]
@@ -167,6 +185,9 @@ top-level = true
 top-level = true
 
 [usb-device-msc]
+top-level = true
+
+[usb-device-net]
 top-level = true
 
 [usb-device-video]

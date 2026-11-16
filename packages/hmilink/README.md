@@ -59,6 +59,14 @@ Transports are swappable and neither side knows which carries it:
 | A UART or USB CDC | `stream.link(uart)` | `stream.link(uart)` |
 | Wi-Fi, OSC over UDP (a phone's OSC controller app, TouchOSC) | `osc.serve(8000)` | the app |
 
+Announce the device and a panel finds it without its address.
+`tcp.serve(9000, page="index.html", announce=True)` announces the board's
+name over mDNS, so a phone opens `http://<name>.local:9000/` and an mDNS
+browser app lists the page. On a panel, `tcp.find()` returns
+`(name, (ip, port))` for each device it hears, and `tcp.find("kitchen")` just
+that one. It needs the `mdns` module, which CircuitPython and OmniPython
+firmware have built in, and `omnipython-desktop` brings to a computer.
+
 With OSC, the controller app needs no code from you. Point it at the
 board's address and port 8000, and each control's message becomes an op on
 the path it names: a fader that sends `/synth/cutoff 0.5` sets the

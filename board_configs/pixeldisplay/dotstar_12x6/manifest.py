@@ -8,7 +8,7 @@ metadata(
     version="0.2",
 )
 
-require("pydevices")
+require("omnipython")
 require("pygraphics")
 require("dotstar")
 

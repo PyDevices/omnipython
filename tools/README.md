@@ -1,7 +1,7 @@
-# pydevices `tools/`
+# OmniPython `tools/`
 
 Developer diagnostics and package-release smoke tests owned by the portable
-PyDevices core.
+OmniPython core.
 
 | Script | Purpose |
 |---|---|
@@ -46,7 +46,7 @@ Then, on a board or the unix port, install from it:
 
 ```python
 import mip
-mip.install("pydevices", index="http://192.168.1.10:8000")
+mip.install("omnipython", index="http://192.168.1.10:8000")
 ```
 
 `build/lib/index` is what `mip` reads; `build/lib/library` holds one folder
@@ -55,7 +55,7 @@ from it:
 
 ```python
 add_library("omnipython-lib", "/path/to/build/lib/library")
-require("pydevices", library="omnipython-lib")
+require("omnipython", library="omnipython-lib")
 ```
 
 What goes in each package comes from [`mip-split.toml`](../mip-split.toml)
@@ -72,7 +72,7 @@ micropython-lib checkout instead.
 To check a build against another index, file hash by file hash:
 
 ```bash
-python tools/libbuild.py compare build/lib/index https://pydevices.github.io/mip
+python tools/libbuild.py compare build/lib/index https://lib.omnipython.org
 ```
 
 `--base-url` writes an `index.html` that shows the address the index is served

@@ -7,7 +7,8 @@
 Discovery turns a name into a transport address. Each kind has the same
 two calls: ``advertise(name, port)`` for this side, and ``find(name)`` for
 the other, which hands back ``[(name, (ip, port))]`` for
-`Link.connect`.
+`Link.connect`. A ``name`` of None advertises the board's own name,
+``boarddev.name()``.
 
 `MDNS` finds a peer on the network both are already on. A peer
 advertises itself as a ``_medialink._udp`` service under its name; another
@@ -23,12 +24,14 @@ weak or absent.
 MDNS uses the ``mdns`` module, which is CircuitPython's API wherever it runs:
 built into CircuitPython, a C module in MicroPython firmware that carries it
 (and the unix and Windows ports), and on CPython ``mdns.py`` in
-pydevices-desktop, over python-zeroconf (``pip install zeroconf``).
+omnipython-desktop, over python-zeroconf (``pip install zeroconf``).
 
 When you already know the address, skip discovery and connect to it.
 """
 
 import sys
+
+import boarddev
 
 from medialink._compat import sleep_ms, ticks_diff, ticks_ms
 
@@ -58,8 +61,9 @@ class MDNS:
         return self._server.hostname
 
     def advertise(self, name, port):
-        """Answer for ``name`` on UDP ``port`` until `deinit`."""
-        self._server.instance_name = name
+        """Answer for ``name`` on UDP ``port`` until `deinit`. A ``name`` of
+        None is the board's, ``boarddev.name()``."""
+        self._server.instance_name = name or boarddev.name()
         self._server.advertise_service(service_type=SERVICE_TYPE, protocol=PROTOCOL, port=port)
 
     def find(self, name=None, timeout=2):
@@ -81,7 +85,7 @@ class MDNS:
 
 
 def _radio():
-    """``wifi.radio``: CircuitPython's own, or pydevices' wifi module on
+    """``wifi.radio``: CircuitPython's own, or OmniPython's wifi module on
     MicroPython, which has the same API over ``network.WLAN``."""
     try:
         import wifi
@@ -102,9 +106,9 @@ def _rejoin_house(timeout):
         if ssid:
             wifi.radio.connect(ssid, os.getenv("CIRCUITPY_WIFI_PASSWORD") or "", timeout=timeout)
         return
-    import wifi
+    import wifi_manager
 
-    wifi.connect_from_secrets(ntp=False, timeout=timeout)
+    wifi_manager.connect(setup=False, timeout=timeout)
 
 
 class Hotspot:
@@ -134,8 +138,8 @@ class Hotspot:
     ``start()`` and ``join()`` are the two halves on their own, for a
     program that decides the roles itself.
 
-    It needs a board with Wi-Fi: on MicroPython pydevices' ``wifi`` module,
-    built into PyDevices firmware; on CircuitPython ``wifi``. A password
+    It needs a board with Wi-Fi: on MicroPython OmniPython's ``wifi`` module,
+    built into OmniPython firmware; on CircuitPython ``wifi``. A password
     must be 8 to 63 characters.
     """
 
@@ -155,8 +159,9 @@ class Hotspot:
         self._static = None
 
     def advertise(self, name, port):
-        """Remember this side's name and port; the hotspot starts at ``find()``."""
-        self.name = name
+        """Remember this side's name and port; the hotspot starts at ``find()``.
+        A ``name`` of None is the board's, ``boarddev.name()``."""
+        self.name = name or boarddev.name()
         self.port = port
 
     def find(self, name=None, timeout=None):
@@ -321,6 +326,9 @@ class BLE:
         self._loop = None
 
     def advertise(self, name, port, address=None):
+        """Send out ``name`` (None: the board's, ``boarddev.name()``) with this
+        side's address and ``port`` until `deinit`."""
+        name = name or boarddev.name()
         if address is None:
             address = _own_address()
         if address is None:

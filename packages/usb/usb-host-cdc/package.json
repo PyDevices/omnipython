@@ -1,7 +1,8 @@
 {
   "urls": [
-    ["usb/host/cdc.py", "github:PyDevices/pydevices/packages/usb/usb-host-cdc/usb/host/cdc.py"]
+    ["usb/host/cdc.py", "github:PyDevices/omnipython/packages/usb/usb-host-cdc/usb/host/cdc.py"],
+    ["usb/host/_chips.py", "github:PyDevices/omnipython/packages/usb/usb-host-cdc/usb/host/_chips.py"]
   ],
-  "deps": [["github:PyDevices/pydevices/packages/usb/usb-core", "main"]],
+  "deps": [["github:PyDevices/omnipython/packages/usb/usb-core", "main"]],
   "version": "0.1.0"
 }

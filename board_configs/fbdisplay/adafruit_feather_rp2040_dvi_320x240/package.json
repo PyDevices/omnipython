@@ -2,12 +2,12 @@
   "urls": [
     [
       "board_config.py",
-      "github:PyDevices/pydevices/board_configs/fbdisplay/adafruit_feather_rp2040_dvi_320x240/board_config.py"
+      "github:PyDevices/omnipython/board_configs/fbdisplay/adafruit_feather_rp2040_dvi_320x240/board_config.py"
     ]
   ],
   "deps": [
     [
-      "pydevices",
+      "omnipython",
       "latest"
     ]
   ],

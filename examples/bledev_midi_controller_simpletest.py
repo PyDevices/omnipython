@@ -11,7 +11,7 @@ bledev_midi_instrument_simpletest.py, or any BLE-MIDI synth or sound
 module: set NAME to the name it advertises.
 
 Needs: a board with Bluetooth LE and bledev: CircuitPython, or MicroPython
-with aioble too. On a laptop, pip install "pydevices[ble]".
+with aioble too. On a laptop, pip install "omnipython[ble]".
 
 Run it:
     mpremote run bledev_midi_controller_simpletest.py

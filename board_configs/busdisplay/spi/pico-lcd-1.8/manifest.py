@@ -8,7 +8,7 @@ metadata(
     version="0.1",
 )
 
-require("pydevices")
+require("omnipython")
 require("st7735r_1")
 
 module("board_config.py")

@@ -4,7 +4,7 @@
 """Notification bursts, the sink: asks burst_source.py for bursts and counts what arrives.
 
 ``WORK_US`` busies Python for that long per packet, which is what made the P4
-lose packets and the S3 not (pydevices#87). ``FAST`` asks for a 7.5-15 ms
+lose packets and the S3 not (omnipython#87). ``FAST`` asks for a 7.5-15 ms
 interval. Logs to /burst_cen.log.
 """
 import asyncio, struct, time

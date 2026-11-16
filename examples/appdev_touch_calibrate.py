@@ -9,7 +9,7 @@ touch screen's axes line up with the display at each rotation, and prints
 the touch_rotation_table to put in board_config.py.
 
 Needs: a board_config with a display_drv and a touch screen, which a
-PyDevices board package provides, and pygraphics. With demo set to True
+OmniPython board package provides, and pygraphics. With demo set to True
 it leaves the touch driver's table alone and only walks through the steps.
 
 Run it:

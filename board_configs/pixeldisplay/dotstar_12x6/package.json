@@ -2,16 +2,16 @@
   "urls": [
     [
       "board_config.py",
-      "github:PyDevices/pydevices/board_configs/pixeldisplay/dotstar_12x6/board_config.py"
+      "github:PyDevices/omnipython/board_configs/pixeldisplay/dotstar_12x6/board_config.py"
     ],
     [
       "dotstar.py",
-      "github:PyDevices/pydevices/drivers/led/dotstar.py"
+      "github:PyDevices/omnipython/drivers/led/dotstar.py"
     ]
   ],
   "deps": [
     [
-      "pydevices",
+      "omnipython",
       "latest"
     ],
     [

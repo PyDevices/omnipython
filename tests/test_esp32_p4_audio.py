@@ -180,17 +180,17 @@ class ESP32P4AudioTests(P4BoardFixture):
         self.assertEqual(13, wire.mck)
         self.assertEqual([], FakeI2S.constructed)
 
-    def test_input_refuses_stereo_that_output_accepts(self):
-        """Not a contradiction any more: the capabilities differ and say so.
+    def test_input_copies_mono_to_the_stereo_asked_for(self):
+        """The capabilities still differ and say so: the microphone's wire is
+        mono. A stereo request opens it at mono and copies each sample to
+        both channels, as ``audio_out`` adapts the other way."""
+        from audiodev import AudioFormat, InputChannelAdapter
 
-        Before, ``_MAX_CHANNELS = 1`` sat beside an ``audio_out`` accepting 2
-        while ``audio_in`` raised on the same request, from one constant.
-        """
-        from audiodev import AudioFormat
-
+        self.assertEqual((1,), self.board.AUDIO_IN.channels)
         self.board.pcm_out(AudioFormat(44100, 2, 16))
-        with self.assertRaises(ValueError):
-            self.board.pcm_in(AudioFormat(44100, 2, 16))
+        pcm = self.board.pcm_in(AudioFormat(44100, 2, 16))
+        self.assertIsInstance(pcm, InputChannelAdapter)
+        self.assertEqual(2, pcm.format.channels)
 
     def test_output_has_codec_controls_and_amplifier_lifecycle(self):
         output = self.board.audio_out()
@@ -262,7 +262,7 @@ class ESP32P4AudioTests(P4BoardFixture):
             self.board.audio_out(coalesce_ms=20)
 
     def test_microphone_is_refused_while_the_speaker_holds_i2s0(self):
-        """pydevices#23: a second I2S(0) used to take the first one over silently.
+        """omnipython#23: a second I2S(0) used to take the first one over silently.
 
         On esp32, constructing I2S(0) again deinitialises the live instance,
         so opening the microphone stopped the speaker with no error. The
@@ -363,7 +363,7 @@ class PanelRecordsWhilePlaying(P4BoardFixture):
     """With the audio pump, pcm_in reads the RX half of the pump's channel.
 
     The ES8311 and the ES7210 share I2S0's clocks, so machine.I2S can have one
-    of them at a time (pydevices#23). The pump's driver opens the port as a
+    of them at a time (omnipython#23). The pump's driver opens the port as a
     TX/RX pair instead; the board publishes the microphone's pin on its wire
     and builds a PumpPCMInput, so audio_out plays while pcm_in records.
     """

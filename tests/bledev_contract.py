@@ -644,6 +644,46 @@ async def repl_login_wrong_password(air):
     expect(repl._check_password(b"hunter22", b"hunter22"), "equal")
 
 
+@check
+async def repl_connect_sends_the_password(air):
+    # The client side of a password login, against a board played by hand.
+    board = FakeBLE(air=air)
+    laptop = FakeBLE(air=air, peripheral=False)
+
+    async def board_side():
+        link = await nus.serve(board, name="kitchen", timeout_ms=2000)
+        equal(await link.readexactly(1), b"\r", "the client's first line")
+        await link.write(repl.PROMPT)
+        equal(await link.readexactly(9), b"hunter22\r", "the password, after the prompt")
+        await link.write(repl.BANNER)
+
+    served = asyncio.create_task(board_side())
+    # No name: the board is found by the service it serves, whatever it's called.
+    link = await repl.connect(laptop, "hunter22", timeout_ms=2000)
+    await served
+    await link.close()
+
+
+@check
+async def services_advertise_the_board_name(air):
+    import boarddev
+
+    boarddev.name("bench-7")
+    try:
+        board = FakeBLE(air=air)
+        laptop = FakeBLE(air=air, peripheral=False)
+        served = asyncio.create_task(nus.serve(board, timeout_ms=2000))
+        await nus.connect(laptop, name="bench-7", timeout_ms=2000)
+        await served
+        board = FakeBLE(air=air)
+        served = asyncio.create_task(midi.serve(board, timeout_ms=2000))
+        await midi.connect(laptop, name="bench-7", timeout_ms=2000)
+        server = await served
+        equal(server.connection._ble.config("gap_name"), "bench-7", "the MIDI port's GAP name")
+        equal(improv.Server(board).name, "bench-7", "improv's name")
+    finally:
+        boarddev.name(None)
+
 class _StubRadio:
     """The calls bledev.repl's server makes on bluetooth.BLE, recorded."""
 

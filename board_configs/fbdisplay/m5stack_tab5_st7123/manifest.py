@@ -8,7 +8,7 @@ metadata(
     version="0.3",
 )
 
-require("pydevices")
+require("omnipython")
 require("st7123")
 require("pi4ioe5v")
 require("tab5_st7123_init")

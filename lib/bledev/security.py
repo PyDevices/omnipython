@@ -11,7 +11,7 @@ You rarely call this yourself. ``bledev.repl.start(pairing=...)`` and
 * **A bond store that survives a filesystem erase.** On an ESP32 the keys go
   in NVS (namespace ``bledev``), which a reformat of the filesystem, a
   ``mip`` reinstall or deleting every file leaves alone. A full chip erase
-  (``esptool erase_flash``, ``mpftp firmware flash --erase``) loses them, and
+  (``esptool erase_flash``, ``mcuctl firmware flash --erase``) loses them, and
   so does `forget`. Elsewhere they go in aioble's ``ble_secrets.json``.
 * **Passkeys.** aioble leaves the passkey step unhandled. Here a board with a
   display shows a random six-digit passkey (``io=DISPLAY_ONLY``) for the host

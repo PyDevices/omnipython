@@ -6,7 +6,7 @@
 
 import _wasm_bridge
 
-from audiodev import AudioFormat, PCMInput, PCMOutput, check_latency
+from audiodev import AudioFormat, AudioLocked, PCMInput, PCMOutput, check_latency
 
 DEFAULT_FORMAT = AudioFormat(48000, 2, 16, signed=True, byteorder="little")
 
@@ -23,8 +23,11 @@ class WasmPCMOutput(PCMOutput):
 
     def _open(self):
         if not _wasm_bridge.audio_state(False):
-            raise RuntimeError(
-                "audio output is disabled; use the host Enable Audio control"
+            # The bridge turns audio on at the page's first click or key
+            # press; `AudioOut` waits for that instead of failing.
+            raise AudioLocked(
+                "audio output is disabled; use the host Enable Audio control,"
+                " or click or press a key on the page"
             )
 
     def _write(self, buf):

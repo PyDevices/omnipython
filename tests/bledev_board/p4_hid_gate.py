@@ -4,7 +4,7 @@
 """The HID gate, repeated, with a board as the device and the P4 as the host.
 
 Runs on Windows Python with pyserial, driving both boards' friendly REPLs over
-their UARTs (``uart_rig.py``). Set up once with mpftp:
+their UARTs (``uart_rig.py``). Set up once with mcuctl:
 
 * the device board (an S3): ``/hidp.py`` = ``hid_peripheral.py``, and
   ``/hidp_plant.py`` = the same with ``PLANT = True``;
@@ -17,7 +17,7 @@ Then::
     python.exe p4_hid_gate.py --p4 COM4 --dev COM17 --mode default --runs 10 --log hid.log
 
 Each run soft-resets the device and starts it, hard-resets the P4 (BLE can't
-start twice after a soft reset there, micropython-pydevices#13), then starts
+start twice after a soft reset there, omnipython-builds#13), then starts
 the host at the friendly prompt, where ESP-IDF's log still reaches the UART:
 every ``alloc_acl_from_ll failed`` (a packet ESP-Hosted dropped) is counted.
 ``--mode plant`` runs the planted device, which must FAIL. A run whose host

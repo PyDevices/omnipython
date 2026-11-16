@@ -11,7 +11,7 @@ which answers in capitals, or anything else that serves the Nordic UART
 Service, such as a BLE serial adapter.
 
 Needs: a board with Bluetooth LE and bledev: CircuitPython, or MicroPython
-with aioble too. On a laptop, pip install "pydevices[ble]".
+with aioble too. On a laptop, pip install "omnipython[ble]".
 
 Run it:
     mpremote run bledev_nus_client_simpletest.py

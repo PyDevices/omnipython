@@ -92,6 +92,7 @@ class FakeHost:
         self.streams = {}
         self.probe = bytearray(34)
         self.report = None
+        self.gone = None                    # an errno once the device is unplugged
         self.host_poll = self._host_poll    # absent on a firmware that predates it
 
     # -- usb.core's calls
@@ -128,6 +129,8 @@ class FakeHost:
         return len(self.report)
 
     def host_claim(self, dev_id, itf, alt=0):
+        if self.refuse_claim == "too big":
+            raise OSError(7, "E2BIG")
         if self.refuse_claim:
             raise OSError(16, "EBUSY")
         self.calls.append(("claim", itf, alt))
@@ -174,6 +177,8 @@ class FakeHost:
         return (10, 1000, 1, 2, 3, 4, 5, 6, 7) if ep in self.streams else None
 
     def host_stream_write(self, dev_id, ep, buf):
+        if self.gone:
+            raise OSError(self.gone, "unplugged")
         ring = self.streams[ep]
         n = min(len(buf), ring.size - ring.any())
         n -= n % 4
@@ -181,6 +186,8 @@ class FakeHost:
         return n
 
     def host_stream_space(self, dev_id, ep):
+        if self.gone:
+            raise OSError(self.gone, "unplugged")
         ring = self.streams[ep]
         return ring.size - ring.any()
 
@@ -247,6 +254,22 @@ class TestSpeaker(unittest.TestCase):
         self.assertEqual(spk.capacity(), 0)
         self.assertEqual(spk.queued(), 0)
 
+    def test_an_unplugged_speaker_says_so_and_keeps_the_errno(self):
+        host.reset(_uac2_blob())
+        spk = Speaker(device(), rate=48000)
+        spk.start()
+        for errno in (2, 19):                  # ENOENT, then ENODEV
+            host.gone = errno
+            for call in (spk.space, lambda: spk.write(bytes(4))):
+                with self.assertRaises(OSError) as cm:
+                    call()
+                self.assertEqual(cm.exception.errno, errno)
+                self.assertIn("USB speaker was disconnected", str(cm.exception))
+        host.gone = 5                          # any other error goes up as it came
+        with self.assertRaises(OSError) as cm:
+            spk.write(bytes(4))
+        self.assertEqual((cm.exception.errno, cm.exception.strerror), (5, "unplugged"))
+
     def test_stop_parks_the_device_on_alt_0_and_lets_go(self):
         host.reset(_uac2_blob())
         spk = Speaker(device(), rate=48000)
@@ -296,6 +319,15 @@ class TestSpeaker(unittest.TestCase):
         with self.assertRaises(OSError) as e:
             spk.start()
         self.assertIn('classes=("uac",)', str(e.exception))
+
+    def test_an_endpoint_too_big_for_the_fifo_says_its_size(self):
+        host.reset(_uac2_blob(), refuse_claim="too big")
+        spk = Speaker(device(), rate=48000)
+        with self.assertRaises(OSError) as e:
+            spk.start()
+        self.assertEqual(7, e.exception.errno)
+        self.assertIn("%d-byte packets" % (spk.stream.max_packet & 0x7FF), str(e.exception))
+        self.assertNotIn("classes=", str(e.exception))
 
 
 class TestMicrophone(unittest.TestCase):
@@ -472,7 +504,19 @@ class TestAudiodev(unittest.TestCase):
         self.assertNotIn(0x83, host.streams)
         self.assertEqual(mic.available(), 0)
 
-    def test_audio_out_wraps_the_speaker_in_a_player_off_the_pump(self):
+    def test_an_unplugged_speaker_fails_the_write_loudly(self):
+        out = self.speaker()
+        out.write(bytes(400))
+        host.gone = 2
+        for call in (lambda: out.write(bytes(400)), lambda: out.try_write(bytes(400)), out.space):
+            with self.assertRaises(OSError) as cm:
+                call()
+            self.assertEqual(cm.exception.errno, 2)
+            self.assertIn("USB speaker was disconnected", str(cm.exception))
+        host.gone = None
+        out.close()
+
+    def test_audio_out_wraps_the_speaker_in_a_player(self):
         fake = types.ModuleType("audiocore")
         saved = sys.modules.get("audiocore")
         sys.modules["audiocore"] = fake
@@ -481,6 +525,13 @@ class TestAudiodev(unittest.TestCase):
 
             host.reset(_uac2_blob())
             out = audio.audio_out(dev=device())
+            host.reset(_uac2_blob())
+            off_pump = audio.audio_out(dev=device(), pump=False)
+            host.reset(_uac2_blob())
+            buffered = audio.audio_out(dev=device(), latency="buffered")
+            host.reset(_uac2_blob())
+            with self.assertRaises(ValueError):
+                audio.audio_out(dev=device(), latency="lo")
         finally:
             if saved is None:
                 del sys.modules["audiocore"]
@@ -488,8 +539,16 @@ class TestAudiodev(unittest.TestCase):
                 sys.modules["audiocore"] = saved
         self.assertIsInstance(out, AudioOut)
         self.assertEqual(out.format.rate, 48000)
-        self.assertFalse(out._want_pump)
+        # The pump plays to the speaker where the firmware's can; pump=False keeps it off.
+        self.assertTrue(out._want_pump)
+        self.assertFalse(off_pump._want_pump)
         self.assertEqual(out.transport.speaker.dev.idVendor, 0x08BB)
+        # Off the pump, the default keeps 80 ms queued, for an instrument.
+        self.assertEqual(out.chunk_ms * out._lookahead_chunks, 80)
+        # "buffered" queues past a collection, and its ring holds that and the catch-up.
+        self.assertGreaterEqual(buffered.chunk_ms * buffered._lookahead_chunks, 300)
+        self.assertGreaterEqual(buffered.transport.speaker._ring_bytes,
+                                buffered.format.rate * 4 * 600 // 1000)
 
 
 class TestCamera(unittest.TestCase):
@@ -522,13 +581,53 @@ class TestCamera(unittest.TestCase):
             Camera(device(), max_size=(320, 240), in_limit=600)
         self.assertIn("640-byte packets, over in_limit=600", str(e.exception))
 
+    def test_mjpeg_the_host_cannot_carry_in_full_streams_on_the_largest_single_alt(self):
+        # A camera reserves for its worst MJPEG frame: 2688 bytes a microframe
+        # is three transactions, which the host does not take. It streams on
+        # the largest one-transaction alternate setting, and says so.
+        host.reset(_C920E, probe_payload=2688)
+        cam = Camera(device(), encoding="mjpeg", max_size=(320, 240))
+        self.assertEqual((cam._alt.max_packet, cam._alt.per_frame), (944, 1))
+        self.assertTrue(cam.best_effort)
+        cam.start()
+        stream = [c for c in host.calls if c[0] == "stream"][0]
+        self.assertEqual(stream[2], 944)
+        cam.stop()
+
+    def test_a_mode_that_fits_is_not_best_effort(self):
+        cam = self.camera(max_size=(320, 240), encoding="mjpeg")
+        self.assertFalse(cam.best_effort)
+
+    def test_uncompressed_the_host_cannot_carry_is_refused(self):
+        # Uncompressed bandwidth is what the camera says it is: no best effort.
+        host.reset(_C920E, probe_payload=2688)
+        with self.assertRaises(ValueError):
+            Camera(device(), encoding="yuy2", max_size=(320, 240))
+
+    def test_in_limit_still_skips_a_mode_over_it_instead_of_best_effort(self):
+        host.reset(_C920E, probe_payload=2688)
+        with self.assertRaises(ValueError):
+            Camera(device(), encoding="mjpeg", max_size=(320, 240), in_limit=1024)
+
+    def test_hold_frame_rate_turns_off_exposure_priority(self):
+        cam = self.camera(max_size=(320, 240))
+        host.ctrl.clear()
+        self.assertTrue(cam.hold_frame_rate())
+        # The camera terminal is entity 1 on video control interface 0.
+        self.assertEqual(host.ctrl, [(0x21, 0x01, 0x0300, 0x0100, b"\x00")])
+        host.ctrl.clear()
+        self.assertTrue(cam.hold_frame_rate(False))
+        self.assertEqual(host.ctrl[0][4], b"\x01")
+
     def test_start_claims_the_alt_and_opens_a_video_stream(self):
         cam = self.camera(max_size=(320, 240))
         host.ctrl.clear()
         cam.start()
         a = cam._alt
         self.assertIn(("claim", cam._fmt.interface, a.alt), host.calls)
-        self.assertEqual(host.ctrl[0][:4], SET_INTERFACE + (a.alt, cam._fmt.interface))
+        # start() first lets go of a stream an earlier program left open (alt 0).
+        self.assertEqual(host.ctrl[0][:4], SET_INTERFACE + (0, cam._fmt.interface))
+        self.assertEqual(host.ctrl[-1][:4], SET_INTERFACE + (a.alt, cam._fmt.interface))
         stream = [c for c in host.calls if c[0] == "stream"][0]
         self.assertEqual(stream, ("stream", a.endpoint, a.max_packet,
                                   {"video": True, "max_frame": cam.frame_bytes}))

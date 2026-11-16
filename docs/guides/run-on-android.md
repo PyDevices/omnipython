@@ -1,6 +1,6 @@
 # Android
 
-PyDevices runs on Android as **CPython in a python-for-android APK** with the SDL2
+OmniPython runs on Android as **CPython in a python-for-android APK** with the SDL2
 bootstrap (no Kivy). This page documents the product side: the APK, the
 `android.py` host tool, and how `displaydev` / `multimer` / `audiodev` behave on
 the platform.
@@ -17,22 +17,22 @@ that path uses PyScript / `PSDisplay`, not this stack.
 
 There is no MicroPython port for Android. Native `libSDL2.so` comes from p4a's
 `sdl2` recipe; `import usdl2` is the pure-Python ctypes binding shipped in
-[pydevices-desktop](https://test.pypi.org/project/pydevices-desktop/).
+[omnipython-desktop](https://test.pypi.org/project/omnipython-desktop/).
 `displaydev.auto.AutoDisplay` selects **`AndroidSDLDisplay`**
 (`SDL_WINDOW_SHOWN` / HIGHDPI — not `FULLSCREEN_DESKTOP`, which resizes the
 Activity surface after GL buffers exist and yields a black screen after splash).
 
-Display wiring uses the MCU-shaped `board_config` from `pydevices-desktop`
+Display wiring uses the MCU-shaped `board_config` from `omnipython-desktop`
 (`AutoDisplay` plus neutral input readers). LVGL owns its app in
 `display_driver`; non-LVGL apps may instantiate optional `appdev`. Set
-`PYDEVICES_WIDTH` / `PYDEVICES_HEIGHT` / `PYDEVICES_SCALE` for your panel size.
+`OMNIPYTHON_WIDTH` / `OMNIPYTHON_HEIGHT` / `OMNIPYTHON_SCALE` for your panel size.
 
 Two APKs are in play:
 
 | Package id | Role |
 |---|---|
 | `org.pydevices.launcher` | **PyDevices Launcher** — a baked LVGL home that fetches examples on button press (`mip` / `pip`). It does *not* auto-fetch on launch. |
-| `org.pydevices.runner` | **Runner** — the target of [`bin/android.py`](https://github.com/PyDevices/pydevices/blob/main/bin/android.py); receives staged scripts over `adb`. |
+| `org.pydevices.runner` | **Runner** — the target of [`bin/android.py`](https://github.com/PyDevices/omnipython/blob/main/bin/android.py); receives staged scripts over `adb`. |
 
 ## Staging a script with `android.py`
 
@@ -44,7 +44,7 @@ from a clone of
 is needed.
 
 ```bash
-curl -LO https://raw.githubusercontent.com/PyDevices/pydevices/main/bin/android.py
+curl -LO https://raw.githubusercontent.com/PyDevices/omnipython/main/bin/android.py
 git clone https://github.com/PyDevices/gallery
 cd gallery/lib
 python3 ../../android.py --install-apk   # once: downloads and installs the Runner
@@ -53,7 +53,7 @@ python3 ../../android.py examples/piano.py
 
 The rest of this page writes that as plain `android.py`.
 
-[`bin/android.py`](https://github.com/PyDevices/pydevices/blob/main/bin/android.py) stages a **cwd-relative path** onto the
+[`bin/android.py`](https://github.com/PyDevices/omnipython/blob/main/bin/android.py) stages a **cwd-relative path** onto the
 installed Runner APK and relaunches it — the same shape as the CLI `python` /
 `micropython` entry points. Options go **before** the script: anything after
 it is passed to the script as `sys.argv`.
@@ -77,12 +77,12 @@ On a Runner older than 0.2.2, which doesn't carry the audio libraries, add
 
 `--deps` takes the package from the Python you run `android.py` with if it is
 installed there (a developer's venv or checkout), and otherwise downloads it
-from the [PyDevices MIP index](https://PyDevices.github.io/mip) into
+from the [OmniPython index](https://lib.omnipython.org) into
 `~/.pydevices/mip`. A package it can't find is an error on your computer,
-before anything is copied to the phone. `--index URL` or `PYDEVICES_MIP_INDEX`
+before anything is copied to the phone. `--index URL` or `OMNIPYTHON_MIP_INDEX`
 points it at another index.
 
-The Runner carries pydevices, pydevices-desktop, audiodsp, audioinstruments,
+The Runner carries OmniPython, omnipython-desktop, audiodsp, audioinstruments,
 audioeffects, pygraphics, palettes, pdwidgets and LVGL (the two audio
 libraries from 0.2.2). A package with native code that is not on that
 list cannot be staged; it has to be built into an APK.
@@ -160,7 +160,7 @@ Tilting the phone does **not** change orientation — the same contract as an SP
 LCD on a board; the user turns the device to match the app. After an aspect
 change, `AndroidSDLDisplay` rebinds the logical texture and letterboxes with
 `RenderSetLogicalSize` (CreateWindow scale is forced to 1 so a stale tall window
-cannot clip landscape content). Desktop chrome fitting and `PYDEVICES_SCALE` do
+cannot clip landscape content). Desktop chrome fitting and `OMNIPYTHON_SCALE` do
 not drive the Android window size; desktop `SDLDisplay` still uses software
 `RenderCopyEx` rotation.
 
@@ -183,10 +183,10 @@ stops the service. Non-Android consumers still get `session=None` — no API cha
 
 ## LVGL on Android
 
-Prebuilt **`pydevices-lvgl`** wheels for Android are on
-[TestPyPI](https://test.pypi.org/project/pydevices-lvgl/) and are included in the
+Prebuilt **`omnipython-lvgl`** wheels for Android are on
+[TestPyPI](https://test.pypi.org/project/omnipython-lvgl/) and are included in the
 launcher APK. The launcher home UI is LVGL; its buttons `mip.install` examples
-from GitHub with `index=` the [PyDevices MIP index](https://PyDevices.github.io/mip).
+from GitHub with `index=` the [OmniPython index](https://lib.omnipython.org).
 
 ## Android TV / Fire OS
 
@@ -194,7 +194,7 @@ The same CPython + SDL2 APK stack as phones, with leanback packaging (owned by
 the template repo) and a landscape framebuffer for 10-foot UI.
 
 **Framebuffer:** import `board_config_tv` before the entry point (it sets
-`PYDEVICES_WIDTH=1280`, `PYDEVICES_HEIGHT=720`), or set those env vars yourself.
+`OMNIPYTHON_WIDTH=1280`, `OMNIPYTHON_HEIGHT=720`), or set those env vars yourself.
 Phone defaults stay portrait 720×1280.
 
 **Remote → appdev** (SDL's Android keyboard map; no extra remap needed):

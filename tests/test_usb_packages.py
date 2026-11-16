@@ -5,11 +5,11 @@
 package files, which of them may import the C module, and usb.core's
 allocation-free polling read on MicroPython itself.
 
-Each package installs with ``mip.install("github:PyDevices/pydevices/<dir>")``,
+Each package installs with ``mip.install("github:PyDevices/omnipython/<dir>")``,
 so every URL in its ``package.json`` must name a file that is here, at the
 path a board would fetch, and every file here must be installed by some URL.
 
-``_usbhost`` is the firmware's C module (micropython-pydevices'
+``_usbhost`` is the firmware's C module (omnipython-builds'
 ``modules/usbhost``). Four package files front it, and every other package
 builds on usb.core; the examples beside the module check that no application
 names it at all.
@@ -26,7 +26,7 @@ from _mprun import need_micropython, run
 ROOT = Path(__file__).resolve().parents[1]
 TESTS = Path(__file__).resolve().parent
 PACKAGES = sorted(p for p in (ROOT / "packages" / "usb").glob("usb-*") if (p / "package.json").is_file())
-PREFIX = "github:PyDevices/pydevices/packages/usb/"
+PREFIX = "github:PyDevices/omnipython/packages/usb/"
 
 # The package files that front the C module, and the only ones allowed to
 # import it.
@@ -41,11 +41,11 @@ _IMPORT = re.compile(r"^\s*(?:import\s+_usbhost|from\s+_usbhost\s+import)", re.M
 
 
 class PackageFileTests(unittest.TestCase):
-    def test_the_twelve_packages_are_here(self):
+    def test_the_fourteen_packages_are_here(self):
         self.assertEqual(
             [p.name for p in PACKAGES],
-            ["usb-core", "usb-device-audio", "usb-device-msc", "usb-device-video", "usb-hid",
-             "usb-host-audio", "usb-host-cdc", "usb-host-hid", "usb-host-msc", "usb-host-mtp", "usb-host-net",
+            ["usb-core", "usb-device-audio", "usb-device-msc", "usb-device-net", "usb-device-video", "usb-hid",
+             "usb-host-audio", "usb-host-cdc", "usb-host-dfu", "usb-host-hid", "usb-host-msc", "usb-host-mtp", "usb-host-net",
              "usb-host-video"])
 
     def test_every_url_names_a_file_here_and_every_file_is_installed(self):

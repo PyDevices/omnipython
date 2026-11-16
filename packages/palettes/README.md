@@ -8,13 +8,16 @@ the sixteen Windows names, with the same code on MicroPython-compatible boards,
 CircuitPython-compatible boards and CPython. It has no dependencies.
 
 ```bash
-pip install -i https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ pydevices-palettes
+pip install -i https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ omnipython-palettes
 ```
 
 ```python
-import mip
-mip.install("palettes", index="https://PyDevices.github.io/mip")
+import omip
+omip.install("palettes")
 ```
+
+`omip` comes with OmniPython firmware. On other MicroPython firmware, run
+`mip.install("github:PyDevices/omnipython/lib/omip.py")` once to put it on the board.
 
 ```python
 from palettes import get_palette
@@ -41,6 +44,6 @@ Amber 500 is 0xFFC107
 The picture at the top of this page is those three palettes drawn as bands: the
 wheel, the sixteen Windows names and the Amber ramp.
 
-[Docs](https://palettes.readthedocs.io) · [Examples](https://pydevices.github.io/gallery/pyscript/) · [Roadmap](ROADMAP.md)
+[Docs](https://docs.omnipython.org/en/latest/palettes/) · [Examples](https://gallery.omnipython.org/pyscript/) · [Roadmap](ROADMAP.md)
 
 OmniPython is made by [PyDevices](https://pydevices.com).

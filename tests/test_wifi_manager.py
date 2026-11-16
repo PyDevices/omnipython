@@ -10,10 +10,18 @@ and a join fails once and then works, so the join order and the two rounds
 are what keep a board on its network.
 """
 
+import sys
+import types
 import unittest
+from unittest import mock
 
 import _env  # noqa: F401
 import wifi_manager as wm
+from fake_wlan import FakeWLAN
+from fake_wlan import clock as _fake_clock
+from fake_wlan import sleep_ms as _fake_sleep_ms
+from fake_wlan import ticks_diff as _fake_ticks_diff
+from fake_wlan import ticks_ms as _fake_ticks_ms
 
 _clock = [0]
 
@@ -27,10 +35,12 @@ class FakeRadio:
         self.seen = seen
         self.script = {k: list(v) for k, v in (script or {}).items()}
         self.joins = []
+        self.scans = 0
         self.address = None
         self.ap = None
 
     def scan(self):
+        self.scans += 1
         if self.seen is None:
             raise OSError("scan failed")
         return dict(self.seen)
@@ -90,7 +100,7 @@ class _Patched(unittest.TestCase):
         _clock[0] = 0
         self.sleeps = 0
         self.on_sleep = None
-        wm._known = lambda: list(self.known)
+        wm._known = lambda module="secrets": list(self.known)
         wm._remember = lambda ssid, password, hidden=False: self.remembered.append(ssid)
         wm._ticks_ms = lambda: _clock[0]
         wm._ticks_diff = lambda a, b: a - b
@@ -192,10 +202,299 @@ class JoinKnownTest(_Patched):
         self.assertEqual(wm._join_known(radio, 5), "10.0.0.5")
         self.assertEqual(radio.joins, ["a", "b"])
 
+    def test_one_known_network_is_joined_without_a_scan(self):
+        self.known = [_net("home")]
+        radio = FakeRadio(seen={"home": -50}, script={"home": [None]})
+        self.assertEqual(wm._join_known(radio, 5), "10.0.0.5")
+        self.assertEqual(radio.scans, 0)
+        self.assertEqual(radio.joins, ["home"])
+
+    def test_one_known_network_out_of_range_is_tried_twice_without_a_scan(self):
+        self.known = [_net("home")]
+        radio = FakeRadio(seen={})
+        self.assertIsNone(wm._join_known(radio, 5))
+        self.assertEqual(radio.scans, 0)
+        self.assertEqual(radio.joins, ["home", "home"])
+
+    def test_several_known_networks_are_scanned_for(self):
+        self.known = [_net("a"), _net("b")]
+        radio = FakeRadio(seen={"b": -50}, script={"b": [None]})
+        self.assertEqual(wm._join_known(radio, 5), "10.0.0.5")
+        self.assertEqual(radio.scans, 1)
+        self.assertEqual(radio.joins, ["b"])
+
     def test_nothing_known_tries_nothing(self):
         radio = FakeRadio(seen={"home": -50})
         self.assertIsNone(wm._join_known(radio, 5))
         self.assertEqual(radio.joins, [])
+
+
+class CircuitPythonJoinTest(_Patched):
+    """CircuitPython's radio searches every channel for a network it can't see."""
+
+    def _radio(self, outcomes):
+        class Radio:
+            def __init__(self):
+                self.calls = []
+                self.ipv4_address = None
+                self.ap_info = types.SimpleNamespace(channel=6)
+
+            def connect(self, ssid, password, channel=0, timeout=None):
+                self.calls.append((ssid, channel))
+                outcome = outcomes.pop(0)
+                if outcome is not None:
+                    raise ConnectionError(outcome)
+                self.ipv4_address = "10.0.0.5"
+
+        radio = wm._CPRadio.__new__(wm._CPRadio)
+        radio.r = Radio()
+        return radio
+
+    def setUp(self):
+        super().setUp()
+        wm._channels.clear()
+
+    def test_a_network_that_isnt_there_is_not_searched_for_twice(self):
+        self.known = [_net("home")]
+        radio = self._radio(["No network with that ssid", "No network with that ssid"])
+        self.assertIsNone(wm._join_known(radio, 5))
+        self.assertEqual(len(radio.r.calls), 1)
+
+    def test_another_failure_still_gets_the_second_round(self):
+        self.known = [_net("home")]
+        radio = self._radio(["Authentication failure", None])
+        self.assertEqual(wm._join_known(radio, 5), "10.0.0.5")
+        self.assertEqual(len(radio.r.calls), 2)
+
+    def test_the_next_join_starts_on_the_channel_that_worked(self):
+        self.known = [_net("home")]
+        radio = self._radio([None])
+        self.assertEqual(wm._join_known(radio, 5), "10.0.0.5")
+        self.assertEqual(radio.r.calls, [("home", 0)])
+        again = self._radio([None])
+        again.join("home", "pw", 5)
+        self.assertEqual(again.r.calls, [("home", 6)])
+
+
+class ConnectLinkTest(unittest.TestCase):
+    """``connect()`` on an esp32-shaped station: an address without a link is
+    not a connection, so a static address joins at boot and rejoins after a
+    drop, and a join that is still waiting for ``isconnected()`` is waited out."""
+
+    def setUp(self):
+        self._saved = {
+            name: getattr(wm, name)
+            for name in ("_load", "_save", "_sleep_ms", "_ticks_ms", "_ticks_diff")
+        }
+        _fake_clock[0] = 0
+        self.stored = []
+        wm._load = lambda: list(self.stored)
+        wm._save = lambda nets: self.stored.__init__(nets) or True
+        wm._sleep_ms = _fake_sleep_ms
+        wm._ticks_ms = _fake_ticks_ms
+        wm._ticks_diff = _fake_ticks_diff
+        self.ntp_calls = 0
+
+        def settime():
+            self.ntp_calls += 1
+
+        secrets = types.ModuleType("_wm_test_secrets")
+        secrets.WIFI_SSID = "bench"
+        secrets.WIFI_PASSWORD = "pw"
+        ntp = types.ModuleType("ntptime")
+        ntp.settime = settime
+        self._modules = {"_wm_test_secrets": secrets, "ntptime": ntp}
+        self._before = {name: sys.modules.get(name) for name in ("network", "secrets", *self._modules)}
+        sys.modules.update(self._modules)
+        sys.modules["secrets"] = types.ModuleType("secrets")  # no network of its own
+
+    def tearDown(self):
+        for name, value in self._saved.items():
+            setattr(wm, name, value)
+        for name, value in self._before.items():
+            if value is None:
+                sys.modules.pop(name, None)
+            else:
+                sys.modules[name] = value
+
+    def _connect(self, wlan, **kwargs):
+        net = types.ModuleType("network")
+        net.STA_IF = 0
+        net.AP_IF = 1
+        net.WLAN = lambda _if: wlan
+        sys.modules["network"] = net
+        kwargs.setdefault("module", "_wm_test_secrets")
+        kwargs.setdefault("setup", False)
+        return wm.connect(**kwargs)
+
+    def test_static_address_without_link_connects(self):
+        wlan = FakeWLAN()
+        wlan.ifconfig(("10.0.0.42", "255.255.255.0", "10.0.0.1", "10.0.0.1"))
+        self.assertEqual(self._connect(wlan), "10.0.0.42")
+        self.assertEqual(wlan.connects, ["bench"])
+        self.assertTrue(wlan.linked)
+
+    def test_static_address_rejoins_after_drop(self):
+        wlan = FakeWLAN()
+        wlan.ifconfig(("10.0.0.42", "255.255.255.0", "10.0.0.1", "10.0.0.1"))
+        self.assertEqual(self._connect(wlan), "10.0.0.42")
+        wlan.drop()
+        self.assertEqual(wlan.ifconfig()[0], "10.0.0.42")
+        self.assertEqual(self._connect(wlan), "10.0.0.42")
+        self.assertEqual(len(wlan.connects), 2)
+        self.assertTrue(wlan.linked)
+
+    def test_dhcp_connect_waits_out_isconnected_lag(self):
+        wlan = FakeWLAN()
+        wlan.lag_ms = 800
+        self.assertEqual(self._connect(wlan), "10.0.0.77")
+        self.assertEqual(wlan.connects, ["bench"])
+
+    def test_dhcp_rejoins_after_drop(self):
+        wlan = FakeWLAN()
+        self.assertEqual(self._connect(wlan), "10.0.0.77")
+        wlan.drop()
+        self.assertEqual(self._connect(wlan), "10.0.0.77")
+        self.assertEqual(len(wlan.connects), 2)
+
+    def test_port_without_isconnected_falls_back_to_address(self):
+        wlan = FakeWLAN(ip="10.0.0.77", linked=True, has_isconnected=False)
+        self.assertEqual(self._connect(wlan), "10.0.0.77")
+        self.assertEqual(wlan.connects, [])
+
+    def test_a_live_link_is_left_alone_and_the_clock_too(self):
+        wlan = FakeWLAN(ip="10.0.0.77", linked=True)
+        self.assertEqual(self._connect(wlan, ntp=True), "10.0.0.77")
+        self.assertEqual(wlan.connects, [])
+        self.assertEqual(self.ntp_calls, 0)
+
+    def test_no_link_ever_returns_none(self):
+        wlan = FakeWLAN()
+        wlan.ifconfig(("10.0.0.42", "255.255.255.0", "10.0.0.1", "10.0.0.1"))
+        wlan.assoc_ms = 10**9
+        self.assertIsNone(self._connect(wlan, ntp=True))
+        self.assertEqual(wlan.connects, ["bench", "bench"])
+        self.assertEqual(self.ntp_calls, 0)
+
+    def test_the_clock_is_set_after_a_join_when_asked(self):
+        self.assertEqual(self._connect(FakeWLAN(), ntp=True), "10.0.0.77")
+        self.assertEqual(self.ntp_calls, 1)
+
+    def test_the_clock_is_left_alone_by_default(self):
+        self.assertEqual(self._connect(FakeWLAN()), "10.0.0.77")
+        self.assertEqual(self.ntp_calls, 0)
+
+    def test_a_failed_clock_set_still_returns_the_address(self):
+        def refuse():
+            raise OSError(113, "EHOSTUNREACH")
+
+        sys.modules["ntptime"].settime = refuse
+        self.assertEqual(self._connect(FakeWLAN(), ntp=True), "10.0.0.77")
+
+    def test_wait_false_starts_the_join_and_returns_at_once(self):
+        wlan = FakeWLAN()
+        self.assertIsNone(self._connect(wlan, wait=False))
+        self.assertEqual(wlan.connects, ["bench"])
+        self.assertFalse(wlan.linked)
+        self.assertEqual(_fake_clock[0], 0)
+        # the link comes up on its own, and the next call sees it
+        _fake_sleep_ms(2000)
+        self.assertEqual(self._connect(wlan, wait=False), "10.0.0.77")
+        self.assertEqual(wlan.connects, ["bench"])
+
+    def test_wait_false_with_a_static_address_and_no_link_rejoins(self):
+        wlan = FakeWLAN()
+        wlan.ifconfig(("10.0.0.42", "255.255.255.0", "10.0.0.1", "10.0.0.1"))
+        self.assertIsNone(self._connect(wlan, wait=False))
+        self.assertEqual(wlan.connects, ["bench"])
+
+    def test_wait_false_with_nothing_known_starts_nothing(self):
+        wlan = FakeWLAN()
+        self.assertIsNone(self._connect(wlan, wait=False, module="_wm_no_such_module"))
+        self.assertEqual(wlan.connects, [])
+
+    def test_a_remembered_network_is_tried_when_the_secrets_one_is_out_of_range(self):
+        wlan = FakeWLAN()
+        self.stored = [{"ssid": "kept", "password": "pw2"}]
+        joined = []
+        real_connect = wlan.connect
+
+        def connect(ssid, password):
+            joined.append(ssid)
+            if ssid == "kept":
+                real_connect(ssid, password)
+
+        wlan.connect = connect
+        self.assertEqual(self._connect(wlan), "10.0.0.77")
+        self.assertEqual(joined, ["bench", "kept"])
+
+
+class BoardNameTest(unittest.TestCase):
+    """The board's name is its hostname and its setup access point's name."""
+
+    def setUp(self):
+        # The board's name itself is test_board_name's; here, what wifi_manager does with it.
+        named = mock.patch.object(wm, "boarddev", types.SimpleNamespace(name=lambda: "kitchen"))
+        named.start()
+        self.addCleanup(named.stop)
+        self.hostnames = []
+        self._before = sys.modules.get("network")
+        net = types.ModuleType("network")
+        net.STA_IF = 0
+        net.AP_IF = 1
+        net.hostname = self.hostnames.append
+
+        class Wlan:
+            def active(self, *a):
+                return True
+
+            def isconnected(self):
+                return True
+
+            def ifconfig(self):
+                return ("10.0.0.9", "255.255.255.0", "10.0.0.1", "10.0.0.1")
+
+        net.WLAN = lambda _if: Wlan()
+        sys.modules["network"] = net
+
+    def tearDown(self):
+        if self._before is None:
+            sys.modules.pop("network", None)
+        else:
+            sys.modules["network"] = self._before
+
+    def test_connect_makes_the_board_name_the_hostname(self):
+        self.assertEqual(wm.connect(setup=False), "10.0.0.9")
+        self.assertEqual(self.hostnames, ["kitchen"])
+
+    def test_a_hostname_given_wins(self):
+        wm.connect(setup=False, hostname="panel")
+        self.assertEqual(self.hostnames, ["panel"])
+
+    def test_run_makes_the_board_name_the_hostname(self):
+        saved = wm._Setup
+        wm._Setup = lambda *a, **k: types.SimpleNamespace(run=lambda: None)
+        try:
+            wm.run(display_drv=object())
+        finally:
+            wm._Setup = saved
+        self.assertEqual(self.hostnames, ["kitchen"])
+
+    def test_the_access_point_is_named_after_the_board(self):
+        radio = FakeRadio(seen={})
+        ui = FakeUI()
+        saved = wm._make_ui, wm._sleep_ms
+        wm._make_ui = lambda display_drv: ui
+        wm._sleep_ms = lambda ms: wm.cancel()
+        s = wm._Setup(radio, None, 5, rescan=False)
+        for name in ("_open_sockets", "_close_sockets", "_serve_dns", "_serve_http"):
+            setattr(s, name, lambda *a: None)
+        try:
+            s.run()
+        finally:
+            wm._make_ui, wm._sleep_ms = saved
+            wm._cancelled = False
+        self.assertEqual(ui.shown[0], "kitchen")
 
 
 class SetupModeTest(_Patched):
@@ -335,6 +634,19 @@ class LvglScreenTest(_Patched):
         ui.status_lbl = FakeObj(deleted=True)
         ui.status("Joining home...")
         self.assertIsNone(ui.status_lbl)
+
+
+
+class CacheFileTest(unittest.TestCase):
+    """Where ports without esp32.NVS remember networks: a writable drive."""
+
+    def test_an_stm32_board_keeps_networks_on_flash(self):
+        # On an Arduino GIGA, / only holds the mounts and refuses writes.
+        self.assertEqual(wm._cache_file("pyboard"), "/flash/wifi_networks.json")
+
+    def test_other_ports_keep_networks_at_the_root(self):
+        self.assertEqual(wm._cache_file("rp2"), "/wifi_networks.json")
+        self.assertEqual(wm._cache_file("linux"), "/wifi_networks.json")
 
 
 if __name__ == "__main__":

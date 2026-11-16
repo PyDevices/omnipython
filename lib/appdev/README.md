@@ -1,12 +1,12 @@
 # appdev
 
-`appdev` is the optional **application coordinator, hardware input aggregator, timer manager, display refresh controller, and main run loop** for Python applications in the PyDevices ecosystem (MicroPython, CircuitPython, CPython, PyScript, and Jupyter).
+`appdev` is the optional **application coordinator, hardware input aggregator, timer manager, display refresh controller, and main run loop** for Python applications in the OmniPython ecosystem (MicroPython, CircuitPython, CPython, PyScript, and Jupyter).
 
 It bridges neutral hardware definitions (`board_config`), timer backends (`multimer`), standard SDL2/PyGame event types (`events`, `keys`), and display drivers (`displaydev`) into an intuitive, zero-async-boilerplate application lifecycle.
 
 ---
 
-For a complete program to start from, see [appdev_simpletest.py](https://github.com/PyDevices/pydevices/blob/main/examples/appdev_simpletest.py).
+For a complete program to start from, see [appdev_simpletest.py](https://github.com/PyDevices/omnipython/blob/main/examples/appdev_simpletest.py).
 
 ## Quick Start
 

@@ -32,7 +32,7 @@ if str(_TESTS) not in sys.path:
     sys.path.insert(0, str(_TESTS))
 import _env  # noqa: E402, F401
 
-from audiodev import AudioFormat, PCMOutput            # noqa: E402
+from audiodev import AudioFormat, AudioLocked, PCMOutput  # noqa: E402
 from audiodev import pump as pump_mod                  # noqa: E402
 from audiodev import sample_out                        # noqa: E402
 
@@ -306,7 +306,7 @@ class FinishesUnwatched(FakeEngine):
     still comes back empty, because the player looked before the bytes were
     there. The second hands the sample over.
 
-    Those two looks are the whole of pydevices#52. Between them the player
+    Those two looks are the whole of omnipython#52. Between them the player
     decides twice whether it has a pump and whether the sample is finished,
     and both readings used to be wrong.
     """
@@ -362,7 +362,7 @@ class NeverStarts(FakeEngine):
 class SharesTheCore(FakeEngine):
     """A pump thread that can only run once the interpreter gives the core up.
 
-    What `lifecycle.py` hit on a loaded machine (pydevices#56): the pump and
+    What `lifecycle.py` hit on a loaded machine (omnipython#56): the pump and
     the interpreter on one core, and the interpreter waiting for the pump's
     first block by spinning. A spin never hands the core over, so the pump
     never ran, the wait ran out, and a round played nothing. Here "the core
@@ -756,7 +756,7 @@ class PauseParksTheThread(PumpFixture):
 
 
 class AStartTheInterpreterMissedCostsNoAudio(PumpFixture):
-    """pydevices#52: a pump can finish the job before the player looks.
+    """omnipython#52: a pump can finish the job before the player looks.
 
     A short sample is one block. On a busy core the pump can spawn, pull the
     whole thing into the ring, reach the end of the source and leave its loop
@@ -800,7 +800,7 @@ class AStartTheInterpreterMissedCostsNoAudio(PumpFixture):
 
 
 class AWaitForThePumpGivesTheCoreUp(PumpFixture):
-    """pydevices#56: waiting for the pump's first block must not starve it.
+    """omnipython#56: waiting for the pump's first block must not starve it.
 
     Measured before the fix with the probe pinned to one core: 303 waits in
     ten runs of `lifecycle.py` spun out their whole budget with the pump still
@@ -831,7 +831,7 @@ class AWaitForThePumpGivesTheCoreUp(PumpFixture):
 
 
 class AStartThatReallyFailedIsNotSticky(PumpFixture):
-    """The other half of pydevices#52, and why the two need telling apart.
+    """The other half of omnipython#52, and why the two need telling apart.
 
     A pump that left no trace at all did not start, so the player falls back
     -- and the loss is this afternoon's CPU, not this graph, so it must not
@@ -956,6 +956,75 @@ class AFaultIsASentence(PumpFixture):
         self.engine.alive = False
         owner.status()[5 * 8] = 99
         self.assertIn("error 99", owner.died())
+
+
+class APlayerWaitsForTheBrowserToUnlockAudio(PumpFixture):
+    """A transport that is locked until the user acts keeps the sample.
+
+    ``play()`` returns, the player reads as playing, and the first tick after
+    the unlock opens the transport and writes: the app never retries.
+    """
+
+    class Locked(Recorder):
+        def __init__(self):
+            super().__init__()
+            self.unlocked = False
+
+        def _open(self):
+            if not self.unlocked:
+                raise AudioLocked("click the page first")
+
+    class Suspended(Recorder):
+        """Opens at once, like a context that starts suspended."""
+
+        unlocked = False
+
+        def locked(self):
+            return not self.unlocked
+
+    def test_play_does_not_raise_and_nothing_is_written_while_locked(self):
+        transport = self.Locked()
+        out = sample_out.AudioOut(transport, chunk_ms=10)
+        self.addCleanup(out.close)
+        out.play(FakeSample())
+        for _ in range(3):
+            out.service()
+        self.assertTrue(out.playing)
+        self.assertEqual(bytes(transport.data), b"")
+
+    def test_the_first_tick_after_the_unlock_starts_playing(self):
+        transport = self.Locked()
+        out = sample_out.AudioOut(transport, chunk_ms=10)
+        self.addCleanup(out.close)
+        out.play(FakeSample())
+        out.service()
+        transport.unlocked = True
+        out.service()
+        out.service()
+        self.assertTrue(len(transport.data) > 0)
+
+    def test_a_context_that_opens_suspended_is_held_the_same_way(self):
+        transport = self.Suspended()
+        out = sample_out.AudioOut(transport, chunk_ms=10)
+        self.addCleanup(out.close)
+        out.play(FakeSample())
+        out.service()
+        self.assertEqual(bytes(transport.data), b"")
+        transport.unlocked = True
+        out.service()
+        out.service()
+        self.assertTrue(len(transport.data) > 0)
+
+    def test_stop_cancels_the_wait(self):
+        transport = self.Locked()
+        out = sample_out.AudioOut(transport, chunk_ms=10)
+        self.addCleanup(out.close)
+        out.play(FakeSample())
+        out.stop()
+        transport.unlocked = True
+        out.service()
+        self.assertFalse(out.playing)
+        self.assertEqual(bytes(transport.data), b"")
 
 
 class ATransportThatRefusesToOpenLeavesNothingBehind(PumpFixture):
@@ -1283,7 +1352,7 @@ class TheBoardPlaysThroughAudiobusio(PumpFixture):
         self.assertEqual(prefetch.wrote, 40 * 1024,
                          "the file stopped being read part way through")
 
-    # --- a fault that has been torn down is over (pydevices#45) ----------
+    # --- a fault that has been torn down is over (omnipython#45) ----------
 
     def test_the_next_player_gets_the_pump_back_once_the_fault_is_torn_down(
             self):
@@ -1376,6 +1445,95 @@ class FakeAudioOut(FakeI2SOut):
         super().__init__(None, None, left_channel, sample_rate=sample_rate)
         self.right_channel = right_channel
         self.buffer_ms = buffer_ms
+
+
+class Speaker(Recorder):
+    """``win_audio``'s output on the default device: it names a speaker."""
+
+    speaker_sink = "wasapi"
+
+
+class WindowsPlaysToTheSpeakerItself(PumpFixture):
+    """Windows: the pump writes the graph to WASAPI on its own thread.
+
+    ``audiobusio.I2SOut(..., sink="wasapi")`` opens the default speaker, so a
+    transport that names it hands the graph over and is never written to.
+    Feeding WASAPI from Python costs a ring, a coalescing queue and the
+    interpreter's ticks between the graph and the device.
+    """
+
+    def setUp(self):
+        super().setUp()
+
+        class Driver:                     # `speaker()` asks for this name
+            def sink_stats(self):
+                return None
+
+        pump_mod._driver = Driver()
+        pump_mod._driver_looked = True
+        FakeI2SOut.built = []
+        FakeI2SOut.live = None
+        self._saved_busio = (pump_mod._busio, pump_mod._busio_looked)
+        pump_mod._busio = FakeBusio()
+        pump_mod._busio_looked = True
+        self.addCleanup(self._put_busio_back)
+
+    def _put_busio_back(self):
+        pump_mod._busio, pump_mod._busio_looked = self._saved_busio
+        FakeI2SOut.live = None
+
+    def test_the_driver_can_play_to_a_speaker_and_is_not_a_board(self):
+        self.assertTrue(pump_mod.speaker())
+        self.assertFalse(pump_mod.on_board())
+
+    def test_the_graph_goes_to_the_speaker_and_the_transport_stays_shut(self):
+        transport = Speaker()
+        out = self.player(transport)
+        self.assertTrue(out.pumped)
+        self.assertEqual(len(FakeI2SOut.built), 1,
+                         "the graph was not handed to I2SOut")
+        i2s = FakeI2SOut.built[0]
+        self.assertEqual(i2s.sink, "wasapi")
+        self.assertEqual(i2s.sample_rate, RATE)
+        self.assertIsNone(i2s.port, "a speaker has no I2S port to name")
+        out.service()
+        self.assertEqual(transport.opened, 0,
+                         "the transport opened a second WASAPI stream")
+        self.assertEqual(bytes(transport.data), b"")
+
+    def test_a_transport_with_no_speaker_stays_on_the_ring(self):
+        out = self.player(Recorder())
+        self.assertTrue(out.pumped)
+        self.assertEqual(FakeI2SOut.built, [])
+        self.assertIsInstance(pump_mod.owner()._driver, pump_mod.RingDriver)
+
+    def test_a_lowered_volume_keeps_the_transport_that_applies_it(self):
+        transport = Speaker()
+        transport.set_volume(50)
+        self.player(transport)
+        self.assertEqual(FakeI2SOut.built, [],
+                         "the speaker would play at full volume")
+
+    def test_muting_while_it_plays_moves_the_sample_to_the_transport(self):
+        transport = Speaker()
+        out = self.player(transport, loop=True)
+        i2s = FakeI2SOut.built[0]
+        out.mute(True)
+        self.assertTrue(i2s.deinited, "the speaker went on playing")
+        self.assertTrue(out.playing)
+        out.service()
+        self.assertTrue(transport.data, "nothing carried the sample on")
+
+    def test_turning_it_down_while_it_plays_does_the_same(self):
+        transport = Speaker()
+        out = self.player(transport, loop=True)
+        out.set_volume(100)
+        self.assertFalse(FakeI2SOut.built[0].deinited,
+                         "full volume is the speaker's to play")
+        out.set_volume(20)
+        self.assertTrue(FakeI2SOut.built[0].deinited)
+        out.service()
+        self.assertTrue(transport.data)
 
 
 class FakeAudioio:
@@ -1792,7 +1950,7 @@ class ATickInsideAnyOfThem(PumpFixture):
                            "being held across anything")
 
     def test_health_carries_the_counter_that_had_no_reader(self):
-        """`reentered()` was a number nothing surfaced (pydevices#38).
+        """`reentered()` was a number nothing surfaced (omnipython#38).
 
         Same answer audiocomponents#97 reached one layer up: not dropped, and
         not shown as a missed step either -- a refused tick costs nothing --
@@ -2008,6 +2166,53 @@ class AFileGoesThroughPrefetch(PumpFixture):
         self.assertGreater(prefetch.wrote, 2 * 512,
                            "the loop never came round")
 
+    def test_a_stream_with_nothing_ready_hands_the_tick_back(self):
+        """A network stream answers "more to come, nothing yet" until its
+        bytes arrive. service() spun on that answer, so the app's tick
+        stopped until the network delivered."""
+        sample = self.wave(blocks=4, block=1024)
+        asked = []
+
+        def waiting():
+            asked.append(1)
+            if len(asked) > 100:
+                raise AssertionError("service() is still asking the stream")
+            return b""
+
+        sample.next_block = waiting
+        prefetch = pump_mod.Prefetch(sample, frames=256)
+        self.addCleanup(prefetch.deinit)
+        self.assertEqual(prefetch.service(), 0)
+        self.assertFalse(prefetch.done)
+
+    def test_a_source_slower_than_the_pump_hands_the_tick_back(self):
+        """An MP3 decoder short of CPU decodes slower than the pump drains,
+        so the ring never fills. service() waited for a full ring and never
+        came back to the app."""
+        sample = self.wave(blocks=4, block=1024)
+        prefetch = pump_mod.Prefetch(sample, frames=256, loop=True)
+        self.addCleanup(prefetch.deinit)
+        ring = prefetch.ring
+        pulled = []
+        real = sample.next_block
+
+        def counted():
+            pulled.append(1)
+            if len(pulled) > 100:
+                raise AssertionError("service() never handed the tick back")
+            return real()
+
+        sample.next_block = counted
+
+        def drained(view):
+            # The pump takes each block as soon as it lands.
+            return len(view)
+
+        ring.write = drained
+        wrote = prefetch.service()
+        self.assertGreater(wrote, 0)
+        self.assertLessEqual(len(pulled), ring.room // 1024 + 1)
+
     def test_a_build_with_no_ring_says_so(self):
         """An older pump, or one built without the ring: a file-backed source
         has nowhere to go and must say which name is missing."""
@@ -2051,6 +2256,103 @@ class TheQueueBelongsToThePump(PumpFixture):
         self.assertGreater(len(attached), 1,
                            "the queue was not handed back after the restart")
         self.assertIs(attached[-1], queue, "the app's queue was replaced")
+
+
+# --- an output the pump writes to itself: a USB speaker --------------------
+
+
+class SinkEngine(FakeEngine):
+    """An engine whose ``spawn`` takes a C sink, and says so."""
+
+    C_SINK = True
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.sink = None
+        self.gains = []
+
+    def spawn(self, sample, blocks, status, ring=None, loop=False, timeout_ms=0,
+              sink=None, sink_room=0, sink_gain=None, prio=None):
+        super().spawn(sample, blocks, status, ring=ring, loop=loop,
+                      timeout_ms=timeout_ms)
+        self.sink = {"sink": sink, "room": sink_room, "gain": sink_gain,
+                     "prio": prio}
+        return True
+
+    def sink_gain(self, level):
+        self.gains.append(level)
+
+
+class SinkRecorder(Recorder):
+    """A transport with a C sink, as a hosted USB speaker has."""
+
+    CAPACITY = 48000
+
+    def c_sink(self):
+        self.open()
+        return b"a C sink, by value"
+
+    def capacity(self):
+        return self.CAPACITY
+
+
+class APumpThatWritesToTheOutputItself(PumpFixture):
+
+    ENGINE = SinkEngine
+
+    def test_the_graph_goes_to_the_outputs_c_sink(self):
+        transport = SinkRecorder()
+        out = self.player(transport=transport)
+        self.assertTrue(out.pumped)
+        got = self.engine.sink
+        self.assertEqual(got["sink"], b"a C sink, by value")
+        # 10 ms of 48 kHz stereo is 1920 bytes kept queued.
+        self.assertEqual(got["room"], SinkRecorder.CAPACITY - 1920)
+        self.assertEqual(got["gain"], 1.0)
+        self.assertIsNone(got["prio"])
+        out.service()
+        self.assertEqual(bytes(transport.data), b"",
+                         "the interpreter wrote audio the pump is writing")
+
+    def test_the_transport_names_the_pumps_priority(self):
+        transport = SinkRecorder()
+        transport.c_sink_prio = 6
+        self.player(transport=transport)
+        self.assertEqual(self.engine.sink["prio"], 6)
+
+    def test_volume_and_mute_reach_the_pump(self):
+        transport = SinkRecorder()
+        transport.set_volume(80)
+        out = self.player(transport=transport)
+        self.assertEqual(self.engine.sink["gain"], 0.8)
+        out.set_volume(50)
+        out.mute(True)
+        out.mute(False)
+        self.assertEqual(self.engine.gains, [0.5, 0.0, 0.5])
+        self.assertTrue(out.pumped)
+
+    def test_a_graph_in_another_format_stays_on_the_interpreter(self):
+        transport = SinkRecorder()
+        with mock.patch("sys.stdout", new_callable=io.StringIO) as said:
+            out = self.player(transport=transport,
+                              sample=FakeSample(sample_rate=RATE // 2))
+        self.assertFalse(out.pumped)
+        self.assertIn("the output is", said.getvalue())
+
+    def test_a_second_output_is_not_mixed_into_the_first(self):
+        first = self.player(transport=SinkRecorder())
+        with mock.patch("sys.stdout", new_callable=io.StringIO) as said:
+            second = self.player(transport=SinkRecorder())
+        self.assertTrue(first.pumped)
+        self.assertFalse(second.pumped)
+        self.assertIn("another output", said.getvalue())
+        self.assertEqual(len(self.engine.targets()), 1)
+
+    def test_an_engine_without_c_sink_keeps_the_old_path(self):
+        self.engine.C_SINK = False
+        out = self.player(transport=SinkRecorder())
+        self.assertIsNone(self.engine.sink["sink"])
+        self.assertTrue(out.pumped)     # through the ring, as before
 
 
 if __name__ == "__main__":

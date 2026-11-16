@@ -1,6 +1,6 @@
 # Audio drivers
 
-PCM playback and capture for [pydevices](https://github.com/PyDevices/pydevices)
+PCM playback and capture for [OmniPython](https://github.com/PyDevices/omnipython)
 board configs. The `audiodev` package owns the portable bases; each backend is a
 standalone submodule that subclasses them. `audiodev.auto` is an optional
 selector only — backends never import it.
@@ -19,6 +19,7 @@ still directly usable for raw `write()`/`readinto()`.
 | `audiodev.sdl2_audio` | desktop MicroPython, CircuitPython, CPython, Jupyter | SDL2 queued PCM transport through `usdl2` |
 | `audiodev.pygame_audio` | CPython desktop with pygame-ce installed | Queued PCM transport on pygame-ce's bundled SDL |
 | `audiodev.win_audio` | Windows | WASAPI shared-mode queued PCM transport through `uwin32` |
+| `audiodev.alsa_audio` | Linux, CPython and unix MicroPython | ALSA PCM straight to `libasound`: no SDL2 or pygame needed. Chosen when a sound card is present and neither of those is |
 | `audiodev.web_audio` | PyScript / browser | Web Audio playback and `getUserMedia` capture |
 | `audiodev.worklet_audio` | Pyodide Web Worker | AudioWorklet output over a `MessagePort`; import it explicitly |
 | `audiodev.i2s_audio` | MCU | `machine.I2S` transport adapter |
@@ -33,8 +34,8 @@ configs construct one by wrapping a concrete transport or
 `audiodev.auto.select_backend()` probes MicroPython wasm, CPython/Pyodide Web
 Audio, Windows `uwin32`, `usdl2`, then pygame-ce. It raises an actionable
 transport error if none are available. It is a lookup in the same
-[`backends`](../backends.py) registry as `AutoDisplay`, which you can add to
-(experimental): see [Portable audio](../../docs/guides/audio.md#experimental-your-own-transport). `pgdisplay`/`psdisplay` may still
+[`backends`](../backends.py) registry as `AutoDisplay`, which you can add to:
+see [Portable audio](../../docs/guides/audio.md#write-your-own-transport). `pgdisplay`/`psdisplay` may still
 import concrete transports directly.
 
 This package does not import `displaydev`, `multimer`, or `appdev`
@@ -49,7 +50,7 @@ Family invariants (template for later displaydev / multimer):
 3. Optional behavior is real methods with defaults (`service`, `queued_size`, `is_active`, `clear`), not `getattr` discovery.
 4. Platform defects stay documented with “do not simplify” tests, inside the owning subclass.
 
-For a complete program to start from, see [audiodev_simpletest.py](https://github.com/PyDevices/pydevices/blob/main/examples/audiodev_simpletest.py).
+For a complete program to start from, see [audiodev_simpletest.py](https://github.com/PyDevices/omnipython/blob/main/examples/audiodev_simpletest.py).
 
 ## Buffering options
 
@@ -561,6 +562,25 @@ Playback and capture are queued/pull (`GetBuffer` / `ReleaseBuffer`) with
 
 Keyword arguments are the shared set in [Buffering options](#buffering-options).
 
+### On MicroPython, the pump plays to the speaker itself
+
+On a `micropython.exe` whose audio pump can open a WASAPI speaker, `AudioOut`
+on the default device hands its sample graph to the pump, which writes each
+block to WASAPI from its own thread. Nothing passes through this transport, so
+neither its queue nor the interpreter's timer sits between the graph and the
+device. `audiodev.pump.speaker()` says whether the interpreter can.
+
+A change to the graph reached the speaker in about 60 ms, against about 125 ms
+through this transport at `latency="low"` and about 280 ms at the default,
+measured by recording the speaker in WASAPI loopback. That includes the
+loopback's own delay, so the difference between the two is what counts.
+
+The speaker plays the graph's samples untouched. At a volume below 100, or
+muted, the sample stays on this transport, which scales it; turning the volume
+down or muting while it plays moves it there, with a gap while this transport
+fills (about 200 ms at the default latency). A named `device` stays on this
+transport too.
+
 ### Writing a block straight to the device
 
 If you run your own short queue, a synth or mixer that renders a block at a
@@ -642,6 +662,38 @@ buffer: measured on `micropython.exe` at `latency="low"`, DirectSound sits at
 185 ms against WASAPI's 55 ms. An explicit `SDL_AUDIODRIVER` in the
 environment still wins.
 
+## `alsa_audio.py`
+
+ALSA backend for Linux, through `ctypes` on CPython and `ffi` on unix MicroPython.
+Import fails unless `libasound` loads. A Raspberry Pi, or any Linux box with a
+sound card, plays and records without SDL2 or pygame installed.
+
+The card's own ring buffer is the queue: a write takes what fits and waits up to
+half a second for room, and `queued_size()` is what the card still holds.
+`pcm_out(latency="low")` asks for a 40 ms ring and the others for 200 ms. The
+card starts once a little audio is queued (10 ms low, 50 ms otherwise), which is
+`prebuffer_bytes`. `xruns` counts underruns (output) and overruns (input) since
+the stream opened; a healthy run has none.
+
+`device` is any name `snd_pcm_open` takes. Leave it out for `"default"`, the
+sound server's plug-in, or give a card from `alsa_audio.devices()`, such as
+`"plughw:2,0"`: `plughw` converts format and rate for you. A Raspberry Pi's
+`default` can be an HDMI output with no screen on it, which refuses to open.
+
+```python
+from audiodev import AudioFormat, alsa_audio
+
+for card in alsa_audio.devices():
+    print(card["name"], card["description"], card["playback"], card["capture"])
+
+out = alsa_audio.pcm_out(AudioFormat(48000, 2, 16), device="plughw:2,0")
+out.write(pcm_bytes)
+out.drain()
+```
+
+`audiodev.auto` picks this last: after SDL2 and pygame, and only on Linux with a
+sound card. Name it yourself with `OMNIPYTHON_AUDIO=alsa_audio` to use it over the others.
+
 ## `web_audio.py`
 
 PyScript backend. `WebPCMOutput` converts each write into an `AudioBuffer`
@@ -659,6 +711,12 @@ playout would spin forever. The module resumes best-effort, arms a one-shot
 pointer/key handler to resume on the next gesture, prints a hint telling the user
 to click the page, and keeps already-scheduled buffers alive for their wall-clock
 duration so a later gesture can still play them.
+
+`AudioOut` asks the transport whether it is `locked()`. While it is, `play()`
+returns and keeps the sample, and the first `service()` after the click opens
+the transport and starts it, so a page needs no catch-and-retry. The direct
+WebAssembly build does the same: its transport raises `AudioLocked` from
+`open()` until the page's first click, tap or key press turns audio on.
 
 There is no host device to wedge here, so none of the SDL stall machinery exists.
 

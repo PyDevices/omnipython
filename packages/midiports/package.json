@@ -2,31 +2,35 @@
   "urls": [
     [
       "midiports/__init__.py",
-      "github:PyDevices/pydevices/packages/midiports/midiports/__init__.py"
+      "github:PyDevices/omnipython/packages/midiports/midiports/__init__.py"
     ],
     [
       "midiports/uart.py",
-      "github:PyDevices/pydevices/packages/midiports/midiports/uart.py"
+      "github:PyDevices/omnipython/packages/midiports/midiports/uart.py"
     ],
     [
       "midiports/usb_device.py",
-      "github:PyDevices/pydevices/packages/midiports/midiports/usb_device.py"
+      "github:PyDevices/omnipython/packages/midiports/midiports/usb_device.py"
     ],
     [
       "midiports/usb_host.py",
-      "github:PyDevices/pydevices/packages/midiports/midiports/usb_host.py"
+      "github:PyDevices/omnipython/packages/midiports/midiports/usb_host.py"
     ],
     [
       "midiports/windows.py",
-      "github:PyDevices/pydevices/packages/midiports/midiports/windows.py"
+      "github:PyDevices/omnipython/packages/midiports/midiports/windows.py"
     ],
     [
       "midiports/linux.py",
-      "github:PyDevices/pydevices/packages/midiports/midiports/linux.py"
+      "github:PyDevices/omnipython/packages/midiports/midiports/linux.py"
+    ],
+    [
+      "midiports/loopback.py",
+      "github:PyDevices/omnipython/packages/midiports/midiports/loopback.py"
     ],
     [
       "midiports/webmidi.py",
-      "github:PyDevices/pydevices/packages/midiports/midiports/webmidi.py"
+      "github:PyDevices/omnipython/packages/midiports/midiports/webmidi.py"
     ],
     [
       "adafruit_midi/__init__.py",

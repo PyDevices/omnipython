@@ -1,7 +1,7 @@
 {
   "urls": [
-    ["usb_hid.py", "github:PyDevices/pydevices/packages/usb/usb-hid/usb_hid.py"]
+    ["usb_hid.py", "github:PyDevices/omnipython/packages/usb/usb-hid/usb_hid.py"]
   ],
   "deps": [["usb-device-hid", "latest"]],
-  "version": "0.1.0"
+  "version": "0.2.0"
 }

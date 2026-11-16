@@ -3,11 +3,11 @@
 # SPDX-License-Identifier: MIT
 """Drive boards' friendly REPLs over their UARTs, several at once, from Windows Python.
 
-The board-to-board gates that need what mpftp can't give use this: a run
+The board-to-board gates that need what mcuctl can't give use this: a run
 started at the friendly prompt keeps ESP-IDF's log on the console (the raw
 REPL mutes it, so the P4's ``alloc_acl_from_ll failed`` only shows here), a
 hard reset between runs (the P4 can't turn BLE on twice after a soft reset,
-micropython-pydevices#13), and one board's console read while another board
+omnipython-builds#13), and one board's console read while another board
 is typed at, which is how ``passkey_gate.py`` carries a passkey from one
 screen to another board's keyboard.
 

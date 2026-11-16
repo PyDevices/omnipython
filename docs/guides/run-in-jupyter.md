@@ -1,10 +1,10 @@
 # Jupyter Notebook
 
-PyDevices runs in JupyterLab, Jupyter Notebook, and VS Code / Cursor notebooks
+OmniPython runs in JupyterLab, Jupyter Notebook, and VS Code / Cursor notebooks
 through the **`JNDisplay`** backend. `displaydev.auto.AutoDisplay` detects the
 notebook (`get_ipython()`) and selects it.
 
-Board config: [`board_configs/jndisplay/board_config.py`](https://github.com/PyDevices/pydevices/blob/main/board_configs/jndisplay/board_config.py). It exports the Jupyter
+Board config: [`board_configs/jndisplay/board_config.py`](https://github.com/PyDevices/omnipython/blob/main/board_configs/jndisplay/board_config.py). It exports the Jupyter
 display and host reader; `appdev.App(board_config)`
 registers the corresponding host device.
 
@@ -23,7 +23,7 @@ python3 -m venv .venv
 | [ipyevents](https://github.com/mwcraig/ipyevents) | Mouse / keyboard on that widget |
 | JupyterLab or Jupyter Notebook | Notebook UI |
 
-[`bin/jupyter.py`](https://github.com/PyDevices/pydevices/blob/main/bin/jupyter.py) is a CLI runner that generates a demo
+[`bin/jupyter.py`](https://github.com/PyDevices/omnipython/blob/main/bin/jupyter.py) is a CLI runner that generates a demo
 notebook, exports `PYTHONPATH` / `MICROPYPATH`, starts JupyterLab, and opens the
 demo:
 

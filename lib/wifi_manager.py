@@ -9,7 +9,8 @@ Call it once near the top of ``main.py``, before the app touches the network::
     import wifi_manager
     ip = wifi_manager.connect()
 
-``connect()`` scans and joins the strongest network it already knows.  It
+``connect()`` joins the strongest network it already knows, scanning first
+when it knows more than one.  It
 knows the network in ``secrets.py`` (``WIFI_SSID`` / ``WIFI_PASSWORD``), the
 one in CircuitPython's ``settings.toml`` (``CIRCUITPY_WIFI_SSID`` /
 ``CIRCUITPY_WIFI_PASSWORD``), and every network it has joined before.  Every
@@ -20,8 +21,9 @@ When none of those is in range, the board starts its own access point and
 says how to reach it, on the display from ``board_config.display_drv`` when
 there is one and always on the REPL:
 
-1. Join ``PyDevices-1A2B`` (the last four hex digits of the board's MAC) with
-   the password shown.  A phone camera can join from the QR code.
+1. Join the access point named after the board (``omnipython-a1b2c3``, or
+   the name given with ``boarddev.name()``) with the password shown.  A phone
+   camera can join from the QR code.
 2. The phone opens the setup page by itself.  If it doesn't, browse to
    http://192.168.4.1.
 3. Pick your network, type its password, press Join.
@@ -32,6 +34,18 @@ own.  To move to a new network on purpose, call ``wifi_manager.run()``, which
 waits for one.
 ``cancel()``, from a timer or another app, ends setup mode without a network.
 
+Before it joins, ``connect()`` and ``run()`` make the board's name
+(``boarddev.name()``) its hostname, so DHCP, mDNS and Bluetooth Classic see
+it, unless they're given ``hostname=``.
+
+``connect(ntp=True)`` sets the clock from NTP once a network is joined.
+``connect(wait=False)`` starts the join and returns at once, for an app that
+can't stall: poll ``wifi.radio.connected``, or call it again after the link
+drops.  A board with a fixed address (``ifconfig()`` set before the join) counts
+as connected only once the station has a link, so it joins at boot and rejoins
+after a drop.  ``connect(module="mysecrets")`` reads the credentials from
+another module than ``secrets``.
+
 ``networks()`` lists the remembered SSIDs, ``forget(ssid)`` drops one and
 ``forget()`` drops them all.  A network that is still in ``secrets.py`` comes
 back the next time it is joined.
@@ -41,11 +55,11 @@ tries it at every boot even though scans can't see it.
 
 Install
 -------
-It is part of the ``pydevices`` package, so a firmware that freezes
-pydevices already has it.  Otherwise, on MicroPython::
+It is part of the ``omnipython`` package, so a firmware that freezes
+OmniPython already has it.  Otherwise, on MicroPython::
 
-    import mip
-    mip.install("pydevices", index="https://PyDevices.github.io/mip")
+    import omip
+    omip.install("omnipython")
 
 CircuitPython: copy this file to ``/lib``.
 
@@ -73,7 +87,9 @@ magic header; move ``NVM_OFFSET`` if your app keeps its own data in nvm.
 
 MicroPython on ESP32 keeps them in ``esp32.NVS`` namespace ``"wifi_manager"``.
 That survives a filesystem wipe, but not ``esptool erase_flash``.  Other
-MicroPython ports use ``/wifi_networks.json``.
+MicroPython ports use ``wifi_networks.json`` on the board's writable drive:
+``/wifi_networks.json``, or ``/flash/wifi_networks.json`` on an STM32 board
+such as the Arduino GIGA, whose ``/`` only holds the mounts.
 
 Passwords are stored in plain text, as they are in ``secrets.py``.
 """
@@ -82,14 +98,25 @@ import json
 import sys
 import time
 
+import boarddev
+
 _CP = sys.implementation.name == "circuitpython"
 
-# Name prefix for the setup access point; the MAC's last four hex digits follow.
-AP_PREFIX = "PyDevices"
+# The setup access point's name. None: the board's name, ``boarddev.name()``.
+AP_NAME = None
 # CircuitPython: where the record starts in microcontroller.nvm.
 NVM_OFFSET = 0
+
+
+def _cache_file(platform=None):
+    """Where MicroPython ports without esp32.NVS keep the networks: the top
+    of the writable drive, which is ``/flash`` on an STM32."""
+    root = "/flash" if (platform or sys.platform) == "pyboard" else ""
+    return root + "/wifi_networks.json"
+
+
 # MicroPython ports without esp32.NVS.
-CACHE_FILE = "/wifi_networks.json"
+CACHE_FILE = _cache_file()
 # Seconds to wait for one network to associate and hand out an address.
 JOIN_TIMEOUT_S = 20
 # Seconds between scans for a known network while setup mode waits.
@@ -135,42 +162,67 @@ else:
 # --------------------------------------------------------------- public calls
 
 
-def connect(*, setup=True, hostname=None, display_drv=None, timeout=JOIN_TIMEOUT_S):
+def connect(
+    *,
+    setup=True,
+    hostname=None,
+    display_drv=None,
+    timeout=JOIN_TIMEOUT_S,
+    wait=True,
+    ntp=False,
+    module="secrets",
+):
     """Join a known network, or run setup mode when none is in range.
 
     Args:
         setup (bool): Start setup mode when no known network is in range.
             ``False`` returns ``None`` instead.
         hostname (str): Set before joining, so DHCP and mDNS see it.
+            Default: the board's name, ``boarddev.name()``.
         display_drv: Display for setup mode.  Default:
             ``board_config.display_drv`` when there is one.
         timeout (int): Seconds to wait for each network.
+        wait (bool): ``False`` starts joining the first known network and
+            returns ``None`` at once, without a scan or setup mode; poll
+            ``wifi.radio.connected`` (or call again after a drop). For an app
+            that can't stall. On CircuitPython a join can't run in the
+            background, so it waits as usual.
+        ntp (bool): Set the clock from NTP once a network is joined. Skipped
+            when the board was already connected.
+        module (str): The module holding ``WIFI_SSID`` and ``WIFI_PASSWORD``
+            (or ``ssid`` and ``password``).  Default ``secrets``.
 
     Returns:
-        str | None: The IPv4 address, or ``None`` when no network was joined.
+        str | None: The IPv4 address, or ``None`` when no network was joined
+        (or, with ``wait=False``, when one was started).
     """
-    if setup and display_drv is None:
+    if setup and wait and display_drv is None:
         # Display first, then radio: on an S3 the panel needs a contiguous
         # block of internal RAM that a running radio no longer leaves.
         display_drv = _board_display()
     radio = _radio()
-    if hostname:
-        _set_hostname(radio, hostname)
+    _set_hostname(radio, hostname or boarddev.name())
     ip = radio.ip()
     if ip:
         print("wifi_manager: already connected,", ip)
         return ip
-    ip = _join_known(radio, timeout)
-    if ip or not setup:
-        if not ip:
-            print("wifi_manager: couldn't join a known network")
-        return ip
-    return _Setup(radio, display_drv, timeout, rescan=True).run()
+    if not wait and not _CP:
+        _start_join(radio, module)
+        return None
+    ip = _join_known(radio, timeout, module)
+    if not ip and setup and wait:
+        ip = _Setup(radio, display_drv, timeout, rescan=True).run()
+    elif not ip:
+        print("wifi_manager: couldn't join a known network")
+    if ip and ntp:
+        _sync_time()
+    return ip
 
 
 def run(*, hostname=None, display_drv=None, timeout=JOIN_TIMEOUT_S):
     """Start setup mode now, even when a known network is in range.  It waits
     for a new network (or ``cancel()``) rather than going back to a known one.
+    ``hostname`` and ``display_drv`` are as in `connect`.
 
     Returns:
         str | None: The IPv4 address of the network joined, or ``None`` when
@@ -179,8 +231,7 @@ def run(*, hostname=None, display_drv=None, timeout=JOIN_TIMEOUT_S):
     if display_drv is None:
         display_drv = _board_display()
     radio = _radio()
-    if hostname:
-        _set_hostname(radio, hostname)
+    _set_hostname(radio, hostname or boarddev.name())
     return _Setup(radio, display_drv, timeout, rescan=False).run()
 
 
@@ -208,15 +259,15 @@ def forget(ssid=None):
 # ------------------------------------------------------------ known networks
 
 
-def _from_settings():
+def _from_settings(module="secrets"):
     """Networks from secrets.py and CircuitPython's settings.toml."""
     found = []
     try:
-        import secrets as s
+        s = __import__(module)
     except ImportError:
         s = None
     except Exception as exc:
-        print("wifi_manager: secrets.py failed to import:", exc)
+        print("wifi_manager:", module, "failed to import:", exc)
         s = None
     if s is not None:
         ssid = getattr(s, "WIFI_SSID", None) or getattr(s, "ssid", None)
@@ -232,11 +283,11 @@ def _from_settings():
     return found
 
 
-def _known():
+def _known(module="secrets"):
     """Every network we may join.  secrets.py wins over a remembered password."""
     nets = []
     seen = set()
-    for n in _from_settings() + _load():
+    for n in _from_settings(module) + _load():
         if n["ssid"] not in seen:
             seen.add(n["ssid"])
             nets.append(n)
@@ -375,6 +426,10 @@ def _store_write(data):
 # --------------------------------------------------------------------- radio
 
 
+# The channel each network was last joined on (CircuitPython), kept in RAM.
+_channels = {}
+
+
 def _radio():
     return _CPRadio() if _CP else _MPRadio()
 
@@ -386,16 +441,44 @@ def _set_hostname(radio, name):
         print("wifi_manager: can't set hostname:", exc)
 
 
-def _join_known(radio, timeout):
-    known = _known()
+def _start_join(radio, module):
+    """Begin joining the first known network and return without waiting."""
+    known = _known(module)
+    if not known:
+        print("wifi_manager: no networks known yet")
+        return
+    n = known[0]
+    print("wifi_manager: joining", n["ssid"], "in the background")
+    radio.start(n["ssid"], n.get("password", ""))
+
+
+def _sync_time():
+    """Set the clock from NTP.  Returns True when it worked."""
+    try:
+        import ntptime
+
+        ntptime.settime()
+        print("wifi_manager: ntp ok")
+        return True
+    except Exception as exc:
+        print("wifi_manager: ntp", type(exc).__name__, exc)
+        return False
+
+
+def _join_known(radio, timeout, module="secrets"):
+    known = _known(module)
     if not known:
         print("wifi_manager: no networks known yet")
         return None
-    try:
-        seen = radio.scan()
-    except Exception as exc:
-        print("wifi_manager: scan failed:", exc)
-        seen = None
+    seen = None
+    if len(known) > 1:
+        # A scan only chooses among networks, and it holds the interpreter for
+        # seconds, so one known network is joined without it.  A join finds a
+        # hidden network or a missed one either way.
+        try:
+            seen = radio.scan()
+        except Exception as exc:
+            print("wifi_manager: scan failed:", exc)
     if seen is None:
         order = known
     else:
@@ -406,8 +489,15 @@ def _join_known(radio, timeout):
         order += [n for n in known if n["ssid"] not in seen]
     # Two rounds: on a weak link esp32 fails a join ("wrong password",
     # "network not found") that works a moment later.
+    absent = set()
     for n in order + order:
+        if n["ssid"] in absent:
+            continue
         ip = _try_join(radio, n["ssid"], n.get("password", ""), timeout, seen)
+        if not ip and getattr(radio, "absent", False):
+            # CircuitPython searched every channel for it. The second round
+            # would hold the interpreter for as long again to say the same.
+            absent.add(n["ssid"])
         if ip:
             # A network from secrets.py lands in the cache here, which is what
             # lets secrets.py be deleted afterwards.
@@ -440,9 +530,15 @@ class _MPRadio:
         self.ap = network.WLAN(network.AP_IF)
 
     def ip(self):
+        # An address alone isn't a link: a static address set with ifconfig()
+        # reads back before the station has associated and stays after a drop.
         try:
-            if not self.sta.isconnected():
-                return None
+            linked = self.sta.isconnected()
+        except Exception:
+            linked = True  # a port without a usable isconnected(): the address is all we have
+        if not linked:
+            return None
+        try:
             ip = self.sta.ifconfig()[0]
         except Exception:
             return None
@@ -465,6 +561,14 @@ class _MPRadio:
             if ssid and (ssid not in best or rec[3] > best[ssid]):
                 best[ssid] = rec[3]
         return best
+
+    def start(self, ssid, password):
+        """Begin joining and return; ``ip()`` says when it has."""
+        try:
+            self.sta.disconnect()
+        except OSError:
+            pass
+        self.sta.connect(ssid, password)
 
     def join(self, ssid, password, timeout):
         """None on success, else a short reason."""
@@ -563,11 +667,23 @@ class _CPRadio:
         return best
 
     def join(self, ssid, password, timeout):
+        # A join with no channel scans all of them (about 5 s) before it
+        # looks for the network; with the channel it last joined on, it
+        # starts there and finds it in 1 to 3 s. The channel is a hint: the
+        # radio still searches the others when the network isn't on it.
+        self.absent = False
         try:
-            self.r.connect(ssid, password, timeout=timeout)
+            self.r.connect(ssid, password, channel=_channels.get(ssid, 0), timeout=timeout)
         except Exception as exc:  # ConnectionError carries the reason
-            return str(exc) or type(exc).__name__
-        return None if self.ip() else "no address"
+            msg = str(exc) or type(exc).__name__
+            self.absent = msg == "No network with that ssid"
+            return msg
+        if not self.ip():
+            return "no address"
+        info = self.r.ap_info
+        if info is not None:
+            _channels[ssid] = info.channel
+        return None
 
     def start_ap(self, ssid, password):
         self.r.start_ap(ssid, password)
@@ -609,8 +725,7 @@ class _Setup:
             self.seen = radio.scan()  # before the AP is up: a cleaner scan
         except Exception as exc:
             print("wifi_manager: scan failed:", exc)
-        mac = radio.mac()
-        ap_name = "%s-%02X%02X" % (AP_PREFIX, mac[-2], mac[-1])
+        ap_name = AP_NAME or boarddev.name()
         ap_pass = "".join(_PW_CHARS[b % len(_PW_CHARS)] for b in _random_bytes(8))
         ap_ip = radio.start_ap(ap_name, ap_pass)
         self._open_sockets(ap_ip)

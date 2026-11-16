@@ -2,12 +2,12 @@
 
 This page is for you if you're adding a backend (`bledev.bleak`,
 `bledev.webble`, `bledev.cpble`) or changing one. What an app can rely
-on is in [Bluetooth LE](../guides/bluetooth-le.md#the-rules-every-backend-keeps); this is how a
-backend delivers it.
+on is in [The rules every backend keeps](#the-rules-every-backend-keeps), below, and in the
+[Bluetooth LE guide](../guides/bluetooth-le.md); this is how a backend delivers it.
 
 ## The layout
 
-[`lib/bledev/`](https://github.com/PyDevices/pydevices/tree/main/lib/bledev) follows `audiodev` and `displaydev`: a portable base, one
+[`lib/bledev/`](https://github.com/PyDevices/omnipython/tree/main/lib/bledev) follows `audiodev` and `displaydev`: a portable base, one
 standalone module per backend, and an optional selector.
 
 | Module | What it is |
@@ -24,6 +24,8 @@ standalone module per backend, and an optional selector.
 | `midi.py` | BLE-MIDI as a usbif-style MIDI port, both sides, built only on the contract. |
 | `midi_codec.py` | The BLE-MIDI packet codec. Pure, no imports, shared by every host. |
 | `filetransfer.py` | CircuitPython's BLE file-transfer protocol: `FileServer` (pure, no radio), served on the board through `repl`'s server, and a client built on the contract. |
+| `battery.py`, `deviceinfo.py` | SIG services as classes over `Service` and `Characteristic`, built only on the contract. `hid.py` serves them too. |
+| `heartrate.py`, `cyclingspeed.py`, `cyclingpower.py`, `runningspeed.py`, `environmental.py` | More SIG services, one class each. The cycling and running ones answer their control points through `_sig.py`, which also holds the sensor locations. |
 | `hidreport.py` | HID report descriptors and reports to `events`. No Bluetooth in it. |
 | `hid.py` | HID over GATT, host and device, built on the contract and `hidreport`. |
 | `auto.py` | Picks a backend. Nothing imports it, and backends must not. |
@@ -33,8 +35,8 @@ else in bledev except the base classes. `auto.BACKENDS` expects
 `bledev.bleak.BleakBLE` and `bledev.webble.WebBLE`; if you name your class
 differently, change that table.
 
-Anything under `lib/` must also be listed in [`pydevices-desktop.toml`](https://github.com/PyDevices/pydevices/blob/main/pydevices-desktop.toml) (a test
-checks it). A central-only host module belongs in [`mip-split.toml`](https://github.com/PyDevices/pydevices/blob/main/mip-split.toml)'s
+Anything under `lib/` must also be listed in [`omnipython-desktop.toml`](https://github.com/PyDevices/omnipython/blob/main/omnipython-desktop.toml) (a test
+checks it). A central-only host module belongs in [`mip-split.toml`](https://github.com/PyDevices/omnipython/blob/main/mip-split.toml)'s
 `[bledev] host-only` list once its file exists, so it doesn't ship to boards.
 
 ## The hooks
@@ -48,7 +50,9 @@ built on them.
 - `capabilities()`: start from `BLE.capabilities(self)` and set `central`,
   `peripheral`, `mtu`, `max_mtu`, `indicate`, `pairing`, `l2cap`.
 - `config(*names, **settings)`: at least `mtu`; raise `UnsupportedError` for
-  anything else you don't have.
+  anything else you don't have. `addr_mode` (`ADDR_MODE_*`) only where the stack
+  has private addresses: mpble passes it to NimBLE and says `UnsupportedError`
+  where the stack refuses it (BTstack).
 - `close()`.
 - Peripheral backends: `register_services(*services)`, which sets each
   `Characteristic._impl` (see below), and
@@ -140,7 +144,7 @@ returns `None` when cancelled, and mpble turns that back into
 aioble owns the one `bluetooth.BLE()` and its IRQ, so `mpble.get()` shares
 one adapter, and the capture handler is registered once per boot.
 
-The laptop found two more (2026-09-24):
+The laptop found two more:
 
 - **Notifications before a subscription.** NimBLE's server notifies whether
   or not the central wrote the CCCD, and mpble registered its queue at
@@ -158,7 +162,7 @@ The laptop found two more (2026-09-24):
   case never showed it because the central there asks for the MTU after
   connecting.
 
-The bless probe found two more on the P4 (2026-09-24), with the board as the
+The bless probe found two more on the P4, with the board as the
 central and Windows as the peripheral:
 
 - **The same early MTU, the other way round.** Windows exchanges the MTU the
@@ -211,7 +215,7 @@ checks the connection first and raises `DisconnectedError`.
 
 The REPL gate once failed one run in five: bleak couldn't subscribe on a
 connection made 1.5 s after the last one closed. A loop of rapid reconnects
-from the laptop ([`tests/bledev_board/reconnect_loop.py`](https://github.com/PyDevices/pydevices/blob/main/tests/bledev_board/reconnect_loop.py): log in, run a line,
+from the laptop ([`tests/bledev_board/reconnect_loop.py`](https://github.com/PyDevices/omnipython/blob/main/tests/bledev_board/reconnect_loop.py): log in, run a line,
 close, wait 1.5 s) caught it at about one cycle in fifty, always the same
 way. bleak's connect returned in 70-440 ms where a real one takes 1.7 s or
 more, Windows reported the device connected and the GATT session active, the
@@ -285,7 +289,7 @@ advertises to a new host only in discovery mode, which normally takes a reset
 pressed during the blue blink after boot. The supervisor marks that second in
 an RTC register that survives a reset, and `memorymap` can write that register
 on the S3 (`RTC_CNTL_STORE0_REG`, 0x60008050), so
-[`tests/bledev_board/cpfiles_discovery.py`](https://github.com/PyDevices/pydevices/blob/main/tests/bledev_board/cpfiles_discovery.py) writes the mark and resets. It also
+[`tests/bledev_board/cpfiles_discovery.py`](https://github.com/PyDevices/omnipython/blob/main/tests/bledev_board/cpfiles_discovery.py) writes the mark and resets. It also
 erases the board's bonds, as the button would.
 
 **What `_bleio` can't do here**, on the ESP32 port: a central can't receive
@@ -390,8 +394,8 @@ read) wrote, read, listed, moved and deleted against `FileServer` at MTU 247,
 and wrote and read at MTU 23; its `listdir` can't run at 23 against any
 server, because it reads a 28-byte header into one 20-byte packet. That was
 a one-off check, not a test in the tree. The client against a real
-CircuitPython board, whose service pairs, is under
-[CircuitPython (cpble)](#circuitpython-cpble).
+CircuitPython board, whose service pairs, is described under
+[How cpble gets there](#how-cpble-gets-there).
 
 ## How HID gets there
 
@@ -403,7 +407,7 @@ events. It imports `events` and `keys` and nothing from Bluetooth.
 **The keyboard decoder is usbif's, event for event.** Same order (modifier
 releases, key releases, key presses, modifier presses, the new modifier mask
 on all of them), same fields (`scancode` is the HID usage, `window` is
-`None`), same rollover rule. [`tests/test_bledev_hid.py`](https://github.com/PyDevices/pydevices/blob/main/tests/test_bledev_hid.py) feeds 3,000 random
+`None`), same rollover rule. [`tests/test_bledev_hid.py`](https://github.com/PyDevices/omnipython/blob/main/tests/test_bledev_hid.py) feeds 3,000 random
 boot reports through both decoders when usbif's checkout is beside this one,
 and they must agree. It found one difference on its first run: the ISO "# ~"
 key (usage 0x32), which SDL calls `#` and usbif leaves unmapped. There is
@@ -453,8 +457,7 @@ ID (0xFFFF), because we have no vendor ID of our own.
 
 **A laptop can't see a HID service.** Windows hides 0x1812 from apps: bleak
 lists the board's GAP, GATT, Battery and Device Information services and a
-22-handle gap where the HID service sits (measured against the P4,
-2026-09-24). Chrome's Web Bluetooth blocklist hides it too. So
+22-handle gap where the HID service sits (measured against the P4). Chrome's Web Bluetooth blocklist hides it too. So
 `Peripheral(service_uuid=hid.INSPECT_SERVICE)` serves the same
 characteristics under a vendor UUID, and `Host(service_uuid=...)` reads them
 there; that is how the laptop checks a board's HID side, with the same code
@@ -500,7 +503,7 @@ are routine on these boards, and a board that silently forgets its bonds
 leaves every paired host with keys that no longer work. NVS survives all of
 those and is lost only to a full chip erase, which is rarer and already means
 setting the board up again. Not measured: an actual filesystem reformat with a
-bond in NVS (the LCD-7 carries the earful demo's files); what was shown is
+bond in NVS; what was shown is
 that the bond lives outside the filesystem (no file is written) and survives
 hard resets.
 
@@ -571,11 +574,11 @@ What it takes to meet the contract in a browser, all found on hardware:
 - **MicroPython's asyncio can't `wait_for()` a JS promise**, only a
   coroutine, so promises with a timeout are wrapped in one.
 
-**The gate** is [`tests/bledev_web/`](https://github.com/PyDevices/pydevices/tree/main/tests/bledev_web): `gate.py` runs nus's three 16 KB phases
+**The gate** is [`tests/bledev_web/`](https://github.com/PyDevices/omnipython/tree/main/tests/bledev_web): `gate.py` runs nus's three 16 KB phases
 against `nus_gate_server.py` on a board, on three pages (`pyodide.html`,
 `mpy.html`, `wasm.html`) served by `serve.py`, which also collects what the
 pages log. `?mock=1` swaps in `mock_bluetooth.js`, and
-[`tests/test_bledev_web.py`](https://github.com/PyDevices/pydevices/blob/main/tests/test_bledev_web.py) runs that in headless Chromium with two planted
+[`tests/test_bledev_web.py`](https://github.com/PyDevices/omnipython/blob/main/tests/test_bledev_web.py) runs that in headless Chromium with two planted
 faults. Against a board, the chooser is the only human step, and both ends
 of it can be automated:
 
@@ -592,374 +595,263 @@ of it can be automated:
 Restart the board's server with a hard reset: after a Ctrl-C, a new
 `nus.serve()` on the P4 twice said it was advertising while nothing was on
 the air.
-
 ## The checks
 
-**Pairing, without a radio**, on both interpreters: [`tests/bledev_pairing.py`](https://github.com/PyDevices/pydevices/blob/main/tests/bledev_pairing.py)
-serves the file service over the fake the way CircuitPython does (encrypted,
-no `AUTH`) and the way a passkey board does, and checks that clients pair when
-they must, refuse what they must, and move 20 KB intact; plus the NVS blob
-codec. [`tests/test_bledev_pairing.py`](https://github.com/PyDevices/pydevices/blob/main/tests/test_bledev_pairing.py) runs four plants, each of which must fail.
+Every behaviour above has a check, and each check has a planted fault that
+must make it fail. Over the fake, on both interpreters:
+[`tests/bledev_contract.py`](https://github.com/PyDevices/omnipython/blob/main/tests/bledev_contract.py)
+is the contract, run by [`tests/test_bledev.py`](https://github.com/PyDevices/omnipython/blob/main/tests/test_bledev.py)
+with five planted faults (a dropped, corrupted, reordered, truncated or
+overwritten packet). A host backend that has a fake peripheral to talk to can
+reuse most of it by building its adapters there instead; if you change the
+fake, keep the plants failing. The pairing and file-transfer protocols have
+their own scripts and plants beside it.
 
-**The file-transfer protocol**, on both interpreters:
-[`tests/bledev_filetransfer.py`](https://github.com/PyDevices/pydevices/blob/main/tests/bledev_filetransfer.py) wires the client to a `FileServer` through a
-loopback that splits both directions at the MTU (23, 185 and 247, windows
-from 512 to 4096), and [`tests/test_bledev_filetransfer.py`](https://github.com/PyDevices/pydevices/blob/main/tests/test_bledev_filetransfer.py) runs it with a
-flipped bit and a lost packet, each of which must fail.
+Over a real radio, the scripts in
+[`tests/bledev_board/`](https://github.com/PyDevices/omnipython/tree/main/tests/bledev_board)
+pair a serving script on one board with a client on a second board, a laptop
+or a browser. Its README lists each pair, what it checks, and how to run it.
 
-**Against the fake**, on both interpreters: [`tests/bledev_contract.py`](https://github.com/PyDevices/pydevices/blob/main/tests/bledev_contract.py).
-Its `pair()` and `nus_pair()` helpers build two fake adapters. A host backend
-that has a fake peripheral to talk to can reuse most checks by building its
-adapters there instead. [`tests/test_bledev.py`](https://github.com/PyDevices/pydevices/blob/main/tests/test_bledev.py) also runs five planted faults
-(a dropped, corrupted, reordered, truncated or overwritten packet), and each
-must fail the contract; if you change the fake, keep that true.
+## The rules every backend keeps
 
-**Over a real radio**, [`tests/bledev_board/`](https://github.com/PyDevices/pydevices/tree/main/tests/bledev_board). Run the serving script with
-`mpftp run` on one board and the other with `mpftp probe --capture` on a
-second, or run the client on the laptop with the Windows Python:
+These hold on every backend. The fake enforces the strict version of each, so
+code that passes its tests keeps them:
 
-```bash
-PYTHONPATH="$(wslpath -w lib)" python.exe "$(wslpath -w tests/bledev_board/gatt_central.py)"
+- **One packet is `connection.mtu - 3` bytes.** A notification or write
+  longer than that raises `BLEError`. Real NimBLE would cut the tail off and
+  say nothing. `exchange_mtu()` asks for more, and the smaller side wins.
+- **A characteristic holds `max_len` bytes**, 20 by default, as on
+  MicroPython. Raise it for anything that takes MTU-sized writes. The fake
+  raises on a longer write; a real board keeps the first `max_len` bytes and
+  says nothing (measured: 29 bytes sent, 20 kept).
+- **Nothing is dropped quietly.** Notifications and captured writes queue in
+  order. If a queue overflows because you stopped reading, the next
+  `notified()` or `written()` raises `BLEError` instead.
+- **`notify()` can say `BusyError`.** It's synchronous, like aioble's, and
+  the transmit buffers are finite. Wait a moment and send again, or use nus,
+  which does. Every async send waits for room itself.
+- **Subscribe before you expect notifications.** Browsers and bleak deliver
+  nothing until you do, and the fake matches them.
+- **Discovery comes back in the server's order** (by handle).
+- **A dropped link ends pending client calls with `DisconnectedError`,** and
+  anything that arrived before the drop is still delivered first. A server's
+  `written()` serves every connection, so it doesn't end on a disconnect; give
+  it a `timeout_ms` or cancel it. With `capture=True`, `written(timeout_ms=0)`
+  returns a write that's already queued, or raises `BLETimeoutError` at once.
+- **Every timeout is `BLETimeoutError`,** and every error is a `BLEError`:
+  `UnsupportedError`, `DisconnectedError`, `BLETimeoutError`, `BusyError`,
+  `GattError` (with `.status`).
+- **`UUID` is one value everywhere.** `UUID(0x180F)`, `UUID("180f")` and the
+  128-bit string are equal. `str()` is always the 128-bit form, which bleak
+  and browsers use, and `to_bytes()` is the little-endian wire form.
+
+## Details the guide leaves out
+
+Behaviour an app meets now and then, which the [Bluetooth LE guides](../guides/bluetooth-le.md) leave short.
+
+### The REPL over Bluetooth
+
+Any terminal that speaks Nordic UART works too: send an empty line, and the
+board answers `Password: `. A wrong password gets `Access denied` and a
+disconnect, and nothing sent with it reaches the REPL. The link isn't
+encrypted, as with WebREPL, so someone nearby with a sniffer can read the
+password, unless you [pair](../guides/bluetooth-le-services.md#pairing-and-bonding).
+
+It runs beside WebREPL. On a board with one console slot (the ESP32), the
+two take turns: while a WebREPL client is connected, a Bluetooth login gets
+`The REPL is busy` and a disconnect, the way WebREPL turns away a second
+client, and the other way round.
+
+While it runs, the REPL owns the radio: it registers its own service and
+advertises whenever nobody is connected. Call `bledev.repl.stop()` to give the
+radio back to your app.
+
+### Files over Bluetooth
+
+It's locked the way the REPL is. CircuitPython uses pairing; bledev uses the
+REPL's password by default (or [pairing](../guides/bluetooth-le-services.md#pairing-and-bonding)), sent to one
+extra characteristic, and until it's right
+every command is refused. One attempt per connection, and a wrong one is hung
+up on. Logging in to the REPL over the same connection unlocks files too,
+which is what [mcuctl](https://github.com/PyDevices/mcuctl) does. The protocol
+has no checksum beyond the radio's own, so check what matters (mcuctl compares
+SHA-256 after every transfer).
+
+`start()` serves the REPL beside the files; `console=False` serves files
+alone. It's MicroPython only, and like the REPL it owns the radio while it
+runs.
+
+How fast: 20 KB from a laptop to an ESP32-S3 in about 2 s and back in about
+1.5 s, or about 1.2 s and 0.5 s when the laptop connects with
+`priority="throughput"`.
+
+### MIDI ports
+
+The port is the contract the [`midiports`](https://github.com/PyDevices/omnipython/blob/main/packages/midiports/README.md) package
+documents: `read(nbytes)` returns MIDI bytes or `None` and never blocks,
+`readinto(buf, nbytes)` does the same into your buffer without allocating,
+`any()` says how many bytes are waiting, and `write(buf, nbytes)` sends.
+Every message comes out whole, with its status byte, and a read takes only
+the whole messages that fit. Give `adafruit_midi` an `in_buf_size` bigger than
+your longest SysEx: its 1.6.0 parser throws away a SysEx that reaches it in
+two reads.
+
+If you'd rather have messages than bytes, with the sender's timestamp, use
+`ts, message = await port.receive()` or `async for ts, message in port`.
+Messages you write go out from a task, packed as many to a packet as fit, and
+`await port.drain()` waits for them.
+
+On a board, ask for the shortest connection interval when you connect:
+`midi.connect(ble, name="synth", min_conn_interval_us=7500,
+max_conn_interval_us=7500)`. The latency that buys is in
+[How fast it goes](../guides/bluetooth-le.md#how-fast-it-goes).
+
+### HID host and bonding
+
+A keyboard that wants an encrypted link gets one: the first read it refuses
+pairs the link ("just works", no passkey) and tries again. On a board, call
+`ble.enable_bonding()` once before connecting so the keys are kept, and the
+next connect doesn't pair from scratch. The keys live in NVS on an ESP32
+(see [where the keys live](../guides/bluetooth-le-services.md#pairing-and-bonding)), so a full chip erase
+forgets them, and a keyboard that remembers the board may then need putting
+back into pairing mode.
+
+### HID device details
+
+Install `adafruit_hid` on MicroPython with
+`mip.install("github:PyDevices/omnipython/bledev_hid")`: it fetches
+Adafruit's files at a release tag, with one file patched so
+`consumer_control` imports on MicroPython, and micropython-lib's
+`__future__`. Each `send_report()` returns once the radio has the report,
+waiting briefly if its buffers are full. The keyboard's LED report (Caps
+Lock and friends) reaches `kb.led_on(Keyboard.LED_CAPS_LOCK)` the way it does
+over USB.
+
+`adafruit_hid` has had no gamepad since 5.0, so `bledev.hid_gamepad` gives
+one in the shape of Adafruit's `hid_gamepad.py` example, for a
+`Peripheral(ble, gamepad=True)`: `press_buttons()`, `move_joysticks()`,
+`set_hat()`, and `set()` for everything in one report.
+
+Its name, appearance and Report Map come from which functions you ask for,
+the same way every time, because hosts cache a device against its identity.
+Change the set, and a host that paired with the board before must forget it
+and pair again. Pass `encrypted=True` to make hosts pair first, as real
+keyboards do.
+
+### HID presence key and the parser
+
+**A paired phone as a presence key.** A phone reconnects to a bonded HID
+device by itself whenever its Bluetooth comes back in range, so a board can
+tell when you walk up, with no app on the phone. Pair once from the phone's
+Bluetooth settings, then wait for each arrival:
+
+```python
+ble = bledev.auto.adapter()
+ble.enable_bonding()
+per = hid.Peripheral(ble, keyboard=False, mouse=False, encrypted=True, name="Presence")
+while True:
+    conn = await per.serve()                # the phone is here
+    screen_on()
+    await conn.disconnected()               # the phone has gone
+    screen_off()
 ```
 
-The serving scripts have a `PLANT` switch, and a planted run must fail:
+Android gives the phone a new random address over time, so watching
+advertisements for a known address doesn't work; the bonded reconnect does.
+`conn.encrypted` is still False at the moment `serve()` returns. A bonded
+phone re-encrypts the link about 0.3 s later, so wait for it before you treat
+the visitor as the phone you paired.
 
-| Scripts | What they check |
-|---|---|
-| `gatt_peripheral.py` + `gatt_central.py` | The contract over the air: find, MTU exchange, discovery order, read, 200 notifications in order, 100 captured writes in order, the MTU refusal, an indication, a disconnect from the far side |
-| `gatt_peripheral.py` + `gatt_latency.py` | Per-operation latency of reads and writes-with-response, with the stall count |
-| `nus_server.py` + `nus_client.py` | 16 KB up, down and echoed over nus, byte for byte, timed. On a laptop, `--fast` asks for throughput parameters and `--plant` flips a bit |
-| `repl_server.py` + `repl_client.py` | The REPL: the right password evaluates `123 * 456`, a wrong one sent with code that would create `/pwned` is refused and hung up on and the code never runs, and Ctrl-C stops `while True`. `repl_server.py` runs from `/main.py`, because mpftp soft-resets the board, which turns Bluetooth off |
-| `midi_server.py` + `midi_client.py` | BLE-MIDI. `gate`: 1,000 mixed messages up, checked by the server, then down, checked by the client; `--plant` on the client and `PLANT = "drop"` or `"flip"` on the server must FAIL. `latency`: note-on round trips through an echo, `--fast` for a 7.5 ms interval (throughput parameters on a laptop). A board client reads its arguments from `/midi_client_args.py` |
-| `reconnect_loop.py` (laptop) against `repl_server.py` | Rapid reconnects: log in, run a line, close, wait 1.5 s, N times; `--no-retry` turns `connect_and_set_up`'s retry off |
-| `improv_server.py` + `improv_client.py` | Improv: `--wrong` must get "unable to connect" and a return to "authorized"; without it, on a board, the network comes from that board's own `secrets.py` and must end "provisioned" with a URL |
-| `coex_server.py` + `tcp_pull.py` + `nus_client.py` | Wi-Fi and BLE on one S3: a TCP source on Wi-Fi beside the nus gate |
-| `files_server.py` + `files_client.py` | File transfer: no password and a wrong one refused; 20 KB up and down byte for byte and timed (`--runs N`, `--fast` for throughput parameters), a read at an offset, mkdir, listdir, move, a recursive delete. `--plant` on the client, or `PLANT = "flip"` on the server, must FAIL. `files_server.py` runs from `/main.py` |
+**Don't pair a test board with the computer you're testing from.** Once
+paired, Windows and phones use it as a real keyboard, and it types into
+them.
 
-| `hid_peripheral.py` + `hid_central.py` | HID: the device types `hid_script.py`'s text, chords, media keys and gamepad moves; the host's events must equal `hid_script.expected()` and spell the text. Then key-press round trips. `PLANT` drops one Shift. The host also runs on a laptop, where it refuses to pair |
-| `bless_peripheral.py` + `bless_probe.py` | The laptop as a peripheral, through bless, probed by a board |
-| `pair_server.py` + `pair_client.py` (laptop) | Pairing. `pair`: a passkey read off the board's console, then the REPL and 20 KB through the file service on the paired link. `reconnect`: from the bond, nobody asked for a passkey. `wrong`: a passkey one off must fail pairing and leave Windows unpaired. `unpaired`: every protected characteristic refuses reads and writes. Plants on the server: `forget`, `justworks`, `open`. `uart_say.py` reads the board's state without mpftp's soft reset |
-| `pair_server.py` + `files_pair_client.py` (board) | Board to board: the client pairs on its own, 20 KB both ways byte for byte, then reconnects from the bond. `plant="flip"` and `plant="nopair"` must FAIL |
-| `nus_server.py` + `nus_client.py` | 16 KB up, down and echoed over nus, byte for byte, timed |
-| [`tests/bledev_web/nus_gate_server.py`](https://github.com/PyDevices/pydevices/blob/main/tests/bledev_web/nus_gate_server.py) + a gate page | The same, from a browser through webble |
+The parser underneath, `bledev.hidreport`, knows nothing about Bluetooth.
+Give it any HID report descriptor and it decodes that device's reports, so a
+USB host can use it the same way. How it numbers axes, what it does with a
+rollover, and what a board central can't read are in
+[bledev-internals.md](../how-it-works/bledev-internals.md#how-hid-gets-there).
 
-`gatt_peripheral.py` is also the peripheral to point a host backend at: it
-advertises as `bledev-radio`, and a central steers it by writing commands.
+### A changing address, watching it
 
-## Measurements
+A scanner sees the new address each time the old one expires, so keep scans
+going for a quarter of an hour to watch it change. Closing the adapter puts the
+mode back to the stack's default.
 
-Two ESP32-S3 boards (the Waveshare ESP32-S3-Touch-LCD-7 serving, the LilyGo
-T-Embed connecting), MicroPython 1.29, on one desk (RSSI about -50 dBm), Wi-Fi
-off, 2026-09-24.
+### Pairing, in detail
 
-These runs are a record of MicroPython 1.29. On MicroPython 1.30 preview the
-same harnesses measured lower nus write and echo rates and slower file
-transfers; [Measured on two ESP32-S3s](../guides/bluetooth-le.md#measured-on-two-esp32-s3s)
-has those figures.
+The first time a computer connects, the board draws a six-digit passkey on its
+screen (and prints it to the console) and the computer asks for it. The board
+asks for pairing as soon as a host connects, so a phone puts up its pairing
+dialog straight away; that's how Workbench in Chrome on Android pairs. After that
+the two are bonded: they reconnect encrypted, with no passkey, until one of
+them forgets. `password=False` means the passkey is the only lock; keep a
+password as well if you like.
 
-**nus throughput**, 16 KB per phase, MTU 247, every byte checked:
+From a laptop or another board, pair when you connect, and pass the passkey,
+or a function that asks for it:
 
-| Run | Up (writes) | Down (notifications) | Echo, each way |
-|---|---|---|---|
-| default interval | 81.2 KB/s | 35.9 KB/s | 25.1 KB/s |
-| default interval | 86.5 KB/s | 40.7 KB/s | 23.6 KB/s |
-| default interval, final code | 87.0 KB/s | 31.4 KB/s | 29.7 KB/s |
-| 7.5-15 ms interval | 69.0 KB/s | 38.6 KB/s | 43.5 KB/s |
-| 7.5-15 ms interval | 78.8 KB/s | 37.0 KB/s | 44.0 KB/s |
-| planted bit flip at offset 5000 | FAIL, 1 mismatch at 5000 | FAIL, same | FAIL, same |
+```python
+link = await bledev.repl.connect(ble, name="rack", pair=True, passkey=lambda: input("Passkey: "))
+files = await bledev.filetransfer.connect(ble, name="rack", passkey=ask)    # pairs when the board asks it to
+```
 
-**GATT latency**, alternating a read and a write-with-response:
+On Windows that's WinRT's own pairing, with no system dialog, and it pairs
+before the link comes up. Once a link is up, Windows answers the board's
+request to pair on its own, out of sight, and pairing then fails without asking
+for the passkey, so on Windows pass `pair=True` rather than waiting for the
+board to ask. To pair a
+computer once for tools that don't pair themselves (mcuctl),
+`python -m bledev.bleak pair rack` asks for the passkey in the terminal, and
+`python -m bledev.bleak unpair rack` undoes it. Windows Settings, Add device,
+works too.
 
-| Link | Operations | Median | p99 | Max | Over 500 ms |
-|---|---|---|---|---|---|
-| S3 to S3, default interval, 60 s | 598 | 100 ms | 107 ms | 151 ms | 0 |
-| S3 to S3, 7.5-15 ms, 120 s | 3966 | 30 ms | 40 ms | 80 ms | 0 |
-| Laptop (bleak, Windows) to S3, 120 s | 1004 | 120 ms | 183 ms | 241 ms | 0 |
+Just works on its own would let anyone in range pair and get a REPL, so it
+needs the password too; what it adds is that nobody sniffing can read the
+password or the session. A board draws the passkey on `board_config.display_drv`;
+pass `show(passkey)` and `hide()` to put it somewhere else.
 
-**Memory**, `gc.mem_free()` and `esp32.idf_heap_info()` after a hard reset:
+A board's name, and the services it serves, follow from what you start: the
+name you pass, or [the board's name](../guides/board-name.md) when you pass none, is both
+the advertised name and the one a paired computer lists
+(the GAP name, which would otherwise be MicroPython's "MPY ESP32"), and the
+same `console` and `files` give the same table every time, whatever the lock,
+because hosts cache a paired device's table. Serving something else on the same
+board (HID, say) changes it under the same address, and MicroPython doesn't tell
+bonded hosts, so a host that kept the old table may need the board unpaired and
+paired again.
 
-| Step | Internal RAM | Python heap |
-|---|---|---|
-| `bluetooth.BLE().active(True)` | 63.9 KB (both boards); the largest free block drops to 31.7 KB | 0.7 KB |
-| `import aioble` (.mpy) | none | 18.5 KB |
-| `import bledev, bledev.mpble, bledev.nus` as .mpy (what mip installs) | none | 31.6 KB |
-| the same, as .py source | none | 98.8 KB |
-| registering nus, then advertising | 0.2 KB | 1.8 KB |
-| `active(False)` | all returned | |
+### Standard services
 
-### HID, board to board and from the laptop
+Register your own service in the same call: `register_services()` replaces what
+came before. The [HID peripheral](../guides/bluetooth-le-services.md#keyboards-mice-and-gamepads-hid) serves
+Battery and Device Information itself. These are plain GATT tables, so any
+backend that can be a peripheral serves them. `examples/bledev_battery_simpletest.py`
+shows both running.
 
-`hid_peripheral.py` typed `hid_script.py` (30 characters with Shift, Ctrl+C,
-Right Alt + Shift + F5, two media keys, five gamepad reports: 112 events) and
-`hid_central.py` compared every event and the text they spell. MicroPython
-1.29, aioble from mip, 2026-09-24. The planted run drops Shift from the first
-character.
+The cycling and running services each have a control point that a central
+writes and the board answers by indication. Run `sensor.run()` as a task to
+answer it. MicroPython waits for the central's acknowledgement; CircuitPython
+sends the indication but `_bleio` doesn't report the acknowledgement, so
+`indicate()` returns once it's queued. Each module's docstring lists what the
+measurement carries and which flags it sets, and each has an example under
+`examples/` named `bledev_<service>.py` that a phone fitness or sensor app can
+read.
 
-| Device | Host | Plain | Planted | 7.5-15 ms interval | Round trip, default (median / max) | Round trip, 7.5-15 ms |
-|---|---|---|---|---|---|---|
-| LCD-7 (S3) | T-Embed (S3) | PASS, 112/112 | FAIL, event 0 | PASS | 69 / 119 ms | 29 / 49 ms |
-| T-Embed (S3) | LCD-7 (S3) | PASS | FAIL, event 0 | PASS | 68 / 118 ms | 30 / 69 ms |
-| P4 | LCD-7 (S3) | PASS | FAIL, event 0 | PASS | 70 / 220 ms | 30 / 80 ms |
-| LCD-7 (S3) | P4 | PASS 2 of 5 | FAIL, event 0 | FAIL 6 of 6 | 68 / 178 ms | 29 / 69 ms |
-| P4, vendor UUID | laptop (bleak) | PASS | FAIL, event 0 | PASS | 90 / 270 ms | 60 / 90 ms |
+### File transfer speed and offsets
 
-The round trip is a key press on the device to the host's LED write arriving
-back, so one way is roughly half: 35 ms at the default interval, 15 ms at
-7.5-15 ms. Decoding on the host adds 1.7 ms (P4) to 2.8 ms (S3) from the
-report's arrival to the app's `events()`, with a p99 of 10 to 23 ms.
+`write()` takes an `offset`, and the file ends after what you wrote.
+`read()` takes one too. The board paces every write with a free-space count,
+so it never receives more than it can hold.
 
-**The P4 as host loses reports** below Python, always from around the 26th
-report on (pydevices#87). The S3 never did. `burst_source.py` and
-`burst_sink.py` reproduce it without HID.
+How fast: 20 KB from a laptop to an ESP32-S3 in about 2 s and back in about
+1.5 s, or about 1.2 s and 0.5 s when the laptop connects with
+`priority="throughput"`.
 
-**Pairing and bonding** (`ENCRYPTED = True`: every HID characteristic
-encrypted, both sides call `enable_bonding()`), each direction between the S3s
-and with the P4 as device:
+### BLE-MIDI packets
 
-| Run | Result |
-|---|---|
-| First connect, no keys on either side | The Report Map read fails, the host pairs "just works" (encrypted, not authenticated, 16-byte key, bonded), 112/112 |
-| Both boards reset, then reconnect | Encryption from the stored keys: the key store's checksum unchanged, connect-to-started 0.8 to 1.4 s faster, 112/112 |
-| The host's `ble_secrets.json` deleted (as an erase would) | The device accepts a fresh pairing (NimBLE's repeat-pairing path drops the old bond), new keys, 112/112 |
-| A host that refuses to pair (planted) | Fails: the device's encrypted Report Map can't be read |
-
-### The laptop to an S3
-
-Windows 11, bleak 3.0.2, the laptop's Intel radio, to the LCD-7 running
-`nus_server.py`, 16 KB per phase, every byte checked, 2026-09-24:
-
-| Run | Up (writes) | Down (notifications) | Echo, each way |
-|---|---|---|---|
-| before the MTU fix (the board sent 20-byte notifications) | 100.6-134.5 KB/s | 16.4-20.4 KB/s | 8.8-16.1 KB/s |
-| after it, Windows' default parameters | 126.0 KB/s | 48.6 KB/s | 33.9 KB/s |
-| after it, `priority="throughput"` | 133.3 KB/s | 47.1 KB/s | 29.7 KB/s |
-| planted bit flips on both sides | FAIL, 1 mismatch at 5000 | FAIL, same | FAIL, same |
-
-The over-the-air contract (`gatt_central.py`) passed from the laptop, and
-failed with the peripheral's planted skip ("got 199, first gap 7").
-
-### Wi-Fi and BLE on one S3
-
-The LCD-7 served nus with `coex_server.py`, the T-Embed ran `nus_client.py`
-at 64 KB per phase (default interval, BLE at about -50 dBm), and the laptop
-read the LCD-7's TCP source with `tcp_pull.py`. The LCD-7's Wi-Fi was weak,
--74 to -82 dBm, and that matters below. Three runs each:
-
-| LCD-7's Wi-Fi | Up (writes) | Down (notifications) | Echo, each way |
-|---|---|---|---|
-| off | 76.5, 81.3, 83.9 KB/s | 34.0, 33.6, 31.7 | 26.6, 26.3, 25.8 |
-| connected, idle | 36.1, 61.8, 36.0 | 23.7, 26.0, 28.5 | 22.5, 22.3, 24.2 |
-| connected, the laptop streaming from it | 21.8, 39.2, 31.9 | 23.1, 27.0, 26.7 | 20.2, 18.5, 21.5 |
-
-Every byte arrived intact in every run. What the board receives (up) suffers
-most: an idle association alone halves it about two runs in three.
-
-**Wi-Fi throughput with BLE on is not measured, in the sense that matters.**
-The TCP stream from the board to the laptop, 10 s per run:
-
-| BLE on the LCD-7 | KB/s |
-|---|---|
-| off (never activated) | 155.0, 49.2, 13.5, 86.1 |
-| active, not advertising | 43.5, 35.9, 36.8, 120.4 |
-| advertising every 100 ms | 39.7, (connection timed out at -82 dBm), 130.8, 112.5 |
-| carrying the nus gate (averaged over 26-29 s that include advertising) | 46.2, 43.4, 40.7 |
-
-With BLE off entirely the rate ran from 13.5 to 155 KB/s, so at this signal
-strength the run-to-run spread is wider than any difference BLE could make.
-One early run with BLE advertising read 8.1 KB/s, which looked like a finding
-until the repeats. Measuring BLE's cost to Wi-Fi needs the board at -60 dBm
-or better.
-
-### BLE-MIDI
-
-The LCD-7 ran `midi_server.py` and the T-Embed or the laptop ran
-`midi_client.py`, one desk apart, Wi-Fi off, bledev as `.py` source,
-2026-09-24.
-
-**The gate** passed board to board at both intervals and from the laptop:
-1,000 messages each way, complete, in order and intact, no decode errors, in
-about 0.7 s up and 0.5 s down. The planted runs failed as they must: a bit
-flipped in one packet going up (the server reported the first bad message,
-546), one packet dropped going down (940 of 1,000 arrived), and a bit flipped
-going down.
-
-**Latency**, half a note-on's round trip, each ping sent 0-20 ms after the
-last echo so the phase against the connection events varies:
-
-| Link | Pings | Median | p90 | p99 | Max |
-|---|---|---|---|---|---|
-| S3 to S3, default interval (MicroPython asks 30-50 ms) | 400 notes | 44.3 ms | 44.3 | 49.8 | 69.3 |
-| the same, four-note chords (to the last note) | 100 | 44.4 ms | 44.4 | 49.7 | 49.7 |
-| S3 to S3, 7.5 ms interval | 400 notes | 10.8 ms | 13.6 | 15.9 | 21.1 |
-| the same, chords | 100 | 10.9 ms | 13.7 | 18.8 | 18.8 |
-| Laptop to S3, Windows' defaults | 400 notes | 52.3 ms | 60.0 | 110.7 | 118.1 |
-| the same, chords | 100 | 52.1 ms | 59.8 | 105.7 | 105.7 |
-| Laptop to S3, throughput parameters | 400 notes | 13.4 ms | 16.7 | 23.1 | 24.7 |
-| the same, chords | 100 | 13.3 ms | 16.5 | 23.2 | 23.2 |
-
-No echo was lost in any run. **The codec's own cost** on the S3 (240 MHz,
-`.py` source), splitting, encoding and decoding: 0.51 ms for a note, 1.27 ms
-for a four-note chord, 4.9 ms for a 300-byte SysEx. A round trip crosses the
-codec four times, so it accounts for about 1 ms of the 10.8 ms one way at
-7.5 ms. What the rest splits into, connection events against asyncio's
-scheduling on each board, wasn't measured: that needs a raw GATT echo at the
-same interval to compare.
-
-**Windows** (2026-09-24, Windows 11 build 26200): once the board is paired,
-Windows lists it as a MIDI device, `bledev-midi (Bluetooth MIDI IN)` and
-`(Bluetooth MIDI OUT)`, found through the WinRT MIDI device interfaces. It
-takes pairing: unpaired, nothing appears. winmm doesn't list it, and this
-build's Windows MIDI Services has no Bluetooth transport among its
-`Midi2.*Transport.dll`s, so a DAW that opens ports through winmm can't see
-the board. Pairing needs the board to bond (`ble.config(bond=True, ...)` with
-aioble's `security` module loaded); bledev doesn't do that for you.
-Before `midi.serve()` set the GAP name, Windows called the port `MPY ESP32`.
-
-### File transfer
-
-The laptop (Windows 11, bleak 3.0.2) to the T-Embed running `files_server.py`,
-one desk apart, Wi-Fi off, bledev as `.py` source, 2026-09-24. 20 KB each
-way, every run byte for byte:
-
-| Client | Up | Down |
-|---|---|---|
-| `files_client.py`, Windows' defaults, 5 runs in two sessions | 0.73-1.42 s (14.5-27.9 KB/s) | 0.80-0.98 s (20.8-25.5 KB/s) |
-| `files_client.py --fast` (throughput parameters), 3 runs | 0.72-0.82 s (24.9-28.4 KB/s) | 0.32-0.39 s (52.1-64.2 KB/s) |
-| mpftp's `ble_bench.py`, throughput parameters, median of 3 | 0.83 s (24.0 KB/s) | 0.30 s (67.5 KB/s) |
-| the same over mpremote's raw REPL (256-byte chunks) | 15.6 s (1.3 KB/s) | 10.6 s (1.9 KB/s) |
-| the same over the raw REPL, 4 KB chunks | 11.8 s (1.7 KB/s) | 6.3 s (3.2 KB/s) |
-| `ble_bench.py`, Windows' defaults, file transfer / raw REPL | 1.37 s / 43.6 s | 0.49 s / 26.6 s |
-
-So file transfer is the path for files: 19 times faster up and 35 times
-down than the raw REPL, which pays a round trip for every raw-paste window
-and prints what it reads as text. Downloads run near nus's own notification
-rate. Uploads are held to about 25 KB/s by the board writing flash between
-windows. Up got slower from run to run at Windows' defaults (25.8, 17.4, 14.5
-KB/s), overwriting the same file each time. The planted bit flip on the client
-failed the round-trip check. mpftp's `ble://` transport, and its gate, are in
-[PyDevices/mpftp](https://github.com/PyDevices/mpftp) `docs/plans/ble.md`.
-
-### CircuitPython (cpble)
-
-The LilyGO T-Embed (ESP32-S3) on CircuitPython 10.3.0, bledev as `.py`
-source, against Windows 11 and bleak 3.0.2 one desk apart, 2026-09-24.
-"Official" is circuitpython.org's build; "patched" is the same tag with a fix to
-`ports/espressif/common-hal/_bleio/PacketBuffer.c`, built here because the official build can't carry a notification stream
-reliably (below).
-
-| Gate | Official 10.3.0 | Patched |
-|---|---|---|
-| nus, 16 KB up, down and echoed (`nus_server.py` on the board) | 9 of 11 passed; 2 restarted the board in safe mode (hard fault) | 12 of 12 |
-| nus throughput, Windows' defaults | 50-90 KB/s up, 31-49 down, 21-37 echo | 50-91 up, 25-49 down, 16-28 echo |
-| nus, `--fast` (throughput parameters) | | 88 up, 44 down, 34 echo |
-| the GATT contract, laptop central (`gatt_central.py --mtu 256`) | pass | 5 of 5 |
-| BLE-MIDI, 1,000 messages each way | pass (0.8 s up, 0.7 s down) | pass |
-| CircuitPython's own file service, 20 KB up and down (`cpfiles_client.py`) | 0 of 2: the download stalls | 7 of 7 round trips in 3 sessions |
-| MicroPython LCD-7 central, CircuitPython serving nus | | pass: 90 up, 37 down, 25 echo |
-
-Every planted fault failed its gate: a bit flipped in the nus stream (either
-side), notification 7 skipped by the contract's peripheral, the three BLE-MIDI
-plants (a flip going up, a dropped and a flipped packet going down), and a bit
-flipped in the file data read back.
-
-**BLE-MIDI latency** against the T-Embed, half a note-on's round trip, 400
-notes: a median of 52.1 ms (p99 103.2) at Windows' defaults and 13.3 ms (p99
-23.4) with throughput parameters, the same as against a MicroPython S3
-(52.3 and 13.4). Polling every 5 ms costs nothing you can see there.
-
-**CircuitPython's file service.** The client paired by itself in 2.1-3.2 s,
-reconnected from the bond with no pairing in 1.0-1.7 s, and moved 20 KB up in
-4.6-10.1 s (2.0-4.4 KB/s: CircuitPython writes flash between 512-byte
-windows) and down in 0.8-1.8 s (11-26 KB/s). Two conditions, both
-CircuitPython's design: the service writes nothing while a computer has the
-CIRCUITPY drive mounted (USB takes the filesystem's lock as soon as the host
-asks whether it may write; `storage.disable_usb_drive()` in `boot.py` for the
-gate), and a command that arrives while a write's automatic reload is
-restarting `code.py` isn't answered until another command arrives
-(`supervisor.runtime.autoreload = False` in `code.py` for the gate). mkdir
-there makes one level, where bledev's server makes the parents too.
-
-**CircuitPython as central**, against the LCD-7 serving nus: found, connected,
-discovered, subscribed and wrote, with every write with a response (making the
-subscription is one) taking 2 s, because CircuitPython's ESP32 port waits out
-its whole timeout for a status to leave 0, and success is 0.
-
-The full nus gate in that direction passes since
-[#91](https://github.com/PyDevices/pydevices/issues/91): a XIAO nRF52840 on
-stock CircuitPython 10.3.1 as central, the LCD-7 on MicroPython 1.29 serving,
-2026-10-09: UP 87.4 KB/s, DOWN 23.9 KB/s, ECHO 10.9 KB/s each way, every byte
-checked; a planted bit flip at 5000 fails. Before the fix the central
-connected, subscribed and wrote, and the server never saw the connection.
-ESP-IDF's NimBLE holds back a peripheral's connect event until it has read
-the central's version and features, and posts it with the status of that
-read. The nRF52840 answered with an error while the link carried on, and
-MicroPython reports any non-zero status as a failed connection, so
-`aioble.advertise()` never returned. `bledev.mpble` announces such a
-connection itself. To fit in that board's heap, `nus_client.py` receives into
-one reused buffer and checks afterwards, and `Link.read()` and `readexactly()`
-copy once instead of twice.
-
-**mpftp on CircuitPython**, noticed on the way: a long `exec` or `run` sent
-over the serial REPL arrived garbled now and then (a base64 chunk of 6,000
-characters decoded with 11 wrong bytes, twice), and `put` with the drive
-disabled failed with a syntax error. Copying through the CIRCUITPY drive and
-`exec`-ing `import script` was reliable.
-
-### Pairing
-
-The laptop (Windows 11, bleak 3.0.2, WinRT custom pairing) and the LCD-7
-(ESP32-S3, MicroPython 1.29, bledev as `.mpy`) one desk apart, 2026-09-24,
-with `pair_server.start("passkey")`: files and the REPL, the passkey the only
-lock. Every step below is `pair_client.py`.
-
-| Step | Result |
-|---|---|
-| `pair`, three fresh pairings | the passkey read off the board, the link authenticated on both sides (board: encrypted, authenticated, bonded, 16-byte key), `123 * 456` over the REPL and 20 KB through the file service byte for byte. Connect to prompt 8.1-11.1 s, most of it the passkey round trip |
-| `reconnect` after a hard reset of the board and a new laptop process, 10 runs | 10 of 10, no passkey asked, board and laptop both report the bonded, authenticated link. Connect to prompt median 2.1 s (1.43-6.28 s; the slow ones retried links Windows gave out that never reached the board). First command 0.05-0.30 s |
-| the same, 21 earlier runs, before the retry backoff | 17 of 21, each failure a link dropped during discovery with the bond intact (the next run passed on the same keys). The one the board's log covered: no connection ever reached the board, so Windows' three attempts all went to a dead link |
-| `wrong`, six runs | pairing refused (`FAILED`) in 2.7-4.9 s; no bond on either side |
-| `unpaired` | the REPL's RX, the file transfer (read, write) and `AUTH` (read, write) each refused with ATT 0x05; no REPL output; version readable; Windows didn't pair on its own |
-| `forget` plant, then `reconnect` | fails as it must (the board's log: key lookup misses, encryption fails, link drops). Unpairing on the laptop and pairing again restores it |
-| `justworks` plant, then `wrong` | the wrong passkey gets in: FAIL, as it must |
-| `open` plant, then `unpaired` | every protected characteristic allowed: FAIL, as it must |
-
-**Board to board** (`files_pair_client.py` on the T-Embed against
-`pair_server.start("justworks", password="gate")` on the LCD-7, one desk
-apart, both with no bonds to start): the client paired by itself because the
-board refused the file service to an unpaired host, and the link was
-encrypted and bonded (16-byte key, not authenticated, as just works is). Connect,
-pair and log in 3.8 s; 20 KB written in 3.0 s (6.7 KB/s) and read back in
-1.0 s (20.1 KB/s), byte for byte, and the LCD-7's own copy had the same
-SHA-256. A second connection encrypted from the bond in 2.1 s. Plants:
-`nopair` was refused ("the board wants pairing") and `flip` failed the
-byte-for-byte check. Not run on hardware: a board as central typing in a
-passkey another board shows (the fake covers it).
-
-The passkey on the panel, read back from the framebuffer: "Bluetooth passkey"
-over the six digits at 8x the 8-pixel font, drawn in 77 ms, present in both of
-the dot-clock panel's buffers while shown and gone from both after.
-
-mpftp's `ble://` (PyDevices/mpftp `ble-pairing`) used the bond with no password
-set: `exec` and 20 KB `put`/`get` byte for byte. Against a just-works board
-with a password it paired by itself; against a passkey board with the laptop
-unpaired it said to pair once and left no pairing behind.
-**webble to the P4** (through its C6), nus, 16 KB per phase, every byte
-checked, 2026-09-24. Chrome 153 on a Galaxy S21 about a metre away, and on
-Windows 11 through the laptop's Intel radio. KB/s:
-
-| Browser, runtime, page MTU | Up (writes) | Down (notifications) | Echo, each way |
-|---|---|---|---|
-| S21, Pyodide, 247 | 22.8 | 15.8 | 8.6 |
-| S21, PyScript MicroPython, 247 | 15.6 | 19.9 | 9.2 |
-| S21, MicroPython WebAssembly, 247 | 22.3 | 8.5 | 9.8 |
-| S21, Pyodide, 23 | 3.3-4.4 | 10.7-14.1 | 3.9 |
-| S21, Pyodide, 247, planted bit flips | FAIL, 1 at 5000 | FAIL, 1 at 5000 | FAIL, 1 at 5000 |
-| Windows, Pyodide and PyScript MicroPython, 247 | 37-61 | 4-7 | 3.7-4.8 |
-| Windows, MicroPython WebAssembly, 247 | 50.6 | 3.6 | 3.6 |
-
-From Windows the P4 sends 20-byte notifications, because it never learns the
-MTU Windows negotiated ([#80](https://github.com/PyDevices/pydevices/issues/80)).
-Two of three ECHO runs on the phone at MTU 23 (none of five at 247), and
-two of eleven from Windows, lost writes the P4 never received, always while it was notifying
-back ([#79](https://github.com/PyDevices/pydevices/issues/79)). The gate
-reports those as a stall, not a pass.
+The packet format lives in `bledev.midi_codec`, pure Python with no
+imports: timestamps, running status, SysEx split across packets, and clock
+slipped into a SysEx. Its test vectors ([`tests/bledev_midi_vectors.json`](https://github.com/PyDevices/omnipython/blob/main/tests/bledev_midi_vectors.json)) were
+worked out by hand from the specification, and every interpreter checks
+against the same file.

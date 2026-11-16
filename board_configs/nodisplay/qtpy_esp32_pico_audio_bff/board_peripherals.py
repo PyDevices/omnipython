@@ -49,11 +49,11 @@ from audiodev import (
 )
 from audiodev.i2s_audio import I2SPCMOutput
 
-PERIPHERALS = frozenset({"audio_out", "pcm_out", "audio_power"})
+PERIPHERALS = frozenset({"audio_out", "pcm_out", "audio_power", "boot_button"})
 
 # Audio roles are factories: first attribute access must not construct, so a
 # caller can pass a format. See boarddev.bind_lazy.
-FACTORY_ROLES = PERIPHERALS
+FACTORY_ROLES = frozenset({"audio_out", "pcm_out", "audio_power"})
 
 # Adafruit Audio BFF (product 5769) pads on the QT Py ESP32 Pico.
 #
@@ -176,7 +176,7 @@ def _pcm_out(format=None, *, latency=None, queue_ms=None):
         # and never opens ``machine.I2S`` on this port -- the pump's own I2S
         # channel is the only owner. On a firmware without it these two are
         # inert. Without them this board plays every sample on machine.I2S
-        # and the pump sits idle (PyDevices/pydevices#41).
+        # and the pump sits idle (PyDevices/omnipython#41).
         # PUMP WIRING UNVERIFIED ON HARDWARE (2026-09-23): the machine.I2S
         # path was heard on 2026-09-15; the pump path has not been run here.
         wire=AUDIO_OUT.wire,
@@ -219,3 +219,12 @@ def _audio_power(enable=True, *, volume=None):
 pcm_out = AudioFactory(_pcm_out, AUDIO_OUT)
 audio_out = AudioFactory(_audio_out, AUDIO_OUT)
 audio_power = _audio_power
+
+
+def boot_button():
+    """The Boot button (GPIO0, low while pressed): a strap at reset, a plain
+    input once the board is running. Holding it through a reset starts the
+    bootloader, so a program reads it only after boot."""
+    from machine import Pin
+
+    return Pin(0, Pin.IN, Pin.PULL_UP)

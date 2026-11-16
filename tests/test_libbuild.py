@@ -101,7 +101,7 @@ class BuiltRepository(unittest.TestCase):
 
     def test_every_package_this_repository_publishes_is_in_the_index(self):
         split = _split()
-        expected = {"pydevices", "pydevices-desktop"}
+        expected = {"omnipython", "omnipython-desktop"}
         expected.update(name for name, section in split.items() if section.get("top-level") or section.get("own-package"))
         expected.update(_folders())
         tested = {p["name"] for p in self.everything["packages"] if p.get("tested")}
@@ -121,7 +121,7 @@ class BuiltRepository(unittest.TestCase):
                 for kind in ("py", "6"):
                     for stem in ("latest", version):
                         body = json.loads((self.untested / "package" / kind / name / f"{stem}.json").read_text())
-                        self.assertLessEqual(set(body), {"v", "hashes", "version", "deps", "upstream"})
+                        self.assertLessEqual(set(body), {"v", "hashes", "version", "deps", "upstream", "circuitpython", "stands_in_for"})
                         self.assertEqual(body["version"], version)
                 py = self.paths(name)
                 self.assertTrue(py or self.deps(name))
@@ -140,7 +140,7 @@ class BuiltRepository(unittest.TestCase):
         self.assertIn("board_config.mpy", compiled)
 
     def test_a_board_package_depends_on_its_drivers_and_brings_no_copies(self):
-        self.assertEqual(self.deps("esp32-s3-touch-lcd-4_3"), ["pydevices", "ch422g", "gt911", "rs485", "canbus"])
+        self.assertEqual(self.deps("esp32-s3-touch-lcd-4_3"), ["omnipython", "ch422g", "gt911", "rs485", "canbus"])
         self.assertEqual(sorted(self.paths("esp32-s3-touch-lcd-4_3")), ["board_config.py", "board_peripherals.py"])
         self.assertEqual(self.paths("gt911"), ["gt911.py"])
         self.assertIn("esp32-s3-touch-lcd-4_3 requires sdcard", self.report.getvalue())
@@ -156,12 +156,12 @@ class BuiltRepository(unittest.TestCase):
         self.assertIn("m5stack-cores3 requires bmi270", self.report.getvalue())
 
     def test_host_board_configs_keep_their_own_board_config(self):
-        self.assertNotIn("board_config.py", self.paths("pydevices-desktop"))
-        self.assertEqual(self.deps("pgdisplay"), ["pydevices-desktop"])
+        self.assertNotIn("board_config.py", self.paths("omnipython-desktop"))
+        self.assertEqual(self.deps("pgdisplay"), ["omnipython-desktop"])
         self.assertIn("board_config.py", self.paths("desktop"))
 
     def test_the_pyscript_table_points_at_the_index(self):
-        table = tomllib.loads((self.out / "index" / "pydevices-desktop.toml").read_text(encoding="utf-8"))["files"]
+        table = tomllib.loads((self.out / "index" / "omnipython-desktop.toml").read_text(encoding="utf-8"))["files"]
         self.assertIn("/lib/board_config.py", table.values())
         self.assertIn("/lib/displaydev/sdldisplay.py", table.values())
         for url in table:
@@ -169,13 +169,13 @@ class BuiltRepository(unittest.TestCase):
             self.assertNotIn("github", url)
 
     def test_installed_source_carries_its_version(self):
-        path, short = next(item for item in self.package("pydevices")["hashes"] if item[0] == "events.py")
+        path, short = next(item for item in self.package("omnipython")["hashes"] if item[0] == "events.py")
         text = (self.out / "index" / "file" / short[:2] / short).read_text(encoding="utf-8")
         self.assertTrue(text.endswith(f"\n\n__version__ = {self.version!r}\n"))
 
     def test_host_only_modules_ship_in_the_desktop_package_not_the_device_one(self):
-        device = set(self.paths("pydevices")) | set(self.paths("bledev"))
-        desktop = set(self.paths("pydevices-desktop"))
+        device = set(self.paths("omnipython")) | set(self.paths("bledev"))
+        desktop = set(self.paths("omnipython-desktop"))
         for package, section in _split().items():
             for module in section.get("host-only", ()):
                 path = f"{package}/{module}.py"
@@ -184,21 +184,21 @@ class BuiltRepository(unittest.TestCase):
                     self.assertIn(path, desktop)
         self.assertIn("displaydev/auto.py", device)
 
-    def test_desktop_brings_pydevices_with_it(self):
-        self.assertEqual(self.deps("pydevices-desktop"), ["pydevices"])
+    def test_desktop_brings_omnipython_with_it(self):
+        self.assertEqual(self.deps("omnipython-desktop"), ["omnipython"])
 
     def test_a_required_sibling_is_named_by_library_in_the_tree(self):
         manifest = (self.out / "library" / "usb-host-msc" / "manifest.py").read_text(encoding="utf-8")
         self.assertIn('require("usb-core", library="omnipython-lib")', manifest)
         self.assertIn(f'version="{self.version}"', manifest)
         self.assertIn("usb-core", self.deps("usb-host-msc"))
-        desktop = (self.out / "library" / "pydevices-desktop" / "manifest.py").read_text(encoding="utf-8")
-        self.assertIn('require("pydevices", library="omnipython-lib", opt=options.opt)', desktop)
+        desktop = (self.out / "library" / "omnipython-desktop" / "manifest.py").read_text(encoding="utf-8")
+        self.assertIn('require("omnipython", library="omnipython-lib", opt=options.opt)', desktop)
 
     def test_a_firmware_build_can_choose_the_optimisation_of_what_it_freezes(self):
         # The index compiles with no opt, as it always did; a build that
         # require()s the package passes opt= and every file it freezes takes it.
-        manifest = (self.out / "library" / "pydevices" / "manifest.py").read_text(encoding="utf-8")
+        manifest = (self.out / "library" / "omnipython" / "manifest.py").read_text(encoding="utf-8")
         self.assertIn("options.defaults(opt=None)", manifest)
         calls = [line for line in manifest.splitlines() if line.startswith(("package(", "module("))]
         self.assertTrue(calls)
@@ -232,18 +232,24 @@ class BuiltRepository(unittest.TestCase):
         # aioble is micropython-lib's. In deps, mip would stop at it; in the
         # manifest, a CircuitPython firmware freezing bledev would look for it.
         self.assertNotIn("aioble/core.py", self.paths("bledev"))
-        self.assertEqual(self.deps("bledev"), [])
+        # OmniPython, for boarddev.name(); aioble never.
+        self.assertEqual(self.deps("bledev"), ["omnipython"])
         manifest = (self.out / "library" / "bledev" / "manifest.py").read_text(encoding="utf-8")
         self.assertNotIn('require("aioble")', manifest)
         for kind in ("py", "6"):
             self.assertEqual(self.package("bledev", kind)["upstream"], [["aioble", "latest"]])
+
+    def test_bledev_names_adafruits_asyncio_for_omip_on_circuitpython(self):
+        for kind in ("py", "6"):
+            self.assertEqual(self.package("bledev", kind)["circuitpython"], [["asyncio", "latest"]])
+        self.assertNotIn("circuitpython", self.package("omnipython"))
 
     def test_the_upstream_key_reaches_the_main_index(self):
         body = json.loads((self.out / "index" / "package" / "py" / "bledev" / "latest.json").read_text(encoding="utf-8"))
         self.assertEqual(body["upstream"], [["aioble", "latest"]])
 
     def test_a_package_that_needs_nothing_upstream_has_no_key(self):
-        self.assertNotIn("upstream", self.package("pydevices"))
+        self.assertNotIn("upstream", self.package("omnipython"))
 
     def test_a_tree_only_build_writes_the_tree_and_no_index_and_needs_no_mpy_cross(self):
         lock_dir = self.scratch / "lock"
@@ -253,8 +259,8 @@ class BuiltRepository(unittest.TestCase):
         self.assertEqual(status, 0)
         self.assertFalse((out / "index").exists())
         self.assertEqual(
-            (out / "library" / "pydevices" / "manifest.py").read_text(encoding="utf-8"),
-            (self.out / "library" / "pydevices" / "manifest.py").read_text(encoding="utf-8"),
+            (out / "library" / "omnipython" / "manifest.py").read_text(encoding="utf-8"),
+            (self.out / "library" / "omnipython" / "manifest.py").read_text(encoding="utf-8"),
         )
 
     def test_the_landing_page_shows_the_address_it_was_given(self):
@@ -269,13 +275,19 @@ class BuiltRepository(unittest.TestCase):
             self.assertEqual(libbuild.main(["compare", str(index), str(index)]), 0)
         changed = self.scratch / "changed"
         shutil.copytree(index, changed)
-        target = changed / "package" / "py" / "pydevices" / "latest.json"
+        target = changed / "package" / "py" / "omnipython" / "latest.json"
         body = json.loads(target.read_text())
         body["hashes"][0][1] = "00000000"
         target.write_text(json.dumps(body))
         with redirect_stdout(StringIO()) as out:
-            self.assertEqual(libbuild.main(["compare", str(index), str(changed), "--package", "pydevices"]), 1)
+            self.assertEqual(libbuild.main(["compare", str(index), str(changed), "--package", "omnipython"]), 1)
         self.assertIn("different content", out.getvalue())
+
+
+class TypeStubs(unittest.TestCase):
+    def test_stubs_stay_out_of_what_a_board_installs(self):
+        names = ["__init__.py", "__init__.pyi", "py.typed", "pump.py", "pump.pyi", "__pycache__"]
+        self.assertEqual(libbuild._ignore_debris("lib/audiodev", names), {"__init__.pyi", "py.typed", "pump.pyi", "__pycache__"})
 
 
 class Manifests(unittest.TestCase):
@@ -325,9 +337,9 @@ class TestedAndUntested(unittest.TestCase):
             run = {"hardware": "x", "firmware": "y", "date": "2026-10-20", "smoke": "passed"}
             (board / "tested.json").write_text(json.dumps({"runs": [run]}), encoding="utf-8")
             tested = libbuild.tested_packages(
-                {"board": board, "other": Path(tmp, "other")}, {"board": ["pydevices", "gt911"], "gt911": [], "other": ["st7789"]}
+                {"board": board, "other": Path(tmp, "other")}, {"board": ["omnipython", "gt911"], "gt911": [], "other": ["st7789"]}
             )
-        self.assertEqual(set(tested), {"board", "pydevices", "gt911"})
+        self.assertEqual(set(tested), {"board", "omnipython", "gt911"})
 
     def test_a_record_of_a_failed_run_is_refused(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -350,7 +362,7 @@ class TestedAndUntested(unittest.TestCase):
 
 
 class ShapeCheck(unittest.TestCase):
-    UPSTREAM = frozenset({"sdcard", "bmi270", "ssd1306", "aioble", "usb-device", "usb-device-hid", "time"})
+    UPSTREAM = frozenset({"sdcard", "bmi270", "ssd1306", "aioble", "usb-device", "usb-device-hid", "time", "requests"})
 
     def copy_with_boards(self, tmp):
         """A stand-in repository: everything linked, board_configs and drivers copied."""
@@ -421,6 +433,50 @@ class SeveralPackages(unittest.TestCase):
         self.assertIn('require("two", library="lib", opt=options.opt)', both)
         self.assertNotIn("package(", both)
 
+    def test_a_member_can_require_a_package_of_its_own_from_elsewhere(self):
+        pinned = libbuild.Pinned("both", "Org/repo", "v1.2.3", "Both", None, {"one": "First", "two": "Second"}, {"one": ("icons",)})
+        libbuild.assemble_pinned(pinned, self.scratch / "src", self.tree, "lib", self.local | {"icons"})
+        one = (self.tree.path / "one" / "manifest.py").read_text(encoding="utf-8")
+        self.assertIn('require("icons", library="lib", opt=options.opt)', one)
+        two = (self.tree.path / "two" / "manifest.py").read_text(encoding="utf-8")
+        self.assertNotIn("icons", two)
+
+    def test_a_member_can_name_what_it_needs_from_each_interpreter_s_own_libraries(self):
+        pinned = libbuild.Pinned(
+            "both",
+            "Org/repo",
+            "v1.2.3",
+            "Both",
+            None,
+            {"one": "First", "two": "Second"},
+            member_upstream={"one": ("requests",)},
+            member_circuitpython={"one": ("adafruit_requests",)},
+        )
+        libbuild.assemble_pinned(pinned, self.scratch / "src", self.tree, "lib", self.local)
+        self.assertEqual(self.tree.upstream, {"one": ("requests",)})
+        self.assertEqual(self.tree.circuitpython, {"one": ("adafruit_requests",)})
+
+    def test_a_repository_that_stands_in_for_a_module_says_so(self):
+        source = self.scratch / "stand"
+        (source / "lib" / "gfx").mkdir(parents=True)
+        (source / "lib" / "gfx" / "__init__.py").write_text("X = 1\n", encoding="utf-8")
+        (source / "package.json").write_text('{"stands_in_for": "gfx"}', encoding="utf-8")
+        pinned = libbuild.Pinned("gfx", "Org/gfx", "v1.0.0", "Gfx", None)
+        libbuild.assemble_pinned(pinned, source, self.tree, "lib", self.local)
+        self.assertEqual(self.tree.stands_in_for, {"gfx": "gfx"})
+        # One without the key, or without a package.json, says nothing.
+        (source / "package.json").write_text("{}", encoding="utf-8")
+        other = libbuild.Pinned("gfx2", "Org/gfx", "v1.0.0", "Gfx", None)
+        shutil.copytree(source / "lib" / "gfx", source / "lib" / "gfx2")
+        libbuild.assemble_pinned(other, source, self.tree, "lib", self.local)
+        self.assertNotIn("gfx2", self.tree.stands_in_for)
+
+    def test_the_lock_gives_deskkit_a_client_on_each_interpreter(self):
+        # deskkit asks the network through appkit.net; touchkit gets the client by requiring deskkit.
+        pinned = libbuild.read_lock(ROOT).pinned["applibs"]
+        self.assertEqual(pinned.member_upstream["deskkit"], ("requests",))
+        self.assertEqual(pinned.member_circuitpython["deskkit"], ("adafruit_requests",))
+
     def test_a_missing_folder_fails_the_build(self):
         shutil.rmtree(self.scratch / "src" / "lib" / "two")
         with self.assertRaisesRegex(libbuild.BuildError, "has no lib/two"):
@@ -438,7 +494,7 @@ class Lockfile(unittest.TestCase):
 
     def test_no_pinned_package_shadows_one_built_here(self):
         lock = libbuild.read_lock(ROOT)
-        here = {"pydevices", "pydevices-desktop", *lock.folders, *(n for n, s in _split().items() if s.get("top-level") or s.get("own-package"))}
+        here = {"omnipython", "omnipython-desktop", *lock.folders, *(n for n, s in _split().items() if s.get("top-level") or s.get("own-package"))}
         self.assertEqual(set(lock.pinned) & here, set())
 
     def test_every_folder_package_has_a_version_and_its_sources(self):

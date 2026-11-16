@@ -9,7 +9,7 @@ Edit the code below and press **Run**. It runs in your browser, on
 MicroPython compiled to WebAssembly.
 
 ````{raw} html
-<div class="pydevices-live-demo">
+<div class="omnipython-live-demo">
   <div class="demo-editor-pane">
     <textarea class="code-editor">
 from palettes import get_palette
@@ -57,7 +57,7 @@ print("Drawn 32 color wheel bands and 10 Material Design amber shades!")
 [your first program](get-started/first-program.md). The
 [guides](guides/choose-a-palette.md) take one task each, the
 docstrings in
-[`lib/palettes`](https://github.com/PyDevices/pydevices/tree/main/packages/palettes/lib/palettes)
+[`lib/palettes`](https://github.com/PyDevices/omnipython/tree/main/packages/palettes/lib/palettes)
 document every name, and
 [How it works](how-it-works/index.md) explains the design.
 

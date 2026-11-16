@@ -24,10 +24,14 @@ guides/upgrade-multimer-from-0.5
 guides/audio
 guides/usb
 guides/bluetooth-le
+guides/bluetooth-le-services
+guides/board-name
 guides/wifi
 guides/mdns
 guides/medialink
 guides/lvgl
+guides/vtterm
+guides/cast-to-a-tv
 guides/run-on-the-desktop
 guides/run-in-the-browser
 guides/run-in-pyscript
@@ -42,11 +46,15 @@ guides/troubleshooting
 
 stack
 reference/index
+reference/usb-support
+reference/bluetooth-le-support
+reference/vtterm-escape-codes
+reference/vtterm-keys
+reference/castdisplay
 modules
 boards/board-contract
 boards/board-configs
-boards/device-matrix
-boards/display-boards
+boards/arduino-giga-display-shield
 boards/display-drivers
 boards/touch-drivers
 boards/wokwi
@@ -62,6 +70,8 @@ how-it-works/ecosystem
 how-it-works/displaydev-internals
 how-it-works/multimer-internals
 how-it-works/bledev-internals
+how-it-works/vtterm-internals
+how-it-works/casting
 ```
 
 ```{toctree}

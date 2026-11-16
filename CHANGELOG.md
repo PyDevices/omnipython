@@ -1,14 +1,214 @@
+## v0.8.0.dev22 (2026-11-16)
+
+- OmniPython: the library takes its new names (#656)
+- Stack: the portal and the old mip mirror at omnipython.org (#655)
+- Links: library, gallery and Workbench links to their new addresses (#489)
+- pdwidgets: font writer links to the pdwidgets docs, not two pages that never existed (#654)
+- Docs: shared theme docs-v0.3.1, which links to docs.omnipython.org (#653)
+
+## v0.8.0.dev21 (2026-11-16)
+
+- Docs: links point at docs.omnipython.org (#651)
+- Check these pages in the documentation site (#650)
+- Stack page: Huey, the chameleon you hold and talk to (#649)
+- Docs: the new PyDevices docs theme (#648)
+- Stack page: _boardname (#647)
+- Stack: svgio for CPython also draws in a Pyodide page (#646)
+- svgio: draws under Pyodide, on the browser's canvas (#645)
+- svgio for CPython: Buffer, close() and decode(colors=) (#644)
+- svgio for CPython: reads a drawing in the compact form, and expand() (#642)
+- svgio for CPython: decode(rows=) draws a band, SvgDecoder(memory=) is accepted (#641)
+- Stack page: Huey's Perch (#643)
+- Library: apps 0.1.2.dev12 (#640)
+
+## v0.8.0.dev20 (2026-11-15)
+
+- usb-host-net: a CDC-ECM adapter comes up as a network interface beside RNDIS (#508)
+- audiodev: on micropython.exe, the pump plays to the speaker itself (#637)
+- castdisplay and hmilink say plainly when older firmware has no boarddev.name() (#636)
+- midiports linux: 5-pin DIN MIDI on a serial port (#633)
+- mp4mux: fragmented MP4 as an option, and files past 4 GB (#631)
+- vtterm: boxes drawn as lines, and mouse and touch reports (#632)
+- usb-host-hid: a gamepad report that fills a packet is whole, so the next one isn't lost (#629)
+- usb_hid, midiports: older firmware says to update it, not a bare AttributeError (#628)
+- Stack: the MIDI Controller app (#634)
+- midiports webmidi: page_out, MIDI out from MicroPython in a browser (#624)
+- iconkit: instant_mix in both sets, drawn from its Material Symbol (#623)
+- Stack: the Gamepad app (#627)
+- boarddev: one name for the board, used by Wi-Fi, Bluetooth and mDNS (#615)
+- pdwidgets: type stubs for the package, its 49 widgets and 79 icons (#621)
+- display_driver: a lifted finger leaves nothing hovered (#612)
+- pdwidgets Console: readinto reads from the reader you gave it (#622)
+- Type stubs for palettes, iconkit and the desktop utils, checked in the same Stubs workflow (#620)
+- Release publishing: use publishing-v25, whose wheel builder ships the type stubs (#619)
+- boarddev stub: env_int returns int (#618)
+- midiports: LOOPBACK and python -m midiports.loopback for trying MIDI with no hardware (#616)
+- pydevices: type stubs for all 76 public modules in lib/ (#614)
+- AudioOut: starts by itself once the browser unlocks audio (#611)
+- audiodev: ALSA playback and capture on Linux, with no SDL2 or pygame (#613)
+- vtterm: scrollback and the alternate screen (#609)
+- usb-host-hid: a gamepad or joystick comes back as button, axis and hat events (#507)
+- Roadmap: one secret bullet, and progressive JPEG left to the medialink guide (#610)
+- Library: apps 0.1.2.dev11 and pygraphics 0.1.6 (#607)
+
+## v0.8.0.dev19 (2026-11-15)
+
+- omip: trust Android's CA certificates on CPython, so installs work in an Android app (#605)
+- USB guide: the P4X-EYE's sound card keeps playing through a flash write (#604)
+- Install docs: point at lib.omnipython.org (#603)
+- Browser displays: a finger move gives Motion(touch=True) (#602)
+- Wi-Fi guides: one recipe per interpreter for reaching a board, wifi_manager as the extra (#601)
+- wifi_manager: connect() takes wait, ntp and a secrets module (#600)
+- wifi_manager: a CircuitPython join starts on the channel it used last and skips a missing network's second round (#599)
+- omip: skip a package that stands in for a module the firmware has built in (#598)
+- omip and wifi_manager: an Arduino GIGA's /flash for app needs and saved networks (#597)
+
+## v0.8.0.dev18 (2026-11-15)
+
+- lib-lock: a pinned package can name its micropython-lib and Adafruit dependencies (#595)
+- omip: a target that isn't a lib folder holds the app's folder (#591)
+- displaydev: can_rotate says whether rotation turns what you draw (#592)
+- iconkit: a release reaches the mip index without a manual dispatch (#593)
+- omip: downloads time out and land whole; CircuitPython configs install their drivers (#589)
+- GIGA Display Shield: omip by mip into /flash/lib, and the ROMFS recipe keeps the firmware's modules (#588)
+- wifi_manager: join a single known network without scanning first (#585)
+
+## v0.8.0.dev17 (2026-11-14)
+
+- Index: touchkit requires deskkit (#582)
+- usb_host_audio_main: start the app when no sound card is plugged in (#578)
+- Stack: Camera for the ESP32-P4, installed with omip (#579)
+- omip: a frozen package stays out of /lib when two needs share it (#577)
+
+## v0.8.0.dev16 (2026-11-14)
+
+- castdisplay: cast an app to a TV, a laptop or VLC; installs with mip (#574)
+- Stack page: vtterm, deskkit and programkit install with mip (#575)
+
+## v0.8.0.dev15 (2026-11-14)
+
+- Library index: applibs 0.1.2.dev3 with deskkit and programkit; each requires what it imports (#572)
+- omip: a package can name its own folder, so an app installs to /apps/<name> (#569)
+- vtterm: a VT100 terminal with ANSI colors on a display, installed by mip (#563)
+- palettes: an ANSI palette, 16 or 256 colors, with nearest() (#552)
+- bledev.repl: connect logs in to a password board from MicroPython (#565)
+- multimer: a Ctrl-C kept from a callback is dropped once the REPL is back (#564)
+- Seeed Round Display on QT Py: text no longer draws mirrored (#566)
+- boarddev: replace_role swaps a board role for every caller (#559)
+- usb.host.audio: audio_out keeps 80 ms queued; latency="buffered" keeps 300 (#557, #558)
+- usb.host.audio: an endpoint too big for the host's FIFO names its size, and an unplugged speaker says so, keeping the errno (#560, #562)
+- docs: make a USB sound card the board's audio, and replacing a role at run time (#561)
+- Stack page: the REPL app, Bit World, and each app installed with omip from its folder (#567, #568, #570)
+
+## v0.8.0.dev14 (2026-11-13)
+
+- multimer: a slow timer runs back to back at a board's idle REPL (#549)
+- Library: pygraphics v0.1.5, blit_rect hands a driver the whole rectangle (#555)
+- Stack page: svgio, on firmware and on CPython (#551)
+
+## v0.8.0.dev13 (2026-11-13)
+
+- svgio for CPython: SVG decode over resvg-py and Pillow, the same API as the firmware module (#548)
+- multimer: the first timer on CPython no longer imports asyncio (#547)
+- multimer: a slow timer runs back to back while the program waits (#546)
+
+## v0.8.0.dev12 (2026-11-13)
+
+- Library: pygraphics v0.1.4, with the row-copy FrameBuffer.blit (#543)
+- docs: timer callbacks, audio servicing and browser unlock, touch, env guard, rotation (#542)
+
+## v0.8.0.dev11 (2026-11-13)
+
+- Library: applibs v0.1.2.dev2 (#539)
+
+## v0.8.0.dev10 (2026-11-13)
+
+- lib-lock: pygraphics pinned at v0.1.3.dev1, with FrameBuffer.blit_alpha (#537)
+- pico-lcd-1.8: the whole screen in landscape, in the right colours (#534)
+
+## v0.8.0.dev9 (2026-11-12)
+
+- iconkit: Material icons for LVGL and pygraphics, as its own package (#531)
+- usb-host-video tests: start() resets the interface before it claims the stream (#532)
+- usb-host-video: Camera.start() lets go of a stream an interrupted program left open (#528)
+- IMX219: digital gain, pedestal, nine test patterns, RAW8, 15 and 53 fps (#529)
+- Examples: a simpletest for every bledev service and USB device package (#527)
+- camera_sensors: a simpletest that opens the fitted camera and reads a frame (#526)
+
+## v0.8.0.dev8 (2026-11-11)
+
+- usb-device-net: a network link to the computer over the USB cable (#524)
+- bledev internals: what BLE costs Wi-Fi on the ESP32-S3, measured (#523)
+- ESP32-P4-WIFI6 Pico: microSD in 1-bit mode, so writes work (#522)
+- Roadmap: the NCM and USBTMC bullets come off (#521)
+- usb-host-cdc: CH34x, CP210x, FTDI and PL2303 USB-serial adapters behind the same Serial (#520)
+- bledev private address example: bond, so a paired phone keeps the board (#519)
+- Touch-LCD-4B: the camera opens upright (#517)
+- usb-host-video: MJPEG at 720p and 1080p on a high-speed host, and Camera.hold_frame_rate (#515)
+
+## v0.8.0.dev7 (2026-11-11)
+
+- Stack: usb-device-audio is a speaker, microphone or headset; usb-hid adds gamepad and pointer (#514)
+- usb-host-dfu: read a microcontroller's flash through its DFU bootloader (#516)
+- usb-host-cdc: a CDC-ECM or NCM network device is no longer taken for a serial port (#503)
+- usb-hid: a gamepad and an absolute pointer, in CircuitPython's custom Device shape (#513)
+- usb-device-audio: a USB microphone, and a headset that plays and records at once (#512)
+- bledev: private addresses with config(addr_mode=) (#511)
+- bledev: Heart Rate, Cycling Speed and Cadence, Cycling Power, Running Speed and Cadence, Environmental Sensing (#510)
+- bledev: Battery and Device Information as services of their own (#505)
+- USB and Bluetooth LE support tables; the GIGA in the USB guide; _uac.py says it reads UAC 2.0 (#504)
+- Board config: ESP32-P4-WIFI6 with a Pico-LCD-1.8 and a Pico-Audio (#502)
+- display_driver: run on LVGL 9.6's renamed draw functions (#496)
+- QT Py Audio BFF: Boot button role, and a config with an SH1106 OLED (#498)
+- midiports: the mip install line names the package's folder (#497)
+- Library: audioinstruments v0.5.2.dev4 and audioeffects v0.5.2.dev2 (#495)
+- omip on CircuitPython brings Adafruit's libraries (#494)
+- omnipython-desktop: no portable mip; omip installs on every host (#492)
+
+## v0.8.0.dev6 (2026-11-10)
+
+- Library: audioinstruments v0.5.2.dev3 and applibs v0.1.2.dev1 (#493)
+- omip: installs in a browser, and takes url_base= and name@version (#490)
+- Stack page: libraries the apps use get their own section (#488)
+- release interpreters: read micropython-pydevices' DEPENDENCIES.lock (#487)
+- Library: audioeffects v0.5.2.dev1, where AirSpace and ShimmerHall load on MicroPython (#486)
+- backends: a third-party display gets rotation (#485)
+- omip: skip packages the firmware has frozen in (#483)
+- midiports: SysEx both ways on Windows (#484)
+- Roadmap: hmilink.appkit under hmilink, OSC out (#482)
+- usb.device.msc: a failed block read or write fails its command (#481)
+- bledev: Windows pairs before the link comes up, so the passkey is asked for (#480)
+- Stack page: mp4mux installs with mip (#479)
+- Tests: displaydev reports the array byteswap when numpy is installed (#478)
+
+## v0.8.0.dev5 (2026-11-09)
+
+- Library: audioeffects v0.5.2.dev0, which loads each effect on first use (#476)
+- esp32-p4x-eye README: which firmware to build, and the check lines as checks (#475)
+- esp32-p4x-eye: the display's SPI at 80 MHz, as the factory firmware runs it (#474)
+- esp32-p4x-eye: the knob counts up clockwise, two counts a click, and says so (#473)
+- audiodev: Prefetch.service() hands the tick back when the source is slow (#472)
+- Stack page: mp4mux is a clone until its release
+- ESP32-P4X-EYE: board config, QMA6100P and orientation, and an MP4 writer (#466)
+- ESP32 Audio Kit: the bt role is a btclassic AudioSink (#469)
+- Examples: play the MP3 files on a microSD card, and record the microphone to a WAV file (#468)
+- audiodev: a pump recorder fills an array("h") in order, counting bytes, not items (#467)
+- audiodev: PaceOutput.write returns once the device is full, so space() falls (#465)
+- Stack: btaudio is now btclassic (#462)
+- ESP32 Audio Kit: pcm_in records the microphones or line in, beside the output (#461)
+- Board config: Ai-Thinker ESP32-Audio-Kit V2.2 with a 2.8in ILI9341 IPS touch module (#459)
+
 ## v0.8.0.dev4 (2026-11-08)
 
 - display_driver: one-finger swipes take 50 px on a touch panel, not 255 (#458)
 - display_driver: quitting from inside LVGL no longer crashes on exit (#457)
 - medialink: Intercom ends a hands-free turn when voice is set to None (#452)
-- Stack: midiports comes with pydevices-desktop (#456)
-- midiports: pip install pydevices-desktop brings midiports and adafruit_midi (#453)
+- Stack: midiports comes with omnipython-desktop (#456)
+- midiports: pip install omnipython-desktop brings midiports and adafruit_midi (#453)
 - audiodev: a stall no longer cuts the lookahead back to max_catchup_chunks (#450)
 - Publishing: medialink, sayso and midiports reach the mip index (#455)
 - medialink: MicroWakeWord reports the model's latest probability (#454)
-- pydevices-desktop: install Pillow, which jpegio and pngio need on a desktop (#451)
+- omnipython-desktop: install Pillow, which jpegio and pngio need on a desktop (#451)
 - display_driver: no timer callback runs while LVGL is inside a callback (#449)
 - GIGA Display Shield: audioeffects and audioinstruments in the ROMFS recipe (#447)
 
@@ -184,9 +384,9 @@
 - Every board config and every driver is a package of the library index, named by its folder or module. A board's `manifest.py` requires the driver packages it uses, and mip installs them as `deps` from the same index, so a driver fixed once reaches every board. Drivers are listed in `drivers/drivers.toml`. Boards with a `tested.json` (written by `tools/mark_tested.py` after the smoke test passes) publish to the main index with their drivers; the rest are in the index's `untested/` folder. [CONTRIBUTING.md](https://github.com/PyDevices/pydevices/blob/main/CONTRIBUTING.md) says how to add one
 - Each board's `package.json` (its GitHub installer) is now written from its `manifest.py` by `python tools/libbuild.py installers`; `tools/libbuild.py check` is the shape check CI runs on a board or driver change
 - **Breaking change:** `drivers/storage/sdcard.py` and `drivers/imu/bmi270.py` are gone; boards require micropython-lib's `sdcard` and `bmi270` packages instead (`mip.install("sdcard")` first on stock MicroPython). The nRF52 keeps its fix as `sdcard_nrf`. `drivers/display/ssd1306.py` is now `ssd1306_bus.py` (`from ssd1306_bus import SSD1306`), so it can't shadow micropython-lib's `ssd1306`
-- `pydevices-desktop` from the index no longer carries the desktop board config; the `desktop` board package does, and depends on it. Before, a desktop board package for another host (`pgdisplay`, `windisplay`) could end up with the generic `board_config`
+- `omnipython-desktop` from the index no longer carries the desktop board config; the `desktop` board package does, and depends on it. Before, a desktop board package for another host (`pgdisplay`, `windisplay`) could end up with the generic `board_config`
 - The M5Stack Tab5 display init tables (`tab5_ili9881c_init.py`, `tab5_st7123_init.py`) parse again: their bytes had lost their quotes
-- palettes, pdwidgets and appkit live here now, each in its own folder with its own version, tests and docs. palettes and pdwidgets keep their PyPI names (`pydevices-palettes`, `pydevices-pdwidgets`) and version numbers, and release from this repository with tags named `palettes-vX.Y.Z` and `pdwidgets-vX.Y.Z`
+- palettes, pdwidgets and appkit live here now, each in its own folder with its own version, tests and docs. palettes and pdwidgets keep their PyPI names (`omnipython-palettes`, `omnipython-pdwidgets`) and version numbers, and release from this repository with tags named `palettes-vX.Y.Z` and `pdwidgets-vX.Y.Z`
 - sayso, a lightweight Spotify Web API client for CPython, MicroPython and CircuitPython with a touch-screen remote app, lives here now, in `sayso/` with its own version (0.1.0), tests and examples. It has no PyPI or mip release yet. See [sayso/README.md](https://github.com/PyDevices/pydevices/blob/main/sayso/README.md)
 - **Breaking change** (pydevices is under 1.0, so it lands without waiting for 2.0): `usb.host.hid` returns key presses, mouse buttons and movement as events named the way `adafruit_hid` names them, and no longer returns raw reports. In 0.7.6, `Device.read()` returned the report's bytes (a keyboard's modifier byte, a reserved byte, then the keys held); it now returns `None` or a tuple: `(KEY_DOWN, keycode, modifiers)`, `(KEY_UP, ...)`, `(CONSUMER_DOWN, code, 0)`, `(CONSUMER_UP, ...)`, or `(MOUSE_EVENT, buttons, dx, dy, wheel)`. Code that unpacked report bytes has to change; there is no switch to get the bytes back. `Device(dev, KEYBOARD)` and `Device.match()` work as before. See [docs/usb.md](https://github.com/PyDevices/pydevices/blob/main/docs/guides/usb.md).
 - usb-host-hid: new `usb.host.hid_codes` with `Keycode`, `ConsumerControlCode` and `Mouse`'s button names, at `adafruit_hid`'s values, so nothing needs `adafruit_hid` installed
@@ -272,7 +472,7 @@
 - web_audio: convert each write's PCM16 to float in one JS call, not sample by sample in Python (#206)
 - T-Watch S3: switch off unused power rails, power the radio, amplifier and haptic driver only while used, and wake on USB (#202)
 - Roadmap: MIDI follows adafruit_midi's API over any transport; bledev's MIDI and HID ends meet Adafruit's (#205)
-- mdns moves to pydevices-desktop: CircuitPython's mdns API over python-zeroconf (#204)
+- mdns moves to omnipython-desktop: CircuitPython's mdns API over python-zeroconf (#204)
 - audiodev: play a VorbisDecoder through the pump's prefetcher, as an MP3 (#203)
 - multimer: Ctrl-C after a long timer callback ends the program; no stray tracebacks (#201)
 - sys.exit() or Ctrl-C from a timer callback now ends the program every time (#200)
@@ -591,7 +791,7 @@ against the old path's 234 µs.
 - Regenerate the ecosystem map: the pygraphics and palettes descriptions
 - Regenerate the ecosystem map: lvgl-python no longer claims macOS wheels
 - tests: the pump job checks out audiodsp at v0.5.1, not its default branch (#48)
-- The core's distribution is pydevices-audiodsp (#47)
+- The core's distribution is omnipython-audiodsp (#47)
 - audioif is audiodsp: links, names and the CPython extension follow the core's rename (#46)
 - t-embed: publish wire= and audio_power= so the pump owns I2S(1) (#41) (#44)
 - board-bringup: reset after installing, and bring the display up before Wi-Fi (#43)

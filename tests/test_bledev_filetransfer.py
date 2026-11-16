@@ -35,7 +35,7 @@ class BledevFileTransfer(unittest.TestCase):
         interpreter = _micropython()
         if interpreter is None:
             message = "no micropython binary: the file-transfer protocol did NOT run on MicroPython"
-            if os.environ.get("PYDEVICES_REQUIRE_MICROPYTHON") == "1":
+            if os.environ.get("OMNIPYTHON_REQUIRE_MICROPYTHON") == "1":
                 self.fail(message)
             sys.stderr.write("\n*** " + message + " ***\n")
             self.skipTest(message)

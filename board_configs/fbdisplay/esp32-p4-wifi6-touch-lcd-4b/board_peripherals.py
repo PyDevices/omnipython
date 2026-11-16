@@ -234,7 +234,7 @@ def _refuse_if_held(session, wanted, holder):
     is in use does not raise on esp32: it deinitialises the live instance and
     hands the same object back in the new direction. Opening the microphone
     during playback silenced the speaker with no error anywhere, and
-    ``playing`` stayed True (pydevices#23, heard on this board). So the second
+    ``playing`` stayed True (omnipython#23, heard on this board). So the second
     direction is refused here, by name, instead.
 
     This still applies with the audio pump, to pcm_out: it is machine.I2S
@@ -365,15 +365,12 @@ def _pcm_in(format=None, *, latency=None, queue_ms=None):
     check_latency(latency)
     wire, source = negotiate(AUDIO_IN, format)
     if source is not wire:
-        # Capture has no adapter. negotiate() will happily say "open the wire
-        # at 1 channel and convert to the 2 you asked for", but that machinery
-        # exists only on the push side -- so handing back the wire format here
-        # would give a caller who asked for stereo a mono stream and no error.
-        # Silently-different is the exact failure this contract prevents.
-        raise ValueError(
-            "this board captures %d channel(s); asked for %d, and capture "
-            "cannot be remixed" % (wire.channels, source.channels)
-        )
+        # The wire takes another channel count: open it at its own and mix down
+        # (or copy up) to the one asked for.
+        from audiodev import adapt_input_channels
+        from audiodev.accel import best_remix
+
+        return adapt_input_channels(_pcm_in(wire, latency=latency, queue_ms=queue_ms), source, remix=best_remix())
     _mclk_rate = wire.rate
     ibuf = queue_bytes(wire, latency, queue_ms, default=_IBUF, minimum=_MIN_IBUF)
     pump = _duplex_pump()
@@ -570,6 +567,10 @@ def camera(**kwargs):
         )
     kwargs.setdefault("sda", _CAM_SDA)
     kwargs.setdefault("scl", _CAM_SCL)
+    # The module sits upside down in this panel: turn the sensor's picture a
+    # half turn (flip and mirror) so frames arrive upright.
+    kwargs.setdefault("flip", True)
+    kwargs.setdefault("mirror", True)
     if "i2c" not in kwargs:
         # Open the board's bus first, so cameraif attaches to it. If the
         # camera opened the port on its own, the next machine.I2C on it (the

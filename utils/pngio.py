@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: MIT
 
 """pngio on CPython: PNG encode and decode, the same API as MicroPython's
-built-in pngio (micropython-pydevices' modules/pngio), over Pillow.
+built-in pngio (omnipython-builds' modules/pngio), over Pillow.
 
     png = pngio.PngEncoder(level=1).encode(fb, 480, 270)        # bytes
     d = pngio.PngDecoder(); w, h = d.open(png); d.decode(buf)   # RGB565 into buf

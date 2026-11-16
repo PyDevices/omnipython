@@ -2,7 +2,7 @@
 
 Touch controller helpers for `board_config.py`.
 
-Source: [`drivers/touch/`](https://github.com/PyDevices/pydevices/tree/main/drivers/touch)
+Source: [`drivers/touch/`](https://github.com/PyDevices/omnipython/tree/main/drivers/touch)
 
 ## board_config.py contract
 
@@ -26,9 +26,9 @@ See any working board config (e.g. `wokwi_ili9341_ft6x36_esp32s3` or
 Board packages include the touch driver when needed. Individual install:
 
 ```python
-mip.install("github:PyDevices/pydevices/drivers/touch/tt21100.py", target="./drivers/touch")
-mip.install("github:PyDevices/pydevices/drivers/touch/stmpe610.py", target="./drivers/touch")
-mip.install("github:PyDevices/pydevices/drivers/touch/ft6x36.py", target="./drivers/touch")
+mip.install("github:PyDevices/omnipython/drivers/touch/tt21100.py", target="./drivers/touch")
+mip.install("github:PyDevices/omnipython/drivers/touch/stmpe610.py", target="./drivers/touch")
+mip.install("github:PyDevices/omnipython/drivers/touch/ft6x36.py", target="./drivers/touch")
 ```
 
 These individual driver files are installed directly from GitHub; board
@@ -49,7 +49,7 @@ installers already include the drivers they require.
 
 ## CircuitPython shims
 
-Touch drivers for CircuitPython under [`drivers/touch/circuitpython/`](https://github.com/PyDevices/pydevices/tree/main/drivers/touch/circuitpython), Adafruit's vendored and a few of our own:
+Touch drivers for CircuitPython under [`drivers/touch/circuitpython/`](https://github.com/PyDevices/omnipython/tree/main/drivers/touch/circuitpython), Adafruit's vendored and a few of our own:
 
 | File | Chip |
 |------|------|
@@ -62,7 +62,7 @@ Touch drivers for CircuitPython under [`drivers/touch/circuitpython/`](https://g
 | `chsc6x.py` | CHSC6x (Seeed Round Display), on `busio.I2C` |
 | `cst816.py` | CST816 |
 
-The authoritative list is the source tree itself: [`drivers/touch/`](https://github.com/PyDevices/pydevices/tree/main/drivers/touch).
+The authoritative list is the source tree itself: [`drivers/touch/`](https://github.com/PyDevices/omnipython/tree/main/drivers/touch).
 
 ## Calibration (STMPE610 / PiTFT)
 

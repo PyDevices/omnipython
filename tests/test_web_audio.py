@@ -185,5 +185,23 @@ process.stdout.write(JSON.stringify(out));
             self.assertEqual(expected, case["chans"])
 
 
+class LockedTests(unittest.TestCase):
+    """``locked()`` is what lets `AudioOut` hold a sample until the click."""
+
+    def output(self, state):
+        out = web_audio.WebPCMOutput(AudioFormat(24000, 1, 16))
+        out._ctx = mock.Mock(state=state)
+        return out
+
+    def test_a_suspended_context_is_locked(self):
+        self.assertTrue(self.output("suspended").locked())
+
+    def test_a_running_context_is_not(self):
+        self.assertFalse(self.output("running").locked())
+
+    def test_no_context_yet_is_not(self):
+        self.assertFalse(web_audio.WebPCMOutput(AudioFormat(24000, 1, 16)).locked())
+
+
 if __name__ == "__main__":
     unittest.main()

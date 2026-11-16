@@ -11,20 +11,14 @@ Board code written for CircuitPython runs unchanged::
     wifi.radio.connect("ssid", "password")      # raises ConnectionError on failure
     print(wifi.radio.ipv4_address, wifi.radio.ap_info.rssi)
 
-Bringing up a fresh board, from a ``secrets.py`` holding ``WIFI_SSID`` and
-``WIFI_PASSWORD``::
-
-    import wifi
-    wifi.connect_from_secrets()
-
-``connect_from_secrets()`` prints its progress, returns ``True`` once the board
-has an address, and sets the clock from NTP.  When ``secrets.py`` is missing or
-its network isn't in range, it tries the networks ``wifi_manager`` has
-remembered (``docs/guides/wifi.md``), if ``wifi_manager`` is installed.
+To join a network from ``secrets.py`` or one the board remembered, use
+``wifi_manager.connect()`` (``docs/guides/wifi.md``); it runs on CircuitPython
+too.  ``connect_from_secrets()`` here only calls it, for boards whose ``boot.py``
+still does.
 
 This file is self-contained on purpose: it is the one you copy onto a board by
-hand so that ``mip`` has a network.  On CircuitPython the native ``wifi``
-module is used instead, so nothing here runs there.
+hand so that ``mip`` has a network, with ``radio.connect()``.  On CircuitPython
+the native ``wifi`` module is used instead, so nothing here runs there.
 
 How it differs from CircuitPython
 ---------------------------------
@@ -335,7 +329,7 @@ class Radio:
                 return
         self._join(ssid, password, bssid, _TIMEOUT_S if timeout is None else timeout)
 
-    def _join(self, ssid, password, bssid, timeout, progress=None):
+    def _join(self, ssid, password, bssid, timeout):
         w = self._wlan
         w.active(True)
         try:
@@ -351,7 +345,6 @@ class Radio:
         if not timeout:
             return
         t0 = ticks_ms()
-        last = t0
         while True:
             if self._ipv4() is not None:
                 return
@@ -371,9 +364,6 @@ class Radio:
                 except OSError:
                     pass
                 raise ConnectionError(reason)
-            if progress is not None and ticks_diff(now, last) >= 1000:
-                progress(elapsed // 1000, _STAT.get(status, status))
-                last = now
             sleep_ms(_POLL_MS)
 
     # -- access point
@@ -439,84 +429,21 @@ def sync_time():
         return False
 
 
-def _progress(seconds, status):
-    print("  waiting %ds (%s)" % (seconds, status))
-
-
-def _report():
-    info = radio.ap_info
-    rssi = info.rssi if info is not None else None
-    print("wifi: connected, ip %s, rssi %s dBm" % (radio.ipv4_address, rssi))
-
-
-def _from_wifi_manager():
-    """Networks wifi_manager remembered, without its setup mode.  None if absent."""
-    try:
-        import wifi_manager
-    except ImportError:
-        print("wifi: install wifi_manager to remember networks and set them up from a phone:")
-        print('  mip.install("pydevices", index="https://PyDevices.github.io/mip")')
-        return None
-    print("wifi: trying networks wifi_manager remembered")
-    return wifi_manager.connect(setup=False)
-
-
 def connect_from_secrets(module="secrets", *, wait=True, ntp=True, timeout=None):
-    """Connect using ``WIFI_SSID`` / ``WIFI_PASSWORD`` (or ``ssid`` / ``password``).
+    """Deprecated: call ``wifi_manager.connect()``, which this now does.
 
-    Prints progress, which is what you want at a REPL or in a bring-up script;
-    use ``radio.connect()`` for quiet.  Returns ``True`` once the station has an
-    address.  Safe to call again to rejoin after the link drops.
-
-    Args:
-        module (str): The module holding the credentials.
-        wait (bool): ``False`` starts the join and returns ``False`` at once;
-            poll ``radio.connected``.  For apps that can't stall.
-        ntp (bool): Set the clock once connected.  Skipped when the board was
-            already connected.
-        timeout (int): Seconds to wait.  Default 45.
+    Boards set up before the move still have this call in their ``boot.py``.
+    It needs ``wifi_manager.py`` beside this file (the ``omnipython`` package
+    has both).
     """
-    if radio.connected:
-        print("wifi: already connected")
-        _report()
-        return True
-    try:
-        s = __import__(module)
-    except ImportError:
-        s = None
-    ssid = password = None
-    if s is not None:
-        ssid = getattr(s, "WIFI_SSID", None) or getattr(s, "ssid", None)
-        password = getattr(s, "WIFI_PASSWORD", None) or getattr(s, "password", None)
-    if not ssid:
-        print("wifi: no %s module" % module if s is None else "wifi: WIFI_SSID missing in " + module)
-        if not wait:
-            return False
-        ip = _from_wifi_manager()
-        if ip and ntp:
-            sync_time()
-        return bool(ip)
+    import wifi_manager
 
-    print("wifi: connecting to", ssid)
-    try:
-        radio._join(
-            ssid,
-            password or "",
-            None,
-            0 if not wait else (_TIMEOUT_S if timeout is None else timeout),
-            _progress,
+    return bool(
+        wifi_manager.connect(
+            setup=False,
+            wait=wait,
+            ntp=ntp,
+            module=module,
+            timeout=_TIMEOUT_S if timeout is None else timeout,
         )
-    except ConnectionError as exc:
-        print("wifi:", ssid, "-", exc)
-        # A board carried away from home: its secrets.py network isn't here,
-        # but wifi_manager may know one that is.
-        ip = _from_wifi_manager()
-        if ip and ntp:
-            sync_time()
-        return bool(ip)
-    if not wait:
-        return False
-    _report()
-    if ntp:
-        sync_time()
-    return True
+    )

@@ -6,10 +6,10 @@
 Shows a pdwidgets list of three items and moves the highlight up and down
 when the joystick's hat or D-pad moves.
 
-Needs: a board_config with a display_drv and a joystick, which a PyDevices
-board package or pydevices-desktop provides, appdev and pdwidgets.
+Needs: a board_config with a display_drv and a joystick, which a OmniPython
+board package or omnipython-desktop provides, appdev and pdwidgets.
 
-Run it from pydevices' pdwidgets folder:
+Run it from OmniPython's pdwidgets folder:
     python examples/joystick_list_select.py
 
 Tested on: CPython 3.12 on Linux, in an SDL window.

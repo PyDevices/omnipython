@@ -2,19 +2,19 @@
   "urls": [
     [
       "board_config.py",
-      "github:PyDevices/pydevices/board_configs/busdisplay/i80/wt32sc01-plus/board_config.py"
+      "github:PyDevices/omnipython/board_configs/busdisplay/i80/wt32sc01-plus/board_config.py"
     ],
     [
       "board_peripherals.py",
-      "github:PyDevices/pydevices/board_configs/busdisplay/i80/wt32sc01-plus/board_peripherals.py"
+      "github:PyDevices/omnipython/board_configs/busdisplay/i80/wt32sc01-plus/board_peripherals.py"
     ],
     [
       "st7796.py",
-      "github:PyDevices/pydevices/drivers/display/st7796.py"
+      "github:PyDevices/omnipython/drivers/display/st7796.py"
     ],
     [
       "ft6x36.py",
-      "github:PyDevices/pydevices/drivers/touch/ft6x36.py"
+      "github:PyDevices/omnipython/drivers/touch/ft6x36.py"
     ],
     [
       "sdcard.py",
@@ -23,7 +23,7 @@
   ],
   "deps": [
     [
-      "pydevices",
+      "omnipython",
       "latest"
     ]
   ],
