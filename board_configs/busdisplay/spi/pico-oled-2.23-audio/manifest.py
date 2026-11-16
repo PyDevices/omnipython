@@ -8,7 +8,7 @@ metadata(
     version="0.1",
 )
 
-require("pydevices")
+require("omnipython")
 require("ssd1305")
 require("spibus")  # a firmware with its own spibus uses that one
 

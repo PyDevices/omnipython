@@ -2,24 +2,24 @@
   "urls": [
     [
       "board_config.py",
-      "github:PyDevices/pydevices/board_configs/busdisplay/spi/pico-oled-2.23-audio/board_config.py"
+      "github:PyDevices/omnipython/board_configs/busdisplay/spi/pico-oled-2.23-audio/board_config.py"
     ],
     [
       "board_peripherals.py",
-      "github:PyDevices/pydevices/board_configs/busdisplay/spi/pico-oled-2.23-audio/board_peripherals.py"
+      "github:PyDevices/omnipython/board_configs/busdisplay/spi/pico-oled-2.23-audio/board_peripherals.py"
     ],
     [
       "ssd1305.py",
-      "github:PyDevices/pydevices/drivers/display/ssd1305.py"
+      "github:PyDevices/omnipython/drivers/display/ssd1305.py"
     ],
     [
       "spibus.py",
-      "github:PyDevices/pydevices/drivers/bus/spibus.py"
+      "github:PyDevices/omnipython/drivers/bus/spibus.py"
     ]
   ],
   "deps": [
     [
-      "pydevices",
+      "omnipython",
       "latest"
     ]
   ],
