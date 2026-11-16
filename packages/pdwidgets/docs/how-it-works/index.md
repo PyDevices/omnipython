@@ -3,7 +3,7 @@
 pdwidgets is a widget toolkit written in pure Python, for touchscreen, desktop
 and browser interfaces. It builds buttons, forms, navigation, charts, dialogs
 and layout containers on a pydevices display driver and
-[pygraphics](https://pygraphics.readthedocs.io), with no native code to
+[pygraphics](https://docs.omnipython.org/en/latest/pygraphics/), with no native code to
 compile.
 
 ## A widget tree
@@ -50,7 +50,7 @@ need directly, such as `from pdwidgets.widgets.button import Button`.
 Layout uses `ALIGN`, `pct`, `Row`, `Column` and `Grid`, so a screen follows its
 panel's size; see [Lay out widgets](../guides/lay-out-widgets.md). Colors come
 from a Material Design palette each display builds with
-[palettes](https://palettes.readthedocs.io), and from color roles on the display;
+[palettes](https://docs.omnipython.org/en/latest/palettes/), and from color roles on the display;
 see [Theme an app](../guides/theme-an-app.md). `Widget` is also a plain
 container, and a subclass keeps its hit testing and redraw behavior, so a custom
 widget stays on the normal event and invalidation path instead of adding a

@@ -24,4 +24,4 @@ yourself, so the byte order matches what pdwidgets draws.
 
 pdwidgets' own color roles (primary, surface, error and the rest) live on its
 `ColorTheme`, which uses a palette only to convert its colors to RGB565. The
-[pdwidgets docs](https://pdwidgets.readthedocs.io) cover changing them.
+[pdwidgets docs](https://docs.omnipython.org/en/latest/pdwidgets/) cover changing them.

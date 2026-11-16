@@ -3,8 +3,8 @@
 pdwidgets is one pure-Python package. The pip package is called
 `pydevices-pdwidgets`; you import `pdwidgets`. It draws through a display from
 [pydevices](https://github.com/PyDevices/pydevices/blob/main/docs/index.md), colors from
-[palettes](https://palettes.readthedocs.io) and shapes from
-[pygraphics](https://pygraphics.readthedocs.io), and pip installs all three
+[palettes](https://docs.omnipython.org/en/latest/palettes/) and shapes from
+[pygraphics](https://docs.omnipython.org/en/latest/pygraphics/), and pip installs all three
 for you.
 
 ## On a desktop (CPython)
