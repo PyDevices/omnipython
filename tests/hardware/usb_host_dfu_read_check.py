@@ -13,7 +13,7 @@ holding the firmware0 whose first 128 KB hash to EXPECTED.
 
 Run it:
 
-    mpftp run --follow tests/hardware/usb_host_dfu_read_check.py
+    mcuctl run --follow tests/hardware/usb_host_dfu_read_check.py
 
 Expect: the alternates "Internal Flash" and others, then "match True". If the
 read doesn't match, the bootloader's pointer may not be where this assumes;

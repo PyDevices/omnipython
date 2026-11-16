@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: MIT
 """The BLE-MIDI gate and latency rig, client side.
 
-Needs ``midi_server.py`` serving on a board. Runs on a board (mpftp probe)
+Needs ``midi_server.py`` serving on a board. Runs on a board (mcuctl probe)
 or on a laptop (bleak, Windows Python)::
 
     PYTHONPATH="$(wslpath -w lib)" python.exe "$(wslpath -w tests/bledev_board/midi_client.py)" [gate] [latency] [--fast] [--plant]

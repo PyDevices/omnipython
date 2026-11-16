@@ -3,9 +3,9 @@
 # SPDX-License-Identifier: MIT
 """The file-transfer gate, board side: serve files and the REPL over BLE and return.
 
-Run it from ``/main.py`` (mpftp's serial connect soft-resets the board, which
+Run it from ``/main.py`` (mcuctl's serial connect soft-resets the board, which
 turns Bluetooth off), then drive it over the air with ``files_client.py`` or
-``mpftp -d ble://bledev-files``. The password is a test value, not a secret.
+``mcuctl -d ble://bledev-files``. The password is a test value, not a secret.
 
 ``PLANT = "flip"`` flips one bit in the third packet of every file read, which
 the client's byte-for-byte check must catch. ``WINDOW`` is the free space the

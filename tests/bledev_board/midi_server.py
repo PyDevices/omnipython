@@ -3,9 +3,9 @@
 # SPDX-License-Identifier: MIT
 """The BLE-MIDI gate and latency rig, board side: serve BLE-MIDI as ``bledev-midi``.
 
-Run it from ``/main.py`` on one MicroPython board (mpftp soft-resets a board
-before it runs a script, and a soft reset turns Bluetooth off, so ``mpftp run``
-would lose it); on CircuitPython, ``mpftp run`` works. ``midi_client.py`` on another board or a laptop then connects and
+Run it from ``/main.py`` on one MicroPython board (mcuctl soft-resets a board
+before it runs a script, and a soft reset turns Bluetooth off, so ``mcuctl run``
+would lose it); on CircuitPython, ``mcuctl run`` works. ``midi_client.py`` on another board or a laptop then connects and
 asks for one of two sessions with a SysEx command, ``F0 7D 10 <mode> F7``:
 
 * mode 1, the gate: this side reads 1,000 mixed messages (``mix()``),
@@ -27,7 +27,7 @@ import sys
 import bledev.midi as midi
 
 if sys.implementation.name == "circuitpython":
-    import bledev.cpble as backend  # mpftp run keeps Bluetooth on here
+    import bledev.cpble as backend  # mcuctl run keeps Bluetooth on here
 else:
     import bledev.mpble as backend
 

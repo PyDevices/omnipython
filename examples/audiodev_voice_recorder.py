@@ -12,7 +12,7 @@ Needs: a board config with sdcard and pcm_in roles, and a microSD card.
 
 Run it:
 
-    mpftp run audiodev_voice_recorder.py
+    mcuctl run audiodev_voice_recorder.py
 
 Tested on: ESP32 Audio Kit (ESP32-A1S), MicroPython 1.30.0-preview,
 recording the line-in jack.

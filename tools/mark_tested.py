@@ -10,13 +10,13 @@ untested index, see CONTRIBUTING.md), from the repository root:
     python tools/mark_tested.py esp32-s3-touch-lcd-4_3 -d ws://my-board.local \\
         --hardware "Waveshare ESP32-S3-Touch-LCD-4.3, rev 2"
 
-It runs ``tools/smoke/board_smoke.py`` on the board with mpftp, prints each
+It runs ``tools/smoke/board_smoke.py`` on the board with mcuctl, prints each
 check, and when every one passed adds a run to the board's ``tested.json``
 (the hardware, the firmware the board reported, the date and the checks).
 Commit that file in a pull request: once it merges, the board's package and
 its drivers publish to the main index. Nothing is written when a check fails.
 
-``-d`` is anything mpftp takes (``ws://HOST``, ``COM5``, ``/dev/ttyACM0``).
+``-d`` is anything mcuctl takes (``ws://HOST``, ``COM5``, ``/dev/ttyACM0``).
 ``--local MICROPYTHON`` runs a desktop interpreter instead, for the desktop
 board configs. ``--path`` is where the package was installed if not the
 board's ``/lib``. ``--skip ROLE`` leaves a peripheral out (by default
@@ -61,14 +61,14 @@ def smoke_script(skip: list[str], path: str | None) -> str:
     return head + SMOKE.read_text(encoding="utf-8")
 
 
-def mpftp_command() -> list[str]:
-    found = os.environ.get("MPFTP") or shutil.which("mpftp")
+def mcuctl_command() -> list[str]:
+    found = os.environ.get("MCUCTL") or shutil.which("mcuctl")
     if not found:
-        sibling = ROOT.parent / "mpftp" / "scripts" / "mpftp"
+        sibling = ROOT.parent / "mcuctl" / "scripts" / "mcuctl"
         if sibling.is_file():
             found = str(sibling)
     if not found:
-        raise SystemExit("mark_tested: mpftp not found (pip install mcuctl, or set MPFTP)")
+        raise SystemExit("mark_tested: mcuctl not found (pip install mcuctl, or set MCUCTL)")
     return [found]
 
 
@@ -82,7 +82,7 @@ def run_smoke(args, script: str) -> str:
                 env["MICROPYPATH"] = f"{args.path}:.frozen"
             result = subprocess.run([args.local, str(path)], capture_output=True, text=True, timeout=args.timeout, env=env)
             return result.stdout + result.stderr
-        command = mpftp_command() + ["run", str(path), "-d", args.device, "--follow"]
+        command = mcuctl_command() + ["run", str(path), "-d", args.device, "--follow"]
         result = subprocess.run(command, capture_output=True, text=True, timeout=args.timeout)
         out = result.stdout + result.stderr
         try:
@@ -102,7 +102,7 @@ def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("board", help="the board package, named by its folder")
     where = parser.add_mutually_exclusive_group(required=True)
-    where.add_argument("-d", "--device", help="the board, as mpftp names it")
+    where.add_argument("-d", "--device", help="the board, as mcuctl names it")
     where.add_argument("--local", metavar="MICROPYTHON", help="run on this desktop interpreter instead")
     parser.add_argument("--hardware", required=True, help="what it ran on, as a person would say it")
     parser.add_argument("--path", help="where the package is installed, if not the board's /lib")

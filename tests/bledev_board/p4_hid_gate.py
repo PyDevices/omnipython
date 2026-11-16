@@ -4,7 +4,7 @@
 """The HID gate, repeated, with a board as the device and the P4 as the host.
 
 Runs on Windows Python with pyserial, driving both boards' friendly REPLs over
-their UARTs (``uart_rig.py``). Set up once with mpftp:
+their UARTs (``uart_rig.py``). Set up once with mcuctl:
 
 * the device board (an S3): ``/hidp.py`` = ``hid_peripheral.py``, and
   ``/hidp_plant.py`` = the same with ``PLANT = True``;

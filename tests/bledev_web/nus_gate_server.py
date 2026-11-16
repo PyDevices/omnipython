@@ -8,7 +8,7 @@ BYE), but it keeps serving, one link after another, so a browser can run the
 gate again without restarting the board. Each link's MTU is logged, because
 the browser can't report it. ``PLANT = True`` flips one bit at offset 5000 of
 everything this side sends, and the page must then report FAIL. Logs to
-/gate_server.log. Stop it with Ctrl-C (any mpftp command does).
+/gate_server.log. Stop it with Ctrl-C (any mcuctl command does).
 """
 import asyncio, time
 import bledev.mpble

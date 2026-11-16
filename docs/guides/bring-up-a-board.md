@@ -90,7 +90,7 @@ WIFI_SSID = "..."
 WIFI_PASSWORD = "..."
 ```
 
-The same file is all `mpftp wifi enable` needs to set the board up for
+The same file is all `mcuctl wifi enable` needs to set the board up for
 reaching it over Wi-Fi later: it writes `/webrepl_cfg.py` and a `boot.py` block
 on MicroPython, and the web workflow settings in `settings.toml` on
 CircuitPython. Stock firmware works, with or without `wifi_manager`.
