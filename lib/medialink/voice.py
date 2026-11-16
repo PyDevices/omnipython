@@ -24,8 +24,8 @@ The detector scores each slice against a floor of its own, and in a very
 quiet room that floor is so low that a rise of 2 dB in the hiss can score as
 speech: a P4X-EYE's microphone hears a quiet room at a mean absolute sample
 of 5 to 11, and such a rise started a turn there. So a frame the detector
-calls speech also has to be 3.5 dB over the room's level floor, the one the
-level gate keeps, and its first second, when the same microphone clicks as
+calls speech also has to be 10 dB over the room's level floor, as the level
+gate asks, and its first second, when the same microphone clicks as
 it opens, is never speech. A fixed level would do it too, but one over the
 hiss of a quiet microphone is over a voice across the room as well.
 
@@ -41,8 +41,8 @@ import struct
 from medialink._compat import ticks_diff, ticks_ms
 
 # What the detector calls speech must also be this far over the room's level
-# floor (3.5 dB), and over a level only a quiet room's hiss reaches.
-_OVER_FLOOR = 1.5
+# floor (10 dB), and over a level a quiet room's hiss doesn't reach.
+_OVER_FLOOR = 3.16
 _LEAST = 12
 
 
