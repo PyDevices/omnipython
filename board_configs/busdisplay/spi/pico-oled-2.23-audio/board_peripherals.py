@@ -125,8 +125,9 @@ class _PIOStream:
     ahead of where the DMA reads and returns how much fitted, never blocking,
     which is what ``machine.I2S`` does in its non-blocking mode. Behind the
     read position the ring is cleared, so if the writer falls behind, the
-    DAC plays silence rather than the last lap again. That holds while
-    `write` is called at least once per lap: 93 ms at 44.1 kHz.
+    DAC plays silence rather than the last lap again, however long the
+    writer was away: what has played is counted from the DMA's own transfer
+    count, which doesn't wrap with the ring.
 
     Args:
         rate (int): the sample rate, in Hz.
@@ -172,6 +173,7 @@ class _PIOStream:
     def _start(self):
         self._dma.config(read=self._base, write=self._txf, count=_COUNT, ctrl=self._ctrl, trigger=True)
         self._read = 0  # where the DMA read last time we looked
+        self._left = _COUNT  # the DMA's transfer count then
         self._write = _LEAD  # where the next byte goes
         self._queued = _LEAD  # bytes between the two
 
@@ -188,15 +190,22 @@ class _PIOStream:
         if not self._dma.active():
             self._clear(0, self._size)
             self._start()
+        left = self._dma.count
+        # Bytes played since the last look. The read address alone would
+        # lose a whole lap each time the writer was away longer than one.
+        gone = (self._left - left) * 4
         now = (self._dma.read - self._base) & (self._size - 1)
-        last = self._read
-        if now != last:
-            if now > last:
+        if gone:
+            last = self._read
+            if gone >= self._size:
+                self._clear(0, self._size)
+            elif now > last:
                 self._clear(last, now)
             else:
                 self._clear(last, self._size)
                 self._clear(0, now)
-            self._queued -= (now - last) & (self._size - 1)
+            self._queued -= gone
+            self._left = left
             self._read = now
             if self._queued < 0:
                 # It ran dry. Start again far enough ahead of the DMA that it
