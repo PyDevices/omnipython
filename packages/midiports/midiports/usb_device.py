@@ -274,17 +274,13 @@ def ports(ring=256, stamps=None, name=None):
     The built-in USB serial port stays, so the REPL survives. Calling this
     re-enumerates the board on the host, which lists it as *name*: the
     board's name, ``boarddev.name()`` from OmniPython, when None.
-
-    Raises:
-        AttributeError: *name* is None and the board's boarddev, frozen into
-            older firmware, has no ``name()``.
     """
     import usb.device
 
     if name is None:
-        import _boardname
+        import boarddev
 
-        name = _boardname.name("ports() names the USB device", "midiports", "pass name= to ports()")
+        name = boarddev.name()
     itf = MIDIPortsInterface(ring=ring, stamps=stamps)
     usb.device.get().init(itf, builtin_driver=True, product_str=name)
     return itf.ports
