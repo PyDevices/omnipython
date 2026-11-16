@@ -345,6 +345,8 @@ and Android.
   Get it: `omip`, from the app's folder, from source. Runs on: MP, Desktop, Web.
 - [`Huey's Perch`](https://github.com/PyDevices/apps/tree/main/apps/perch): Watch Huey the chameleon walk, catch bugs and change colour in vector art drawn at your screen's size.\
   Get it: `omip`, from the app's folder, from source. Runs on: MP, Desktop, Web.
+- [`Huey`](https://github.com/PyDevices/apps/tree/main/apps/huey): Hold Huey the chameleon and talk to him; he answers aloud and acts out his reply.\
+  Get it: `omip`, from the app's folder, from source. Runs on: MP with touch, Wi-Fi, a microphone and PSRAM.
 - [`Bit World`](https://github.com/PyDevices/apps/tree/main/apps/bit_world): Watch a pixel robot's world, play its sky game and drive its deck.\
   Get it: `omip`, from the app's folder, from source. Runs on: MP, Desktop, Web.
 - [`Ostinato`](https://github.com/PyDevices/apps/blob/main/docs/guides/run-ostinato.md): Sequence patterns and edit songs in a groovebox.\
@@ -440,7 +442,7 @@ and Android.
 - **E:** [`Environment sensors`](#drive-a-chip), [`events`](#write-an-app)
 - **F:** [`frame_recorder`](#draw-on-a-screen), [`fs_driver`](#draw-on-a-screen)
 - **G:** [`Gallery`](#run-a-finished-app), [`Gamepad`](#run-a-finished-app)
-- **H:** [`h264enc`](#use-cameras-video-and-ai-on-a-board), [`Hands free`](#run-a-finished-app), [`Haptics`](#drive-a-chip), [`hmilink`](#connect-devices), [`Home`](#run-a-finished-app), [`Huey's Perch`](#run-a-finished-app)
+- **H:** [`h264enc`](#use-cameras-video-and-ai-on-a-board), [`Hands free`](#run-a-finished-app), [`Haptics`](#drive-a-chip), [`hmilink`](#connect-devices), [`Home`](#run-a-finished-app), [`Huey`](#run-a-finished-app), [`Huey's Perch`](#run-a-finished-app)
 - **I:** [`I/O expanders`](#drive-a-chip), [`iconkit`](#draw-on-a-screen), [`IMUs`](#drive-a-chip), [`Infrared`](#drive-a-chip), [`Internet radio`](#run-a-finished-app)
 - **J:** [`Joysticks`](#drive-a-chip), [`jpegio`](#draw-on-a-screen), [`jpegio for CPython`](#draw-on-a-screen), [`jupyter.py`](#run-somewhere-other-than-a-board)
 - **K:** [`keys`](#write-an-app)
