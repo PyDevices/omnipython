@@ -1305,6 +1305,38 @@ class PaceOutputTests(unittest.TestCase):
         self.assertEqual(8, len(inner.data))
         self.assertEqual(24, pcm.queued_size())
 
+    def test_queued_size_flushes_the_stash_into_a_drained_device(self):
+        class Ring(FakePCMOutput):
+            def __init__(self, fmt, dma_bytes):
+                super().__init__(fmt)
+                self._queued = 0
+                self._dma = dma_bytes
+
+            def queued_size(self):
+                return self._queued
+
+            def _write(self, buf):
+                take = min(len(buf), self._dma - self._queued)
+                take -= take % self.format.frame_size
+                if take <= 0:
+                    return 0
+                self._queued += take
+                self.data.extend(buf[:take])
+                return take
+
+        inner = Ring(AudioFormat(44100, 2, 16), 1764)
+        pcm = pace_output(inner, queue_ms=10)
+        pcm.open()
+        pcm.write(bytes(3528))
+        self.assertEqual(1764, pcm._held)
+        # The DAC plays out its ring. A caller that writes only while
+        # queued_size() is under 1764 must see the stash move into the
+        # ring, or it never writes again and the DAC stays empty.
+        inner._queued = 0
+        self.assertEqual(1764, pcm.queued_size())
+        self.assertEqual(0, pcm._held)
+        self.assertEqual(3528, len(inner.data))
+
     def test_write_returns_without_waiting_for_inner_drain(self):
         import audiodev as module
 

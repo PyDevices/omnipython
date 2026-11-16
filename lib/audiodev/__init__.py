@@ -1300,6 +1300,13 @@ class PaceOutput(PCMOutput):
             self.is_open = False
 
     def queued_size(self):
+        """Bytes queued for the DAC, the stash included. Flushes first.
+
+        A caller that writes only while this is under a threshold would
+        otherwise never write again once the stash alone reached it: the
+        stash drains only on a write, and the DAC ran dry behind it.
+        """
+        self._flush()
         return self._inner.queued_size() + self._held
 
     @property
