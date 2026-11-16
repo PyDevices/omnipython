@@ -212,6 +212,8 @@ class BleIn(PortIn):
         self._waiting = 0
         self._stamps = Stamps(stamps)
         self._closed = False
+        #: Whether closing turns the radio off: `ports` found it off.
+        self.radio_off = False
         self._pump = (not _loop_running()) if pump is None else pump
         if self._pump and sys.implementation.name not in ("micropython", "circuitpython"):
             raise RuntimeError("on CPython, open BLE MIDI ports from inside a running asyncio loop")
@@ -339,8 +341,9 @@ class BleIn(PortIn):
         return port.write(buf, nbytes)
 
     def close(self):
-        """Stop advertising and drop the link. The radio stays on. A note
-        still sounding gets its note-off, left to be read."""
+        """Stop advertising and drop the link. A note still sounding gets
+        its note-off, left to be read. The radio goes back off if `ports`
+        found it off."""
         if self._closed:
             return
         self._closed = True
@@ -357,6 +360,8 @@ class BleIn(PortIn):
                 asyncio.run(_yield())  # lets the cancel and the disconnect run
             except Exception:  # noqa: BLE001 - closing either way
                 pass
+        if self.radio_off:
+            _radio_stop(self._ble)
 
     deinit = close
 
@@ -389,18 +394,50 @@ def ports(name=None, *, adapter=None, pump=None, pump_ms=PUMP_MS, queue_limit=QU
         pump_ms: the shortest time between two of those runs.
         queue_limit: messages kept for a reader that isn't reading.
 
+    A radio that was off is turned on here, and turned off again when the
+    input closes or fails to start, so its memory goes back to the board.
+
     Raises:
         ImportError: ``bledev`` (or MicroPython's ``aioble``) isn't installed.
     """
     import bledev.midi  # noqa: F401 - raises here, before anything starts, when it's missing
 
-    if adapter is None:
-        import bledev.auto
+    was_on = _radio_on()
+    try:
+        if adapter is None:
+            import bledev.auto
 
-        adapter = bledev.auto.adapter()
-    if name is None:
-        import boarddev
+            adapter = bledev.auto.adapter()
+        if name is None:
+            import boarddev
 
-        name = boarddev.name()
-    link = BleIn(name, adapter, pump=pump, pump_ms=pump_ms, queue_limit=queue_limit)
+            name = boarddev.name()
+        link = BleIn(name, adapter, pump=pump, pump_ms=pump_ms, queue_limit=queue_limit)
+    except Exception:
+        # A radio that failed to start keeps what it took, internal RAM
+        # the board's other drivers need, until it's turned off again.
+        if was_on is False:
+            _radio_stop(adapter)
+        raise
+    link.radio_off = was_on is False
     return link, BleOut(link)
+
+
+def _radio_on():
+    """Whether the radio is on, or None where asking would turn it on."""
+    if sys.implementation.name != "micropython":
+        return None
+    try:
+        import bluetooth
+    except ImportError:  # a stand-in adapter on a build without a radio
+        return None
+    return bool(bluetooth.BLE().active())
+
+
+def _radio_stop(adapter):
+    if adapter is not None:
+        adapter.close()
+    else:
+        import bluetooth
+
+        bluetooth.BLE().active(False)

@@ -46,7 +46,7 @@ CHECK_TIMEOUT_S = 10
 NAME = "synth"
 
 #: Faults the checks must catch.
-PLANTS = ("no-release", "flat-stamps", "split-message")
+PLANTS = ("no-release", "flat-stamps", "split-message", "radio-left-on")
 
 TESTS = []
 
@@ -83,6 +83,8 @@ def _plant(name):
             return item
 
         midi.Port.take = take
+    elif name == "radio-left-on":
+        ble._radio_stop = lambda adapter: None
     else:
         raise SystemExit("no plant %r" % name)
 
@@ -292,6 +294,40 @@ async def a_failure_is_raised_not_hidden(air):
             pass
         else:
             raise Failed("any() raises what stopped the link")
+
+
+@check
+async def a_radio_found_off_goes_back_off(air):
+    radio, link = ble._radio_on, ble.BleIn
+    stops = []
+
+    class Counted(FakeBLE):
+        def close(self):
+            stops.append(1)
+            FakeBLE.close(self)
+
+    def broken(*args, **kwargs):
+        raise OSError(116, "ETIMEDOUT")
+
+    try:
+        ble._radio_on = lambda: True  # a radio something else turned on: left on
+        midi_in, _ = ble.ports(NAME, adapter=Counted(air=air))
+        midi_in.close()
+        equal(len(stops), 0, "radio stops when it was found on")
+        ble._radio_on = lambda: False
+        midi_in, _ = ble.ports(NAME, adapter=Counted(air=air))
+        midi_in.close()
+        equal(len(stops), 1, "radio stops after close() when it was found off")
+        ble.BleIn = broken
+        try:
+            ble.ports(NAME, adapter=Counted(air=air))
+        except OSError:
+            pass
+        else:
+            raise Failed("a radio that fails to start raises")
+        equal(len(stops), 2, "radio stops after a failure to start")
+    finally:
+        ble._radio_on, ble.BleIn = radio, link
 
 
 def pumped(air):
