@@ -2,13 +2,14 @@
 #
 # SPDX-License-Identifier: MIT
 
-"""svgio.py (pydevices-desktop): MicroPython's svgio API over resvg and Pillow.
+"""svgio.py (pydevices-desktop) on a desktop: MicroPython's svgio API over resvg and Pillow.
 
 The full test is micropython-pydevices' modules/svgio/tests/test_svgio.py,
 which runs unchanged on CPython against this file, and whose renders its
 check_svgio_references.py compares. What is here is the CPython-only part:
 sizes, the three ways to decode, placement, and the message a desktop
-without resvg-py gets.
+without resvg-py gets. The backend a browser uses instead has its own tests,
+test_svgio_canvas.py and test_svgio_browser.py.
 """
 
 import importlib
@@ -88,7 +89,7 @@ class Decode(unittest.TestCase):
 
 class WithoutResvg(unittest.TestCase):
     def test_the_message_says_how_to_install_it(self):
-        saved = {k: sys.modules.pop(k) for k in list(sys.modules) if k in ("svgio", "resvg_py")}
+        saved = {k: sys.modules.pop(k) for k in list(sys.modules) if k in ("svgio", "_svgio_resvg", "resvg_py")}
         sys.modules["resvg_py"] = None  # import resvg_py now raises ImportError
         try:
             with self.assertRaises(ImportError) as cm:
@@ -97,6 +98,7 @@ class WithoutResvg(unittest.TestCase):
         finally:
             sys.modules.pop("resvg_py", None)
             sys.modules.pop("svgio", None)
+            sys.modules.pop("_svgio_resvg", None)
             sys.modules.update(saved)
 
 
