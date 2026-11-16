@@ -367,12 +367,17 @@ _CHUNK_MS = 40               # what audio_out() renders per pull
 _LOOKAHEAD_MS = {None: 80, "low": 80, "buffered": 300}
 
 
-def audio_out(format=None, *, latency=None, **kwargs):
+def audio_out(format=None, *, latency=None, pump=True, **kwargs):
     """``pcm_out()`` wrapped in an ``audiodev.AudioOut``, the player a
     board's ``audio_out`` role returns: ``play()``, ``stop()``, ``playing``.
-    Call its ``service()`` often, or ``attach()`` it to an app, to keep the
-    speaker fed. The graph is pulled on the interpreter thread: the board's
-    audio pump drives I2S, not this bus.
+    Call its ``service()`` often, or ``attach()`` it to an app.
+
+    Where the firmware's audio pump can write to a USB speaker, it does: the
+    graph is rendered and sent off the interpreter thread, with about 10 ms
+    queued, and ``latency`` and the chunk keywords below don't apply. The
+    graph must be 16-bit at the speaker's rate and channel count;
+    otherwise, or with ``pump=False``, or on a firmware without that pump,
+    the graph is pulled on the interpreter thread as follows.
 
     The default, and ``latency="low"``, keep 80 ms of sound queued, so a
     note sounds soon after it's struck. Nothing is pulled while the
@@ -390,5 +395,5 @@ def audio_out(format=None, *, latency=None, **kwargs):
     lookahead_chunks = kwargs.pop("lookahead_chunks", max(1, -(-_LOOKAHEAD_MS[latency] // chunk_ms)))
     max_catchup_chunks = kwargs.pop("max_catchup_chunks", 5)
     kwargs.setdefault("ring_ms", max(_PCM_RING_MS, chunk_ms * (lookahead_chunks + max_catchup_chunks + 2)))
-    return AudioOut(pcm_out(format, **kwargs), pump=False, chunk_ms=chunk_ms,
+    return AudioOut(pcm_out(format, **kwargs), pump=pump, chunk_ms=chunk_ms,
                     lookahead_chunks=lookahead_chunks, max_catchup_chunks=max_catchup_chunks)
