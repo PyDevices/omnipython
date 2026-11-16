@@ -14,7 +14,7 @@ folder named music.
 
 Run it:
 
-    mpftp run audiodev_mp3_player.py
+    mcuctl run audiodev_mp3_player.py
 
 Tested on: ESP32 Audio Kit (ESP32-A1S), MicroPython 1.30.0-preview.
 """

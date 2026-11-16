@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: MIT
 """The REPL gate, board side: start ``bledev.repl`` as ``bledev-repl`` and return.
 
-Run it with ``mpftp exec`` (or ``run``) and leave the board at its REPL; the
+Run it with ``mcuctl exec`` (or ``run``) and leave the board at its REPL; the
 REPL keeps being served over BLE. ``repl_client.py`` then checks it from a
 laptop or another board. The password is a test value, not a secret.
 

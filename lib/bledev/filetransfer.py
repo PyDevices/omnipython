@@ -47,7 +47,7 @@ no ``AUTH`` characteristic, pairs ("just works", as CircuitPython asks) and
 skips the password.
 
 The protocol carries no checksum of its own beyond the link layer's CRC, so a
-client that must be sure checks what landed (mpftp compares SHA-256).
+client that must be sure checks what landed (mcuctl compares SHA-256).
 """
 
 import asyncio

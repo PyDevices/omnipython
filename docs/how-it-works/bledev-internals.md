@@ -619,7 +619,7 @@ adapters there instead. [`tests/test_bledev.py`](https://github.com/PyDevices/om
 must fail the contract; if you change the fake, keep that true.
 
 **Over a real radio**, [`tests/bledev_board/`](https://github.com/PyDevices/omnipython/tree/main/tests/bledev_board). Run the serving script with
-`mpftp run` on one board and the other with `mpftp probe --capture` on a
+`mcuctl run` on one board and the other with `mcuctl probe --capture` on a
 second, or run the client on the laptop with the Windows Python:
 
 ```bash
@@ -633,7 +633,7 @@ The serving scripts have a `PLANT` switch, and a planted run must fail:
 | `gatt_peripheral.py` + `gatt_central.py` | The contract over the air: find, MTU exchange, discovery order, read, 200 notifications in order, 100 captured writes in order, the MTU refusal, an indication, a disconnect from the far side |
 | `gatt_peripheral.py` + `gatt_latency.py` | Per-operation latency of reads and writes-with-response, with the stall count |
 | `nus_server.py` + `nus_client.py` | 16 KB up, down and echoed over nus, byte for byte, timed. On a laptop, `--fast` asks for throughput parameters and `--plant` flips a bit |
-| `repl_server.py` + `repl_client.py` | The REPL: the right password evaluates `123 * 456`, a wrong one sent with code that would create `/pwned` is refused and hung up on and the code never runs, and Ctrl-C stops `while True`. `repl_server.py` runs from `/main.py`, because mpftp soft-resets the board, which turns Bluetooth off |
+| `repl_server.py` + `repl_client.py` | The REPL: the right password evaluates `123 * 456`, a wrong one sent with code that would create `/pwned` is refused and hung up on and the code never runs, and Ctrl-C stops `while True`. `repl_server.py` runs from `/main.py`, because mcuctl soft-resets the board, which turns Bluetooth off |
 | `midi_server.py` + `midi_client.py` | BLE-MIDI. `gate`: 1,000 mixed messages up, checked by the server, then down, checked by the client; `--plant` on the client and `PLANT = "drop"` or `"flip"` on the server must FAIL. `latency`: note-on round trips through an echo, `--fast` for a 7.5 ms interval (throughput parameters on a laptop). A board client reads its arguments from `/midi_client_args.py` |
 | `reconnect_loop.py` (laptop) against `repl_server.py` | Rapid reconnects: log in, run a line, close, wait 1.5 s, N times; `--no-retry` turns `connect_and_set_up`'s retry off |
 | `improv_server.py` + `improv_client.py` | Improv: `--wrong` must get "unable to connect" and a return to "authorized"; without it, on a board, the network comes from that board's own `secrets.py` and must end "provisioned" with a URL |
@@ -642,7 +642,7 @@ The serving scripts have a `PLANT` switch, and a planted run must fail:
 
 | `hid_peripheral.py` + `hid_central.py` | HID: the device types `hid_script.py`'s text, chords, media keys and gamepad moves; the host's events must equal `hid_script.expected()` and spell the text. Then key-press round trips. `PLANT` drops one Shift. The host also runs on a laptop, where it refuses to pair |
 | `bless_peripheral.py` + `bless_probe.py` | The laptop as a peripheral, through bless, probed by a board |
-| `pair_server.py` + `pair_client.py` (laptop) | Pairing. `pair`: a passkey read off the board's console, then the REPL and 20 KB through the file service on the paired link. `reconnect`: from the bond, nobody asked for a passkey. `wrong`: a passkey one off must fail pairing and leave Windows unpaired. `unpaired`: every protected characteristic refuses reads and writes. Plants on the server: `forget`, `justworks`, `open`. `uart_say.py` reads the board's state without mpftp's soft reset |
+| `pair_server.py` + `pair_client.py` (laptop) | Pairing. `pair`: a passkey read off the board's console, then the REPL and 20 KB through the file service on the paired link. `reconnect`: from the bond, nobody asked for a passkey. `wrong`: a passkey one off must fail pairing and leave Windows unpaired. `unpaired`: every protected characteristic refuses reads and writes. Plants on the server: `forget`, `justworks`, `open`. `uart_say.py` reads the board's state without mcuctl's soft reset |
 | `pair_server.py` + `files_pair_client.py` (board) | Board to board: the client pairs on its own, 20 KB both ways byte for byte, then reconnects from the bond. `plant="flip"` and `plant="nopair"` must FAIL |
 | `nus_server.py` + `nus_client.py` | 16 KB up, down and echoed over nus, byte for byte, timed |
 | [`tests/bledev_web/nus_gate_server.py`](https://github.com/PyDevices/omnipython/blob/main/tests/bledev_web/nus_gate_server.py) + a gate page | The same, from a browser through webble |
@@ -849,7 +849,7 @@ way, every run byte for byte:
 |---|---|---|
 | `files_client.py`, Windows' defaults, 5 runs in two sessions | 0.73-1.42 s (14.5-27.9 KB/s) | 0.80-0.98 s (20.8-25.5 KB/s) |
 | `files_client.py --fast` (throughput parameters), 3 runs | 0.72-0.82 s (24.9-28.4 KB/s) | 0.32-0.39 s (52.1-64.2 KB/s) |
-| mpftp's `ble_bench.py`, throughput parameters, median of 3 | 0.83 s (24.0 KB/s) | 0.30 s (67.5 KB/s) |
+| mcuctl's `ble_bench.py`, throughput parameters, median of 3 | 0.83 s (24.0 KB/s) | 0.30 s (67.5 KB/s) |
 | the same over mpremote's raw REPL (256-byte chunks) | 15.6 s (1.3 KB/s) | 10.6 s (1.9 KB/s) |
 | the same over the raw REPL, 4 KB chunks | 11.8 s (1.7 KB/s) | 6.3 s (3.2 KB/s) |
 | `ble_bench.py`, Windows' defaults, file transfer / raw REPL | 1.37 s / 43.6 s | 0.49 s / 26.6 s |
@@ -860,7 +860,7 @@ and prints what it reads as text. Downloads run near nus's own notification
 rate. Uploads are held to about 25 KB/s by the board writing flash between
 windows. Up got slower from run to run at Windows' defaults (25.8, 17.4, 14.5
 KB/s), overwriting the same file each time. The planted bit flip on the client
-failed the round-trip check. mpftp's `ble://` transport, and its gate, are in
+failed the round-trip check. mcuctl's `ble://` transport, and its gate, are in
 [PyDevices/mcuctl](https://github.com/PyDevices/mcuctl) `docs/plans/ble.md`.
 
 ### CircuitPython (cpble)
@@ -923,7 +923,7 @@ connection itself. To fit in that board's heap, `nus_client.py` receives into
 one reused buffer and checks afterwards, and `Link.read()` and `readexactly()`
 copy once instead of twice.
 
-**mpftp on CircuitPython**, noticed on the way: a long `exec` or `run` sent
+**mcuctl on CircuitPython**, noticed on the way: a long `exec` or `run` sent
 over the serial REPL arrived garbled now and then (a base64 chunk of 6,000
 characters decoded with 11 wrong bytes, twice), and `put` with the drive
 disabled failed with a syntax error. Copying through the CIRCUITPY drive and
@@ -963,7 +963,7 @@ The passkey on the panel, read back from the framebuffer: "Bluetooth passkey"
 over the six digits at 8x the 8-pixel font, drawn in 77 ms, present in both of
 the dot-clock panel's buffers while shown and gone from both after.
 
-mpftp's `ble://` (PyDevices/mcuctl `ble-pairing`) used the bond with no password
+mcuctl's `ble://` (PyDevices/mcuctl `ble-pairing`) used the bond with no password
 set: `exec` and 20 KB `put`/`get` byte for byte. Against a just-works board
 with a password it paired by itself; against a passkey board with the laptop
 unpaired it said to pair once and left no pairing behind.

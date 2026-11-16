@@ -691,7 +691,7 @@ async def unpair(address):
 
 async def _main(argv):
     """``python -m bledev.bleak pair NAME`` / ``unpair NAME``: pair this computer
-    with a board once, typing in the passkey its display shows. mpftp, bledev
+    with a board once, typing in the passkey its display shows. mcuctl, bledev
     and anything else on this computer then use the bond."""
     if len(argv) != 2 or argv[0] not in ("pair", "unpair"):
         print("usage: python -m bledev.bleak pair|unpair NAME")

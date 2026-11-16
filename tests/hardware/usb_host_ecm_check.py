@@ -14,7 +14,7 @@ the host port.
 
 Run it:
 
-    mpftp run --follow tests/hardware/usb_host_ecm_check.py
+    mcuctl run --follow tests/hardware/usb_host_ecm_check.py
 
 Expect: kind CDC-ECM, a MAC address, an address from the network's DHCP, rx and
 tx frame counts above zero, and an address for the host name.

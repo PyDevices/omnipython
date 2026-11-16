@@ -359,8 +359,8 @@ REPL's password by default (or [pairing](#pairing-and-bonding)), sent to one
 extra characteristic, and until it's right
 every command is refused. One attempt per connection, and a wrong one is hung
 up on. Logging in to the REPL over the same connection unlocks files too,
-which is what [mpftp](https://github.com/PyDevices/mcuctl) does. The protocol
-has no checksum beyond the radio's own, so check what matters (mpftp compares
+which is what [mcuctl](https://github.com/PyDevices/mcuctl) does. The protocol
+has no checksum beyond the radio's own, so check what matters (mcuctl compares
 SHA-256 after every transfer).
 
 `start()` serves the REPL beside the files; `console=False` serves files
@@ -403,7 +403,7 @@ before the link comes up. Once a link is up, Windows answers the board's
 request to pair on its own, out of sight, and pairing then fails without asking
 for the passkey, so on Windows pass `pair=True` rather than waiting for the
 board to ask. To pair a
-computer once for tools that don't pair themselves (mpftp),
+computer once for tools that don't pair themselves (mcuctl),
 `python -m bledev.bleak pair rack` asks for the passkey in the terminal, and
 `python -m bledev.bleak unpair rack` undoes it. Windows Settings, Add device,
 works too.
@@ -425,7 +425,7 @@ pass `show(passkey)` and `hide()` to put it somewhere else.
 
 **Where the keys live.** On an ESP32 they're in NVS, not the filesystem, so
 reformatting the filesystem or deleting every file keeps them. A full chip
-erase (`mpftp firmware flash --erase`) loses them, and so does
+erase (`mcuctl firmware flash --erase`) loses them, and so does
 `bledev.security.forget()`. On other boards they're in `ble_secrets.json`.
 
 **When the board has lost its keys** and the computer still has its half, the

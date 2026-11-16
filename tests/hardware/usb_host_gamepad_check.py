@@ -13,7 +13,7 @@ folder first on sys.path, or build with it.
 
 Run it:
 
-    mpftp run --follow tests/hardware/usb_host_gamepad_check.py
+    mcuctl run --follow tests/hardware/usb_host_gamepad_check.py
 
 Expect: one AXIS event per axis and one HAT event at first (where each rests),
 then BUTTON_DOWN and BUTTON_UP with the pad's button numbers, AXIS values that

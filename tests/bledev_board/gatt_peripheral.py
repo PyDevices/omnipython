@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: MIT
 """Board side of the over-the-air contract check: a GATT server driven by commands.
 
-Run it on one board (``mpftp run gatt_peripheral.py -d COMx``), then run
+Run it on one board (``mcuctl run gatt_peripheral.py -d COMx``), then run
 ``gatt_central.py`` on another board, or point a host backend's central at it.
 It advertises as ``bledev-radio`` with the contract's test service, and the
 central steers it by writing commands to the read/write characteristic:

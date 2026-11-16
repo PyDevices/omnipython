@@ -6,7 +6,7 @@
 bless (https://github.com/kevincar/bless) serves GATT from CPython. This
 serves one service with a readable, writable, notifying characteristic, for
 ``bless_probe.py`` on a board to find, read, write and subscribe to. Run it
-with a Windows Python that has bless, kept out of mpftp's sidecar Python.
+with a Windows Python that has bless, kept out of mcuctl's sidecar Python.
 On Python 3.14 (2026-09) PyPI's bless 0.3.0 won't install (it pins winrt
 2.0.0b1), so this took bless's GitHub master with ``--no-deps``, then
 ``coloredlogs`` and pysetupdi's GitHub master by hand; the shim below covers

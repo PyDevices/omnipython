@@ -15,7 +15,7 @@ copy in /lib: put the package folder first on sys.path, or build with it.
 
 Run it:
 
-    mpftp run tests/hardware/usb_host_serial_check.py
+    mcuctl run tests/hardware/usb_host_serial_check.py
 
 Expect: "chip" names the adapter, "wrote 12" and, with a loopback jumper, "read b'hello loop\\r\\n'".
 """

@@ -14,7 +14,7 @@ erases the board's bonds.
 This writes the same marker and resets, which is the same thing without the
 button. ``memorymap`` may write the RTC peripheral's registers on the S3, and
 the marker lives in ``RTC_CNTL_STORE0_REG``. Run it with
-``mpftp exec -d COMx --no-follow "$(cat cpfiles_discovery.py)"`` or copy it
+``mcuctl exec -d COMx --no-follow "$(cat cpfiles_discovery.py)"`` or copy it
 over; the board restarts at once. Then ``cpfiles_client.py`` on a laptop.
 """
 import memorymap

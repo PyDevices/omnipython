@@ -137,7 +137,7 @@ empty SD slot) with `--skip sdcard`. Skipped roles are written down. When every 
 the board's folder. Open a pull request with that file: once it merges, the
 board and the drivers it uses publish to the main index.
 
-`-d` is anything mpftp takes (`ws://HOST`, `COM5`, `/dev/ttyACM0`). For a
+`-d` is anything mcuctl takes (`ws://HOST`, `COM5`, `/dev/ttyACM0`). For a
 desktop config, `--local path/to/micropython --path <install folder>` runs it
 on a desktop interpreter.
 
