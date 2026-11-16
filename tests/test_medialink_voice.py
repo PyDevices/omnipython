@@ -37,6 +37,13 @@ def frames(pcm):
 
 
 class Level(unittest.TestCase):
+    def test_a_tone_s_level_is_its_mean_absolute_sample(self):
+        # 8000 * 2 / pi: every eighth sample of a 1 kHz tone read 0.
+        for freq in (250, 440, 1000, 2000, 3000):
+            voice = medialink.VoiceActivity(detector="level")
+            voice.feed(tone(FRAME // 2, freq=freq, level=8000))
+            self.assertAlmostEqual(voice.level, 5093, delta=500, msg="%d Hz" % freq)
+
     def test_quiet_then_a_tone_then_quiet(self):
         voice = medialink.VoiceActivity(detector="level", hold_ms=50)
         self.assertEqual(voice.detector, "level")

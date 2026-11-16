@@ -150,11 +150,14 @@ class VoiceActivity:
 
 
 def _level(pcm, channels):
-    """The mean absolute value of a frame, from every eighth sample."""
+    """The mean absolute value of a frame, from every seventh sample.
+
+    Not every eighth: at 16 kHz that lands on the same two points of each
+    cycle of a 1 kHz tone, and a loud one can read as silence."""
     count = len(pcm) // 2
     if not count:
         return 0
-    step = 8 if count >= 64 else 1
+    step = 7 if count >= 64 else 1
     total = 0
     taken = 0
     for i in range(0, count, step):
