@@ -124,6 +124,7 @@ and `omnipython`; its `manifest.py` lists them.
 | ST NUCLEO-H743ZI2 + TFT shield 1947 | `busdisplay/spi/nucleo_h743zi2_tft_touch_shield_1947` |  | 240×320, ILI9341 SPI (`spibus` SPI1 / SoftSPI); touch FT6206 @ `0x38` | `touch` | `led`, `sdcard`, `ethernet` |
 | ODROID-GO | `busdisplay/spi/odroid_go` |  |  | `joystick`, `keypad` | `battery`, `sdcard`, `audio_out`, `wlan` |
 | Pico LCD 1.8" | `busdisplay/spi/pico-lcd-1.8` |  |  |  |  |
+| Waveshare Pico-OLED-2.23 and Pico-Audio on a Pico | `busdisplay/spi/pico-oled-2.23-audio` |  | 128×32, SSD1305 SPI |  | `audio_out`, `pcm_out`, `audio_power` |
 | 3.5" TFT FeatherWing (HX8357D) (host-dependent STEMMA) | `busdisplay/spi/pitft_hx8357_featherwing` | yes |  | `touch` | `i2c` |
 | 3.5" TFT FeatherWing, HX8357D + STMPE610 on an Adafruit Feather ESP32 V2 | `busdisplay/spi/pitft_hx8357_featherwing_on_feather_esp32_v2` |  |  |  |  |
 | PiTFT ILI9341 FeatherWing (host-dependent STEMMA) | `busdisplay/spi/pitft_ili9341_featherwing` | yes |  | `touch` | `i2c` |
