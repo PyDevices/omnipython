@@ -21,6 +21,7 @@ boards, a desktop, a browser and an Android phone.
 - [Portable audio](guides/audio.md)
 - [USB, both ways round](guides/usb.md)
 - [bledev: Bluetooth Low Energy](guides/bluetooth-le.md)
+- [Bluetooth LE: REPL, files, pairing, MIDI and HID](guides/bluetooth-le-services.md)
 - [The board's name](guides/board-name.md)
 - [wifi_manager](guides/wifi.md)
 - [mdns](guides/mdns.md)
@@ -38,8 +39,7 @@ boards, a desktop, a browser and an Android phone.
 ## Reference
 
 - [The stack: everything you can import or run](stack.md)
-- [USB host support](reference/usb-host-support.md)
-- [USB device support](reference/usb-device-support.md)
+- [USB support](reference/usb-support.md)
 - [Bluetooth LE support](reference/bluetooth-le-support.md)
 - [vtterm escape codes](reference/vtterm-escape-codes.md)
 - [vtterm keys](reference/vtterm-keys.md)
@@ -47,8 +47,7 @@ boards, a desktop, a browser and an Android phone.
 - [Other modules](modules.md)
 - [Board peripherals contract](boards/board-contract.md)
 - [Board configs](boards/board-configs.md)
-- [Device matrix](boards/device-matrix.md)
-- [Display boards — bring-up notes](boards/display-boards.md)
+- [Arduino GIGA R1 WiFi with the Display Shield](boards/arduino-giga-display-shield.md)
 - [Display drivers](boards/display-drivers.md)
 - [Touch drivers](boards/touch-drivers.md)
 - [Wokwi hardware reference](boards/wokwi.md)

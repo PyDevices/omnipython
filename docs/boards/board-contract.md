@@ -319,7 +319,7 @@ single-file (eager UI only), except the few that add an optional
 | CP eager UI parity (`touch` / `keypad` / `encoder` / `joystick`) | CP non-UI stays on `board` |
 | Sequence-preserving `touch_read` | |
 
-See also [device-matrix.md](device-matrix.md) and the other notes in this `docs/` directory.
+See also [Board configs](board-configs.md), which lists every board with its roles.
 
 ## See also
 

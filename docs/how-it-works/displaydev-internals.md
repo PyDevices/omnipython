@@ -214,7 +214,7 @@ display_drv = PixelDisplay(_pixel_framebuf)
 
 **Use `display_drv` for all app drawing.** `_pixel_framebuf` is prefixed to
 discourage bypassing the DisplayDriver API (see
-[Board configs — Pixel configs](../boards/board-configs.md#pixel--addressable-led-configs)).
+[Board configs — Pixel configs](../boards/board-configs.md#pixel-and-led-grids)).
 
 `PixelDisplay` exposes the usual **565 `DisplayDriver` API** (`color_depth=16`).
 The inner `PixelFramebuffer` stays **RGB888** for the strip; `fill_rect`,
