@@ -70,22 +70,31 @@ class Level(unittest.TestCase):
     def test_digital_silence_is_not_the_rooms_quiet_to_audiofeatures(self):
         self.assertFalse(any(self.a_microphone_starting_up("audiofeatures")))
 
-    def a_faint_tone_in_a_silent_room(self, detector, **kw):
-        """A sine whose mean absolute sample is about 51 (-56 dBFS), well
-        over the room's hiss but at or under the default ``quiet``."""
-        voice = medialink.VoiceActivity(detector=detector, hold_ms=50, **kw)
-        for f in frames(hiss(16000, level=4)):
+    def in_a_very_quiet_room(self, sound):
+        """A microphone that hears the room at a mean absolute sample of 4,
+        then *sound* on top of the same hiss."""
+        voice = medialink.VoiceActivity(detector="audiofeatures", hold_ms=50)
+        for f in frames(hiss(16000 * 3, level=8)):
             voice.feed(f)
-        return [voice.feed(f) for f in frames(tone(8000, level=80))]
-
-    def test_a_frame_under_quiet_is_never_speech(self):
-        self.assertFalse(any(self.a_faint_tone_in_a_silent_room("level")))
-        self.assertTrue(any(self.a_faint_tone_in_a_silent_room("level", quiet=20)))
+        room = hiss(len(sound) // 2, level=8, seed=5)
+        mixed = struct.pack(
+            "<%dh" % (len(sound) // 2),
+            *(a + b for a, b in zip(struct.unpack("<%dh" % (len(room) // 2), room),
+                                    struct.unpack("<%dh" % (len(sound) // 2), sound))),
+        )
+        return [voice.feed(f) for f in frames(mixed)]
 
     @unittest.skipUnless(HAVE_FEATURES, "needs audiofeatures with voice activity")
-    def test_a_frame_under_quiet_is_never_speech_to_audiofeatures(self):
-        self.assertFalse(any(self.a_faint_tone_in_a_silent_room("audiofeatures")))
-        self.assertTrue(any(self.a_faint_tone_in_a_silent_room("audiofeatures", quiet=20)))
+    def test_a_hum_in_the_hiss_is_not_speech_to_audiofeatures(self):
+        # A 200 Hz hum about as loud as the hiss: the detector alone calls
+        # half of it speech, though the level hardly moves.
+        self.assertFalse(any(self.in_a_very_quiet_room(tone(16000 * 2, freq=200, level=5))))
+
+    @unittest.skipUnless(HAVE_FEATURES, "needs audiofeatures with voice activity")
+    def test_a_faint_sound_well_over_a_quiet_room_is_speech_to_audiofeatures(self):
+        # A mean absolute sample of about 25: -62 dBFS, a voice across a room
+        # to a quiet microphone.
+        self.assertTrue(any(self.in_a_very_quiet_room(tone(16000, freq=400, level=40))))
 
     @unittest.skipUnless(HAVE_FEATURES, "needs audiofeatures with voice activity")
     def test_audiofeatures_is_the_default_where_there_is_one(self):

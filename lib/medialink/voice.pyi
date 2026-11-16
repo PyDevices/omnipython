@@ -21,7 +21,6 @@ class VoiceActivity:
     rate: int
     channels: int
     hold_ms: int
-    quiet: int
     detector: Literal["audiofeatures", "level"]
     level: int
     def __init__(
@@ -31,7 +30,6 @@ class VoiceActivity:
         *,
         hold_ms: int = 600,
         detector: Literal["audiofeatures", "level"] | None = None,
-        quiet: int = 60,
     ) -> None: ...
     @property
     def speaking(self) -> bool:
