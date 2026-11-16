@@ -46,7 +46,7 @@ for y in range(0, h, 2):
 The picture at the top of this page is the 48 px set. Every icon in both sets is
 on the [contact sheets](docs/reference/icons.md).
 
-[Docs](docs/reference/icons.md) · [Examples](https://pydevices.github.io/gallery/pyscript/) · [Roadmap](ROADMAP.md)
+[Docs](docs/reference/icons.md) · [Examples](https://gallery.omnipython.org/pyscript/) · [Roadmap](ROADMAP.md)
 
 OmniPython is made by [PyDevices](https://pydevices.com).
 
