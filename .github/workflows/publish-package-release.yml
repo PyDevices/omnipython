@@ -1,7 +1,6 @@
 # Publish a palettes, pdwidgets or iconkit release: build the distribution from the
 # package's folder at the release tag, check the wheel installs and imports,
-# upload it to TestPyPI and production PyPI, and attach it to the GitHub
-# Release. OmniPython's own releases (vX.Y.Z tags) go through
+# upload it to PyPI, and attach it to the GitHub Release. OmniPython's own releases (vX.Y.Z tags) go through
 # publish-release-packages.yml instead.
 #
 # Every version goes to PyPI, pre-releases included. The library index (PyDevices/lib) is asked for
@@ -57,7 +56,7 @@ jobs:
 
   build:
     needs: resolve
-    uses: PyDevices/.github/.github/workflows/reusable-build-pure-python-distribution.yml@publishing-v30
+    uses: PyDevices/.github/.github/workflows/reusable-build-pure-python-distribution.yml@publishing-v31
     with:
       distribution-name: ${{ needs.resolve.outputs.distribution }}
       import-name: ${{ needs.resolve.outputs.package }}
@@ -67,29 +66,11 @@ jobs:
       # pdwidgets' smoke test imports it, and it imports its dependencies.
       install-dependencies: ${{ needs.resolve.outputs.package == 'pdwidgets' }}
 
-  publish-to-testpypi:
-    needs: [resolve, build]
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - name: Download the validated distributions
-        uses: actions/download-artifact@v8
-        with:
-          name: testpypi-${{ needs.resolve.outputs.distribution }}-${{ needs.resolve.outputs.version }}
-          path: dist
-      - name: Publish to TestPyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          user: __token__
-          password: ${{ secrets.TESTPYPI_API_TOKEN }}
-          repository-url: https://test.pypi.org/legacy/
-          skip-existing: true
-
   pypi:
     # PyPI's Trusted Publisher for omnipython-palettes, -pdwidgets and -iconkit
     # names this file and the pypi environment, which allows the
     # palettes-v*, pdwidgets-v* and iconkit-v* tags.
-    needs: [resolve, build, publish-to-testpypi]
+    needs: [resolve, build]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     environment: pypi
@@ -99,7 +80,7 @@ jobs:
       - name: Download the validated distributions
         uses: actions/download-artifact@v8
         with:
-          name: testpypi-${{ needs.resolve.outputs.distribution }}-${{ needs.resolve.outputs.version }}
+          name: dist-${{ needs.resolve.outputs.distribution }}-${{ needs.resolve.outputs.version }}
           path: dist
       - name: Publish to PyPI via Trusted Publishing
         uses: pypa/gh-action-pypi-publish@release/v1
@@ -116,7 +97,7 @@ jobs:
       - name: Download the validated distributions
         uses: actions/download-artifact@v8
         with:
-          name: testpypi-${{ needs.resolve.outputs.distribution }}-${{ needs.resolve.outputs.version }}
+          name: dist-${{ needs.resolve.outputs.distribution }}-${{ needs.resolve.outputs.version }}
           path: dist
       - name: Attach distributions to the GitHub Release
         env:
@@ -129,8 +110,8 @@ jobs:
     # reusable workflow skips the request for a pre-release). Its palettes and
     # pdwidgets profiles are locked to the archived repositories, so those two
     # ask the library index alone.
-    needs: [resolve, build, publish-to-testpypi]
-    uses: PyDevices/.github/.github/workflows/reusable-request-mip-publication.yml@publishing-v30
+    needs: [resolve, build]
+    uses: PyDevices/.github/.github/workflows/reusable-request-mip-publication.yml@publishing-v31
     with:
       release-ref: ${{ needs.resolve.outputs.tag }}
       version: ${{ needs.resolve.outputs.version }}
@@ -143,7 +124,7 @@ jobs:
     # The Release Health dashboard in PyDevices/.github, as the OmniPython
     # chain feeds it. A reporting failure never fails the release.
     if: always() && needs.resolve.result == 'success'
-    needs: [resolve, build, publish-to-testpypi, pypi, attach-release-assets, request-library-publication]
+    needs: [resolve, build, pypi, attach-release-assets, request-library-publication]
     continue-on-error: true
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -165,7 +146,6 @@ jobs:
             -F 'client_payload[distribution]=${{ needs.resolve.outputs.distribution }}' \
             -F 'client_payload[version]=${{ needs.resolve.outputs.version }}' \
             -F 'client_payload[prerelease]=${{ needs.resolve.outputs.prerelease }}' \
-            -F 'client_payload[testpypi]=${{ needs.publish-to-testpypi.result }}' \
             -F 'client_payload[assets]=${{ needs.attach-release-assets.result }}' \
             -F 'client_payload[mip]=${{ needs.request-library-publication.result }}' \
             -F 'client_payload[pypi]=${{ needs.pypi.result }}' \
