@@ -9,6 +9,7 @@ The site's navigation. On GitHub, start at [the docs index](index.md).
 index
 get-started/install
 get-started/first-program
+faq
 ```
 
 ```{toctree}
@@ -37,6 +38,7 @@ guides/run-in-the-browser
 guides/run-in-pyscript
 guides/run-on-android
 guides/run-in-jupyter
+guides/run-the-tests
 guides/troubleshooting
 ```
 
@@ -47,6 +49,7 @@ guides/troubleshooting
 stack
 reference/index
 reference/usb-support
+reference/circuitpython-apis
 reference/bluetooth-le-support
 reference/vtterm-escape-codes
 reference/vtterm-keys
@@ -54,6 +57,7 @@ reference/castdisplay
 modules
 boards/board-contract
 boards/board-configs
+boards/tested-boards
 boards/arduino-giga-display-shield
 boards/display-drivers
 boards/touch-drivers

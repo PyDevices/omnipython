@@ -9,6 +9,7 @@ boards, a desktop, a browser and an Android phone.
 
 - [Install](get-started/install.md)
 - [Your first program](get-started/first-program.md)
+- [Questions](faq.md)
 
 ## Guides
 
@@ -34,12 +35,14 @@ boards, a desktop, a browser and an Android phone.
 - [PyScript and Pyodide](guides/run-in-pyscript.md)
 - [Android](guides/run-on-android.md)
 - [Jupyter Notebook](guides/run-in-jupyter.md)
+- [Run the tests](guides/run-the-tests.md)
 - [Troubleshooting](guides/troubleshooting.md)
 
 ## Reference
 
 - [The stack: everything you can import or run](stack.md)
 - [USB support](reference/usb-support.md)
+- [CircuitPython APIs on MicroPython and CPython](reference/circuitpython-apis.md)
 - [Bluetooth LE support](reference/bluetooth-le-support.md)
 - [vtterm escape codes](reference/vtterm-escape-codes.md)
 - [vtterm keys](reference/vtterm-keys.md)
@@ -47,6 +50,7 @@ boards, a desktop, a browser and an Android phone.
 - [Other modules](modules.md)
 - [Board peripherals contract](boards/board-contract.md)
 - [Board configs](boards/board-configs.md)
+- [Tested boards](boards/tested-boards.md)
 - [Arduino GIGA R1 WiFi with the Display Shield](boards/arduino-giga-display-shield.md)
 - [Display drivers](boards/display-drivers.md)
 - [Touch drivers](boards/touch-drivers.md)
