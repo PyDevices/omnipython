@@ -21,10 +21,6 @@
       "github:PyDevices/omnipython/drivers/codec/es7210.py"
     ],
     [
-      "sdcard.py",
-      "github:micropython/micropython-lib/micropython/drivers/storage/sdcard/sdcard.py"
-    ],
-    [
       "battery_adc.py",
       "github:PyDevices/omnipython/drivers/power/battery_adc.py"
     ]
@@ -35,7 +31,7 @@
       "latest"
     ]
   ],
-  "version": "0.4",
+  "version": "0.5",
   "description": "LILYGO T-Embed ST7789 170x320 SPI + rotary (displayif native spibus)",
   "generated": "from manifest.py by tools/libbuild.py installers; edit manifest.py, not this"
 }
