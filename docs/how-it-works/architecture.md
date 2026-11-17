@@ -65,7 +65,7 @@ flowchart TB
 
 1. Install `omnipython` or your board's `board_config` via MIP or pip.
 2. Import `display_drv` from `board_config`.
-3. Draw directly or bind your choice of UI toolkit (`pdwidgets`, `lvgl`, or raw framebuffers).
+3. Draw directly or bind a UI toolkit (`lvgl`, or `pdwidgets`, the pure-Python one), or use raw framebuffers.
 4. Run your application event loop.
 
 ```python
@@ -84,8 +84,8 @@ what you can compile:
 | Approach | Use it for | Package |
 |---|---|---|
 | **Raw graphics / canvas** | Direct pixel, line, and shape drawing | [`displaydev`](../guides/displays.md) with [`pygraphics`](https://github.com/PyDevices/pygraphics) |
-| **Pure-Python GUI** | Portable buttons, lists, themes, and screen management with nothing to compile | [`pdwidgets`](https://github.com/PyDevices/omnipython/tree/main/pdwidgets) |
-| **C-native GUI** | Complex vector widgets and a C-accelerated animation engine | [`lvgl`](https://github.com/PyDevices/omnipython-lvgl) — see [using LVGL with OmniPython](../guides/lvgl.md) |
+| **C-native GUI** | The widget toolkit to reach for: complex vector widgets and a C-accelerated animation engine | [`lvgl`](https://github.com/PyDevices/omnipython-lvgl) — see [using LVGL with OmniPython](../guides/lvgl.md) |
+| **Pure-Python GUI** | A demonstration that the core carries a whole UI framework written in Python, with nothing to compile; installed with `mip`, not in release firmware | [`pdwidgets`](https://docs.omnipython.org/en/latest/pdwidgets/) |
 
 All three sit on the same board contract, so the choice does not change how your
 hardware is configured.

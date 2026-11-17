@@ -79,7 +79,8 @@ run widget apps this way.
 
 ## Frozen into firmware
 
-A firmware build can freeze pdwidgets by including
+Release firmware images don't include pdwidgets: add it with the `mip` lines
+above, or build it in. A firmware build can freeze pdwidgets by including
 [`manifest.py`](https://github.com/PyDevices/omnipython/blob/main/packages/pdwidgets/manifest.py)
 from its own freeze manifest. With
 [omnipython-builds](https://github.com/PyDevices/omnipython-builds),

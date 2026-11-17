@@ -2,9 +2,12 @@
 
 # pdwidgets
 
-pdwidgets is the part of OmniPython that draws user interfaces: labels, buttons,
-sliders, lists, dialogs and layouts in pure Python, with the same code on
-MicroPython-compatible boards, CPython and in the browser.
+pdwidgets is a whole user-interface toolkit written in Python, with no C:
+labels, buttons, sliders, lists, dialogs and layouts, built on OmniPython's
+displaydev, boarddev, appdev and multimer. It shows that the core is a
+foundation other UI frameworks can stand on, and it runs the same code on
+MicroPython-compatible boards, CPython and in the browser. For an interface you
+ship, [LVGL](https://docs.omnipython.org/en/latest/omnipython/guides/lvgl.html) is the toolkit to reach for.
 
 ```bash
 pip install -i https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ omnipython-pdwidgets omnipython-desktop
