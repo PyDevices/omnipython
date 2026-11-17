@@ -1,3 +1,9 @@
+## v0.8.0 (2026-11-17)
+
+- Publishing: package releases go to PyPI alone, on publishing-v31 (#702)
+- FAQ: macOS has native wheels for audiodsp and airwindows (#700)
+- Install lines name PyPI, with pip install --pre (#698)
+
 ## v0.8.0.dev25 (2026-11-17)
 
 - lib-lock: audioinstruments v0.5.2.dev6, audioeffects v0.5.2.dev4 (#695)
