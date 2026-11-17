@@ -9,7 +9,7 @@
 
 picks, in order: ``mpble`` where MicroPython's ``bluetooth`` module exists,
 ``cpble`` where CircuitPython's ``_bleio`` does, ``webble`` in a browser (PyScript, Pyodide, the Workbench simulator), and
-``bleak`` on CPython when bleak is installed (``pip install omnipython[ble]``).
+``bleak`` on CPython when bleak is installed (``pip install --pre omnipython[ble]``).
 Pass ``backend="fake"`` (or set ``BLEDEV_BACKEND``) to force one; extra
 keyword arguments go to the backend's constructor.
 
@@ -77,7 +77,7 @@ def adapter(backend=None, **kwargs):
     name = backend or _env_backend() or backend_name()
     if name is None:
         raise UnsupportedError(
-            "no BLE backend on this host: on CPython, pip install 'omnipython[ble]' "
+            "no BLE backend on this host: on CPython, pip install --pre 'omnipython[ble]' "
             "for bleak; on MicroPython, use firmware built with bluetooth; on "
             "CircuitPython, a board with _bleio"
         )

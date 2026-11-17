@@ -12,7 +12,7 @@ or anything that serves the same three UUIDs. For your own sensor, change
 them to its own.
 
 Needs: a board with Bluetooth LE and bledev: CircuitPython, or MicroPython
-with aioble too. On a laptop, pip install "omnipython[ble]".
+with aioble too. On a laptop, pip install --pre "omnipython[ble]".
 
 Run it:
     mpremote run bledev_central_simpletest.py

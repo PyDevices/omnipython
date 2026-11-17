@@ -33,7 +33,7 @@ On a desktop, install pygraphics from PyPI and put
 repository on the path:
 
 ```bash
-pip install omnipython-pygraphics
+pip install --pre omnipython-pygraphics
 PYTHONPATH=packages/vtterm:packages/palettes/lib python3 your_program.py
 ```
 

@@ -65,7 +65,7 @@ mip.install("bledev", index="https://lib.omnipython.org")
 ```
 
 Firmware that freezes aioble doesn't need it. On a laptop, bledev is inside
-the `omnipython` wheel, and `pip install "omnipython[ble]"` adds bleak, which
+the `omnipython` wheel, and `pip install --pre "omnipython[ble]"` adds bleak, which
 the laptop backend needs.
 
 CircuitPython has its own steps: `omip.install("bledev")` works on a board with

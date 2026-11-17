@@ -43,7 +43,7 @@ won't take yet, to go out on the next ``flush()`` or ``poll()``.
 Runs on MicroPython and CPython with ``socket``. On CircuitPython pass
 ``pool=socketpool.SocketPool(wifi.radio)``. Announcing and finding need the
 ``mdns`` module: CircuitPython's, the one in OmniPython firmware, or on a
-computer omnipython-desktop's (``pip install omnipython-desktop``).
+computer omnipython-desktop's (``pip install --pre omnipython-desktop``).
 """
 
 import binascii
@@ -396,7 +396,7 @@ def _mdns_server():
     except ImportError:
         raise ImportError(
             "announcing needs the mdns module: CircuitPython's, OmniPython firmware's, "
-            "or on a computer pip install omnipython-desktop"
+            "or on a computer pip install --pre omnipython-desktop"
         )
     if sys.implementation.name == "circuitpython":
         import wifi

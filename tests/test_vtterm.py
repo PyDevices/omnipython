@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: MIT
 """Run vtterm's own checks (packages/vtterm/tests) under unittest.
 
-The unit tests need pygraphics (``pip install omnipython-pygraphics``); the
+The unit tests need pygraphics (``pip install --pre omnipython-pygraphics``); the
 differential check against pyte needs ``pip install pyte``.
 """
 

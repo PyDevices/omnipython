@@ -68,7 +68,7 @@ def mcuctl_command() -> list[str]:
         if sibling.is_file():
             found = str(sibling)
     if not found:
-        raise SystemExit("mark_tested: mcuctl not found (pip install mcuctl, or set MCUCTL)")
+        raise SystemExit("mark_tested: mcuctl not found (pip install --pre mcuctl, or set MCUCTL)")
     return [found]
 
 

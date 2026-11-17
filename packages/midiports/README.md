@@ -21,7 +21,7 @@ while True:
         print(msg)
 ```
 
-On a desktop, `pip install omnipython-desktop` installs `midiports` and
+On a desktop, `pip install --pre omnipython-desktop` installs `midiports` and
 `adafruit_midi` together; on a board, install with `mip`.
 
 To use another transport, change the line that opens the ports:

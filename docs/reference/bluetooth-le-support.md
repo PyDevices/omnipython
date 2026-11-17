@@ -58,7 +58,7 @@ On CircuitPython, `adafruit_midi` and `adafruit_hid` are already the way to do M
 ### Installing bledev
 
 
-On a laptop, bledev is inside the `omnipython` wheel. `pip install "omnipython[ble]"`
+On a laptop, bledev is inside the `omnipython` wheel. `pip install --pre "omnipython[ble]"`
 adds bleak, which the laptop backend needs.
 
 With Wi-Fi, `omip.install("bledev")` runs on the board once

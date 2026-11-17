@@ -98,7 +98,7 @@ requires = ["omnipython"]
 # packages here. A name listed before its file exists fails the sync.
 host-only = ["bleak", "webble"]
 # On PyPI bledev stays inside the OmniPython wheel. bleak is optional, behind
-# `pip install "omnipython[ble]"`.
+# `pip install --pre "omnipython[ble]"`.
 pypi-extras = { ble = ["bleak>=1.0"] }
 
 [medialink]

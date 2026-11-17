@@ -10,7 +10,7 @@ backend for whatever it's running on.
 
 Needs: Bluetooth LE. On a board, firmware with the bluetooth module and
 aioble installed (mpremote mip install aioble). On a laptop,
-pip install "omnipython[ble]".
+pip install --pre "omnipython[ble]".
 
 Run it:
     mpremote run bledev_simpletest.py
