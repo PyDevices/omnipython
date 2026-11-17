@@ -68,7 +68,7 @@ Where CircuitPython has an API, OmniPython uses its names and shapes, so code
 moves between the two. [CircuitPython's APIs](reference/circuitpython-apis.md)
 lists which ones run on MicroPython and CPython. The audio modules are ported
 from CircuitPython and checked against CircuitPython's own output byte for byte.
-Bugs found that way went back upstream, and five of the fixes are merged in
+Bugs found that way went back upstream, and seven of the fixes are merged in
 CircuitPython.
 
 ### CircuitPython has its own camera and display drivers for the ESP32-P4. Why use OmniPython there?
