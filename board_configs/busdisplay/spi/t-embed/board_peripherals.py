@@ -410,18 +410,21 @@ audio_in_power = _audio_in_power
 
 
 def sdcard():
-    """MicroSD on dedicated SPI pins (sdcard.py)."""
-    from machine import Pin, SoftSPI
+    """The microSD slot over 1-bit SDMMC (``machine.SDCard``); mount it yourself.
 
-    from sdcard import SDCard
+    The slot is wired for SPI, whose clock, MOSI and MISO are SD mode's clock,
+    command and first data line, and its chip select is the card's DAT3, held
+    high. The SDMMC host moves blocks by its own DMA, so sound keeps playing
+    while a file is written, and both SPI hosts stay free.
 
-    spi = SoftSPI(
-        baudrate=1_000_000,
-        sck=Pin(_SD_SCK),
-        mosi=Pin(_SD_MOSI),
-        miso=Pin(_SD_MISO),
-    )
-    return SDCard(spi, Pin(_SD_CS, Pin.OUT, value=1))
+    A card that another driver put in SPI mode stays there until its power is
+    off, and times out here (``ESP_ERR_TIMEOUT``) until the board is powered
+    off and on.
+    """
+    from machine import Pin, SDCard
+
+    Pin(_SD_CS, Pin.OUT, value=1)
+    return SDCard(slot=1, width=1, freq=20_000_000, sck=_SD_SCK, cmd=_SD_MOSI, data=(_SD_MISO,))
 
 
 def battery():
