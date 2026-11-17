@@ -1096,6 +1096,8 @@ class TheSinkPathReportsItsFaultsToo(PumpFixture):
         self.assertFalse(out.pumped)
         self.assertIn("board's board_peripherals publishes no `wire=`",
                       said.getvalue())
+        self.assertIn("no `wire=`", out.pump_refused or "",
+                      "the reason was printed once and never kept")
         self.assertTrue(out.playing or out.transport.data,
                         "the old path did not take over")
 
@@ -1108,6 +1110,8 @@ class TheSinkPathReportsItsFaultsToo(PumpFixture):
             out.play(FakeSample())
         self.assertFalse(out.pumped)
         self.assertIn("interpreter thread", said.getvalue())
+        self.assertIsNotNone(out.pump_refused,
+                             "the reason was printed and never kept")
         self.assertTrue(transport.data, "the audio stopped with the pump")
 
 
@@ -1293,6 +1297,26 @@ class TheBoardPlaysThroughAudiobusio(PumpFixture):
         with mock.patch("sys.stdout", said):
             out.service()
         self.assertIn("released while it was playing", said.getvalue())
+        self.assertFalse(out.pumped)
+        self.assertEqual(
+            out.pump_refused,
+            "something in the chain was released while it was playing",
+            "the player fell back and nothing an app can read says why")
+
+    def test_a_driver_that_fails_before_the_pump_leaves_the_reason(self):
+        """A failure on the way to the pump, not inside it, is kept too."""
+        def broken(*args, **kwargs):
+            raise RuntimeError("the codec did not answer")
+
+        said = io.StringIO()
+        with mock.patch.object(pump_mod, "BusioDriver", broken), \
+                mock.patch("sys.stdout", said):
+            out, transport = self.board()
+        self.assertFalse(out.pumped)
+        self.assertIn("would not start", said.getvalue())
+        self.assertEqual(out.pump_refused, "the codec did not answer",
+                         "the reason was printed and never kept")
+        self.assertTrue(transport.data, "the audio stopped as well")
 
     def test_starved_is_the_outputs_own_word(self):
         self.board()
