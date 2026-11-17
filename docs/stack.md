@@ -358,7 +358,7 @@ and Android.
 - [`Bluetooth speaker`](https://github.com/PyDevices/apps/tree/main/programs/bt-speaker): Make the board a speaker your phone or computer pairs with.\
   Get it: from source. Runs on: MP with Bluetooth Classic and audio out.
 - [`Camera for the ESP32-P4`](https://github.com/PyDevices/apps/tree/main/programs/camera): Take photos and H.264 video with sound, keep an album and spot people and faces, as the ESP32-P4X-EYE's own camera app does.\
-  Get it: `omip`, from the app's folder, from source. Runs on: MP on ESP32-P4.
+  Get it: `omip`, from the app's folder, from source. Runs on: MP on ESP32-P4, Desktop.
 - [`midiEngine`](https://github.com/PyDevices/apps/tree/main/apps/midiengine): Play General MIDI from a SoundFont and a USB or Bluetooth MIDI keyboard.\
   Get it: `omip`, from the app's folder, from source. Runs on: ESP32-P4 touch board.
 - [`Stompbox`](https://github.com/PyDevices/apps/tree/main/apps/stompbox): Play a guitar or WAV clip through an Airwindows effect, with its knobs on screen.\
@@ -425,6 +425,8 @@ and Android.
 
 - [`PyDevices.github.io`](https://omnipython.org/): Read the website: the front page, a page for each project and the live demos.\
   Get it: open in a browser. Runs on: Web.
+- [`pydevices.com`](https://pydevices.com/): Read the PyDevices company page and the pages for MCU Control, mpvst and Workbench.\
+  Get it: open in a browser. Runs on: Web.
 - [`lib`](https://lib.omnipython.org): Browse the `mip` index for the libraries, board configs and drivers.\
   Get it: open in a browser. Runs on: Web.
 - [`mip`](https://omnipython.org/mip/): Read the old package mirror, which no longer takes releases: install from lib instead.\
@@ -446,7 +448,7 @@ and Android.
 - **L:** [`LEDs`](#drive-a-chip), [`lib`](#find-the-projects-own-sites), [`lite-assistant`](#connect-devices), [`lvgl`](#draw-on-a-screen)
 - **M:** [`mcuctl`](#set-up-a-board), [`mdns`](#connect-devices), [`mdns for CPython`](#connect-devices), [`medialink`](#connect-devices), [`micropython shim`](#run-somewhere-other-than-a-board), [`MIDI Controller`](#run-a-finished-app), [`MIDI module`](#run-a-finished-app), [`midiEngine`](#run-a-finished-app), [`midiports`](#play-and-sequence-music), [`mip`](#find-the-projects-own-sites), [`MP3 player`](#run-a-finished-app), [`mp4mux`](#use-cameras-video-and-ai-on-a-board), [`mpvst`](#make-and-shape-sound), [`multimer`](#write-an-app)
 - **O:** [`Object detection`](#run-a-finished-app), [`omip`](#set-up-a-board), [`OmniPython firmware`](#set-up-a-board), [`omnipython-desktop`](#run-somewhere-other-than-a-board), [`orientation`](#write-an-app), [`Ostinato`](#run-a-finished-app)
-- **P:** [`palettes`](#draw-on-a-screen), [`pdwidgets`](#draw-on-a-screen), [`picotts`](#make-and-shape-sound), [`pngio`](#draw-on-a-screen), [`pngio for CPython`](#draw-on-a-screen), [`Power`](#drive-a-chip), [`ppa`](#draw-on-a-screen), [`programkit`](#libraries-the-apps-use), [`PyDevices.github.io`](#find-the-projects-own-sites), [`pygraphics`](#draw-on-a-screen), [`pyscript-template`](#run-somewhere-other-than-a-board), [`pyscript.py`](#run-somewhere-other-than-a-board)
+- **P:** [`palettes`](#draw-on-a-screen), [`pdwidgets`](#draw-on-a-screen), [`picotts`](#make-and-shape-sound), [`pngio`](#draw-on-a-screen), [`pngio for CPython`](#draw-on-a-screen), [`Power`](#drive-a-chip), [`ppa`](#draw-on-a-screen), [`programkit`](#libraries-the-apps-use), [`pydevices.com`](#find-the-projects-own-sites), [`PyDevices.github.io`](#find-the-projects-own-sites), [`pygraphics`](#draw-on-a-screen), [`pyscript-template`](#run-somewhere-other-than-a-board), [`pyscript.py`](#run-somewhere-other-than-a-board)
 - **R:** [`Radios`](#drive-a-chip), [`Real-time clocks`](#drive-a-chip), [`REPL`](#run-a-finished-app), [`Roku remote`](#run-a-finished-app)
 - **S:** [`sayso`](#libraries-the-apps-use), [`Security camera`](#run-a-finished-app), [`songmodel`](#play-and-sequence-music), [`Sound card`](#run-a-finished-app), [`soundmodule`](#play-and-sequence-music), [`spectrum`](#draw-on-a-screen), [`Spotify`](#run-a-finished-app), [`Stompbox`](#run-a-finished-app), [`Storage`](#drive-a-chip), [`Surveillance camera`](#run-a-finished-app), [`svgio`](#draw-on-a-screen), [`svgio for CPython`](#draw-on-a-screen), [`Synth Station`](#run-a-finished-app), [`synthio`](#make-and-shape-sound), [`System`](#run-a-finished-app)
 - **T:** [`tflite`](#use-cameras-video-and-ai-on-a-board), [`Touch drivers`](#drive-a-chip), [`touchkit`](#libraries-the-apps-use), [`tsmux`](#use-cameras-video-and-ai-on-a-board)
