@@ -42,6 +42,7 @@ SOURCES = [
     ROOT / "packages" / "palettes" / "lib",
     ROOT / "packages" / "iconkit" / "lib",
     ROOT / "packages" / "pdwidgets" / "lib",
+    ROOT / "packages" / "midiports",
 ]
 LISTS = ROOT / "tools" / "stubs"
 TIMEOUT = 120  # seconds, per module

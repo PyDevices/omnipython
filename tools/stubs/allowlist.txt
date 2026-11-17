@@ -12,6 +12,11 @@ displaydev\.wasmdisplay
 displaydev\.windisplay
 bledev\.cpble
 bledev\.mpble
+# midiports likewise walks the USB device and host transports, which need micropython-lib's
+# usb package, and the Windows one, which needs Windows.
+midiports\.usb_device
+midiports\.usb_host
+midiports\.windows
 # pdwidgets.Area is pygraphics' C type: its constructor takes a rectangle in several
 # shapes, and introspection only sees `(self)`.
 pdwidgets\.Area\.__init__

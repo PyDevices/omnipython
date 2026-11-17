@@ -10,3 +10,6 @@ displaydev.windisplay
 wifi
 iconkit.lvicons
 uwin32
+midiports.usb_device
+midiports.usb_host
+midiports.windows

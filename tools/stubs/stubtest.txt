@@ -68,6 +68,12 @@ medialink.transport
 medialink.video
 medialink.voice
 medialink.wakeword
+midiports
+midiports.ble
+midiports.linux
+midiports.loopback
+midiports.uart
+midiports.webmidi
 multimer
 omip
 orientation
