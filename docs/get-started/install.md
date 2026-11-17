@@ -34,9 +34,7 @@ One command installs the complete desktop stack: all portable OmniPython
 components, the desktop board configuration, and the bundled utility modules.
 
 ```bash
-python -m pip install \
-  --index-url https://test.pypi.org/simple/ \
-  --extra-index-url https://pypi.org/simple/ \
+python -m pip install --pre \
   omnipython-desktop
 ```
 
@@ -46,9 +44,7 @@ board and utility entry points in a fresh environment:
 ```bash
 python -m venv .venv
 . .venv/bin/activate
-python -m pip install \
-  --index-url https://test.pypi.org/simple/ \
-  --extra-index-url https://pypi.org/simple/ \
+python -m pip install --pre \
   omnipython-desktop
 python -c "import board_config, micropython, mip; print(board_config.__file__)"
 ```
@@ -56,9 +52,7 @@ python -c "import board_config, micropython, mip; print(board_config.__file__)"
 Install only the portable libraries when no desktop board is wanted:
 
 ```bash
-python -m pip install \
-  --index-url https://test.pypi.org/simple/ \
-  --extra-index-url https://pypi.org/simple/ \
+python -m pip install --pre \
   omnipython
 ```
 

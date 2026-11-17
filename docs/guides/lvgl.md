@@ -12,7 +12,7 @@ integration for each interpreter, from one generated binding:
 |---|---|
 | [`ports/micropython`](https://github.com/PyDevices/omnipython-lvgl/tree/main/ports/micropython) | MicroPython firmware |
 | [`ports/circuitpython`](https://github.com/PyDevices/omnipython-lvgl/tree/main/ports/circuitpython) | CircuitPython firmware |
-| [`ports/cpython`](https://github.com/PyDevices/omnipython-lvgl/tree/main/ports/cpython) | CPython (`omnipython-lvgl` wheels on TestPyPI) |
+| [`ports/cpython`](https://github.com/PyDevices/omnipython-lvgl/tree/main/ports/cpython) | CPython (`omnipython-lvgl` wheels on PyPI) |
 
 All three share `displaydev`, neutral board capabilities, and `multimer`, so
 the same LVGL Python code is portable across them. You can even develop it interactively in

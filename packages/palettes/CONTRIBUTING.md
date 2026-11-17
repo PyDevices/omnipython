@@ -55,5 +55,5 @@ errors. The API pages are generated from the docstrings when you build.
 palettes has its own version, in `VERSION`, apart from the OmniPython release.
 A pull request that changes `VERSION` and adds the matching section to
 `CHANGELOG.md` tags `palettes-vX.Y.Z` when it merges, and the OmniPython release
-chain publishes `omnipython-palettes` to TestPyPI. The import name and the mip
+chain publishes `omnipython-palettes` to PyPI. The import name and the mip
 package name stay `palettes`.

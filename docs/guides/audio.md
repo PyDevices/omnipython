@@ -121,10 +121,10 @@ satisfying CircuitPython's audiosample pull protocol — a
 `audiodelays`, `audiofreeverb`, `audiospeed`), all provided by the
 `audiodsp` usermod on MicroPython or the separately installed
 `omnipython-audiodsp` CPython distribution (`import synthio`,
-`import audiomixer`, ...). CPython users install it from TestPyPI with:
+`import audiomixer`, ...). CPython users install it from PyPI with:
 
 ```sh
-python -m pip install --index-url https://test.pypi.org/simple/ omnipython-audiodsp
+python -m pip install --pre omnipython-audiodsp
 ```
 
 Neither `omnipython` distribution depends on it; importing `audiodev` and

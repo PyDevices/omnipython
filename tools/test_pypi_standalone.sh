@@ -1,27 +1,25 @@
 #!/usr/bin/env bash
-# Verify core OmniPython TestPyPI distributions in isolated environments.
+# Verify core OmniPython PyPI distributions in isolated environments.
 #
 # Each package gets a fresh venv with only that wheel (+ pip-resolved deps from its
 # manifest). Fails if import or a minimal smoke check errors.
 #
 # Usage:
-#   ./tools/test_testpypi_standalone.sh
-#   ./tools/test_testpypi_standalone.sh --desktop   # also SDL + pygame stacks
+#   ./tools/test_pypi_standalone.sh
+#   ./tools/test_pypi_standalone.sh --desktop   # also SDL + pygame stacks
 #
 # See CONTRIBUTING.md
 
 set -euo pipefail
 
-TESTPYPI_INDEX="${TESTPYPI_INDEX:-https://test.pypi.org/simple/}"
-PYPI_INDEX="${PYPI_INDEX:-https://pypi.org/simple/}"
-BASE_VENV="${TESTPYPI_STANDALONE_VENV:-/tmp/omnipython-testpypi-standalone}"
+BASE_VENV="${PYPI_STANDALONE_VENV:-/tmp/omnipython-pypi-standalone}"
 DESKTOP=0
 
 usage() {
     cat <<'EOF'
-Usage: ./tools/test_testpypi_standalone.sh [--desktop]
+Usage: ./tools/test_pypi_standalone.sh [--desktop]
 
-Install each TestPyPI package into its own venv and run a minimal import smoke test.
+Install each PyPI package into its own venv and run a minimal import smoke test.
 
 Options:
   --desktop  Also test SDLDisplay / PGDisplay stacks (headless SDL/pg)
@@ -75,8 +73,8 @@ test_package() {
     rm -rf "$venv"
     python3 -m venv "$venv"
     "$venv/bin/pip" install -q -U pip
-    "$venv/bin/pip" install -i "$TESTPYPI_INDEX" --extra-index-url "$PYPI_INDEX" \
-        "$pypi_name" "${extras[@]}"
+    # --pre: current releases are pre-releases.
+    "$venv/bin/pip" install --pre "$pypi_name" "${extras[@]}"
     echo "--- $pypi_name ---"
     "$venv/bin/pip" freeze | sort
     check_import "$venv" "$py_code"
@@ -88,18 +86,16 @@ test_package() {
 # install exercising every module it should have delivered -- rather than six
 # installs of distributions that no longer exist separately.
 test_package omnipython "
-import events, keys, displaydev, audiodev, appdev, boarddev
-from multimer import auto as timer
+import events, keys, displaydev, audiodev, appdev, boarddev, multimer
 print('events', events.KEYDOWN)
 print('keys', keys.keyname(keys.K_UP))
-print('multimer', timer.Timer)
+print('multimer', multimer.Timer)
 print('displaydev', displaydev.DisplayDriver.__name__)
 print('audiodev', audiodev.AudioFormat.__name__)
 print('boarddev', boarddev.bind_lazy.__name__)
 r = appdev.App()
-r.start_timer()
 print('appdev', type(r).__name__)
-r.stop_timer()
+r.stop_timers()
 "
 
 if [[ "$DESKTOP" -eq 1 ]]; then
@@ -121,4 +117,4 @@ print('pgdisplay', PGDisplay.__name__)
 " pygame-ce
 fi
 
-echo "All standalone TestPyPI smoke tests passed."
+echo "All standalone PyPI smoke tests passed."

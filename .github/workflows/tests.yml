@@ -76,7 +76,7 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y libsdl2-2.0-0
 
       - name: Install zeroconf, for mdns.py's network test, resvg-py and Pillow for svgio.py, and pygraphics and pyte for vtterm
-        run: python -m pip install -i https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ zeroconf resvg-py pillow "omnipython-pygraphics>=0.1.7.dev0" pyte
+        run: python -m pip install zeroconf resvg-py pillow "omnipython-pygraphics>=0.1.7.dev0" pyte
 
       - name: Run stdlib unittest suite
         env:

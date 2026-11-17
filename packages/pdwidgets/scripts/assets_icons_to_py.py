@@ -6,7 +6,7 @@
 """
 Convert ``lib/pdwidgets/icons/*.{pbm,bmp}`` into importable ``.py`` modules.
 
-Installs ``omnipython-pygraphics`` from TestPyPI (unless already importable), or
+Installs ``omnipython-pygraphics`` from PyPI (unless already importable), or
 uses sibling ``pygraphics/lib`` when present. Loads each binary via
 ``FrameBuffer.from_file``, then writes modules via ``FrameBuffer.export``
 (``BITMAP = bytearray(...)`` for zero-copy MicroPython loads).
@@ -57,10 +57,7 @@ def ensure_graphics(*, install: bool) -> None:
         "-m",
         "pip",
         "install",
-        "-i",
-        "https://test.pypi.org/simple/",
-        "--extra-index-url",
-        "https://pypi.org/simple/",
+        "--pre",
         "omnipython-pygraphics",
     ]
     print("Running:", " ".join(cmd))
@@ -131,7 +128,7 @@ def main() -> int:
     parser.add_argument(
         "--no-install",
         action="store_true",
-        help="Do not pip install graphics from TestPyPI",
+        help="Do not pip install graphics from PyPI",
     )
     parser.add_argument(
         "--delete-binaries",

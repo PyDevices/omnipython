@@ -10,13 +10,10 @@ For a complete program to start from, see [multimer_simpletest.py](https://githu
 
 ## Install
 
-### CPython (TestPyPI)
+### CPython (PyPI)
 
 ```bash
-pip install \
-  -i https://test.pypi.org/simple/ \
-  --extra-index-url https://pypi.org/simple/ \
-  omnipython
+pip install --pre omnipython
 ```
 
 `omnipython` is one distribution covering the whole core `lib/` tree. MIP

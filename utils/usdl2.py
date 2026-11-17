@@ -24,7 +24,7 @@ with the same subviews, ``SDL_Rect``/``SDL_Point`` as packed bytes, timer API
 via ``SDL_TimerCallback`` / ``SDL_AddTimer`` / ``SDL_RemoveTimer``. Opaque
 handles are plain ints (falsy when 0/NULL).
 
-Lives at ``lib/usdl2.py`` in this repo. Published as TestPyPI ``usdl2-py`` /
+Lives at ``lib/usdl2.py`` in this repo. Published as PyPI ``usdl2-py`` /
 MIP ``usdl2`` (same release tag as the native ``usdl2`` wheels). Uses
 **ctypes** on CPython (unix and win32); **ffi** on MicroPython unix.
 """

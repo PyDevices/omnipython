@@ -9,7 +9,7 @@ OmniPython core.
 | [`test_timers.py`](test_timers.py) | Public multimer timer probe for any supported interpreter |
 | [`ps_debug.py`](ps_debug.py) | Headless CDP console, network request, and WASM error diagnostic probe |
 | [`ps_shot.py`](ps_shot.py) | Timed headless browser screenshot runner with process watchdog |
-| [`test_testpypi_standalone.sh`](test_testpypi_standalone.sh) | Isolated TestPyPI import checks for core distributions; `--desktop` adds host backends |
+| [`test_pypi_standalone.sh`](test_pypi_standalone.sh) | Isolated PyPI import checks for core distributions; `--desktop` adds host backends |
 | [`libbuild.py`](libbuild.py) | Builds the package library: a `mip` index of every package this repository publishes and the ones [`lib-lock.json`](../lib-lock.json) pins, and the tree a firmware build `require()`s them from |
 
 From the repository root:
@@ -25,8 +25,8 @@ circuitpython tools/test_timers.py
 python tools/ps_debug.py http://127.0.0.1:8000/gallery/pyscript/harness.html?modules=bouncing_balls
 python tools/ps_shot.py http://127.0.0.1:8000/gallery/pyscript/harness.html?modules=bouncing_balls 3
 
-./tools/test_testpypi_standalone.sh
-./tools/test_testpypi_standalone.sh --desktop
+./tools/test_pypi_standalone.sh
+./tools/test_pypi_standalone.sh --desktop
 ```
 
 The cross-interpreter timer runner and LVGL-specific input diagnostics remain in

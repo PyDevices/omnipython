@@ -23,7 +23,7 @@ It prints `Area(20, 56, 80, 16)` and leaves a hue gradient with white text in
 `fb`. Install pygraphics first:
 
 ```bash
-pip install -i https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ omnipython-pygraphics
+pip install --pre omnipython-pygraphics
 ```
 
 The palette does not know about the framebuffer, so a mismatch in depth gives
