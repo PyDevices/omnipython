@@ -358,7 +358,7 @@ and Android.
 - [`Bluetooth speaker`](https://github.com/PyDevices/apps/tree/main/programs/bt-speaker): Make the board a speaker your phone or computer pairs with.\
   Get it: from source. Runs on: MP with Bluetooth Classic and audio out.
 - [`Camera for the ESP32-P4`](https://github.com/PyDevices/apps/tree/main/programs/camera): Take photos and H.264 video with sound, keep an album and spot people and faces, as the ESP32-P4X-EYE's own camera app does.\
-  Get it: `omip`, from the app's folder, from source. Runs on: MP on ESP32-P4.
+  Get it: `omip`, from the app's folder, from source. Runs on: MP on ESP32-P4, Desktop.
 - [`midiEngine`](https://github.com/PyDevices/apps/tree/main/apps/midiengine): Play General MIDI from a SoundFont and a USB or Bluetooth MIDI keyboard.\
   Get it: `omip`, from the app's folder, from source. Runs on: ESP32-P4 touch board.
 - [`Stompbox`](https://github.com/PyDevices/apps/tree/main/apps/stompbox): Play a guitar or WAV clip through an Airwindows effect, with its knobs on screen.\
