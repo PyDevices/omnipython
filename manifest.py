@@ -12,7 +12,7 @@ install. The list is read from ``lib/`` itself, so a new module there is
 included without anyone editing this file. ``utils/`` is not: its modules
 are for desktop hosts.
 
-With omnipython-builds, ``build_mp.py --modules omnipython`` (or ``all``)
+With omnipython-builds, ``build.py --modules omnipython`` (or ``all``)
 freezes it. From your own freeze manifest::
 
     include("path/to/omnipython")

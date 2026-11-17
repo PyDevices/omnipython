@@ -84,6 +84,6 @@ above, or build it in. A firmware build can freeze pdwidgets by including
 [`manifest.py`](https://github.com/PyDevices/omnipython/blob/main/packages/pdwidgets/manifest.py)
 from its own freeze manifest. With
 [omnipython-builds](https://github.com/PyDevices/omnipython-builds),
-that's `build_mp.py --modules pdwidgets`.
+that's `build.py --modules pdwidgets`.
 
 [Your first program](first-program.md) checks the install.

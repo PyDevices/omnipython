@@ -53,6 +53,6 @@ A firmware build can freeze palettes by including
 [`manifest.py`](https://github.com/PyDevices/omnipython/blob/main/packages/palettes/manifest.py)
 from its own freeze manifest. With
 [omnipython-builds](https://github.com/PyDevices/omnipython-builds),
-that's `build_mp.py --modules palettes`.
+that's `build.py --modules palettes`.
 
 [Your first program](first-program.md) checks the install.

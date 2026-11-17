@@ -50,7 +50,7 @@ host with no isochronous transfers: a drive, keyboard or MIDI controller works
 there, and audio, video and tethering don't. The device packages run on MicroPython's own `machine.USBDevice`; audio and video
 also need the OmniPython overlay's streaming endpoints (`USBDevice.Ring`,
 `USBDevice.stream()`), which move their packets in C from the USB interrupt.
-Both come with omnipython-builds' `build_mp.py`.
+Both come with omnipython-builds' `build.py`.
 
 Which classes each package drives, which boards run them and what a board
 can't do are in two tables: [USB support](../reference/usb-support.md), one section for the host and one for the device.

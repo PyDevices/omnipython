@@ -66,7 +66,7 @@ are in
 
 The packages run on MicroPython's `machine.USBDevice`. Audio and video also
 need the OmniPython firmware's streaming endpoints (`USBDevice.Ring` and
-`USBDevice.stream()`), which `build_mp.py` includes. The network adapter needs
+`USBDevice.stream()`), which `build.py` includes. The network adapter needs
 the firmware's `network.USBD_NCM`, which it has wherever the board has lwIP.
 
 | Board | Link speed | Notes |
