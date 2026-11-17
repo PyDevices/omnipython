@@ -27,7 +27,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import _mprun  # noqa: E402
 
 CONTRACT = Path(__file__).resolve().parent / "lt8912b_contract.py"
-PLANTS = ("hfp-hbp", "no-lane-check", "audio-leak", "edid-polarity")
+PLANTS = ("hfp-hbp", "no-lane-check", "audio-leak", "edid-polarity", "video-first", "color-remap")
 
 
 def _run(interpreter, *args):

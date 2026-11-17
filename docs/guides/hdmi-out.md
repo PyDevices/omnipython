@@ -3,8 +3,10 @@
 The Lontium LT8912B turns MIPI DSI video into HDMI or DVI. Adafruit sells it
 on a small board (product 6539) with a 22-pin DSI connector, an HDMI port and
 pads for reset, hot-plug and I2S audio; Olimex and M5Stack make others. The
-`lt8912b` driver sets the bridge up over I2C; the video itself comes from
-`mipidsi` on an ESP32-P4.
+`lt8912b` driver's `LT8912B` is a `mipidsi.Display` that sets the bridge up
+over I2C before the ESP32-P4 starts sending it video. It takes the same
+arguments as Adafruit's CircuitPython `adafruit_lt8912b.LT8912B`; see
+[Coming from Adafruit's driver](#coming-from-adafruits-driver).
 
 The driver hasn't run on hardware yet. Its register writes match those of
 Espressif's and Adafruit's drivers for the chip, checked on a fake I2C bus,
@@ -32,15 +34,20 @@ monitor that answers at 0x48 to 0x4A takes the bridge's writes.
 ## See a picture first
 
 The bridge can draw colour bars by itself, with no DSI video, which proves
-the wiring, the bridge and the monitor before anything else:
+the wiring, the bridge and the monitor before anything else. This needs only
+I2C, so any firmware will do:
 
 ```python
 import omip
 omip.install("lt8912b")
 ```
 
-then run [`lt8912b_simpletest.py`](https://github.com/PyDevices/omnipython/blob/main/examples/lt8912b_simpletest.py).
+then run [`lt8912b_test_pattern.py`](https://github.com/PyDevices/omnipython/blob/main/examples/lt8912b_test_pattern.py).
 An I2C scan should show 0x48, 0x49 and 0x4A, and the chip ID reads `12b2`.
+It uses `lt8912b.Bridge`, the I2C side of the driver alone.
+
+Then [`lt8912b_simpletest.py`](https://github.com/PyDevices/omnipython/blob/main/examples/lt8912b_simpletest.py)
+draws colour bars from the board itself, over DSI.
 [Bring up a board](bring-up-a-board.md) shows how to put `omip` on the board.
 
 ## Install the board config
@@ -54,11 +61,10 @@ or `esp32-p4-wifi6-dev-kit_lt8912b-hdmi` for the DEV-KIT. Pins, mode and
 audio are constants at the top of its `board_config.py`.
 
 The bridge takes RGB888 video and needs the DSI lanes kept in high speed
-through blanking. The board config asks `mipidsi` for both
-(`output_color_depth=24` and `low_power_blanking=False`); the framebuffer stays
-RGB565 and the P4 converts it on the way out. On firmware whose `mipidsi` lacks
-those options, the board config shows the test pattern and raises
-`NotImplementedError` saying what's missing.
+through blanking. `LT8912B` asks `mipidsi` for both (`output_color_depth=24`
+and `low_power_blanking=False`); the framebuffer stays RGB565 and the P4
+converts it on the way out. Firmware whose `mipidsi` lacks those options
+raises a `TypeError` naming the one it refuses.
 
 ## Pick a mode
 
@@ -81,10 +87,13 @@ RGB888 needs 24 bits a pixel:
 A padded mode announces video code 0, meaning no standard code, because its
 timing isn't the CEA one. If a monitor or TV handles it badly, set `VIC` in
 the board config to the standard code (4 for 720p60), or pass `vic=` to
-`fit()`.
+`fit()`. `mode.timing()` gives the arguments `LT8912B` takes, so
+`LT8912B(bus, i2c, **mode.timing())` starts any mode.
 
 Set `MODE = "edid"` in the board config to pick the largest mode the
-monitor lists that fits; that needs the DDC switch on. Your own timing is a
+monitor lists that fits; that needs the DDC switch on. In your own program,
+`best_mode(parse_edid(read_edid(i2c)), 2)` does the same, before you make
+the `LT8912B`. Your own timing is a
 `Mode(...)`, and goes through `fit()` and `check()` like the rest.
 
 A fitted mode isn't a CEA mode any more, so the bridge announces no video
@@ -92,12 +101,41 @@ code. Monitors take it on the line and frame rates; some TVs want the code.
 
 ## HDMI, DVI and audio
 
-The bridge sends DVI unless you ask for HDMI (`hdmi=True`) or audio. Audio
+The bridge sends DVI unless you ask for HDMI (`hdmi=True`) or audio
+(`audio=`), both arguments of `LT8912B`. Audio
 comes in as I2S, with no master clock, on the board's BCK, LRC and DIN pads,
 and goes out in the HDMI stream. It's experimental: no public document
 covers this chip's audio registers, so `Audio(rate, bits, recipe)` offers
 three register sets, `"a"` first. The driver's `Audio` docstring says where
 each came from.
+
+## Coming from Adafruit's driver
+
+A program written for `adafruit_lt8912b` keeps its `LT8912B(bus, i2c, ...)`
+call: the timing arguments, `reset`, `hsync_positive`, `vsync_positive`,
+`vic` and `aspect_ratio` mean the same, and `width`, `height` and
+`hot_plug_detected` read the same. The bridge is set up in the same order,
+then the DSI video starts, then the bridge locks to it. Three things
+differ:
+
+- **The bus.** This `mipidsi.Bus` takes `frequency=`, the rate itself, and
+  doesn't report its lanes or rate, so pass them to `LT8912B` too:
+  `num_lanes=` and `bus_frequency=`. `check()` gives the rate. There is no
+  `Bus(minimum_frequency=)`.
+- **The framebuffer.** It's RGB565, and the bridge gets RGB888 on the wire.
+  `color_depth=24` asks for an RGB888 framebuffer; where `mipidsi` doesn't
+  have one, `LT8912B` says so and tells you to leave it out.
+- **The board's own modules.** Adafruit's examples draw with `displayio`
+  and `framebufferio` and find pins in `board`. Here you draw with the
+  display's `fill_rect` and `blit`, or through displaydev's `FBDisplay`,
+  and name pins with `machine.Pin`.
+
+What `LT8912B` adds: `audio=` and `hdmi=`, `hpd=` for a wired hot-plug pin,
+`status()`, and `bridge`, the `Bridge` underneath with its test pattern.
+The driver also checks the chip ID before it writes anything, and after
+the video starts it resets the bridge's receiver as well as reseeding its
+pixel clock, because the clock generator locks only when it is reset with
+video running.
 
 ## What isn't proven
 

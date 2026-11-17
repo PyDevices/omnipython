@@ -15,7 +15,11 @@ and answers reads from a register file. The checks are:
   registers, and with audio each recipe writes its own set;
 * a real monitor's EDID (a Dell E207WFP, from the linuxhw/EDID collection)
   parses to the timings edid-decode reports, and `best_mode` picks 720p;
-* detection, hot-plug, the test pattern, `sync`, `status` and the options.
+* detection, hot-plug, the test pattern, `sync`, `status` and the options;
+* `LT8912B`, as a subclass of a fake ``mipidsi.Display``, takes Adafruit's
+  constructor, sets the bridge up before the DSI video starts and locks it
+  after, asks for RGB888 on the wire, and refuses what it can't do before
+  touching the chip.
 
 None of this shows a monitor agrees: it shows the driver writes the registers
 those sources write.
@@ -37,6 +41,45 @@ except NameError:  # pragma: no cover
 _sep = "\\" if "\\" in _here else "/"
 _dir = _here.rsplit(_sep, 1)[0] if _sep in _here else "."
 sys.path.insert(0, _dir + _sep + ".." + _sep + "drivers" + _sep + "display")
+
+
+class FakeDisplay:
+    """``mipidsi.Display`` as far as `LT8912B` sees it."""
+
+    log = None  # the I2C write list, so video starting shows among the writes
+    rgb565_only = True  # today's displayif: color_depth=16 only
+    report_clock = None  # a pixel_clock_frequency to report, or None for none
+
+    def __init__(self, bus, init_sequence, **kwargs):
+        if kwargs.get("color_depth") != 16 and FakeDisplay.rgb565_only:
+            raise ValueError("only color_depth=16 is supported")
+        self.init_sequence = init_sequence
+        self.kw = kwargs
+        self.width = kwargs["width"]
+        self.height = kwargs["height"]
+        self.deinited = False
+        if FakeDisplay.report_clock is not None:
+            self.pixel_clock_frequency = FakeDisplay.report_clock
+        FakeDisplay.log.append("VIDEO")
+
+    def deinit(self):
+        self.deinited = True
+
+
+class FakeBus:
+    """``mipidsi.Bus``: with no figures, today's displayif, which reports neither."""
+
+    def __init__(self, num_lanes=None, frequency=None):
+        self.num_lanes = num_lanes
+        self.frequency = frequency
+
+
+class fake_mipidsi:
+    Display = FakeDisplay
+    Bus = FakeBus
+
+
+sys.modules["mipidsi"] = fake_mipidsi
 
 import lt8912b  # noqa: E402
 
@@ -102,9 +145,18 @@ class FakeI2C:
 
 
 class LogPin:
+    OUT = "out"
+    IN = "in"
+
     def __init__(self, log, level=1):
         self.log = log
         self.level = level
+        self.mode = None
+
+    def init(self, mode, value=None):
+        self.mode = mode
+        if value is not None:
+            self.value(value)
 
     def value(self, level=None):
         if level is None:
@@ -167,15 +219,16 @@ def dds(clock):
 
 
 def avi(mode):
-    pb2 = mode.aspect * 16 + 8
+    pb2 = mode.aspect_ratio * 16 + 8
     body = [0x10, pb2, 0, mode.vic] + [0] * 9
     checksum = (256 - (0x82 + 0x02 + 0x0D + sum(body)) % 256) % 256
     return " ".join("%02X%02X" % (0x43 + i, v) for i, v in enumerate([checksum] + body))
 
 
-def expected_start(mode, lanes=2, hdmi=False, audio_text=None):
+def expected_start(mode, lanes=2, hdmi=False, audio_text=None, reset_pin=False):
     out = []
-    out += pairs(0x48, CLOCK_CYCLE)
+    if not reset_pin:
+        out += pairs(0x48, CLOCK_CYCLE)
     out += pairs(0x48, "330C")
     out += pairs(0x48, MAIN_INIT)
     out += pairs(0x49, "1001 1110 13%02X " % (lanes % 4) + DSI_RX_TAIL)
@@ -202,7 +255,7 @@ def expected_start(mode, lanes=2, hdmi=False, audio_text=None):
 
 def bridge(**kwargs):
     bus = FakeI2C(kwargs.pop("regs", None))
-    return lt8912b.LT8912B(bus, **kwargs), bus
+    return lt8912b.Bridge(bus, **kwargs), bus
 
 
 def first_difference(got, want):
@@ -220,15 +273,15 @@ lt8912b.time = FakeTime()
 
 if PLANT == "hfp-hbp":
     # Swap the horizontal porches in the timing registers.
-    _timing = lt8912b.LT8912B._timing
+    _timing = lt8912b.Bridge._timing
 
     def _bad_timing(mode):
         swapped = lt8912b.Mode(mode.name, mode.pixel_clock, mode.width, mode.hbp, mode.hsync, mode.hfp,
                                mode.height, mode.vfp, mode.vsync, mode.vbp,
-                               mode.hsync_positive, mode.vsync_positive, mode.vic, mode.aspect)
+                               mode.hsync_positive, mode.vsync_positive, mode.vic, mode.aspect_ratio)
         return _timing(swapped)
 
-    lt8912b.LT8912B._timing = staticmethod(_bad_timing)
+    lt8912b.Bridge._timing = staticmethod(_bad_timing)
 elif PLANT == "no-lane-check":
     lt8912b.check = lambda mode, lanes, lane_rate=None, max_lane_rate=0: lane_rate
 elif PLANT == "audio-leak":
@@ -244,6 +297,24 @@ elif PLANT == "edid-polarity":
         return mode
 
     lt8912b._detailed_timing = _bad_detailed
+elif PLANT == "video-first":
+    # Start the DSI video before the bridge is set up, then set it up.
+    _start = lt8912b.Bridge.start
+    _sync = lt8912b.Bridge.sync
+
+    def _late_start(self, mode, **kwargs):
+        self._late = (mode, kwargs)
+        self._mode = mode
+
+    def _late_sync(self, pixel_clock=None):
+        _start(self, self._late[0], **self._late[1])
+        _sync(self, pixel_clock)
+
+    lt8912b.Bridge.start = _late_start
+    lt8912b.Bridge.sync = _late_sync
+elif PLANT == "color-remap":
+    # Quietly turn color_depth=24 into an RGB565 framebuffer.
+    lt8912b._color_options = lambda color_depth, output_color_depth: {"color_depth": 16, "output_color_depth": 24}
 elif PLANT is not None:
     print("unknown plant", PLANT)
     sys.exit(2)
@@ -330,7 +401,7 @@ def check_refusals():
     slow = raises(lambda: lt8912b.check(lt8912b.fit(lt8912b.MODES["1280x720p60"]), 2, lane_rate=500_000_000), "960", "500")
     check("a bus too slow for 720p is refused", slow is not None)
     check("five lanes refused", raises(lambda: lt8912b.check(p60, 5), "lanes") is not None)
-    check("LT8912B(lanes=0) refused", raises(lambda: lt8912b.LT8912B(FakeI2C(), lanes=0), "lanes") is not None)
+    check("Bridge(lanes=0) refused", raises(lambda: lt8912b.Bridge(FakeI2C(), lanes=0), "lanes") is not None)
     wide = lt8912b.Mode("wide", 25_000_000, 640, 16, 300, 48, 480, 10, 2, 33, False, False)
     check("hsync over 255 refused", raises(lambda: lt8912b.check(wide, 2), "sync") is not None)
     fast = lt8912b.Mode("fast", 160_000_000, 1920, 88, 44, 148, 1080, 4, 5, 36, True, True)
@@ -362,7 +433,7 @@ def check_audio():
     check("recipe b: no N", not any(w.startswith("4A35") for w in writes))
 
     bus = FakeI2C({(0x4A, 0x3D): 0x08})
-    dev = lt8912b.LT8912B(bus)
+    dev = lt8912b.Bridge(bus)
     dev.start(mode, audio=lt8912b.Audio(44100, 16, "c"))
     frame = [0x84, 0x01, 0x0A, 0, 0x01] + [0] * 9
     frame[3] = (256 - sum(frame) % 256) % 256
@@ -407,9 +478,9 @@ def check_edid():
 
     regs = {(0x50, i): DELL_E207WFP[i] for i in range(256)}
     bus = FakeI2C(regs, present=(0x48, 0x49, 0x4A, 0x50))
-    check("read_edid reads both blocks", lt8912b.LT8912B(bus).read_edid() == DELL_E207WFP)
+    check("read_edid reads both blocks", lt8912b.read_edid(bus) == DELL_E207WFP)
     try:
-        lt8912b.LT8912B(FakeI2C()).read_edid()
+        lt8912b.read_edid(FakeI2C())
         message = ""
     except OSError as exc:
         message = str(exc)
@@ -428,20 +499,24 @@ def check_bridge():
     check("a wrong chip ID names the DDC switch", "26 60" in message and "DDC" in message, message)
     bus = FakeI2C(present=(0x48, 0x49))
     try:
-        lt8912b.LT8912B(bus).detect()
+        lt8912b.Bridge(bus).detect()
         message = ""
     except OSError as exc:
         message = str(exc)
     check("a missing page is named", "0x4A" in message, message)
 
     dev, bus = bridge(regs={(0x48, 0xC1): 0x80})
-    check("hot-plug from 0xC1 bit 7", dev.connected is True)
+    check("hot-plug from 0xC1 bit 7", dev.hot_plug_detected is True)
     log = []
-    dev = lt8912b.LT8912B(FakeI2C(), hpd=LogPin(log, 0))
-    check("hot-plug pin is active low", dev.connected is True)
+    pin = LogPin(log, 0)
+    dev = lt8912b.Bridge(FakeI2C(), hpd=pin)
+    check("hot-plug pin is active low", dev.hot_plug_detected is True)
+    check("hot-plug pin made an input", pin.mode == "in")
 
     log = []
-    dev, bus = bridge(reset=LogPin(log))
+    pin = LogPin(log)
+    dev, bus = bridge(reset=pin)
+    check("reset pin made an output, high", pin.mode == "out" and log == [1], (pin.mode, log))
     mode = lt8912b.fit(lt8912b.MODES["1280x720p60"])
     dev.start(mode)
     check("reset pin pulsed low then high", log == [1, 0, 1], log)
@@ -485,7 +560,125 @@ def check_bridge():
     check("deinit turns the transmitter off", bus.writes[-1] == "4833=0C" and dev.mode is None)
 
 
-for _fn in (check_modes, check_refusals, check_audio, check_edid, check_bridge):
+ADAFRUIT_720P = {
+    # Adafruit's lt8912b_720p.py, as it calls the constructor.
+    "width": 1280, "height": 720, "hsync_pulse_width": 32, "hsync_back_porch": 80,
+    "hsync_front_porch": 408, "vsync_pulse_width": 5, "vsync_back_porch": 13, "vsync_front_porch": 3,
+    "pixel_clock_frequency": 80_000_000, "hsync_positive": True, "vsync_positive": True,
+    "vic": 0, "aspect_ratio": 2,
+}
+
+
+def display(i2c=None, bus=None, rgb565_only=True, report_clock=None, **kwargs):
+    i2c = i2c or FakeI2C({(0x48, 0xC1): 0x80})
+    FakeDisplay.log = i2c.writes
+    FakeDisplay.rgb565_only = rgb565_only
+    FakeDisplay.report_clock = report_clock
+    timing = dict(ADAFRUIT_720P)
+    timing.update(kwargs)
+    return lt8912b.LT8912B(bus or FakeBus(2, 960_000_000), i2c, **timing), i2c
+
+
+def refusal(fn):
+    try:
+        fn()
+    except (ValueError, TypeError, OSError) as exc:
+        return "%s: %s" % (type(exc).__name__, exc)
+    return None
+
+
+def check_display():
+    check("LT8912B is a mipidsi.Display", issubclass(lt8912b.LT8912B, FakeDisplay))
+    mode = lt8912b.Mode("1280x720", 80_000_000, 1280, 408, 32, 80, 720, 3, 5, 13, True, True, vic=0, aspect_ratio=2)
+
+    # Adafruit's 720p call, unchanged, on a bus that reports its figures.
+    log = []
+    pin = LogPin(log)
+    dev, i2c = display(reset=pin)
+    video = i2c.writes.index("VIDEO") if "VIDEO" in i2c.writes else -1
+    want = expected_start(mode, reset_pin=True)
+    check("Adafruit's call: the bridge is set up before video", i2c.writes[:video] == want,
+          first_difference(i2c.writes[:video], want))
+    after = pairs(0x49, "5180 " + dds(80_000_000) + " 5100") + pairs(0x48, RX_RESET)
+    check("then reseeded and locked to the video", i2c.writes[video + 1:] == after, i2c.writes[video + 1:])
+    kw = dev.kw
+    check("mipidsi gets RGB565 in, RGB888 out, no LP blanking",
+          (kw.get("color_depth"), kw.get("output_color_depth"), kw.get("low_power_blanking")) == (16, 24, False), kw)
+    timing = dict((k, v) for k, v in ADAFRUIT_720P.items() if k not in ("hsync_positive", "vsync_positive", "vic", "aspect_ratio"))
+    check("mipidsi gets the timing and no init sequence",
+          all(kw.get(k) == v for k, v in timing.items()) and dev.init_sequence == b"", kw)
+    check("width and height read through", (dev.width, dev.height) == (1280, 720))
+    check("hot_plug_detected", dev.hot_plug_detected is True)
+    check("reset pin pulsed", log == [1, 0, 1], log)
+    dev.deinit()
+    check("deinit stops video, turns the transmitter off, releases reset",
+          dev.deinited and i2c.writes[-1] == "4833=0C" and pin.mode == "in", (dev.deinited, i2c.writes[-1], pin.mode))
+
+    # Our extras: the mode from fit(), and **mode.timing().
+    fitted = lt8912b.fit(lt8912b.MODES["1280x720p60"])
+    dev, i2c = display(**fitted.timing())
+    check("**fit(...).timing() takes the same path", "VIDEO" in i2c.writes and dev.kw["hsync_front_porch"] == 238,
+          dev.kw.get("hsync_front_porch"))
+    dev, i2c = display(audio=lt8912b.Audio(48000, 16, "a"))
+    check("audio= reaches the bridge, in HDMI", "4A06=08" in i2c.writes and "48B2=01" in i2c.writes)
+    dev, i2c = display(non_burst=True)
+    check("other mipidsi arguments pass through", dev.kw.get("non_burst") is True)
+
+    # Today's mipidsi.Bus reports neither figure: they must be given.
+    i2c = FakeI2C()
+    message = refusal(lambda: display(i2c=i2c, bus=FakeBus()))
+    check("a bus with no num_lanes asks for num_lanes=", message is not None and "num_lanes=" in message
+          and not i2c.writes, message)
+    print("   ", message)
+    dev, i2c = display(bus=FakeBus(), num_lanes=2, bus_frequency=960_000_000)
+    check("num_lanes= and bus_frequency= stand in for the bus's figures", "VIDEO" in i2c.writes)
+    i2c = FakeI2C()
+    message = refusal(lambda: display(i2c=i2c, num_lanes=4))
+    check("num_lanes= that disagrees with the bus is refused", message is not None and "disagrees" in message
+          and not i2c.writes, message)
+
+    # Refusals, before the chip is touched.
+    i2c = FakeI2C()
+    message = refusal(lambda: display(i2c=i2c, bus=FakeBus(2, 500_000_000)))
+    check("a slow bus is refused before any write", message is not None and "960" in message and not i2c.writes, message)
+    for name, value, needle in (("hsync_pulse_width", 0, "hsync_pulse_width must be between 1 and 255"),
+                                ("vsync_pulse_width", 256, "vsync_pulse_width must be between 1 and 255"),
+                                ("vic", 128, "vic must be between 0 and 127"),
+                                ("aspect_ratio", 3, "aspect_ratio must be 0, 1, or 2"),
+                                ("hsync_back_porch", 70000, "does not fit in 16 bits")):
+        i2c = FakeI2C()
+        message = refusal(lambda: display(i2c=i2c, **{name: value}))
+        check("Adafruit's refusal: %s=%d" % (name, value), message is not None and needle in message and not i2c.writes,
+              message)
+    i2c = FakeI2C(present=(0x48, 0x49))
+    message = refusal(lambda: display(i2c=i2c))
+    check("a missing bridge is refused before any write", message is not None and "0x4A" in message
+          and not i2c.writes, message)
+
+    # Colour depth: Adafruit's color_depth=24 works where mipidsi has it,
+    # and otherwise says what to use; nothing is remapped.
+    dev, i2c = display(rgb565_only=False, color_depth=24)
+    check("color_depth=24 reaches mipidsi as asked", dev.kw.get("color_depth") == 24
+          and "output_color_depth" not in dev.kw, dev.kw)
+    message = refusal(lambda: display(color_depth=24))
+    check("color_depth=24 on an RGB565-only mipidsi names the option to use",
+          message is not None and "output_color_depth=24" in message and "only color_depth=16" in message, message)
+    print("   ", message)
+    message = refusal(lambda: display(output_color_depth=16))
+    check("RGB565 on the wire is refused", message is not None and "RGB888" in message, message)
+    message = refusal(lambda: display(color_depth=8))
+    check("color_depth=8 is refused", message is not None and "color_depth" in message, message)
+
+    # A display that reports a faster real clock than the bus carries.
+    message = refusal(lambda: display(report_clock=85_000_000))
+    check("the real clock is checked against the bus after video starts", message is not None
+          and "below the 1020000000 needed" in message, message)
+    dev, i2c = display(report_clock=79_999_999)
+    seed = pairs(0x49, "5180 " + dds(79_999_999) + " 5100")
+    check("reseeded from the clock the display reports", i2c.writes[-9:-4] == seed, i2c.writes[-9:-4])
+
+
+for _fn in (check_modes, check_refusals, check_audio, check_edid, check_bridge, check_display):
     try:
         _fn()
     except Exception as _e:

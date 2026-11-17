@@ -15,19 +15,21 @@ The DSI host divides a 240 MHz clock by a whole number, so 720p runs at
 80 MHz with a wider front porch: 1778 pixels a line instead of 1650, the
 same 45 kHz and 60 Hz a monitor expects. Each lane then runs at 960 Mbps.
 
-The bridge needs RGB888 video with the lanes held in high speed through
-blanking. When this firmware's ``mipidsi`` can't send that, this config
-shows the bridge's own test pattern and raises NotImplementedError: the
-pattern proves the bridge and the monitor, and the error says what's missing.
+``fb`` is an ``lt8912b.LT8912B``, with the same class and
+constructor as Adafruit's CircuitPython driver. It sends RGB888 with the
+lanes held in high speed through blanking, which needs a ``mipidsi`` with
+``output_color_depth`` and ``low_power_blanking``; an older one names the
+argument it refuses. The bridge's own test pattern needs no DSI video:
+``lt8912b.Bridge`` shows it.
 """
 
 from machine import I2C, Pin
 
 from displaydev.fbdisplay import FBDisplay
-from lt8912b import LT8912B, MODES, best_mode, check, fit, parse_edid
+from lt8912b import LT8912B, MODES, best_mode, check, fit, parse_edid, read_edid
 
 try:
-    from mipidsi import Bus, Display
+    from mipidsi import Bus
 except ImportError as exc:
     raise NotImplementedError("MIPI DSI requires displayif mipidsi cmod (esp32p4 port)") from exc
 
@@ -59,38 +61,32 @@ MODE = "1280x720p60"
 VIC = 0
 HDMI = None  # None: DVI, or HDMI when AUDIO is set. True forces HDMI.
 AUDIO = None  # experimental: lt8912b.Audio(48000, 16) with I2S on the pins above
-# What mipidsi must do for this bridge: RGB888 on the wire (the framebuffer
-# stays RGB565 and the P4 converts it), and no drop to low power between lines. If the picture won't hold, add "non_burst": True and
+# The driver asks mipidsi for RGB888 on the wire and no drop to low power
+# between lines. If the picture won't hold, add "non_burst": True and
 # "continuous_clock": True, which the bridge's datasheet asks for.
-DSI_OPTIONS = {"color_depth": 16, "output_color_depth": 24, "low_power_blanking": False}
+DSI_OPTIONS = {}
 
 i2c = I2C(1, scl=Pin(I2C_SCL), sda=Pin(I2C_SDA), freq=100_000)
-bridge = LT8912B(
-    i2c,
-    lanes=LANES,
-    reset=None if BRIDGE_RST is None else Pin(BRIDGE_RST, Pin.OUT, value=1),
-    hpd=None if BRIDGE_HPD is None else Pin(BRIDGE_HPD, Pin.IN),
-)
-bridge.detect()
 
 if MODE == "edid":
-    mode = best_mode(parse_edid(bridge.read_edid()), LANES)
+    mode = best_mode(parse_edid(read_edid(i2c)), LANES)
 else:
     mode = fit(MODES[MODE], vic=VIC)
 lane_rate = check(mode, LANES)
 
-# The bridge is set up first; it locks to the video once the video runs.
-bridge.start(mode, lane_rate=lane_rate, hdmi=HDMI, audio=AUDIO)
-
 display_bus = Bus(frequency=lane_rate, num_lanes=LANES, ldo_chan=3, ldo_voltage_mv=2500)
-try:
-    fb = Display(display_bus, b"", **mode.dsi_timing(), **DSI_OPTIONS)
-except (TypeError, ValueError) as exc:
-    bridge.test_pattern()
-    raise NotImplementedError(
-        "this firmware's mipidsi can't send the LT8912B's video (%s): it needs %s. "
-        "The monitor shows the bridge's test pattern instead" % (exc, DSI_OPTIONS)
-    ) from exc
-bridge.sync()
+# Sets the bridge up, starts the DSI video, then locks the bridge to it.
+fb = LT8912B(
+    display_bus,
+    i2c,
+    reset=None if BRIDGE_RST is None else Pin(BRIDGE_RST),
+    hpd=None if BRIDGE_HPD is None else Pin(BRIDGE_HPD),
+    num_lanes=LANES,
+    bus_frequency=lane_rate,
+    hdmi=HDMI,
+    audio=AUDIO,
+    **mode.timing(),
+    **DSI_OPTIONS,
+)
 
 display_drv = FBDisplay(fb)

@@ -6,14 +6,18 @@
 
 """Send a MIPI DSI display out over HDMI or DVI through a Lontium LT8912B bridge.
 
-The bridge is set up entirely over I2C, so `LT8912B` never touches pixels:
-the DSI video comes from the host (``mipidsi.Display`` on an ESP32-P4). The
-order matters. Call `LT8912B.start` before the DSI video starts, then
-`LT8912B.sync` once it runs, because the bridge only locks its pixel clock
-to a stream that is already there.
+`LT8912B` is a ``mipidsi.Display`` that also sets the bridge up over I2C,
+with the same constructor and properties as Adafruit's CircuitPython
+``adafruit_lt8912b.LT8912B``, so a program written for that runs here. It
+configures the bridge first, then starts DSI video, then locks the bridge
+to it, because the bridge only locks its pixel clock to a stream that is
+already there.
 
-The bridge takes RGB888 or RGB666 on the wire, non-burst video with a
-continuous clock lane, one to four data lanes at up to 1.5 Gbps each. An
+`Bridge` is the I2C side alone. It needs no DSI video, so it can show the
+bridge's own test pattern and read its status before anything else works.
+
+The bridge takes RGB888 on the wire with the lanes kept in high speed
+through blanking, on one to four data lanes at up to 1.5 Gbps each. An
 ESP32-P4 has two lanes and divides a fixed clock by a whole number, so
 `fit` turns a standard mode into one the host can make, and `check`
 refuses a mode the lanes can't carry.
@@ -24,14 +28,18 @@ file. HDMI audio over I2S is experimental: no public source documents it,
 and `Audio` says where each value came from.
 
 Example:
-    bridge = LT8912B(i2c)
     mode = fit(MODES["1280x720p60"])
-    bridge.start(mode)
-    fb = Display(bus, b"", **mode.dsi_timing(), ...)
-    bridge.sync()
+    lane_rate = check(mode, 2)
+    bus = mipidsi.Bus(frequency=lane_rate, num_lanes=2)
+    display = LT8912B(bus, i2c, num_lanes=2, bus_frequency=lane_rate, **mode.timing())
 """
 
 import time
+
+try:
+    from mipidsi import Display as _Display
+except ImportError:
+    _Display = None
 
 MAIN = 0x48  # main page: clocks, analog, sync polarity, HDMI mode, status
 DSI = 0x49  # CEC and DSI page: receiver, timing, the pixel clock (DDS)
@@ -111,11 +119,12 @@ class Mode:
         hsync_positive (bool): Sync polarity on the HDMI side.
         vsync_positive (bool): Sync polarity on the HDMI side.
         vic (int): The CEA-861 video code to announce, 0 for none.
-        aspect (int): Picture aspect in the AVI infoframe: 0 none, 1 4:3, 2 16:9.
+        aspect_ratio (int): Picture aspect in the AVI infoframe: 0 none,
+            1 4:3, 2 16:9.
     """
 
     def __init__(self, name, pixel_clock, width, hfp, hsync, hbp, height, vfp, vsync, vbp,
-                 hsync_positive, vsync_positive, vic=0, aspect=0):
+                 hsync_positive, vsync_positive, vic=0, aspect_ratio=0):
         self.name = name
         self.pixel_clock = pixel_clock
         self.width = width
@@ -129,7 +138,7 @@ class Mode:
         self.hsync_positive = hsync_positive
         self.vsync_positive = vsync_positive
         self.vic = vic
-        self.aspect = aspect
+        self.aspect_ratio = aspect_ratio
 
     @property
     def htotal(self):
@@ -151,8 +160,8 @@ class Mode:
         rate = (bits + lanes - 1) // lanes
         return (rate + 999_999) // 1_000_000 * 1_000_000
 
-    def dsi_timing(self):
-        """The keyword arguments ``mipidsi.Display`` takes for this mode."""
+    def timing(self):
+        """The timing keyword arguments `LT8912B` takes, for ``LT8912B(bus, i2c, **mode.timing())``."""
         return {
             "width": self.width,
             "height": self.height,
@@ -163,6 +172,10 @@ class Mode:
             "vsync_back_porch": self.vbp,
             "vsync_front_porch": self.vfp,
             "pixel_clock_frequency": self.pixel_clock,
+            "hsync_positive": self.hsync_positive,
+            "vsync_positive": self.vsync_positive,
+            "vic": self.vic,
+            "aspect_ratio": self.aspect_ratio,
         }
 
     def __repr__(self):
@@ -173,12 +186,12 @@ class Mode:
 # The standard modes, as CEA-861 and VESA DMT define them. An ESP32-P4 can't
 # make most of these pixel clocks: pass a mode through `fit` first.
 MODES = {
-    "640x480p60": Mode("640x480p60", 25_175_000, 640, 16, 96, 48, 480, 10, 2, 33, False, False, vic=1, aspect=1),
-    "800x600p60": Mode("800x600p60", 40_000_000, 800, 40, 128, 88, 600, 1, 4, 23, True, True, aspect=1),
-    "1024x768p60": Mode("1024x768p60", 65_000_000, 1024, 24, 136, 160, 768, 3, 6, 29, False, False, aspect=1),
-    "1280x720p60": Mode("1280x720p60", 74_250_000, 1280, 110, 40, 220, 720, 5, 5, 20, True, True, vic=4, aspect=2),
-    "1920x1080p30": Mode("1920x1080p30", 74_250_000, 1920, 88, 44, 148, 1080, 4, 5, 36, True, True, vic=34, aspect=2),
-    "1920x1080p60": Mode("1920x1080p60", 148_500_000, 1920, 88, 44, 148, 1080, 4, 5, 36, True, True, vic=16, aspect=2),
+    "640x480p60": Mode("640x480p60", 25_175_000, 640, 16, 96, 48, 480, 10, 2, 33, False, False, vic=1, aspect_ratio=1),
+    "800x600p60": Mode("800x600p60", 40_000_000, 800, 40, 128, 88, 600, 1, 4, 23, True, True, aspect_ratio=1),
+    "1024x768p60": Mode("1024x768p60", 65_000_000, 1024, 24, 136, 160, 768, 3, 6, 29, False, False, aspect_ratio=1),
+    "1280x720p60": Mode("1280x720p60", 74_250_000, 1280, 110, 40, 220, 720, 5, 5, 20, True, True, vic=4, aspect_ratio=2),
+    "1920x1080p30": Mode("1920x1080p30", 74_250_000, 1920, 88, 44, 148, 1080, 4, 5, 36, True, True, vic=34, aspect_ratio=2),
+    "1920x1080p60": Mode("1920x1080p60", 148_500_000, 1920, 88, 44, 148, 1080, 4, 5, 36, True, True, vic=16, aspect_ratio=2),
 }
 
 
@@ -231,7 +244,7 @@ def fit(mode, host_clock=P4_HOST_CLOCK, vic=0):
     extra = htotal - mode.htotal
     return Mode(mode.name, real, mode.width, mode.hfp + extra, mode.hsync, mode.hbp,
                 mode.height, mode.vfp, mode.vsync, mode.vbp,
-                mode.hsync_positive, mode.vsync_positive, vic=vic, aspect=mode.aspect)
+                mode.hsync_positive, mode.vsync_positive, vic=vic, aspect_ratio=mode.aspect_ratio)
 
 
 def check(mode, lanes, lane_rate=None, max_lane_rate=MAX_LANE_RATE):
@@ -399,11 +412,11 @@ def best_mode(modes, lanes, host_clock=P4_HOST_CLOCK, max_lane_rate=MAX_LANE_RAT
 
 
 class Audio:
-    """HDMI audio from I2S, for `LT8912B.start`. Experimental.
+    """HDMI audio from I2S, for `LT8912B` or `Bridge.start`. Experimental.
 
     No public source documents this chip's I2S audio registers, so there
     are three recipes, most likely first. Each writes the HDMI page (0x4A),
-    and `LT8912B.start` puts the bridge in HDMI mode for it.
+    and starting the bridge with it puts the bridge in HDMI mode for it.
 
     ``"a"`` is the set a 2025 Linux patch for this chip used, tested with
     monitors on an i.MX8M Mini: channel status 0x0F, the N value at 0x35 to
@@ -474,19 +487,47 @@ class Audio:
         return "<Audio %d Hz %d-bit recipe %s>" % (self.rate, self.bits, self.recipe)
 
 
-class LT8912B:
-    """One LT8912B bridge on an I2C bus.
+def read_edid(i2c):
+    """Read the monitor's EDID from 0x50: 128 bytes, or 256 with an extension.
+
+    The DDC lines must reach this bus: on Adafruit's board, the DDC switch
+    on. Read it before making the `LT8912B`, which needs the timing, and
+    pass the result to `parse_edid`.
+
+    Args:
+        i2c: A bus with ``readfrom_mem``, such as ``machine.I2C``.
+
+    Raises:
+        OSError: If nothing answers at 0x50, with what to check.
+    """
+    try:
+        data = bytes(i2c.readfrom_mem(EDID, 0x00, 128))
+        if data[126]:
+            data += bytes(i2c.readfrom_mem(EDID, 0x80, 128))
+    except OSError as exc:
+        raise OSError("no EDID at 0x50: is a monitor plugged in and on, and is the "
+                      "board's DDC switch on? (%s)" % (exc,))
+    return data
+
+
+class Bridge:
+    """The LT8912B's I2C side alone, with no DSI video.
+
+    `LT8912B` uses one of these to set the bridge up. On its own, it shows
+    the bridge's test pattern, reads its status and finds clashes on the
+    bus, which proves the wiring and the monitor before any video runs.
 
     Args:
         i2c: A bus with ``writeto_mem``, ``readfrom_mem`` and ``scan``, such
             as ``machine.I2C``.
         lanes (int): DSI data lanes wired to the bridge, 1 to 4.
-        reset: The bridge's active-low reset as an output ``machine.Pin``, or
-            None if it isn't wired. Without it, `start` cycles the bridge's
-            clocks instead, which recovers less.
-        hpd: The board's hot-plug output as an input ``machine.Pin``, low when
-            a monitor is connected on Adafruit's board, or None to read the
-            bridge's own status register.
+        reset: The ``machine.Pin`` wired to the bridge's active-low reset, or
+            None if it isn't wired. It is made an output, held high. Without
+            it, `start` cycles the bridge's clocks instead, which recovers
+            less.
+        hpd: The ``machine.Pin`` wired to the board's hot-plug output, low
+            while a monitor is connected on Adafruit's board, or None to
+            read the bridge's own status register. It is made an input.
         settle (int): The DSI receiver's settle count, register 0x11 of the
             DSI page. Espressif and Adafruit use 0x10.
         lane_swap (bool): Reverse the data lanes (DSI page 0x15).
@@ -508,7 +549,9 @@ class LT8912B:
         self._pn_swap = pn_swap
         self._mode = None
         if reset is not None:
-            reset.value(1)
+            reset.init(reset.OUT, value=1)
+        if hpd is not None:
+            hpd.init(hpd.IN)
 
     @property
     def mode(self):
@@ -593,7 +636,7 @@ class LT8912B:
         return [address for address in (MAIN, DSI, AVI, 0x4B) if address in found]
 
     @property
-    def connected(self):
+    def hot_plug_detected(self):
         """True when a monitor asserts hot-plug detect.
 
         Reads the HPD pin if one was given, otherwise bit 7 of main page 0xC1.
@@ -601,24 +644,6 @@ class LT8912B:
         if self._hpd is not None:
             return not self._hpd.value()
         return bool(self._read(MAIN, 0xC1)[0] & 0x80)
-
-    def read_edid(self):
-        """Read the monitor's EDID from 0x50: 128 bytes, or 256 with an extension.
-
-        The DDC lines must reach this bus: on Adafruit's board, the DDC
-        switch on. Pass the result to `parse_edid`.
-
-        Raises:
-            OSError: If nothing answers at 0x50, with what to check.
-        """
-        try:
-            data = bytes(self._read(EDID, 0x00, 128))
-            if data[126]:
-                data += bytes(self._read(EDID, 0x80, 128))
-        except OSError as exc:
-            raise OSError("no EDID at 0x50: is a monitor plugged in and on, and is the "
-                          "board's DDC switch on? (%s)" % (exc,))
-        return data
 
     # -- Video --------------------------------------------------------------
 
@@ -671,18 +696,22 @@ class LT8912B:
         self._write(MAIN, 0xB2, 0x01 if hdmi else 0x00)
         self._write(MAIN, 0x33, _TX_ON)
 
-    def sync(self):
+    def sync(self, pixel_clock=None):
         """Lock the bridge to DSI video that is now running.
 
-        Seeds the pixel clock generator from the mode's clock, then resets
-        the DSI receiver and the generator, so they lock to the live stream.
+        Seeds the pixel clock generator, then resets the DSI receiver and
+        the generator, so they lock to the live stream.
+
+        Args:
+            pixel_clock (int): The clock the host really sends, in Hz, or
+                None for the mode's.
 
         Raises:
             RuntimeError: If `start` hasn't run.
         """
         if self._mode is None:
             raise RuntimeError("call start() first")
-        self._seed_dds(self._mode.pixel_clock)
+        self._seed_dds(pixel_clock or self._mode.pixel_clock)
         self._receiver_reset()
 
     def output(self, on):
@@ -753,9 +782,16 @@ class LT8912B:
         }
 
     def deinit(self):
-        """Turn the transmitter off. The bridge keeps its setup until reset."""
+        """Turn the transmitter off and let go of the reset pin.
+
+        The reset pin becomes an input again, and the board's pull-up keeps
+        the bridge running with its setup.
+        """
         self.output(False)
         self._mode = None
+        if self._reset is not None:
+            self._reset.init(self._reset.IN)
+            self._reset = None
 
     # -- Internals ----------------------------------------------------------
 
@@ -804,7 +840,7 @@ class LT8912B:
         # PB0 is the checksum over the 82 02 0D header and PB1 to PB13.
         # PB1 = 0x10: RGB with active format information. PB2: picture
         # aspect in bits 5-4, active format "same as picture". PB4: the VIC.
-        pb2 = mode.aspect << 4 | 0x08
+        pb2 = mode.aspect_ratio << 4 | 0x08
         payload = [0, 0x10, pb2, 0, mode.vic] + [0] * 9
         payload[0] = (0x100 - 0x82 - 0x02 - 0x0D - pb2 - 0x10 - mode.vic) & 0xFF
         return [(0x43 + index, value) for index, value in enumerate(payload)]
@@ -818,3 +854,206 @@ class LT8912B:
 
 def _dds_word(pixel_clock):
     return pixel_clock * _DDS_PER_MHZ // 1_000_000
+
+
+# The bus treats rates within 1 kHz of what is asked as meeting it.
+_BUS_FREQUENCY_TOLERANCE = 1_000
+
+
+def _bus_figure(bus, name, given, argument):
+    # The bus's own figure wins; a mipidsi.Bus that can't report it needs
+    # the caller to say it, and the two must agree when both are there.
+    try:
+        reported = getattr(bus, name)
+    except AttributeError:
+        reported = None
+    if reported is None:
+        if given is None:
+            raise ValueError("this mipidsi.Bus doesn't report %s: pass %s= to LT8912B, "
+                             "the value the Bus was made with" % (name, argument))
+        return given
+    if given is not None and given != reported:
+        raise ValueError("%s=%d disagrees with the bus's %s, %d" % (argument, given, name, reported))
+    return reported
+
+
+def _color_options(color_depth, output_color_depth):
+    """The ``mipidsi.Display`` colour arguments for the bridge's RGB888 input."""
+    if color_depth == 16:
+        if output_color_depth not in (None, 24):
+            raise ValueError("the LT8912B takes RGB888: output_color_depth must be 24, not %r"
+                             % (output_color_depth,))
+        return {"color_depth": 16, "output_color_depth": 24}
+    if color_depth == 24:
+        if output_color_depth not in (None, 24):
+            raise ValueError("an RGB888 framebuffer is RGB888 on the wire: leave output_color_depth out")
+        options = {"color_depth": 24}
+        if output_color_depth is not None:
+            options["output_color_depth"] = 24
+        return options
+    raise ValueError("color_depth must be 16 (an RGB565 framebuffer sent as RGB888) or 24, not %r"
+                     % (color_depth,))
+
+
+if _Display is None:
+
+    class LT8912B:
+        """Needs ``mipidsi``, which this firmware doesn't have: use `Bridge` for the I2C side."""
+
+        def __init__(self, *args, **kwargs):
+            raise NotImplementedError("LT8912B is a mipidsi.Display, and this firmware has no mipidsi. "
+                                      "Bridge drives the I2C side alone, with its test pattern")
+
+else:
+
+    class LT8912B(_Display):
+        """An HDMI or DVI display: a ``mipidsi.Display`` that sets up an LT8912B first.
+
+        The same constructor, properties and order of work as Adafruit's
+        CircuitPython ``adafruit_lt8912b.LT8912B``: it resets the bridge and
+        configures it for the timing over I2C, starts DSI video, checks the
+        bus is fast enough for the pixel clock, then locks the bridge to the
+        video. Draw into it as into any ``mipidsi.Display``, through
+        displaydev's ``FBDisplay`` for example.
+
+        The framebuffer is RGB565 and the DSI host sends it as RGB888, which
+        is all the bridge takes, with the lanes kept in high speed through
+        blanking. Pass ``color_depth=24`` for an RGB888 framebuffer on a
+        ``mipidsi`` that has one.
+
+        The arguments after ``aspect_ratio`` are this driver's own. On an
+        ESP32-P4 the pixel clock must be one the host makes exactly: `fit`
+        gives one.
+
+        Args:
+            bus (mipidsi.Bus): The DSI bus the bridge is on. Its rate must
+                carry 24 bits a pixel across its lanes: `check` gives it.
+            i2c: The I2C bus the bridge is on, such as ``machine.I2C``.
+            width (int): Active pixels per line.
+            height (int): Active lines.
+            hsync_pulse_width (int): Horizontal sync width, 1 to 255 pixels.
+            hsync_back_porch (int): Horizontal back porch, pixels.
+            hsync_front_porch (int): Horizontal front porch, pixels.
+            vsync_pulse_width (int): Vertical sync width, 1 to 255 lines.
+            vsync_back_porch (int): Vertical back porch, lines.
+            vsync_front_porch (int): Vertical front porch, lines.
+            pixel_clock_frequency (int): Pixel clock in Hz.
+            reset: The ``machine.Pin`` wired to the bridge's active-low
+                reset, or None.
+            hsync_positive (bool): True for positive horizontal sync.
+            vsync_positive (bool): True for positive vertical sync.
+            vic (int): AVI video code, 0 to 127; 0 for a timing with no
+                standard code.
+            aspect_ratio (int): AVI picture aspect: 0 none, 1 4:3, 2 16:9.
+            num_lanes (int): The bus's data lanes, for a ``mipidsi.Bus``
+                that doesn't report ``num_lanes``.
+            bus_frequency (int): The bus's bit rate per lane in Hz, for a
+                ``mipidsi.Bus`` that doesn't report ``frequency``.
+            hpd: The ``machine.Pin`` wired to the hot-plug output, or None to
+                read the bridge's status register.
+            hdmi (bool): True for HDMI, False for DVI. None picks HDMI when
+                ``audio`` is given, otherwise DVI.
+            audio (Audio): HDMI audio from I2S. Experimental.
+            settle (int): As for `Bridge`.
+            lane_swap (bool): As for `Bridge`.
+            pn_swap (bool): As for `Bridge`.
+            **kwargs: Other ``mipidsi.Display`` arguments, such as
+                ``non_burst``.
+
+        Raises:
+            ValueError: If an argument is out of range, the bus is too slow
+                for the pixel clock, or ``mipidsi`` can't make the colour
+                format asked for.
+            OSError: If the bridge doesn't answer on I2C, or another device
+                answers at its address.
+        """
+
+        def __init__(self, bus, i2c, *, width, height, hsync_pulse_width, hsync_back_porch,
+                     hsync_front_porch, vsync_pulse_width, vsync_back_porch, vsync_front_porch,
+                     pixel_clock_frequency, reset=None, hsync_positive=False, vsync_positive=False,
+                     vic=0, aspect_ratio=0, num_lanes=None, bus_frequency=None, hpd=None, hdmi=None,
+                     audio=None, settle=0x10, lane_swap=False, pn_swap=False, **kwargs):
+            h_total = width + hsync_front_porch + hsync_pulse_width + hsync_back_porch
+            v_total = height + vsync_front_porch + vsync_pulse_width + vsync_back_porch
+            if h_total > 0xFFFF or v_total > 0xFFFF:
+                raise ValueError("horizontal or vertical total does not fit in 16 bits")
+            if not 1 <= hsync_pulse_width <= 255:
+                raise ValueError("hsync_pulse_width must be between 1 and 255")
+            if not 1 <= vsync_pulse_width <= 255:
+                raise ValueError("vsync_pulse_width must be between 1 and 255")
+            if not 0 <= vic <= 127:
+                raise ValueError("vic must be between 0 and 127")
+            if not 0 <= aspect_ratio <= 2:
+                raise ValueError("aspect_ratio must be 0, 1, or 2")
+            color_depth = kwargs.pop("color_depth", 16)
+            colors = _color_options(color_depth, kwargs.pop("output_color_depth", None))
+            kwargs.update(colors)
+            lanes = _bus_figure(bus, "num_lanes", num_lanes, "num_lanes")
+            rate = _bus_figure(bus, "frequency", bus_frequency, "bus_frequency")
+            mode = Mode("%dx%d" % (width, height), pixel_clock_frequency, width, hsync_front_porch,
+                        hsync_pulse_width, hsync_back_porch, height, vsync_front_porch,
+                        vsync_pulse_width, vsync_back_porch, hsync_positive, vsync_positive,
+                        vic=vic, aspect_ratio=aspect_ratio)
+            # Refuse a mode the lanes can't carry before touching the chip.
+            check(mode, lanes, rate)
+
+            # Configure the bridge before starting DSI video.
+            self.bridge = Bridge(i2c, lanes=lanes, reset=reset, hpd=hpd, settle=settle,
+                                 lane_swap=lane_swap, pn_swap=pn_swap)
+            self.bridge.detect()
+            self.bridge.start(mode, hdmi=hdmi, audio=audio)
+
+            # Start DSI video only now. The lanes stay in high speed, so the
+            # bridge's receiver must be ready for the one start of transmission.
+            try:
+                super().__init__(
+                    bus,
+                    b"",
+                    width=width,
+                    height=height,
+                    hsync_pulse_width=hsync_pulse_width,
+                    hsync_back_porch=hsync_back_porch,
+                    hsync_front_porch=hsync_front_porch,
+                    vsync_pulse_width=vsync_pulse_width,
+                    vsync_back_porch=vsync_back_porch,
+                    vsync_front_porch=vsync_front_porch,
+                    pixel_clock_frequency=pixel_clock_frequency,
+                    # The bridge regenerates the pixel clock from the DSI clock
+                    # and loses lock if the lanes drop to low power in blanking.
+                    low_power_blanking=False,
+                    **kwargs,
+                )
+            except ValueError as exc:
+                if color_depth != 24:
+                    raise
+                raise ValueError("this mipidsi refused color_depth=24 (%s). Leave color_depth out: "
+                                 "the framebuffer is then RGB565 and the bridge still gets RGB888, "
+                                 "from output_color_depth=24" % (exc,))
+
+            # Check the rate against the clock the host really makes, where
+            # the display reports it.
+            try:
+                real_clock = self.pixel_clock_frequency
+            except AttributeError:
+                real_clock = pixel_clock_frequency
+            needed = (real_clock * 24 + lanes - 1) // lanes
+            if rate + _BUS_FREQUENCY_TOLERANCE < needed:
+                self.deinit()
+                raise ValueError("bus runs at %d, below the %d needed for this pixel clock" % (rate, needed))
+
+            # Seed again from the real clock, now the bridge has video to track.
+            self.bridge.sync(real_clock)
+
+        @property
+        def hot_plug_detected(self):
+            """True when a monitor asserts hot-plug detect: see `Bridge.hot_plug_detected`."""
+            return self.bridge.hot_plug_detected
+
+        def status(self):
+            """What the bridge measures from the DSI input: see `Bridge.status`."""
+            return self.bridge.status()
+
+        def deinit(self):
+            """Stop the display, turn the transmitter off and release the reset pin."""
+            self.bridge.deinit()
+            super().deinit()
