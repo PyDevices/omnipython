@@ -37,11 +37,13 @@ except ImportError as exc:
 I2C_SCL = 8
 I2C_SDA = 7
 LANES = 2
-# Not on the cable (J2 pins 5 and 6 are unconnected). To use them, wire the
-# board's RST and HPD pads to free GPIOs of your choosing and put the numbers
-# here. RST is pulled up on the board, so leaving it unwired is safe; HPD is
-# low while a monitor is connected. None reads hot-plug from the bridge.
-BRIDGE_RST = None
+# Not on the cable (J2 pins 5 and 6 are unconnected). RST is wired from the
+# adapter's RST pad (JP2 pin 7) to GPIO 47, the Pico header's pin 22; the
+# header's pin 23 beside it is GND. The adapter pulls RST up to 3.3 V, so the
+# line is safe to leave unwired: set None. HPD isn't wired (it is low while a
+# monitor is connected); to use it, wire its pad to a free GPIO and put the
+# number here. None reads hot-plug from the bridge.
+BRIDGE_RST = 47  # Pico header pin 22
 BRIDGE_HPD = None
 # I2S for HDMI audio, to the board's BCK, LRC and DIN pads: your choice of
 # pins (these are free on the header). Used only when AUDIO is set; the

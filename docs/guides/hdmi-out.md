@@ -19,9 +19,11 @@ connector has 15 pins, so it needs a 15-to-22-pin cable, the kind Raspberry
 Pi 5 displays use.
 
 The cable has no reset or hot-plug line. Both are optional: the board pulls
-reset up, and the driver reads hot-plug from the bridge. To wire them
-anyway, run the board's RST and HPD pads to free GPIOs and name them in the
-board config.
+reset up, and the driver reads hot-plug from the bridge. The board config
+expects reset wired: run the adapter's RST pad (JP2 pin 7) to GPIO 47, the
+Pico header's pin 22, with ground from the neighbouring pin 23. To leave it
+unwired, set `BRIDGE_RST = None`. To wire hot-plug too, run the HPD pad to a
+free GPIO and name it in the board config.
 
 Adafruit's board has a DDC switch that joins the monitor's DDC lines to the
 cable's I2C. Leave it off unless you want the monitor's EDID: with it on, a
