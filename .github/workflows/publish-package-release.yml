@@ -56,7 +56,7 @@ jobs:
 
   build:
     needs: resolve
-    uses: PyDevices/.github/.github/workflows/reusable-build-pure-python-distribution.yml@publishing-v27
+    uses: PyDevices/.github/.github/workflows/reusable-build-pure-python-distribution.yml@publishing-v28
     with:
       distribution-name: ${{ needs.resolve.outputs.distribution }}
       import-name: ${{ needs.resolve.outputs.package }}
@@ -108,7 +108,7 @@ jobs:
     # pdwidgets profiles are locked to the archived repositories, so those two
     # ask the library index alone.
     needs: [resolve, build, publish-to-testpypi]
-    uses: PyDevices/.github/.github/workflows/reusable-request-mip-publication.yml@publishing-v27
+    uses: PyDevices/.github/.github/workflows/reusable-request-mip-publication.yml@publishing-v28
     with:
       release-ref: ${{ needs.resolve.outputs.tag }}
       version: ${{ needs.resolve.outputs.version }}
