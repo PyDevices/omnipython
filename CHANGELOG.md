@@ -1,3 +1,9 @@
+## v0.8.0.dev24 (2026-11-17)
+
+- omnipython-desktop: midiports' type stubs and py.typed ship in the pip wheel (#680)
+- midiports: type stubs for every port module, so pip users see the port contract's types (#678)
+- midiports: BLE MIDI port, the board as an instrument a controller plays (#677)
+
 ## v0.8.0.dev23 (2026-11-16)
 
 - Boards: Waveshare Pico-OLED-2.23 and Pico-Audio on a Pico (#463)
