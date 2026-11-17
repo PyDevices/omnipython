@@ -1,3 +1,7 @@
+## v0.1.0 (2026-11-17)
+
+- First final release, on PyPI and the library index
+
 ## v0.1.0.dev2 (2026-11-15)
 
 - instant_mix in both sets, drawn from its Material Symbol (#623)
