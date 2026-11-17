@@ -31,7 +31,7 @@ names the hardware.
 - Windows: MicroPython and CPython.
 - A browser: MicroPython through WebAssembly, and CPython through PyScript.
 - Android: CPython.
-- macOS: CPython. Only the audio engine, audiodsp, has native macOS wheels so far.
+- macOS: CPython. Two packages have native macOS wheels so far: the audio engine, audiodsp, and the Airwindows effects, airwindows. pygraphics runs there as pure Python, and LVGL has no macOS wheel.
 
 The [desktop](guides/run-on-the-desktop.md),
 [browser](guides/run-in-the-browser.md),
