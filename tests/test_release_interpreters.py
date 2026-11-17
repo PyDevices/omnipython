@@ -1,7 +1,7 @@
 # SPDX-FileCopyrightText: 2026 Brad Barnett
 #
 # SPDX-License-Identifier: MIT
-"""The pins behind a final release's interpreters: scripts/release_interpreters/sources.py,
+"""The pins behind a release's interpreters: scripts/release_interpreters/sources.py,
 the gate and fetch steps of scripts/release_interpreters.sh, and the sources
 record bin/upload_interpreters.sh puts in interpreters.json.
 
@@ -223,6 +223,17 @@ class TheWorkflowSteps(Scratch):
         self.assertEqual(out["attach"], "true")
         self.assertEqual(out["mpp"], self.mpp)
         self.assertEqual(out["lvgl"], self.lvgl)
+
+    def test_gate_attaches_to_a_pre_release_and_not_to_a_branch(self):
+        for tag in ("v0.8.0.dev24", "v1.2.3rc1"):
+            for args in (("release", tag), ("workflow_dispatch", tag, "true")):
+                out = dict(line.split("=", 1) for line in self.sh("gate", *args).stdout.split())
+                self.assertEqual((out["build"], out["attach"], out["tag"]), ("true", "true", tag))
+        r = self.sh("gate", "workflow_dispatch", "main", "true", check=False)
+        self.assertNotEqual(r.returncode, 0)
+        self.assertIn("release tag", r.stderr)
+        out = dict(line.split("=", 1) for line in self.sh("gate", "release", "not-a-tag").stdout.split())
+        self.assertEqual(out["attach"], "false")
 
     def test_gate_refuses_to_attach_a_build_of_another_source(self):
         for mpp_ref, lvgl_ref in (("main", ""), ("", "feature")):

@@ -1,12 +1,12 @@
-# The interpreters attached to a final release: micropython (Linux),
+# The interpreters attached to a release: micropython (Linux),
 # micropython.exe (Windows), micropython.mjs and micropython.wasm (browser and
 # Node), and circuitpython (Linux), each with every OmniPython module, plus the
 # interpreters.json manifest that bin/fetch_interpreters.sh checks them against.
 # The release notes get one line saying which MicroPython and CircuitPython the
 # interpreters are built on, and when either is a preview.
 #
-# A final release (vX.Y.Z) builds and attaches them. A dev, a, b or rc release
-# gets none. Every build comes from the release's own tag, with the
+# A final release (vX.Y.Z) and a pre-release (vX.Y.Z.devN, vX.Y.ZrcN) both
+# build and attach them. Every build comes from the release's own tag, with the
 # omnipython-builds and omnipython-lvgl commits that
 # scripts/release_interpreters/sources.lock pins, and the manifest lists every
 # source commit that went in. Move the pins before a final with
@@ -14,7 +14,7 @@
 #
 # By hand: Actions > Release interpreters > Run workflow builds every
 # interpreter from the branch or tag you name and keeps them as a run artifact,
-# attaching nothing. Tick "attach" with a final tag to (re)attach to that
+# attaching nothing. Tick "attach" with a release tag to (re)attach to that
 # release; that always uses the pins. To try another omnipython-builds or
 # omnipython-lvgl, name it in the two inputs below, and the run attaches
 # nothing. Changes to this recipe run the same builds on their pull request.
@@ -31,7 +31,7 @@ on:
         default: ""
         type: string
       attach:
-        description: Attach to that tag's GitHub Release (a final vX.Y.Z tag only)
+        description: Attach to that tag's GitHub Release (a release tag such as vX.Y.Z or vX.Y.Z.devN)
         default: false
         type: boolean
       omnipython-builds-ref:
@@ -84,7 +84,7 @@ jobs:
             *) ref="$INPUT_REF" ;;
           esac
           # A pull request and a dispatch build and never attach unless a
-          # dispatch asks to and names a final tag.
+          # dispatch asks to and names a release tag.
           scripts/release_interpreters.sh gate "$EVENT" "$ref" "${INPUT_ATTACH:-false}" "$INPUT_MPP" "$INPUT_LVGL" | tee -a "$GITHUB_OUTPUT"
       - name: Say when a pin is behind its default branch
         run: python3 scripts/release_interpreters/sources.py stale
