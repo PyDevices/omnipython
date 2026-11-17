@@ -138,11 +138,11 @@ CircuitPython or CPython.
 ## Freezing OmniPython into one binary
 
 If you want a single `micropython.exe` (or board image) that runs with nothing
-installed, freeze OmniPython into it with omnipython-builds' `build_mp.py`.
+installed, freeze OmniPython into it with omnipython-builds' `build.py`.
 Its `omnipython` variant also freezes the universal desktop board config:
 
 ```bash
-build_mp.py --port windows --variant omnipython --modules omnipython,<your app>
+build.py --port windows --variant omnipython --modules omnipython,<your app>
 ```
 
 [`manifest.py`](https://github.com/PyDevices/omnipython/blob/main/manifest.py) freezes everything in `lib/`;

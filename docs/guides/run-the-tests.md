@@ -56,7 +56,7 @@ To build the unix binary, follow
 with `--port unix`:
 
 ```bash
-./build_mp.py --port unix --modules pygraphics
+./build.py --port unix --modules pygraphics
 ```
 
 ## On CircuitPython

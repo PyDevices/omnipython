@@ -17,7 +17,7 @@ into an afternoon.
 ## 1. What the firmware already has, and what it does not
 
 Check before installing anything. On an image built with the OmniPython C
-modules (omnipython-builds' `build_mp.py --modules
+modules (omnipython-builds' `build.py --modules
 displayif,lvgl,usbhost,pygraphics,audiodsp,ulab`, say) the following
 are **frozen or built in** — installing them is wasted effort:
 
