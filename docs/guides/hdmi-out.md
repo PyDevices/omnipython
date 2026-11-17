@@ -52,9 +52,11 @@ or `esp32-p4-wifi6-dev-kit_lt8912b-hdmi` for the DEV-KIT. Pins, mode and
 audio are constants at the top of its `board_config.py`.
 
 The bridge takes RGB888 video and needs the DSI lanes kept in high speed
-through blanking. Until `mipidsi` offers both (`color_depth=24` and
-`low_power_blanking=False`), the board config shows the test pattern and
-raises `NotImplementedError` saying what's missing.
+through blanking. The board config asks `mipidsi` for both
+(`output_color_depth=24` and `low_power_blanking=False`); the framebuffer stays
+RGB565 and the P4 converts it on the way out. On firmware whose `mipidsi` lacks
+those options, the board config shows the test pattern and raises
+`NotImplementedError` saying what's missing.
 
 ## Pick a mode
 

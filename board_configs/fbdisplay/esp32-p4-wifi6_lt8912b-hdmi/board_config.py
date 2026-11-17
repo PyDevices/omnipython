@@ -56,10 +56,10 @@ I2S_SD = 22
 MODE = "1280x720p60"
 HDMI = None  # None: DVI, or HDMI when AUDIO is set. True forces HDMI.
 AUDIO = None  # experimental: lt8912b.Audio(48000, 16) with I2S on the pins above
-# What mipidsi must do for this bridge: RGB888 on the wire, and no drop to low
-# power between lines. If the picture won't hold, add "non_burst": True and
+# What mipidsi must do for this bridge: RGB888 on the wire (the framebuffer
+# stays RGB565 and the P4 converts it), and no drop to low power between lines. If the picture won't hold, add "non_burst": True and
 # "continuous_clock": True, which the bridge's datasheet asks for.
-DSI_OPTIONS = {"color_depth": 24, "low_power_blanking": False}
+DSI_OPTIONS = {"color_depth": 16, "output_color_depth": 24, "low_power_blanking": False}
 
 i2c = I2C(1, scl=Pin(I2C_SCL), sda=Pin(I2C_SDA), freq=100_000)
 bridge = LT8912B(
