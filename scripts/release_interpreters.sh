@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# The interpreters attached to a final release: how they are built, and when.
+# The interpreters attached to a release: how they are built, and when.
 # .github/workflows/release-interpreters.yml calls this; every step also runs
 # by hand on Linux or WSL.
 #
@@ -9,8 +9,9 @@
 #       <ref> is the release tag, or for a dispatch the branch or tag to
 #       build; <attach> is "true" when a dispatch asks to attach (a release
 #       event always attaches). Prints build=, attach= and tag= lines for
-#       $GITHUB_OUTPUT. Only a final tag (vX.Y.Z) is ever attached: a dev, a,
-#       b or rc release gets no interpreters, and a branch is only ever built.
+#       $GITHUB_OUTPUT. Only a release tag is ever attached, a final (vX.Y.Z)
+#       or a pre-release (vX.Y.Z.devN, vX.Y.ZaN, vX.Y.ZbN, vX.Y.ZrcN); a
+#       branch is only ever built.
 #       The optional refs override the commits release_interpreters/sources.lock
 #       pins for omnipython-builds and omnipython-lvgl; a run that
 #       overrides one never attaches. Also prints mpp= and lvgl=, the pins.
@@ -41,7 +42,7 @@ set -euo pipefail
 
 HERE=$(cd "$(dirname "$0")" && pwd)
 SOURCES="$HERE/release_interpreters/sources.py"
-FINAL_TAG='^v[0-9]+\.[0-9]+\.[0-9]+$'
+RELEASE_TAG='^v[0-9]+\.[0-9]+\.[0-9]+((\.dev|a|b|rc)[0-9]+)?$'
 
 gate() {
     local event="${1:?event}" ref="${2:-}" attach="${3:-false}" mpp_ref="${4:-}" lvgl_ref="${5:-}"
@@ -49,17 +50,17 @@ gate() {
     case "$event" in
         release)
             tag="$ref"
-            # Pre-releases (aN, bN, rcN, .devN) are not attached to.
-            if [[ "$tag" =~ $FINAL_TAG ]]; then build=true; do_attach=true; fi
+            # A final and a pre-release (.devN, aN, bN, rcN) both get them.
+            if [[ "$tag" =~ $RELEASE_TAG ]]; then build=true; do_attach=true; fi
             ;;
         workflow_dispatch|pull_request)
             build=true
-            if [[ "$attach" == "true" && "$ref" =~ $FINAL_TAG ]]; then
+            if [[ "$attach" == "true" && "$ref" =~ $RELEASE_TAG ]]; then
                 do_attach=true
                 tag="$ref"
             fi
             if [[ "$attach" == "true" && "$do_attach" == "false" ]]; then
-                echo "error: will not attach interpreters to '$ref': only a final vX.Y.Z tag gets them" >&2
+                echo "error: will not attach interpreters to '$ref': only a release tag (vX.Y.Z, vX.Y.Z.devN or vX.Y.ZrcN) gets them" >&2
                 return 1
             fi
             ;;

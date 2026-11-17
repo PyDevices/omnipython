@@ -3,7 +3,7 @@
 #
 # SPDX-License-Identifier: MIT
 
-"""The pins behind a final release's interpreters.
+"""The pins behind a release's interpreters.
 
 scripts/release_interpreters/sources.lock names the commits of
 omnipython-builds and omnipython-lvgl that the interpreters are built

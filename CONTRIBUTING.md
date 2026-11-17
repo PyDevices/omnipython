@@ -195,24 +195,26 @@ by
   desktop board config directory ([`board_configs/desktop`](board_configs/desktop)). Utilities do not get their own
   distributions.
 
-### Interpreters on final releases
+### Interpreters on releases
 
-A final release (`vX.Y.Z`) also gets fresh desktop interpreters as release
+A release, final (`vX.Y.Z`) or pre-release (`vX.Y.Z.devN`, `vX.Y.ZrcN`), also gets fresh desktop interpreters as release
 assets, built by
 [`release-interpreters.yml`](.github/workflows/release-interpreters.yml):
 `micropython`, `micropython.exe`, `micropython.mjs`, `micropython.wasm` and
 `circuitpython`, each carrying every OmniPython module with this release's
 `omnipython` frozen in, plus an `interpreters.json` listing each file's sha256,
-size and version. A dev, a, b or rc release gets none.
+size and version.
 [`bin/fetch_interpreters.sh`](bin/fetch_interpreters.sh) downloads the
-newest set and checks it against that manifest. To rebuild without releasing,
+newest set, from a pre-release or a final, and checks it against that
+manifest; name a tag to take that release's set. To rebuild without releasing,
 run the workflow by hand from the Actions tab: it keeps the files as a run
-artifact and attaches nothing unless you tick "attach" with a final tag. The
+artifact and attaches nothing unless you tick "attach" with a release tag, which also
+rebuilds and attaches to a release that was published without them. The
 recipe is [`scripts/release_interpreters.sh`](scripts/release_interpreters.sh).
 
 #### The sources are pinned
 
-What you download from a final must be what that release built, so the
+What you download from a release must be what that release built, so the
 interpreters are made from fixed commits, never from a branch tip.
 [`scripts/release_interpreters/sources.lock`](scripts/release_interpreters/sources.lock)
 names the commit of `omnipython-builds` (the build script, its patches, and
@@ -224,7 +226,7 @@ build used exactly the pins. A run that attaches always does; to try another
 `omnipython-builds` or `omnipython-lvgl`, name it in the two inputs of a
 manual run, which then attaches nothing.
 
-**Before you cut a final, move the pins:**
+**Before you cut a release that should carry newer sources, move the pins:**
 
 ```bash
 python3 scripts/release_interpreters/sources.py bump

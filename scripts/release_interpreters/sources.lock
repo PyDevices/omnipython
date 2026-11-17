@@ -1,5 +1,5 @@
-# The sources a final release's interpreters are built from: name, git URL,
-# full commit. A final's interpreters are what people download, so they build
+# The sources a release's interpreters are built from: name, git URL,
+# full commit. A release's interpreters are what people download, so they build
 # from exactly these commits, never from a branch tip. Full 40-character
 # SHAs: GitHub serves a fetch by commit only for the whole hash.
 #

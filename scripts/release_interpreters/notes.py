@@ -3,9 +3,9 @@
 #
 # SPDX-License-Identifier: MIT
 
-"""The line in a final release's notes that says what the interpreters are built on.
+"""The line in a release's notes that says what the interpreters are built on.
 
-A final attaches desktop interpreters even when they are built on a MicroPython
+A release attaches desktop interpreters even when they are built on a MicroPython
 or CircuitPython pre-release, so the release page says which. The versions come
 from the ``built_on`` record in the interpreters.json manifest the same run wrote
 (bin/upload_interpreters.sh asks the binaries), not from anywhere else.
