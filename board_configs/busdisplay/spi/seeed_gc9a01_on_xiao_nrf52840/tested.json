@@ -1,0 +1,22 @@
+{
+  "board": "seeed_gc9a01_on_xiao_nrf52840",
+  "runs": [
+    {
+      "hardware": "Seeed XIAO nRF52840 Sense with Seeed Round Display for XIAO; the display's microSD slot is empty, so sdcard was skipped",
+      "firmware": "micropython 1.30.0 (XIAO nRF52840 Sense with NRF52840), v1.30.0-preview.160.gb70ae1aca6 on 2026-11-16",
+      "date": "2026-11-17",
+      "smoke": "passed",
+      "checks": [
+        "board_config imports",
+        "display draws",
+        "touch reads",
+        "battery answers",
+        "rtc answers"
+      ],
+      "skipped": [
+        "sdcard"
+      ],
+      "tool": "tools/mark_tested.py"
+    }
+  ]
+}
