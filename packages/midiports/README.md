@@ -32,6 +32,7 @@ To use another transport, change the line that opens the ports:
 | USB, a keyboard or synth plugged into the board | `usb_host.ports()` |
 | USB, every MIDI device plugged into the board, merged | `usb_host.all_ports()` |
 | A UART (5-pin DIN, TRS, board to board) | `uart.ports(1, tx=17, rx=18)` |
+| Bluetooth LE, the board as an instrument a controller, phone or computer connects to | `ble.ports("Synth")` |
 | Windows' MIDI ports (a keyboard, loopMIDI, a DAW) | `windows.ports("loopMIDI")` |
 | Windows' loopback, for trying MIDI with no hardware | `windows.ports(midiports.LOOPBACK)` |
 | Linux raw MIDI | `linux.ports("DMK25")` |
@@ -40,8 +41,17 @@ To use another transport, change the line that opens the ports:
 | Web MIDI, in a browser page (MicroPython) | `webmidi.page_in("DMK25")`, `webmidi.page_out("synth")` |
 | Web MIDI, in a Web Worker, relayed by the page | `webmidi.relay_ports(port)` |
 
-Import each from `midiports`. BLE MIDI ports come from
-[`bledev`](../../docs/guides/bluetooth-le.md), which moves onto this package's ports next.
+Import each from `midiports`.
+
+Over Bluetooth LE the board advertises the standard BLE-MIDI service under the
+name you give, and advertises again when a link drops. `ble.available()` says
+whether the firmware has Bluetooth without starting it, so a program can offer
+the choice and start nothing until it's picked. When a link drops with notes
+still sounding, the input hands out a note-off for each, so none is left
+hanging. It needs [`bledev`](../../docs/guides/bluetooth-le.md), and `aioble` on
+MicroPython; an app with no event loop of its own needs nothing more, as each
+`any()` runs Bluetooth's tasks. To make the board the central that connects to
+a named controller instead, use `bledev.midi.connect`.
 
 An Android phone works as the keyboard. Plug it into the board's host port,
 pick **MIDI** in its USB settings (the notification that appears when it's

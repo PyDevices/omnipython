@@ -186,6 +186,11 @@ The port follows the [`midiports`](https://github.com/PyDevices/omnipython/blob/
 
 On a board, ask for the shortest connection interval: `midi.connect(ble, name="synth", min_conn_interval_us=7500, max_conn_interval_us=7500)`.
 
+For an instrument that a controller plays, `midiports.ble.ports("synth")` does
+the rest for you: it advertises again after every disconnect, releases the
+notes a dropped link left sounding, and runs from a polling loop with no event
+loop of its own. `port.take()` is `receive()` without the wait, for such a loop.
+
 ## Keyboards, mice and gamepads (HID)
 
 `bledev.hid` turns a BLE keyboard, mouse, media remote or game controller

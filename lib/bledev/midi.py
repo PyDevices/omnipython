@@ -251,6 +251,16 @@ class Port:
         """How many MIDI bytes are waiting to be read."""
         return self._waiting
 
+    def take(self):
+        """The next ``(timestamp, message)`` if one has arrived, else ``None``:
+        `receive` without waiting, for a loop that polls. Use one of
+        ``take``, ``receive`` and ``read``, not two."""
+        if not self._messages:
+            return None
+        item = self._messages.pop(0)
+        self._waiting -= len(item[1])
+        return item
+
     async def receive(self, timeout_ms=None):
         """The next ``(timestamp, message)``. Raises `DisconnectedError`
         once the link has closed and everything that arrived is read."""

@@ -384,9 +384,16 @@ class MPBLE(BLE):
         self._addr_mode = mode
 
     def close(self):
+        """Turn the radio off. Its services go with it: register them again
+        after it's back on."""
         aioble.stop()
         self._connections = {}
+        self._services = ()
         self._addr_mode = ADDR_MODE_PUBLIC  # the stack starts over with its own default
+        try:
+            del self._midi_server  # bledev.midi registers its service again on the next serve()
+        except AttributeError:
+            pass
 
     # -- the raw bluetooth.BLE, for code written against it
 
