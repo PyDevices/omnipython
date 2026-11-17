@@ -12,7 +12,7 @@ board_config.py: eager display and primary input wiring
         +--> optional board_peripherals.py + boarddev: lazy extra hardware
         |
         v
-application chooses raw drawing, pdwidgets, or LVGL
+application chooses raw drawing, LVGL, or pdwidgets
         |
         +--> optional appdev coordinator and multimer event loop
 ```
@@ -30,8 +30,9 @@ Read [the board contract](../boards/board-contract.md) before adding a board and
 ## Choose a GUI layer
 
 - Use displaydev and pygraphics for direct drawing.
-- Use [pdwidgets](https://github.com/PyDevices/omnipython/tree/main/pdwidgets) for a pure-Python widget toolkit.
-- Use [LVGL](../guides/lvgl.md) when the firmware or the omnipython-lvgl wheel provides the lvgl module.
+- Use [LVGL](../guides/lvgl.md) for a widget toolkit, when the firmware or the omnipython-lvgl wheel provides the lvgl module.
+
+[pdwidgets](https://docs.omnipython.org/en/latest/pdwidgets/) is a third path, and a different kind of one: a complete widget toolkit written in Python on this core, with no C. It demonstrates that the core is a foundation for UI frameworks other than LVGL, and it runs wherever the core does. Release firmware doesn't carry it; install it with `mip install pdwidgets`.
 
 The hardware configuration remains the same whichever layer you choose. Ready-to-run programs live in [gallery](https://github.com/PyDevices/gallery), not this product repository.
 
