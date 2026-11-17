@@ -1,3 +1,19 @@
+## v0.8.0.dev25 (2026-11-17)
+
+- lib-lock: audioinstruments v0.5.2.dev6, audioeffects v0.5.2.dev4 (#695)
+- Publishing: every release also goes to PyPI (#694)
+- T-Embed: the microSD card runs on the SDMMC host, so sound keeps playing (#684)
+- stack: Workbench is listed as PyDevices Workbench (#693)
+- Stack: pydevices.com, and the camera app on the desktop (#692)
+- Tested boards: Waveshare RP2040-Plus with the 2.8 inch shield, XIAO nRF52840 with the Round Display (#691)
+- Docs say build.py for the firmware build (#689)
+- pdwidgets: shown as a Python-only demonstration, not a recommended toolkit (#686)
+- Docs: tested boards, CircuitPython's APIs, run the tests, and questions (#687)
+- Stack page: the camera app runs on the desktop (#685)
+- Release interpreters: built with omnipython-builds' omnipythonBridge rename and its fixes (#683)
+- Release interpreters: dev and rc releases get the CI-built interpreters too (#682)
+- audiodev: every fallback off the pump says why in pump_refused (#679)
+
 ## v0.8.0.dev24 (2026-11-17)
 
 - omnipython-desktop: midiports' type stubs and py.typed ship in the pip wheel (#680)
