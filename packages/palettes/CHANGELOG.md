@@ -1,3 +1,7 @@
+## v0.1.0 (2026-11-17)
+
+- First final release, on PyPI and the library index
+
 ## v0.0.16.dev1 (2026-11-15)
 
 - Type stubs ship in the wheel, so an editor knows every palette function and its types (#620)
