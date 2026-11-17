@@ -1,3 +1,7 @@
+## v0.0.26 (2026-11-17)
+
+- Final release on PyPI, on omnipython 0.8.0, palettes 0.1.0 and pygraphics 0.2.0
+
 ## v0.0.26.dev0 (2026-11-15)
 
 - Console: `readinto` reads from the reader you gave it (#622)
