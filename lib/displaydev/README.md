@@ -8,25 +8,22 @@ For a complete program to start from, see [displaydev_simpletest.py](https://git
 
 ## Install
 
-### CPython (TestPyPI)
+### CPython (PyPI)
 
-This package is published as a pure-Python wheel to TestPyPI.
+This package is published as a pure-Python wheel to PyPI.
 
 ```bash
-pip install \
-  -i https://test.pypi.org/simple/ \
-  --extra-index-url https://pypi.org/simple/ \
-  omnipython
+pip install --pre omnipython
 ```
 
 `omnipython` is one distribution covering the whole core `lib/` tree, so this
 also installs `events`, `keys`, `appdev`, `multimer`, `audiodev`, and
 `boarddev`. MIP ships the same set as one `omnipython` package.
 
-Why both indexes: OmniPython wheels are on TestPyPI while some of their
-dependencies are on PyPI only — [details](https://github.com/PyDevices/omnipython/blob/main/docs/guides/troubleshooting.md#pip-cannot-resolve-a-pydevices-distribution).
+Why `--pre`: current releases are pre-releases, and without it pip settles for
+a 0.0.1 placeholder — [details](https://github.com/PyDevices/omnipython/blob/main/docs/guides/troubleshooting.md#pip-installs-version-001).
 
-For desktop SDL, also install [`omnipython-desktop`](https://test.pypi.org/project/omnipython-desktop/) with the same two-index pattern (bundles `usdl2` and the desktop `board_config`). For PyGame, install `pygame-ce` from PyPI (`import pygame`).
+For desktop SDL, also install [`omnipython-desktop`](https://pypi.org/project/omnipython-desktop/) the same way (bundles `usdl2` and the desktop `board_config`). For PyGame, install `pygame-ce` from PyPI (`import pygame`).
 
 ### MicroPython (MIP)
 

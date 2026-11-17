@@ -17,7 +17,7 @@ that path uses PyScript / `PSDisplay`, not this stack.
 
 There is no MicroPython port for Android. Native `libSDL2.so` comes from p4a's
 `sdl2` recipe; `import usdl2` is the pure-Python ctypes binding shipped in
-[omnipython-desktop](https://test.pypi.org/project/omnipython-desktop/).
+[omnipython-desktop](https://pypi.org/project/omnipython-desktop/).
 `displaydev.auto.AutoDisplay` selects **`AndroidSDLDisplay`**
 (`SDL_WINDOW_SHOWN` / HIGHDPI — not `FULLSCREEN_DESKTOP`, which resizes the
 Activity surface after GL buffers exist and yields a black screen after splash).
@@ -184,7 +184,7 @@ stops the service. Non-Android consumers still get `session=None` — no API cha
 ## LVGL on Android
 
 Prebuilt **`omnipython-lvgl`** wheels for Android are on
-[TestPyPI](https://test.pypi.org/project/omnipython-lvgl/) and are included in the
+[PyPI](https://pypi.org/project/omnipython-lvgl/) and are included in the
 launcher APK. The launcher home UI is LVGL; its buttons `mip.install` examples
 from GitHub with `index=` the [OmniPython index](https://lib.omnipython.org).
 

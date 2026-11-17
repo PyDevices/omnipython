@@ -53,5 +53,5 @@ python tools/icon_sheets.py docs/reference/icons
 iconkit has its own version, in `VERSION`, apart from the OmniPython release. A pull
 request that changes `VERSION` and adds the matching section to `CHANGELOG.md`
 tags `iconkit-vX.Y.Z` when it merges, and the OmniPython release chain publishes
-`omnipython-iconkit` to TestPyPI. The import name and the mip package name stay
+`omnipython-iconkit` to PyPI. The import name and the mip package name stay
 `iconkit`.

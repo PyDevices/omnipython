@@ -156,7 +156,7 @@ These hold the design together. Some are checked by a test or by `libbuild.py ch
 **Package names and what ships**
 
 - `lib/` is the core, and it installs as the `omnipython` package. Each folder under `packages/` publishes on its own, under its own name, with its own version.
-- MIP names and Python imports are unprefixed (`displaydev`, `audiodev`, `appdev`, `events`, `keys`, `multimer`). TestPyPI distribution names are always `omnipython-*`.
+- MIP names and Python imports are unprefixed (`displaydev`, `audiodev`, `appdev`, `events`, `keys`, `multimer`). PyPI distribution names are always `omnipython-*`.
 - `displaydev` needs `events` and `keys`; `appdev` needs `events`, `keys` and `multimer`.
 - Every top-level component in `lib/` ships inside the `omnipython` MIP package. Only a directory marked `own-package` in [`mip-split.toml`](mip-split.toml) also publishes on its own; `bledev` is the one that does (install aioble from micropython-lib first). Every library component in `utils/` is bundled into `omnipython-desktop`, which depends on `omnipython`.
 - Don't rename the GitHub repository: MIP URLs and the docs pin its name.
@@ -181,7 +181,7 @@ same version.
 
 ### Generated products
 
-Exactly two TestPyPI distributions build from this repository, both assembled
+Exactly two PyPI distributions build from this repository, both assembled
 by
 [`dotgithub/scripts/build_omnipython_python_distributions.py`](https://github.com/PyDevices/.github/blob/main/scripts/build_omnipython_python_distributions.py):
 
@@ -250,7 +250,7 @@ MIP publishes `omnipython` as a
 single package rather than per-component (see
 [gallery's package names table](https://github.com/PyDevices/gallery#package-names)).
 
-All internal TestPyPI requirements use exact `==X.Y.Z` pins. MIP meta-package
+All internal PyPI requirements use exact `==X.Y.Z` pins. MIP meta-package
 requirements intentionally resolve `latest`, while each generated manifest
 records `X.Y.Z` as its own version.
 
@@ -308,5 +308,5 @@ publishable entry under `lib/` or `utils/` changes the next release
 automatically — then follow the standard procedure in the
 [org-wide runbook](https://github.com/PyDevices/.github/blob/main/docs/publishing-automation.md).
 
-Published TestPyPI files and MIP releases are immutable in practice; publish a
+Published PyPI files and MIP releases are immutable in practice; publish a
 new version to correct a release.

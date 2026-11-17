@@ -211,7 +211,7 @@ Consequences worth knowing:
   `channel_count` mismatches *do* raise (`_check_format`), because those
   corrupt every byte a software queue reads, unlike a rate mismatch.
 - **CPython needs a separate package.** Install `omnipython-audiodsp` from
-  TestPyPI before constructing `AudioOut`; raw PCM (`write()`/`readinto()`)
+  PyPI before constructing `AudioOut`; raw PCM (`write()`/`readinto()`)
   remains usable without it.
 - `sample_out.sample_out(transport_module, format, **kwargs)` is the one-line
   helper most `board_peripherals.audio_out()` factories use:

@@ -26,7 +26,7 @@ bundle while core OmniPython libraries continue to come from OmniPython packages
 (`omnipython-desktop`), analogous to the MIP desktop bundle in
 [`board_configs/desktop`](https://github.com/PyDevices/omnipython/tree/main/board_configs/desktop).
 
-## Install (TestPyPI)
+## Install (PyPI)
 
 Install and verification flows are centralized here:
 [Install](../get-started/install.md)

@@ -26,14 +26,13 @@ mip.install("github:PyDevices/omnipython/board_configs/sdldisplay")  # desktop S
 
 ## Install failures
 
-### `pip` cannot resolve a OmniPython distribution
+### `pip` installs version 0.0.1
 
-OmniPython wheels are on **TestPyPI**, and some of their dependencies are on
-**PyPI** only. Pass both indexes or the install fails:
+Current OmniPython releases are pre-releases, which pip skips unless asked.
+Pass `--pre`, or the install settles for the 0.0.1 placeholder:
 
 ```bash
-pip install -i https://test.pypi.org/simple/ \
-  --extra-index-url https://pypi.org/simple/ omnipython-desktop
+pip install --pre omnipython-desktop
 ```
 
 ### `mip` network or SSL errors on device
@@ -45,7 +44,7 @@ Wi-Fi on the board for OTA installs.
 
 CircuitPython has no MicroPython-compatible `framebuf`. Install the shim from
 [pygraphics](https://github.com/PyDevices/pygraphics)
-([`lib/pygraphics/framebuf.py`](https://github.com/PyDevices/pygraphics/blob/main/lib/pygraphics/framebuf.py); MIP package `pygraphics`, TestPyPI
+([`lib/pygraphics/framebuf.py`](https://github.com/PyDevices/pygraphics/blob/main/lib/pygraphics/framebuf.py); MIP package `pygraphics`, PyPI
 `omnipython-pygraphics`).
 
 ## Display issues

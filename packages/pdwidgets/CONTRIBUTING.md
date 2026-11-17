@@ -111,5 +111,5 @@ errors. The API pages are generated from the docstrings when you build.
 pdwidgets has its own version, in `VERSION`, apart from the OmniPython release.
 A pull request that changes `VERSION` and adds the matching section to
 `CHANGELOG.md` tags `pdwidgets-vX.Y.Z` when it merges, and the OmniPython release
-chain publishes `omnipython-pdwidgets` to TestPyPI. The import name and the mip
+chain publishes `omnipython-pdwidgets` to PyPI. The import name and the mip
 package name stay `pdwidgets`.
