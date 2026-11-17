@@ -13,6 +13,3 @@ dependencies do. What differs is how each runtime is checked.
 
 The desktop and browser paths need `omnipython-pygraphics`, whose
 [docs](https://docs.omnipython.org/en/latest/pygraphics/) list the platforms it ships wheels for.
-
-Current releases are pre-releases. A plain `pip install omnipython-pdwidgets`
-skips them and gives you an older placeholder release; pass `--pre`.

@@ -13,7 +13,7 @@ For a complete program to start from, see [multimer_simpletest.py](https://githu
 ### CPython (PyPI)
 
 ```bash
-pip install --pre omnipython
+pip install omnipython
 ```
 
 `omnipython` is one distribution covering the whole core `lib/` tree. MIP

@@ -26,15 +26,6 @@ mip.install("github:PyDevices/omnipython/board_configs/sdldisplay")  # desktop S
 
 ## Install failures
 
-### `pip` installs version 0.0.1
-
-Current OmniPython releases are pre-releases, which pip skips unless asked.
-Pass `--pre`, or the install settles for the 0.0.1 placeholder:
-
-```bash
-pip install --pre omnipython-desktop
-```
-
 ### `mip` network or SSL errors on device
 
 Use `mpremote mip install` from your PC, or copy files with `mpremote cp`. Check

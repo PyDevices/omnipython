@@ -73,8 +73,7 @@ test_package() {
     rm -rf "$venv"
     python3 -m venv "$venv"
     "$venv/bin/pip" install -q -U pip
-    # --pre: current releases are pre-releases.
-    "$venv/bin/pip" install --pre "$pypi_name" "${extras[@]}"
+    "$venv/bin/pip" install "$pypi_name" "${extras[@]}"
     echo "--- $pypi_name ---"
     "$venv/bin/pip" freeze | sort
     check_import "$venv" "$py_code"

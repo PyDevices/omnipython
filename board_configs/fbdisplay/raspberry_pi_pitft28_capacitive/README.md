@@ -27,7 +27,7 @@ to be in the `video` and `input` groups, as the Pi's default user is.
 
 ```bash
 python3 -m venv ~/pitft
-~/pitft/bin/pip install --pre omnipython-desktop omnipython-lvgl
+~/pitft/bin/pip install omnipython-desktop omnipython-lvgl
 ```
 
 Copy `board_config.py` and `board_peripherals.py` from this folder beside

@@ -13,15 +13,12 @@ For a complete program to start from, see [displaydev_simpletest.py](https://git
 This package is published as a pure-Python wheel to PyPI.
 
 ```bash
-pip install --pre omnipython
+pip install omnipython
 ```
 
 `omnipython` is one distribution covering the whole core `lib/` tree, so this
 also installs `events`, `keys`, `appdev`, `multimer`, `audiodev`, and
 `boarddev`. MIP ships the same set as one `omnipython` package.
-
-Why `--pre`: current releases are pre-releases, and without it pip settles for
-a 0.0.1 placeholder — [details](https://github.com/PyDevices/omnipython/blob/main/docs/guides/troubleshooting.md#pip-installs-version-001).
 
 For desktop SDL, also install [`omnipython-desktop`](https://pypi.org/project/omnipython-desktop/) the same way (bundles `usdl2` and the desktop `board_config`). For PyGame, install `pygame-ce` from PyPI (`import pygame`).
 

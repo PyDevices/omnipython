@@ -124,7 +124,7 @@ satisfying CircuitPython's audiosample pull protocol — a
 `import audiomixer`, ...). CPython users install it from PyPI with:
 
 ```sh
-python -m pip install --pre omnipython-audiodsp
+python -m pip install omnipython-audiodsp
 ```
 
 Neither `omnipython` distribution depends on it; importing `audiodev` and

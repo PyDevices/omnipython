@@ -8,7 +8,7 @@ and the same program on MicroPython-compatible boards, CircuitPython-compatible
 boards, a desktop, a browser and an Android phone.
 
 ```bash
-pip install --pre omnipython-desktop
+pip install omnipython-desktop
 ```
 
 ```python
