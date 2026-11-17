@@ -8,7 +8,7 @@ the sixteen Windows names, with the same code on MicroPython-compatible boards,
 CircuitPython-compatible boards and CPython. It has no dependencies.
 
 ```bash
-pip install --pre omnipython-palettes
+pip install omnipython-palettes
 ```
 
 ```python

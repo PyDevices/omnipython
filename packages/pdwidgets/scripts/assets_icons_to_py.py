@@ -57,7 +57,6 @@ def ensure_graphics(*, install: bool) -> None:
         "-m",
         "pip",
         "install",
-        "--pre",
         "omnipython-pygraphics",
     ]
     print("Running:", " ".join(cmd))

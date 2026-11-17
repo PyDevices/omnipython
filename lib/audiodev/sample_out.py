@@ -134,7 +134,7 @@ def _load_audiocore():
         else:
             message = (
                 "AudioOut requires omnipython-audiodsp; install it with: "
-                "python -m pip install --pre omnipython-audiodsp"
+                "python -m pip install omnipython-audiodsp"
             )
         raise ImportError(message) from exc
 

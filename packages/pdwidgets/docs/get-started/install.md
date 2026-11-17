@@ -10,14 +10,11 @@ for you.
 ## On a desktop (CPython)
 
 ```bash
-pip install --pre omnipython-pdwidgets omnipython-desktop
+pip install omnipython-pdwidgets omnipython-desktop
 ```
 
 `omnipython-desktop` supplies `board_config`, the module that opens a window and
 gives the program its display. Leave it out if you bring your own board config.
-
-Current releases are pre-releases, which is why the command passes `--pre`. A
-plain `pip install omnipython-pdwidgets` gets an older placeholder release.
 
 The window comes from SDL2, which the desktop board config loads when it
 starts. On Debian and Ubuntu, install it first:
@@ -66,7 +63,7 @@ In PyScript or Pyodide, install the wheel with `micropip` and import it:
 
 ```python
 import micropip
-await micropip.install("omnipython-pdwidgets", pre=True)
+await micropip.install("omnipython-pdwidgets")
 
 import pdwidgets as pd
 ```

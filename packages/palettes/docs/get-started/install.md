@@ -7,11 +7,8 @@ import `palettes`.
 ## On a desktop (CPython)
 
 ```bash
-pip install --pre omnipython-palettes
+pip install omnipython-palettes
 ```
-
-Current releases are pre-releases, which is why the command passes `--pre`. A
-plain `pip install omnipython-palettes` gets an older placeholder release.
 
 ## On a MicroPython-compatible board
 
@@ -40,7 +37,7 @@ In PyScript or Pyodide, install the wheel with `micropip` and import it:
 
 ```python
 import micropip
-await micropip.install("omnipython-palettes", pre=True)
+await micropip.install("omnipython-palettes")
 
 from palettes import get_palette
 ```

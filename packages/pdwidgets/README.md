@@ -10,7 +10,7 @@ MicroPython-compatible boards, CPython and in the browser. For an interface you
 ship, [LVGL](https://docs.omnipython.org/en/latest/omnipython/guides/lvgl.html) is the toolkit to reach for.
 
 ```bash
-pip install --pre omnipython-pdwidgets omnipython-desktop
+pip install omnipython-pdwidgets omnipython-desktop
 ```
 
 ```python

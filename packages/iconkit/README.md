@@ -8,7 +8,7 @@ icon lives in flash and costs no RAM, and it draws in LVGL or in pygraphics on
 MicroPython-compatible boards, CircuitPython-compatible boards and CPython.
 
 ```bash
-pip install --pre omnipython-iconkit
+pip install omnipython-iconkit
 ```
 
 On a board, freeze it: `include("/path/to/omnipython/packages/iconkit")` from your
