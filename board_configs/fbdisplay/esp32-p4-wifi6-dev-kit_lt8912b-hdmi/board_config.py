@@ -54,6 +54,9 @@ I2S_SD = None
 # A name from lt8912b.MODES, or "edid" for the best mode the monitor offers
 # that two lanes carry (needs the board's DDC switch on).
 MODE = "1280x720p60"
+# The video code a padded mode announces: 0 for none, or the standard code
+# (4 for 720p60) if a monitor or TV handles that better.
+VIC = 0
 HDMI = None  # None: DVI, or HDMI when AUDIO is set. True forces HDMI.
 AUDIO = None  # experimental: lt8912b.Audio(48000, 16) with I2S on the pins above
 # What mipidsi must do for this bridge: RGB888 on the wire (the framebuffer
@@ -73,7 +76,7 @@ bridge.detect()
 if MODE == "edid":
     mode = best_mode(parse_edid(bridge.read_edid()), LANES)
 else:
-    mode = fit(MODES[MODE])
+    mode = fit(MODES[MODE], vic=VIC)
 lane_rate = check(mode, LANES)
 
 # The bridge is set up first; it locks to the video once the video runs.

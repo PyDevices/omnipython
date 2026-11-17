@@ -182,7 +182,7 @@ MODES = {
 }
 
 
-def fit(mode, host_clock=P4_HOST_CLOCK):
+def fit(mode, host_clock=P4_HOST_CLOCK, vic=0):
     """Return the nearest mode a host that divides ``host_clock`` can send.
 
     The host's pixel clock is ``host_clock`` divided by a whole number. This
@@ -190,13 +190,16 @@ def fit(mode, host_clock=P4_HOST_CLOCK):
     widens the horizontal front porch so the line and frame rates stay as
     close to the standard as whole pixels allow. A monitor measures those
     rates, not the pixel clock, so it sees the mode it expects. When the
-    timing changes, the video code goes to 0, because the mode is no
-    longer the CEA one.
+    timing changes, the video code becomes ``vic``: 0 by default, because
+    the mode is no longer the CEA one. Some sinks handle a padded mode
+    better when it announces the standard code; pass that code to try it.
 
     Args:
         mode (Mode): The mode wanted.
         host_clock (int): The host's DPI clock source in Hz, or None when the
             host can make any pixel clock.
+        vic (int): The video code a padded mode announces. A mode the host
+            makes exactly keeps its own.
 
     Returns:
         Mode: The mode to send, with the pixel clock the host really makes.
@@ -228,7 +231,7 @@ def fit(mode, host_clock=P4_HOST_CLOCK):
     extra = htotal - mode.htotal
     return Mode(mode.name, real, mode.width, mode.hfp + extra, mode.hsync, mode.hbp,
                 mode.height, mode.vfp, mode.vsync, mode.vbp,
-                mode.hsync_positive, mode.vsync_positive, vic=0, aspect=mode.aspect)
+                mode.hsync_positive, mode.vsync_positive, vic=vic, aspect=mode.aspect)
 
 
 def check(mode, lanes, lane_rate=None, max_lane_rate=MAX_LANE_RATE):

@@ -274,6 +274,10 @@ def check_modes():
     check("640x480 runs at 240/9 MHz", fitted["640x480p60"].pixel_clock == 26_666_666)
     check("800x600 is exact and keeps its timing", fitted["800x600p60"] is lt8912b.MODES["800x600p60"])
     check("720p keeps its VIC only if untouched", fitted["1280x720p60"].vic == 0)
+    check("a padded 720p announces the VIC asked for",
+          lt8912b.fit(lt8912b.MODES["1280x720p60"], vic=4).vic == 4)
+    check("an exact mode keeps its own VIC",
+          lt8912b.fit(lt8912b.MODES["800x600p60"], vic=4) is lt8912b.MODES["800x600p60"])
     check("720p needs 960 Mbps a lane", lt8912b.check(fitted["1280x720p60"], 2) == 960_000_000)
     check("1080p30 needs 960 Mbps a lane", lt8912b.check(fitted["1920x1080p30"], 2) == 960_000_000)
     check("640x480 needs 320 Mbps a lane", lt8912b.check(fitted["640x480p60"], 2) == 320_000_000)

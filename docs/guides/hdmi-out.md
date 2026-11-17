@@ -76,6 +76,11 @@ RGB888 needs 24 bits a pixel:
 | `1920x1080p60` | refused | | | 1782 Mbps needed |
 
 `check()` refuses a mode the lanes can't carry and says by how much.
+A padded mode announces video code 0, meaning no standard code, because its
+timing isn't the CEA one. If a monitor or TV handles it badly, set `VIC` in
+the board config to the standard code (4 for 720p60), or pass `vic=` to
+`fit()`.
+
 Set `MODE = "edid"` in the board config to pick the largest mode the
 monitor lists that fits; that needs the DDC switch on. Your own timing is a
 `Mode(...)`, and goes through `fit()` and `check()` like the rest.
