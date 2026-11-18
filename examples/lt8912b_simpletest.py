@@ -48,15 +48,13 @@ PIXEL_CLOCK_FREQUENCY = 40_000_000
 LANE_RATE = PIXEL_CLOCK_FREQUENCY * 24 // NUM_LANES
 
 i2c = I2C(1, scl=Pin(I2C_SCL), sda=Pin(I2C_SDA), freq=100_000)
-bus = Bus(frequency=LANE_RATE, num_lanes=NUM_LANES)
+bus = Bus(minimum_frequency=LANE_RATE, num_lanes=NUM_LANES)
 
 # The bridge configures itself, then starts DSI video.
 bridge = LT8912B(
     bus,
     i2c,
     reset=None if RESET_PIN is None else Pin(RESET_PIN),
-    num_lanes=NUM_LANES,
-    bus_frequency=LANE_RATE,
     width=WIDTH,
     height=HEIGHT,
     hsync_pulse_width=HSYNC_PULSE_WIDTH,

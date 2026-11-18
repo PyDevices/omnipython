@@ -76,15 +76,13 @@ else:
     mode = fit(MODES[MODE], vic=VIC)
 lane_rate = check(mode, LANES)
 
-display_bus = Bus(frequency=lane_rate, num_lanes=LANES, ldo_chan=3, ldo_voltage_mv=2500)
+display_bus = Bus(minimum_frequency=lane_rate, num_lanes=LANES, ldo_chan=3, ldo_voltage_mv=2500)
 # Sets the bridge up, starts the DSI video, then locks the bridge to it.
 fb = LT8912B(
     display_bus,
     i2c,
     reset=None if BRIDGE_RST is None else Pin(BRIDGE_RST),
     hpd=None if BRIDGE_HPD is None else Pin(BRIDGE_HPD),
-    num_lanes=LANES,
-    bus_frequency=lane_rate,
     hdmi=HDMI,
     audio=AUDIO,
     **mode.timing(),

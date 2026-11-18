@@ -118,13 +118,13 @@ call: the timing arguments, `reset`, `hsync_positive`, `vsync_positive`,
 then the DSI video starts, then the bridge locks to it. Three things
 differ:
 
-- **The bus.** This `mipidsi.Bus` takes `frequency=`, the rate itself, and
-  doesn't report its lanes or rate, so pass them to `LT8912B` too:
-  `num_lanes=` and `bus_frequency=`. `check()` gives the rate. There is no
-  `Bus(minimum_frequency=)`.
-- **The framebuffer.** It's RGB565, and the bridge gets RGB888 on the wire.
-  `color_depth=24` asks for an RGB888 framebuffer; where `mipidsi` doesn't
-  have one, `LT8912B` says so and tells you to leave it out.
+- **The bus.** `mipidsi.Bus(minimum_frequency=)` works as it does there, and
+  `LT8912B` reads `bus.num_lanes` and `bus.frequency` from it. `check()` gives
+  the rate to ask for. The bus may run faster than that, because the PHY makes
+  only certain rates, and the bridge is checked against the rate it reports.
+- **The framebuffer.** It's RGB565, and the bridge gets RGB888 on the wire,
+  which saves memory. `color_depth=24` asks for an RGB888 framebuffer, as with
+  Adafruit's driver.
 - **The board's own modules.** Adafruit's examples draw with `displayio`
   and `framebufferio` and find pins in `board`. Here you draw with the
   display's `fill_rect` and `blit`, or through displaydev's `FBDisplay`,

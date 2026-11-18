@@ -30,8 +30,8 @@ and `Audio` says where each value came from.
 Example:
     mode = fit(MODES["1280x720p60"])
     lane_rate = check(mode, 2)
-    bus = mipidsi.Bus(frequency=lane_rate, num_lanes=2)
-    display = LT8912B(bus, i2c, num_lanes=2, bus_frequency=lane_rate, **mode.timing())
+    bus = mipidsi.Bus(minimum_frequency=lane_rate, num_lanes=2)
+    display = LT8912B(bus, i2c, **mode.timing())
 """
 
 import time
@@ -860,23 +860,6 @@ def _dds_word(pixel_clock):
 _BUS_FREQUENCY_TOLERANCE = 1_000
 
 
-def _bus_figure(bus, name, given, argument):
-    # The bus's own figure wins; a mipidsi.Bus that can't report it needs
-    # the caller to say it, and the two must agree when both are there.
-    try:
-        reported = getattr(bus, name)
-    except AttributeError:
-        reported = None
-    if reported is None:
-        if given is None:
-            raise ValueError("this mipidsi.Bus doesn't report %s: pass %s= to LT8912B, "
-                             "the value the Bus was made with" % (name, argument))
-        return given
-    if given is not None and given != reported:
-        raise ValueError("%s=%d disagrees with the bus's %s, %d" % (argument, given, name, reported))
-    return reported
-
-
 def _color_options(color_depth, output_color_depth):
     """The ``mipidsi.Display`` colour arguments for the bridge's RGB888 input."""
     if color_depth == 16:
@@ -918,16 +901,19 @@ else:
 
         The framebuffer is RGB565 and the DSI host sends it as RGB888, which
         is all the bridge takes, with the lanes kept in high speed through
-        blanking. Pass ``color_depth=24`` for an RGB888 framebuffer on a
-        ``mipidsi`` that has one.
+        blanking. Pass ``color_depth=24`` for an RGB888 framebuffer, as with
+        Adafruit's driver.
 
         The arguments after ``aspect_ratio`` are this driver's own. On an
         ESP32-P4 the pixel clock must be one the host makes exactly: `fit`
         gives one.
 
         Args:
-            bus (mipidsi.Bus): The DSI bus the bridge is on. Its rate must
-                carry 24 bits a pixel across its lanes: `check` gives it.
+            bus (mipidsi.Bus): The DSI bus the bridge is on. Make it with a
+                ``minimum_frequency`` that carries 24 bits a pixel across its
+                lanes, which `check` gives. The bus runs at the first rate its
+                PHY makes that is at least that, and the bridge is checked
+                against the rate it reports.
             i2c: The I2C bus the bridge is on, such as ``machine.I2C``.
             width (int): Active pixels per line.
             height (int): Active lines.
@@ -945,10 +931,6 @@ else:
             vic (int): AVI video code, 0 to 127; 0 for a timing with no
                 standard code.
             aspect_ratio (int): AVI picture aspect: 0 none, 1 4:3, 2 16:9.
-            num_lanes (int): The bus's data lanes, for a ``mipidsi.Bus``
-                that doesn't report ``num_lanes``.
-            bus_frequency (int): The bus's bit rate per lane in Hz, for a
-                ``mipidsi.Bus`` that doesn't report ``frequency``.
             hpd: The ``machine.Pin`` wired to the hot-plug output, or None to
                 read the bridge's status register.
             hdmi (bool): True for HDMI, False for DVI. None picks HDMI when
@@ -961,9 +943,8 @@ else:
                 ``non_burst``.
 
         Raises:
-            ValueError: If an argument is out of range, the bus is too slow
-                for the pixel clock, or ``mipidsi`` can't make the colour
-                format asked for.
+            ValueError: If an argument is out of range, or the bus is too slow
+                for the pixel clock.
             OSError: If the bridge doesn't answer on I2C, or another device
                 answers at its address.
         """
@@ -971,7 +952,7 @@ else:
         def __init__(self, bus, i2c, *, width, height, hsync_pulse_width, hsync_back_porch,
                      hsync_front_porch, vsync_pulse_width, vsync_back_porch, vsync_front_porch,
                      pixel_clock_frequency, reset=None, hsync_positive=False, vsync_positive=False,
-                     vic=0, aspect_ratio=0, num_lanes=None, bus_frequency=None, hpd=None, hdmi=None,
+                     vic=0, aspect_ratio=0, hpd=None, hdmi=None,
                      audio=None, settle=0x10, lane_swap=False, pn_swap=False, **kwargs):
             h_total = width + hsync_front_porch + hsync_pulse_width + hsync_back_porch
             v_total = height + vsync_front_porch + vsync_pulse_width + vsync_back_porch
@@ -988,8 +969,8 @@ else:
             color_depth = kwargs.pop("color_depth", 16)
             colors = _color_options(color_depth, kwargs.pop("output_color_depth", None))
             kwargs.update(colors)
-            lanes = _bus_figure(bus, "num_lanes", num_lanes, "num_lanes")
-            rate = _bus_figure(bus, "frequency", bus_frequency, "bus_frequency")
+            lanes = bus.num_lanes
+            rate = bus.frequency
             mode = Mode("%dx%d" % (width, height), pixel_clock_frequency, width, hsync_front_porch,
                         hsync_pulse_width, hsync_back_porch, height, vsync_front_porch,
                         vsync_pulse_width, vsync_back_porch, hsync_positive, vsync_positive,
@@ -1005,37 +986,26 @@ else:
 
             # Start DSI video only now. The lanes stay in high speed, so the
             # bridge's receiver must be ready for the one start of transmission.
-            try:
-                super().__init__(
-                    bus,
-                    b"",
-                    width=width,
-                    height=height,
-                    hsync_pulse_width=hsync_pulse_width,
-                    hsync_back_porch=hsync_back_porch,
-                    hsync_front_porch=hsync_front_porch,
-                    vsync_pulse_width=vsync_pulse_width,
-                    vsync_back_porch=vsync_back_porch,
-                    vsync_front_porch=vsync_front_porch,
-                    pixel_clock_frequency=pixel_clock_frequency,
-                    # The bridge regenerates the pixel clock from the DSI clock
-                    # and loses lock if the lanes drop to low power in blanking.
-                    low_power_blanking=False,
-                    **kwargs,
-                )
-            except ValueError as exc:
-                if color_depth != 24:
-                    raise
-                raise ValueError("this mipidsi refused color_depth=24 (%s). Leave color_depth out: "
-                                 "the framebuffer is then RGB565 and the bridge still gets RGB888, "
-                                 "from output_color_depth=24" % (exc,))
+            super().__init__(
+                bus,
+                b"",
+                width=width,
+                height=height,
+                hsync_pulse_width=hsync_pulse_width,
+                hsync_back_porch=hsync_back_porch,
+                hsync_front_porch=hsync_front_porch,
+                vsync_pulse_width=vsync_pulse_width,
+                vsync_back_porch=vsync_back_porch,
+                vsync_front_porch=vsync_front_porch,
+                pixel_clock_frequency=pixel_clock_frequency,
+                # The bridge regenerates the pixel clock from the DSI clock
+                # and loses lock if the lanes drop to low power in blanking.
+                low_power_blanking=False,
+                **kwargs,
+            )
 
-            # Check the rate against the clock the host really makes, where
-            # the display reports it.
-            try:
-                real_clock = self.pixel_clock_frequency
-            except AttributeError:
-                real_clock = pixel_clock_frequency
+            # Check the rate against the clock the host really makes.
+            real_clock = self.pixel_clock_frequency
             needed = (real_clock * 24 + lanes - 1) // lanes
             if rate + _BUS_FREQUENCY_TOLERANCE < needed:
                 self.deinit()

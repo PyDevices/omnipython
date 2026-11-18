@@ -47,19 +47,18 @@ class FakeDisplay:
     """``mipidsi.Display`` as far as `LT8912B` sees it."""
 
     log = None  # the I2C write list, so video starting shows among the writes
-    rgb565_only = True  # today's displayif: color_depth=16 only
-    report_clock = None  # a pixel_clock_frequency to report, or None for none
+    report_clock = None  # a pixel_clock_frequency to report, or None for the one asked for
 
     def __init__(self, bus, init_sequence, **kwargs):
-        if kwargs.get("color_depth") != 16 and FakeDisplay.rgb565_only:
-            raise ValueError("only color_depth=16 is supported")
+        if kwargs.get("color_depth") not in (16, 24):
+            raise ValueError("color_depth must be 16 or 24")
         self.init_sequence = init_sequence
         self.kw = kwargs
         self.width = kwargs["width"]
         self.height = kwargs["height"]
         self.deinited = False
-        if FakeDisplay.report_clock is not None:
-            self.pixel_clock_frequency = FakeDisplay.report_clock
+        # The clock the host really makes: the one asked for, unless a test says otherwise.
+        self.pixel_clock_frequency = FakeDisplay.report_clock or kwargs["pixel_clock_frequency"]
         FakeDisplay.log.append("VIDEO")
 
     def deinit(self):
@@ -67,9 +66,9 @@ class FakeDisplay:
 
 
 class FakeBus:
-    """``mipidsi.Bus``: with no figures, today's displayif, which reports neither."""
+    """``mipidsi.Bus``, which reports the lanes and the rate it runs at."""
 
-    def __init__(self, num_lanes=None, frequency=None):
+    def __init__(self, num_lanes, frequency):
         self.num_lanes = num_lanes
         self.frequency = frequency
 
@@ -569,10 +568,9 @@ ADAFRUIT_720P = {
 }
 
 
-def display(i2c=None, bus=None, rgb565_only=True, report_clock=None, **kwargs):
+def display(i2c=None, bus=None, report_clock=None, **kwargs):
     i2c = i2c or FakeI2C({(0x48, 0xC1): 0x80})
     FakeDisplay.log = i2c.writes
-    FakeDisplay.rgb565_only = rgb565_only
     FakeDisplay.report_clock = report_clock
     timing = dict(ADAFRUIT_720P)
     timing.update(kwargs)
@@ -624,18 +622,11 @@ def check_display():
     dev, i2c = display(non_burst=True)
     check("other mipidsi arguments pass through", dev.kw.get("non_burst") is True)
 
-    # Today's mipidsi.Bus reports neither figure: they must be given.
-    i2c = FakeI2C()
-    message = refusal(lambda: display(i2c=i2c, bus=FakeBus()))
-    check("a bus with no num_lanes asks for num_lanes=", message is not None and "num_lanes=" in message
-          and not i2c.writes, message)
-    print("   ", message)
-    dev, i2c = display(bus=FakeBus(), num_lanes=2, bus_frequency=960_000_000)
-    check("num_lanes= and bus_frequency= stand in for the bus's figures", "VIDEO" in i2c.writes)
-    i2c = FakeI2C()
-    message = refusal(lambda: display(i2c=i2c, num_lanes=4))
-    check("num_lanes= that disagrees with the bus is refused", message is not None and "disagrees" in message
-          and not i2c.writes, message)
+    # The bus's own lanes and rate are what the bridge is set up and checked with.
+    _, two_lanes = display(bus=FakeBus(2, 960_000_000))
+    _, four_lanes = display(bus=FakeBus(4, 480_000_000))
+    check("the bridge is set up for the bus's lanes", "VIDEO" in four_lanes.writes
+          and four_lanes.writes != two_lanes.writes)
 
     # Refusals, before the chip is touched.
     i2c = FakeI2C()
@@ -655,15 +646,11 @@ def check_display():
     check("a missing bridge is refused before any write", message is not None and "0x4A" in message
           and not i2c.writes, message)
 
-    # Colour depth: Adafruit's color_depth=24 works where mipidsi has it,
-    # and otherwise says what to use; nothing is remapped.
-    dev, i2c = display(rgb565_only=False, color_depth=24)
+    # Colour depth: Adafruit's color_depth=24 reaches mipidsi as asked;
+    # nothing is remapped.
+    dev, i2c = display(color_depth=24)
     check("color_depth=24 reaches mipidsi as asked", dev.kw.get("color_depth") == 24
           and "output_color_depth" not in dev.kw, dev.kw)
-    message = refusal(lambda: display(color_depth=24))
-    check("color_depth=24 on an RGB565-only mipidsi names the option to use",
-          message is not None and "output_color_depth=24" in message and "only color_depth=16" in message, message)
-    print("   ", message)
     message = refusal(lambda: display(output_color_depth=16))
     check("RGB565 on the wire is refused", message is not None and "RGB888" in message, message)
     message = refusal(lambda: display(color_depth=8))
