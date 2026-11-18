@@ -63,6 +63,10 @@ from medialink._compat import sleep_ms, ticks_add, ticks_diff, ticks_ms
 from medialink import packet as _p
 from medialink.link import IDLE, LISTENING, TALKING, PeerUnreachable
 
+# The most extra reads one late service() makes of the microphone: enough to
+# catch up after a slow pass, few enough to get back to the network.
+_CATCH_UP_READS = 8
+
 
 class Intercom:
     def __init__(
@@ -104,6 +108,7 @@ class Intercom:
         self._settle_frames = -(-settle_ms // frame_ms)
         self._settle = 0
         self._mic_open = False
+        self._last_read = None
         self._auto = False
         self._refused = None
         self.stats = {
@@ -148,6 +153,7 @@ class Intercom:
             self._mic_open = True
             self._filled = 0
         self._talking = True
+        self._last_read = None
         self._first = True
         self._auto = False
 
@@ -179,7 +185,7 @@ class Intercom:
     def service(self):
         """Move one step: capture and send while talking, play while not."""
         if self._talking:
-            if not self._capture_step():
+            if not self._read_mic():
                 # Nothing from the microphone yet: wait a moment for it
                 # rather than spin. On CircuitPython a loop that never
                 # sleeps starves the network, and a send fails with ENOMEM
@@ -251,6 +257,23 @@ class Intercom:
         for frame in preroll:
             self._send(frame, _p.START if self._first else 0)
             self._first = False
+
+    def _read_mic(self):
+        """Read the microphone, more than once if this pass came late. A
+        program whose loop takes longer than a frame, drawing pictures say,
+        would otherwise send fewer frames than the microphone makes and the
+        listener's speaker would run dry. False when the microphone had
+        nothing."""
+        now = ticks_ms()
+        late = 0 if self._last_read is None else ticks_diff(now, self._last_read)
+        self._last_read = now
+        got = self._capture_step()
+        more = got
+        for _ in range(min(late // self.frame_ms, _CATCH_UP_READS)):
+            if not (more and self._talking):
+                break
+            more = self._capture_step()
+        return got
 
     def _capture_step(self):
         """Read the microphone, and send a frame once one is full. False
