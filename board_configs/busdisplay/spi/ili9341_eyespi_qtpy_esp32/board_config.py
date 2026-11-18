@@ -15,9 +15,9 @@ display_bus = SPIBus(
     baudrate=40_000_000,
     sck=14,
     mosi=13,
-    miso=12,
     command=7,
     chip_select=32,
+    swap_bytes=True,  # the bus swaps each colour as it copies it
 )
 
 display_drv = ILI9341(
@@ -30,7 +30,7 @@ display_drv = ILI9341(
     mirrored=False,
     color_depth=16,
     bgr=True,
-    reverse_bytes_in_word=True,
+    reverse_bytes_in_word=False,
     invert=False,
     brightness=1.0,
     backlight_on_high=True,

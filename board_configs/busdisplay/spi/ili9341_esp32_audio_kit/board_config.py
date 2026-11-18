@@ -23,22 +23,15 @@ from machine import I2C, Pin
 from spibus import SPIBus
 
 # VSPI's own clock and data pins, so the bus runs at full speed. No MISO.
-_bus_kw = dict(
+display_bus = SPIBus(
     id=2,
     baudrate=40_000_000,
     sck=18,
     mosi=23,
     command=19,
     chip_select=12,
+    swap_bytes=True,  # the bus swaps each colour as it copies it
 )
-try:
-    # The bus swaps each colour as it copies it (omnipython-builds#566).
-    display_bus = SPIBus(swap_bytes=True, **_bus_kw)
-    _swap_in_bus = True
-except TypeError:
-    # Firmware without that: the display driver swaps instead.
-    display_bus = SPIBus(**_bus_kw)
-    _swap_in_bus = False
 
 # The IPS panel needs inversion on and BGR order, as in lcdwiki's init code.
 # Rotated 180 degrees, so the top of the screen is the end nearest the kit's
@@ -53,7 +46,7 @@ display_drv = ILI9341(
     mirrored=False,
     color_depth=16,
     bgr=True,
-    reverse_bytes_in_word=not _swap_in_bus,
+    reverse_bytes_in_word=False,
     invert=True,
     brightness=1.0,
     backlight_on_high=True,
