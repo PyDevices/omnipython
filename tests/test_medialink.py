@@ -20,6 +20,7 @@ import unittest
 import _env  # noqa: F401  (puts lib/ on sys.path)
 
 import medialink
+from medialink._compat import ticks_add, ticks_ms
 from medialink import codec, packet
 from medialink.transport import Transport, UDPTransport
 
@@ -437,6 +438,46 @@ class PressToTalk(unittest.TestCase):
     def test_adpcm_arrives_whole(self):
         speech, heard, talker, listener = self.run_exchange(codec.ADPCM)
         self.assertEqual(len(heard), len(speech))
+
+    def test_a_slow_loop_still_sends_all_the_microphone_made(self):
+        # A pass that took three frames' time leaves three frames waiting.
+        fmt = Format(16000, 1)
+        network, a, b = pair()
+        mic = FakeMic(fmt, tone(3 * 320))
+        talker = medialink.Intercom(a, mic, None)
+        serve = Serve(b)
+        a.connect("b")
+        self.assertTrue(talker.press())
+        serve.stop()
+        talker._last_read = ticks_add(ticks_ms(), -60)
+        talker.service()
+        self.assertEqual(talker.stats["sent"], 3)
+
+    def test_catching_up_gives_the_network_its_turn(self):
+        fmt = Format(16000, 1)
+        network, a, b = pair()
+        mic = FakeMic(fmt, tone(16000))  # far more than one pass may take
+        talker = medialink.Intercom(a, mic, None)
+        serve = Serve(b)
+        a.connect("b")
+        self.assertTrue(talker.press())
+        serve.stop()
+        talker._last_read = ticks_add(ticks_ms(), -1000)
+        talker.service()
+        self.assertEqual(talker.stats["sent"], 9)
+
+    def test_a_loop_on_time_reads_one_frame_a_pass(self):
+        fmt = Format(16000, 1)
+        network, a, b = pair()
+        mic = FakeMic(fmt, tone(3 * 320))
+        talker = medialink.Intercom(a, mic, None)
+        serve = Serve(b)
+        a.connect("b")
+        self.assertTrue(talker.press())
+        serve.stop()
+        talker._last_read = ticks_ms()
+        talker.service()
+        self.assertEqual(talker.stats["sent"], 1)
 
     def test_a_talker_waits_for_its_microphone_rather_than_spin(self):
         # A loop that never sleeps starves CircuitPython's network, and its
