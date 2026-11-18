@@ -37,12 +37,19 @@ from st7789 import ST7789
 # 80 MHz, the clock the factory firmware drives this ST7789 at. A 240x240
 # frame takes 12.4 ms on the wire; at 40 MHz it took 23.9 ms.
 _bus_kw = dict(id=2, baudrate=80_000_000, sck=17, mosi=16, miso=-1, command=19, chip_select=18, reset=15)
+_swap_in_bus = True
 try:
     # The DMA bus: queue at most 32 KB. A 1080p H.264 encoder needs 155 KB of
     # this board's internal RAM in one piece, and the 128 KB default left none.
-    display_bus = SPIBus(dma=32768, **_bus_kw)
+    # The bus also swaps each colour as it copies it (omnipython-builds#566).
+    display_bus = SPIBus(dma=32768, swap_bytes=True, **_bus_kw)
 except TypeError:
-    display_bus = SPIBus(**_bus_kw)  # the common bus has no dma keyword
+    # Firmware without the colour swap: the display driver swaps instead.
+    _swap_in_bus = False
+    try:
+        display_bus = SPIBus(dma=32768, **_bus_kw)
+    except TypeError:
+        display_bus = SPIBus(**_bus_kw)  # the common bus has no dma keyword
 
 display_drv = ST7789(
     display_bus,
@@ -56,7 +63,7 @@ display_drv = ST7789(
     mirrored=True,
     color_depth=16,
     bgr=False,
-    reverse_bytes_in_word=True,
+    reverse_bytes_in_word=not _swap_in_bus,
     invert=True,
     brightness=1.0,
     backlight_pin=20,

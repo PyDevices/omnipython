@@ -16,7 +16,7 @@ from st7789 import ST7789
 
 import keys
 
-display_bus = SPIBus(
+_bus_kw = dict(
     id=1,
     baudrate=24_000_000,
     sck=36,
@@ -26,6 +26,14 @@ display_bus = SPIBus(
     chip_select=40,
     reset=41,
 )
+try:
+    # The bus swaps each colour as it copies it (omnipython-builds#566).
+    display_bus = SPIBus(swap_bytes=True, **_bus_kw)
+    _swap_in_bus = True
+except TypeError:
+    # Firmware without that: the display driver swaps instead.
+    display_bus = SPIBus(**_bus_kw)
+    _swap_in_bus = False
 
 display_drv = ST7789(
     display_bus,
@@ -41,7 +49,7 @@ display_drv = ST7789(
     mirrored=True,
     color_depth=16,
     bgr=False,
-    reverse_bytes_in_word=True,
+    reverse_bytes_in_word=not _swap_in_bus,
     backlight_pin=21,
     backlight_on_high=True,
 )

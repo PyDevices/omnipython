@@ -29,7 +29,7 @@ display's writes go nowhere and everything else works as before.
 from spibus import SPIBus
 from st7735r_1 import ST7735R
 
-display_bus = SPIBus(
+_bus_kw = dict(
     id=2,
     baudrate=10_000_000,  # Waveshare's clock; the ST7735S is rated to 15 MHz for writes
     sck=3,
@@ -38,6 +38,14 @@ display_bus = SPIBus(
     command=5,
     chip_select=4,
 )
+try:
+    # The bus swaps each colour as it copies it (omnipython-builds#566).
+    display_bus = SPIBus(swap_bytes=True, **_bus_kw)
+    _swap_in_bus = True
+except TypeError:
+    # Firmware without that: the display driver swaps instead.
+    display_bus = SPIBus(**_bus_kw)
+    _swap_in_bus = False
 
 display_drv = ST7735R(
     display_bus,
@@ -50,7 +58,7 @@ display_drv = ST7735R(
     mirrored=True,
     color_depth=16,
     bgr=False,
-    reverse_bytes_in_word=True,
+    reverse_bytes_in_word=not _swap_in_bus,
     invert=False,
     brightness=1.0,
     # GP13, the backlight, is the board's SDA: the LCD's pull-up keeps it on.
