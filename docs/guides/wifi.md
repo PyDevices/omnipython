@@ -142,10 +142,15 @@ has the details.
 
 By default an ESP32 saves power by letting its Wi-Fi radio sleep between the
 access point's beacons. Anything sent to the board waits until the radio
-next wakes. A stream that only sends barely notices. An app that asks and
-waits for each reply pays that delay on every request: a picture, a REPL
-line, a ping. That includes request-and-reply protocols like the camera
-examples and WebREPL.
+next wakes. An app that asks and waits for each reply pays that delay on
+every request: a picture, a REPL line, a ping. That includes
+request-and-reply protocols like the camera examples and WebREPL.
+
+A long TCP stream from the board pays too, because its acknowledgements come
+back through the same radio. When they go missing, the board stops sending
+for a second or two until TCP tries again. On a P4 with a C6 for Wi-Fi,
+streaming camera video for 25 seconds at a time, 12 of 36 runs stopped like
+that with power saving on, and none of 36 with it off.
 
 On a P4 sending 27 KB camera pictures one request at a time, at -60 to
 -65 dBm:
@@ -156,7 +161,7 @@ On a P4 sending 27 KB camera pictures one request at a time, at -60 to
 | Wi-Fi, power saving on (the default) | 300 to 690 ms | 7.9 s |
 | Wi-Fi, power saving off | 110 to 210 ms | 2.4 s |
 
-Turn it off when your app talks back and forth or needs low latency:
+Turn it off when your app talks back and forth, streams, or needs low latency:
 
 ```python
 import wifi
