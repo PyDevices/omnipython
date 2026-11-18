@@ -12,8 +12,9 @@ Pins from Espressif's ESP32-P4-EYE board support package:
     buttons   menu 3, up 4, down 5 (each low when pressed)
     I2C       SCL 13, SDA 14 (camera, QMA6100P accelerometer)
 
-The panel is 240x240 with colour inversion on and big-endian RGB565, at
-20 MHz as the factory firmware runs it.
+The panel is 240x240 with colour inversion on, BGR order and big-endian
+RGB565. It only works while the camera enable (GPIO 12) is high, so this file
+turns that on first.
 
 The three buttons are ``keypad``, with these key codes:
 
@@ -28,11 +29,19 @@ T-Embed.
 going in or out without trying to mount it.
 """
 
+import time
+
 import keys
+from board_peripherals import PERIPHERALS, load_peripherals, sdcard_present  # noqa: F401
 from keypad_gpio import GPIOButtons
 from machine import Encoder, Pin
 from spibus import SPIBus
 from st7789 import ST7789
+
+# The screen stays dark until the camera enable is high. board_peripherals is
+# imported first because, after a deep-sleep wake, it sets this pin low.
+Pin(12, Pin.OUT, value=1, hold=False)
+time.sleep_ms(50)
 
 # 80 MHz, the clock the factory firmware drives this ST7789 at. A 240x240
 # frame takes 12.4 ms on the wire; at 40 MHz it took 23.9 ms.
@@ -48,12 +57,12 @@ display_drv = ST7789(
     height=240,
     colstart=0,
     rowstart=0,
-    # MADCTL 0x00 (no row or column swap, RGB order), as the factory firmware
-    # sets it. In this driver's tables that is mirrored=True at rotation 0.
+    # No row or column swap: in this driver's tables that is mirrored=True at
+    # rotation 0.
     rotation=0,
     mirrored=True,
     color_depth=16,
-    bgr=False,
+    bgr=True,
     reverse_bytes_in_word=False,
     invert=True,
     brightness=1.0,
@@ -93,7 +102,5 @@ keypad = GPIOButtons(
     }
 )
 keypad_read = keypad.read
-
-from board_peripherals import PERIPHERALS, load_peripherals, sdcard_present  # noqa: E402,F401
 
 load_peripherals(globals())

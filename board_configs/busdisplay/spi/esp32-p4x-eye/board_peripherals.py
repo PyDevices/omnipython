@@ -343,9 +343,9 @@ def _sleep(ms=None, *, deep=False, wake=WAKE_SOURCES):
     ``"timer"``. Deep sleep restarts the board on wake, so it never returns;
     ``machine.reset_cause()`` and ``machine.wake_reason()`` say why it woke.
     Through deep sleep the camera's enable and the C6's are held low, so
-    neither draws power; ``import board_peripherals`` lets them go after the
-    restart. The screen and backlight stay as they are: turn them off first
-    to save power.
+    neither draws power, and the screen, which needs the camera's enable, goes
+    dark; ``import board_peripherals`` lets them go after the restart. The
+    backlight stays as it is: turn it off first to save power.
     """
     import esp32
     import machine
