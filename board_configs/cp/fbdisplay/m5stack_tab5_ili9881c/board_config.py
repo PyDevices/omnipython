@@ -16,7 +16,7 @@ from displaydev.fbdisplay import FBDisplay
 
 displayio.release_displays()
 
-display_bus = mipidsi.Bus(frequency=730_000_000, num_lanes=2)
+display_bus = mipidsi.Bus(minimum_frequency=730_000_000, num_lanes=2)
 
 fb = mipidsi.Display(
     display_bus,

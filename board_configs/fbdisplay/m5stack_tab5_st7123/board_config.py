@@ -36,7 +36,7 @@ touch = ST7123(
     height=1_280,
 )
 
-display_bus = Bus(frequency=965_000_000, num_lanes=2)
+display_bus = Bus(minimum_frequency=965_000_000, num_lanes=2)
 
 fb = Display(
     display_bus,

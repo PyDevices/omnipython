@@ -39,7 +39,7 @@ touch = GT911(
     touch_points=5,
 )
 
-display_bus = Bus(frequency=730_000_000, num_lanes=2)
+display_bus = Bus(minimum_frequency=730_000_000, num_lanes=2)
 
 fb = Display(
     display_bus,

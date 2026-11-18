@@ -176,13 +176,13 @@ class TheSourcesRecord(Scratch):
             f"omnipython-lib https://example.com/pydevices.git {'3' * 40}\n"
             f"esp-vision https://example.com/esp-vision.git {'5' * 40}\n"
             f"esp-idf https://example.com/idf.git {'6' * 40}  # tag v5.5.4\n"
-            f"circuitpython https://example.com/cp.git {'7' * 40}  # tag 11.0.0-alpha.2\n"
+            f"circuitpython https://example.com/cp.git {'7' * 40}  # tag 11.0.0-alpha.3\n"
             "SDL2 https://example.com/SDL2-2.30.10.tar.gz 2.30.10\n")})
         rec = sources.record(self.dir / "mpp2", self.dir / "lvgl", self.dir / "pyd", "v1.2.3",
                              self.lock(mpp, self.lvgl))
         self.assertTrue(rec["pinned"])
         self.assertEqual(rec["micropython"], {"commit": "c" * 40})
-        self.assertEqual(rec["circuitpython"], {"version": "11.0.0-alpha.2"})
+        self.assertEqual(rec["circuitpython"], {"version": "11.0.0-alpha.3"})
         self.assertEqual(rec["modules"], {"displayif": "2" * 40, "omnipython-lvgl": "4" * 40})
 
     def test_says_unpinned_when_a_checkout_is_not_the_pin(self):

@@ -58,7 +58,7 @@ time.sleep(0.1)
 reset_pin.value = True
 time.sleep(0.2)
 
-display_bus = mipidsi.Bus(frequency=1_000_000_000, num_lanes=2, ldo_chan=3, ldo_voltage_mv=2500)
+display_bus = mipidsi.Bus(minimum_frequency=1_000_000_000, num_lanes=2)
 
 fb = mipidsi.Display(
     display_bus,

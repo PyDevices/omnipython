@@ -44,7 +44,7 @@ display_on = Pin(DISPLAY_ON, Pin.OUT, value=1)
 backlight = Pin(BACKLIGHT, Pin.OUT, value=0)
 time.sleep_ms(20)
 
-display_bus = Bus(frequency=500_000_000, num_lanes=2)
+display_bus = Bus(minimum_frequency=500_000_000, num_lanes=2)
 
 # 40 MHz is the STM32's PLL3 at 320 MHz divided by 8. A line of 864 pixels
 # then lasts exactly 1350 DSI lane byte clocks (864 * 62.5 / 40).
