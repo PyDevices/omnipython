@@ -33,6 +33,8 @@ Each one says in its docstring what it needs and where it has been run.
 | [displaydev_simpletest.py](displaydev_simpletest.py) | Boxes and a label drawn straight on the display |
 | [events_simpletest.py](events_simpletest.py) | Input events, told apart by type, and one of your own |
 | [keys_simpletest.py](keys_simpletest.py) | Key names, a Ctrl+S shortcut, and a USB keyboard's codes |
+| [lt8912b_simpletest.py](lt8912b_simpletest.py) | Colour bars on an HDMI monitor through an LT8912B bridge, drawn by the board over DSI |
+| [lt8912b_test_pattern.py](lt8912b_test_pattern.py) | An LT8912B bridge's own colour bars, with no DSI video |
 | [multimer_simpletest.py](multimer_simpletest.py) | Two timers at once, stopped by a third |
 | [usb_device_audio_headset.py](usb_device_audio_headset.py) | Being a USB headset that plays back what the computer plays to it |
 | [usb_device_audio_simpletest.py](usb_device_audio_simpletest.py) | Being a USB microphone that sends a tone |

@@ -31,6 +31,7 @@ guides/wifi
 guides/mdns
 guides/medialink
 guides/lvgl
+guides/hdmi-out
 guides/vtterm
 guides/cast-to-a-tv
 guides/run-on-the-desktop

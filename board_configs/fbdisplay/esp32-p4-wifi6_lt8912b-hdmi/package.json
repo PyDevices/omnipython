@@ -1,0 +1,21 @@
+{
+  "urls": [
+    [
+      "board_config.py",
+      "github:PyDevices/omnipython/board_configs/fbdisplay/esp32-p4-wifi6_lt8912b-hdmi/board_config.py"
+    ],
+    [
+      "lt8912b.py",
+      "github:PyDevices/omnipython/drivers/display/lt8912b.py"
+    ]
+  ],
+  "deps": [
+    [
+      "omnipython",
+      "latest"
+    ]
+  ],
+  "version": "0.1.0",
+  "description": "Waveshare ESP32-P4-WIFI6 with an LT8912B DSI to HDMI board, 720p60 - MicroPython",
+  "generated": "from manifest.py by tools/libbuild.py installers; edit manifest.py, not this"
+}
