@@ -16,6 +16,7 @@ import time
 
 import usdl2
 
+from displaydev import color_rgb
 from displaydev.sdldisplay import SDLDisplay, retcheck
 import keys
 
@@ -319,6 +320,42 @@ class AndroidSDLDisplay(SDLDisplay):
         if time.time() < float(getattr(self, "_orient_settle_until", 0) or 0):
             self._render_dirty = True
         super().show(_timer)
+
+    def fill_rect(self, x, y, w, h, c):
+        """Fill by uploading pixels into the display texture.
+
+        ``SDLDisplay`` fills with ``SDL_RenderFillRect`` on a render target,
+        which the GPU queues. On a phone, an Adreno GPU sometimes lost the
+        commands queued while the Activity was still settling after the turn
+        to landscape, leaving a run of keys unpainted until they were touched.
+        An upload is applied in order and never queued, so it can't be lost.
+        """
+        if not self._sdl_active() or self.color_depth not in (16, 32):
+            return super().fill_rect(x, y, w, h, c)
+        x0 = max(int(x), 0)
+        y0 = max(int(y), 0)
+        x1 = min(int(x) + int(w), int(self.width))
+        y1 = min(int(y) + int(h), int(self.height))
+        if x1 <= x0 or y1 <= y0:
+            return (x, y, w, h)
+        r, g, b = color_rgb(c)
+        if self.color_depth == 16:
+            value = ((r >> 3) << 11) | ((g >> 2) << 5) | (b >> 3)
+            pixel = bytes((value & 0xFF, value >> 8))
+        else:
+            pixel = bytes((b, g, r, 255))
+        cols = x1 - x0
+        rows = y1 - y0
+        retcheck(
+            usdl2.SDL_UpdateTexture(
+                self._buffer,
+                usdl2.SDL_Rect(x0, y0, cols, rows),
+                pixel * (cols * rows),
+                cols * len(pixel),
+            )
+        )
+        self._render_dirty = True
+        return (x, y, w, h)
 
     def _rebind_logical_texture(self, tex_w, tex_h):
         """Swap the target texture + logical size; keep the existing renderer.
