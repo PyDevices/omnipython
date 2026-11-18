@@ -404,7 +404,9 @@ class BusDisplay(DisplayDriver):
         else:
             self._param_buf[0] = c16 & 0xFF
             self._param_buf[1] = (c16 >> 8) & 0xFF
-        self.send(_RAMWR, self._param_mv[:2])
+        # A pixel is a colour, so it goes the way a blit does: a bus that
+        # converts colours as it copies (spibus swap_bytes) converts this one too.
+        self.send_color(_RAMWR, self._param_mv[:2])
         return (x, y, 1, 1)
 
     ############### API Method Overrides ################
