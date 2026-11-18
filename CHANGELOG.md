@@ -1,3 +1,14 @@
+## v0.8.1.dev1 (2026-11-18)
+
+- BusDisplay: pixel() sends its colour with send_color() when the bus has it (#713)
+- medialink: an Intercom reads its microphone again after a late pass (#712)
+- Wi-Fi guide: power saving also stalls long TCP streams (#711)
+- Android display: Piano's white keys no longer go missing at launch (#710)
+- lib-lock: audioinstruments v0.5.3.dev2, a SoundFont preset worked out when selected (#708)
+- lib-lock: audioinstruments v0.5.3.dev1 keeps a re-struck kit pad sounding (#707)
+- lib-lock: audioinstruments v0.5.2, audioeffects v0.5.2 (#706)
+- Install lines are plain pip install from PyPI (#701)
+
 ## v0.8.0 (2026-11-17)
 
 - Publishing: package releases go to PyPI alone, on publishing-v31 (#702)
