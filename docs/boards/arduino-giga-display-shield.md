@@ -48,7 +48,7 @@ gives you, and how to set the board up. The role names (`audio_out`, `pcm_in`,
   and apps that read `/sd` (midiEngine's `/sd/midi` and `/sd/soundfonts`, the MP3
   player) find the drive's files. It starts the USB host, so keep a keyboard or
   MIDI device in the same hub, and give it a few seconds to show up. It needs
-  `usb-host-msc` in the ROMFS (below). Interrupting a transfer to the drive can leave
+  `usb.host.msc` in the ROMFS, which a `usbhost` firmware's ROMFS carries (below). Interrupting a transfer to the drive can leave
   it timing out until the board resets.
 - **Bluetooth LE:** `ble` is a bledev adapter over the GIGA's Murata 1DX,
   which also answers every `bluetooth.BLE` method. Needs firmware with
@@ -68,13 +68,16 @@ gives you, and how to set the board up. The role names (`audio_out`, `pcm_in`,
 - **Libraries:** the OmniPython libraries don't fit in the firmware beside
   LVGL, so they go in the board's 4 MB ROMFS with the drivers this board
   needs: the two in this repository, micropython-lib's `bmi270` for the IMU
-  and `aioble` for Bluetooth, the USB host packages, and the audio packages
+  and `aioble` for Bluetooth, and the audio packages
   `audioeffects` and `audioinstruments` that apps like midiEngine import. The
   firmware keeps its own Python modules (asyncio, webrepl, mip and the rest)
   in the ROMFS too, and a deploy replaces the whole partition, so start the
   folder with those, from the firmware release's `romfs-files` zip or the
-  build's `romfs/` folder. Then add the rest and deploy it once, from a clone
-  of this repository:
+  build's `romfs/` folder, which already holds `usb.device` and, from a `usbhost`
+  build, `usb.core` and the `usb.host` classes (a `usb` package in the ROMFS
+  hides any `usb/` you install in `/flash/lib`, so the host packages can only go
+  in the ROMFS). Then add the rest and deploy it once, from a clone of this
+  repository:
 
   ```bash
   git clone --depth 1 https://github.com/PyDevices/omnipython.git
@@ -83,11 +86,6 @@ gives you, and how to set the board up. The role names (`audio_out`, `pcm_in`,
   cp -r omnipython/lib/* omnipython/drivers/touch/gt911.py \
       omnipython/drivers/display/giga_display_shield_init.py romfs/
   cp -r omnipython/packages/midiports/midiports romfs/
-  mkdir -p romfs/usb/host
-  cp omnipython/packages/usb/usb-core/usb/*.py romfs/usb/
-  cp omnipython/packages/usb/usb-core/usb_host.py romfs/
-  cp omnipython/packages/usb/usb-host-hid/usb/host/*.py \
-      omnipython/packages/usb/usb-host-msc/usb/host/*.py romfs/usb/host/
   curl -o romfs/bmi270.py https://raw.githubusercontent.com/micropython/micropython-lib/master/micropython/drivers/imu/bmi270/bmi270.py
   mkdir romfs/aioble
   for f in __init__ central client core device l2cap peripheral security server; do
