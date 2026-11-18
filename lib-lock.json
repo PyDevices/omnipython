@@ -32,7 +32,7 @@
   "pinned": {
     "pygraphics": {
       "repository": "PyDevices/pygraphics",
-      "ref": "v0.1.6",
+      "ref": "v0.2.0",
       "description": "Pure-Python pygraphics for MicroPython/CircuitPython/CPython (FrameBuffer, Draw, fonts); import as pygraphics"
     },
     "audioinstruments": {
@@ -47,7 +47,7 @@
     },
     "applibs": {
       "repository": "PyDevices/apps",
-      "ref": "v0.1.2.dev12",
+      "ref": "v0.1.3.dev1",
       "description": "The libraries apps share; installs each of them",
       "packages": {
         "appkit": "Apps you can switch between, and a launcher to run them",
