@@ -178,8 +178,10 @@ class EcmTests(unittest.TestCase):
         net = Tether(dev)
         self.assertTrue(net.active(True))
         self.assertEqual(net.config("mac"), bytes((0x02, 0x11, 0x22, 0x33, 0x44, 0x5A)))
-        # The MAC string, the data interface's alternate 1, then the packet filter.
-        self.assertEqual(dev.requests, [(0x80, 6, 0x0304, 0x0409), (0x01, 0x0B, 1, 1), (0x21, 0x43, 0x0E, 0)])
+        # The MAC string, the data interface's alternate 1, out to 0 and back (a Linux
+        # gadget that saw a bus suspend sends nothing until then), then the packet filter.
+        self.assertEqual(dev.requests, [(0x80, 6, 0x0304, 0x0409), (0x01, 0x0B, 1, 1), (0x01, 0x0B, 0, 1),
+                                        (0x01, 0x0B, 1, 1), (0x21, 0x43, 0x0E, 0)])
         self.assertEqual(started, [(9, 1, 0x81, 0x02, 512, net.mac, False, 1)])
         net.active(False)
         self.assertEqual(started[-1], "stop")

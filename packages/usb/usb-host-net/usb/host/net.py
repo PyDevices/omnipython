@@ -185,7 +185,12 @@ class Tether:
             self.mac = _mac(self.dev, self._mac_index)
             # The endpoints are in an alternate setting: the device is told to use it
             # (the data interface's alternate 0 has none), then which frames to send.
+            # It is selected, left and selected again: a Linux gadget that saw the bus
+            # suspend before this keeps its transmit queue stopped until it is left.
             self.dev.ctrl_transfer(0x01, 0x0B, self._alt, self._data, None, 1000)
+            if self._alt:
+                self.dev.ctrl_transfer(0x01, 0x0B, 0, self._data, None, 1000)
+                self.dev.ctrl_transfer(0x01, 0x0B, self._alt, self._data, None, 1000)
             try:
                 self.dev.ctrl_transfer(0x21, _SET_ETHERNET_PACKET_FILTER, _ECM_FILTER, self._ctrl, None, 1000)
             except usb.core.USBError:
