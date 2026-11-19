@@ -51,7 +51,7 @@ ST7703_INIT_SEQUENCE = (
     b"\x29\x81\x00\x32"
 )
 
-reset_pin = digitalio.DigitalInOut(board.IO27)
+reset_pin = digitalio.DigitalInOut(LCD_RESET)
 reset_pin.direction = digitalio.Direction.OUTPUT
 reset_pin.value = False
 time.sleep(0.1)
@@ -73,15 +73,18 @@ fb = mipidsi.Display(
     vsync_pulse_width=4,
     vsync_front_porch=30,
     vsync_back_porch=12,
-    reset_pin=LCD_RESET,
-    backlight_pin=LCD_BACKLIGHT,
-    backlight_on_high=False,
 )
+
+# mipidsi.Display takes no reset or backlight pins: the panel is reset above,
+# and the backlight is active low.
+backlight = digitalio.DigitalInOut(LCD_BACKLIGHT)
+backlight.direction = digitalio.Direction.OUTPUT
+backlight.value = False
 
 display = framebufferio.FramebufferDisplay(fb, auto_refresh=True)
 display.root_group = None
 
-display_drv = FBDisplay(fb)
+display_drv = FBDisplay(fb, display=display)
 
 i2c = busio.I2C(I2C_SCL, I2C_SDA)
 touch_rst = digitalio.DigitalInOut(TOUCH_RESET)
