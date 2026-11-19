@@ -93,10 +93,8 @@ touch = gt911.GT911(i2c, i2c_address=0x5D, rst_pin=touch_rst)
 
 
 def _touch_points():
-    touches = touch.touches
-    if not touches:
-        return ()
-    return tuple((t[0], t[1]) for t in touches)
+    # The controller's x runs right to left across this panel.
+    return tuple((719 - t[0], t[1]) for t in touch.read_points())
 
 
 touch_rotation_table = (0, 0, 0, 0)

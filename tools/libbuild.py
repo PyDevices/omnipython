@@ -1449,12 +1449,20 @@ def render_cp_installers(root: Path, drivers: dict[str, Driver]) -> dict[Path, s
     A CircuitPython config has no manifest.py, so its installer is read from
     what its files import: the drivers in drivers/ by file, Adafruit's
     libraries under "circuitpython" (only omip on CircuitPython reads it), and
-    OmniPython as a dep when it imports a library from lib/.
+    OmniPython as a dep when it imports a library from lib/. A driver with a
+    CircuitPython copy (drivers/<kind>/circuitpython/<name>.py) installs that
+    copy in place of the MicroPython one.
     """
     base = root / BOARD_ROOT / "cp"
     if not base.is_dir():
         return {}
     by_module = {Path(module).stem: name for name, driver in drivers.items() for module in driver.modules}
+    drivers_root = root / DRIVERS_DIR
+    cp_copies = {
+        p.stem: p.relative_to(drivers_root).as_posix()
+        for p in sorted(drivers_root.glob("*/circuitpython/*.py"))
+        if not p.stem.startswith("adafruit_")
+    }
     library = {p.stem for p in (root / "lib").iterdir() if p.suffix == ".py" or p.is_dir()} if (root / "lib").is_dir() else set()
     out: dict[Path, str] = {}
     for folder in sorted({p.parent for p in base.rglob("board_*.py")}):
@@ -1478,7 +1486,12 @@ def render_cp_installers(root: Path, drivers: dict[str, Driver]) -> dict[Path, s
                 add_driver(required)
 
         for name in sorted(set().union(*(_cp_imports(p) for p in files)) - own):
-            if name in by_module:
+            if name in cp_copies:
+                file = f"{name}.py"
+                if file not in seen_files:
+                    seen_files.add(file)
+                    urls.append([file, f"github:{GITHUB_REPO}/{DRIVERS_DIR}/{cp_copies[name]}"])
+            elif name in by_module:
                 add_driver(by_module[name])
             elif name.startswith("adafruit_") or name in ADAFRUIT_UNPREFIXED:
                 adafruit.append([name, "latest"])

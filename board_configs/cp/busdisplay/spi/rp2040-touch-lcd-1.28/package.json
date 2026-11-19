@@ -5,6 +5,10 @@
       "github:PyDevices/omnipython/board_configs/cp/busdisplay/spi/rp2040-touch-lcd-1.28/board_config.py"
     ],
     [
+      "cst816.py",
+      "github:PyDevices/omnipython/drivers/touch/circuitpython/cst816.py"
+    ],
+    [
       "gc9a01.py",
       "github:PyDevices/omnipython/drivers/display/gc9a01.py"
     ]
