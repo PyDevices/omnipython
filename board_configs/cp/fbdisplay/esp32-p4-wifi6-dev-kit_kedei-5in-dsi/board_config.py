@@ -42,7 +42,7 @@ _regs = board_peripherals._I2CMem(i2c)
 _regs.writeto_mem(PANEL_CTRL, _POWERON, b"\x00")
 time.sleep(0.3)
 
-display_bus = mipidsi.Bus(frequency=528_000_000, num_lanes=1)
+display_bus = mipidsi.Bus(minimum_frequency=528_000_000, num_lanes=1)
 
 fb = mipidsi.Display(
     display_bus,

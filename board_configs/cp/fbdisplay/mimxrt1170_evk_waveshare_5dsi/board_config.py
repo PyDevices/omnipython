@@ -17,7 +17,7 @@ displayio.release_displays()
 
 PANEL_INIT_SEQUENCE = b""
 
-display_bus = mipidsi.Bus(frequency=1_000_000_000, num_lanes=2)
+display_bus = mipidsi.Bus(minimum_frequency=1_000_000_000, num_lanes=2)
 
 fb = mipidsi.Display(
     display_bus,

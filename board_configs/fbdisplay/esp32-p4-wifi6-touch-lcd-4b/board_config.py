@@ -59,7 +59,7 @@ time.sleep_ms(200)
 # Active-low backlight; enable after Display init.
 lcd_backlight = Pin(LCD_BACKLIGHT, Pin.OUT, value=1)
 
-display_bus = Bus(frequency=1_000_000_000, num_lanes=2, ldo_chan=3, ldo_voltage_mv=2500)
+display_bus = Bus(minimum_frequency=1_000_000_000, num_lanes=2, ldo_chan=3, ldo_voltage_mv=2500)
 
 fb = Display(
     display_bus,

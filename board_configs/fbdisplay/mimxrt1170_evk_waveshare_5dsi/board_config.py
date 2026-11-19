@@ -18,7 +18,7 @@ except ImportError as exc:
 
 PANEL_INIT_SEQUENCE = b""
 
-display_bus = Bus(frequency=1_000_000_000, num_lanes=2)
+display_bus = Bus(minimum_frequency=1_000_000_000, num_lanes=2)
 
 fb = Display(
     display_bus,

@@ -42,7 +42,7 @@ i2c = I2C(1, scl=Pin(I2C_SCL), sda=Pin(I2C_SDA), freq=100_000)
 i2c.writeto_mem(PANEL_CTRL, _POWERON, b"\x00")
 time.sleep_ms(300)
 
-display_bus = Bus(frequency=528_000_000, num_lanes=1, ldo_chan=3, ldo_voltage_mv=2500)
+display_bus = Bus(minimum_frequency=528_000_000, num_lanes=1, ldo_chan=3, ldo_voltage_mv=2500)
 
 fb = Display(
     display_bus,
