@@ -25,6 +25,7 @@ display_bus = SPIBus(
     command=39,
     chip_select=40,
     reset=41,
+    swap_bytes=True,  # the bus swaps each colour as it copies it
 )
 
 display_drv = ST7789(
@@ -41,7 +42,7 @@ display_drv = ST7789(
     mirrored=True,
     color_depth=16,
     bgr=False,
-    reverse_bytes_in_word=True,
+    reverse_bytes_in_word=False,
     backlight_pin=21,
     backlight_on_high=True,
 )

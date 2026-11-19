@@ -37,6 +37,7 @@ display_bus = SPIBus(
     miso=-1,
     command=5,
     chip_select=4,
+    swap_bytes=True,  # the bus swaps each colour as it copies it
 )
 
 display_drv = ST7735R(
@@ -50,7 +51,7 @@ display_drv = ST7735R(
     mirrored=True,
     color_depth=16,
     bgr=False,
-    reverse_bytes_in_word=True,
+    reverse_bytes_in_word=False,
     invert=False,
     brightness=1.0,
     # GP13, the backlight, is the board's SDA: the LCD's pull-up keeps it on.

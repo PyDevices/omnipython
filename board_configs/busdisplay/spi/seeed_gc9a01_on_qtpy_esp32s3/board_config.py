@@ -20,9 +20,9 @@ display_bus = SPIBus(
     baudrate=60_000_000,
     sck=36,
     mosi=35,
-    miso=37,
     command=8,
     chip_select=17,
+    swap_bytes=True,  # the bus swaps each colour as it copies it
 )
 
 display_drv = GC9A01(
@@ -38,7 +38,7 @@ display_drv = GC9A01(
     mirrored=True,
     color_depth=16,
     bgr=True,
-    reverse_bytes_in_word=True,
+    reverse_bytes_in_word=False,
     invert=True,
     brightness=1.0,
     backlight_pin=None,

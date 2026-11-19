@@ -30,6 +30,7 @@ display_bus = SPIBus(
     mosi=23,
     command=19,
     chip_select=12,
+    swap_bytes=True,  # the bus swaps each colour as it copies it
 )
 
 # The IPS panel needs inversion on and BGR order, as in lcdwiki's init code.
@@ -45,7 +46,7 @@ display_drv = ILI9341(
     mirrored=False,
     color_depth=16,
     bgr=True,
-    reverse_bytes_in_word=True,
+    reverse_bytes_in_word=False,
     invert=True,
     brightness=1.0,
     backlight_on_high=True,
