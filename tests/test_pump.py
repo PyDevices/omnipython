@@ -1274,11 +1274,19 @@ class TheBoardPlaysThroughAudiobusio(PumpFixture):
         self.assertEqual(pump_mod.owner().clients(), 1)
 
     def test_pause_and_resume_go_through_the_output(self):
+        """Through ``I2SOut``'s own pause, not a park behind its back.
+
+        A park from here left ``I2SOut`` not knowing it was paused, and the
+        pause's silence was counted by ``starved()`` (omnipython-builds#605).
+        """
         out, _transport = self.board()
+        i2s = FakeI2SOut.built[0]
         out.pause()
         self.assertTrue(self.engine.parked)
+        self.assertTrue(i2s.paused, "the pump was parked behind I2SOut's back")
         out.resume()
         self.assertFalse(self.engine.parked)
+        self.assertFalse(i2s.paused, "I2SOut was left paused")
 
     def test_the_fault_sentence_comes_from_the_outputs_own_status_block(self):
         """``I2SOut`` spawns with a status bytearray of its own.
