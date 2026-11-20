@@ -94,6 +94,8 @@ and Android.
   Get it: `pip omnipython-desktop`. Runs on: Desktop, Web.
 - [`ppa`](https://github.com/PyDevices/omnipython-builds/tree/main/modules/ppa): Scale, rotate, mirror, crop, convert, fill and blend pictures in memory, in hardware on an ESP32-P4.\
   Get it: firmware build. Runs on: MP.
+- [`offheap`](https://github.com/PyDevices/omnipython-builds/tree/main/modules/offheap): Keep big pixel buffers outside the garbage-collected heap, so they don't slow every collection.\
+  Get it: firmware build. Runs on: MP on ESP32, desktop, browser.
 - [`frame_recorder`](https://github.com/PyDevices/omnipython/blob/main/utils/frame_recorder.py): Record a desktop display to video.\
   Get it: `pip omnipython-desktop`. Runs on: Desktop.
 
@@ -451,7 +453,7 @@ and Android.
 - **K:** [`keys`](#write-an-app)
 - **L:** [`LEDs`](#drive-a-chip), [`lib`](#find-the-projects-own-sites), [`lite-assistant`](#connect-devices), [`lvgl`](#draw-on-a-screen)
 - **M:** [`mcuctl`](#set-up-a-board), [`mdns`](#connect-devices), [`mdns for CPython`](#connect-devices), [`medialink`](#connect-devices), [`micropython shim`](#run-somewhere-other-than-a-board), [`MIDI Controller`](#run-a-finished-app), [`MIDI module`](#run-a-finished-app), [`midiEngine`](#run-a-finished-app), [`midiports`](#play-and-sequence-music), [`mip`](#find-the-projects-own-sites), [`MP3 player`](#run-a-finished-app), [`mp4mux`](#use-cameras-video-and-ai-on-a-board), [`mpvst`](#make-and-shape-sound), [`multimer`](#write-an-app)
-- **O:** [`Object detection`](#run-a-finished-app), [`omip`](#set-up-a-board), [`OmniPython firmware`](#set-up-a-board), [`omnipython-desktop`](#run-somewhere-other-than-a-board), [`orientation`](#write-an-app), [`Ostinato`](#run-a-finished-app)
+- **O:** [`Object detection`](#run-a-finished-app), [`offheap`](#draw-on-a-screen), [`omip`](#set-up-a-board), [`OmniPython firmware`](#set-up-a-board), [`omnipython-desktop`](#run-somewhere-other-than-a-board), [`orientation`](#write-an-app), [`Ostinato`](#run-a-finished-app)
 - **P:** [`palettes`](#draw-on-a-screen), [`pdwidgets`](#draw-on-a-screen), [`picotts`](#make-and-shape-sound), [`pngio`](#draw-on-a-screen), [`pngio for CPython`](#draw-on-a-screen), [`Power`](#drive-a-chip), [`ppa`](#draw-on-a-screen), [`programkit`](#libraries-the-apps-use), [`PyDevices Workbench`](#set-up-a-board), [`pydevices.com`](#find-the-projects-own-sites), [`PyDevices.github.io`](#find-the-projects-own-sites), [`pygraphics`](#draw-on-a-screen), [`pyscript-template`](#run-somewhere-other-than-a-board), [`pyscript.py`](#run-somewhere-other-than-a-board)
 - **R:** [`Radios`](#drive-a-chip), [`Real-time clocks`](#drive-a-chip), [`REPL`](#run-a-finished-app), [`Roku remote`](#run-a-finished-app)
 - **S:** [`sayso`](#libraries-the-apps-use), [`Security camera`](#run-a-finished-app), [`songmodel`](#play-and-sequence-music), [`Sound card`](#run-a-finished-app), [`soundmodule`](#play-and-sequence-music), [`spectrum`](#draw-on-a-screen), [`Spotify`](#run-a-finished-app), [`Stompbox`](#run-a-finished-app), [`Storage`](#drive-a-chip), [`Surveillance camera`](#run-a-finished-app), [`svgio`](#draw-on-a-screen), [`svgio for CPython`](#draw-on-a-screen), [`Synth Station`](#run-a-finished-app), [`synthio`](#make-and-shape-sound), [`System`](#run-a-finished-app)
