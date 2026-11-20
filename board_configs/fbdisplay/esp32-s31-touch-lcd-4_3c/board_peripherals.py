@@ -91,7 +91,7 @@ _LED = 55
 # The rates the codec's BCLK clock tree has settings for.
 _RATES = (8000, 16000, 44100, 48000)
 _RATE = 48000
-_DEFAULT_VOLUME = 70
+_DEFAULT_VOLUME = 85
 
 AUDIO_OUT = AudioCapability(
     AudioFormat(_RATE, 2, 16),
