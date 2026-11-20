@@ -6,7 +6,7 @@
     ],
     [
       "gt911.py",
-      "github:PyDevices/omnipython/drivers/touch/gt911.py"
+      "github:PyDevices/omnipython/drivers/touch/circuitpython/gt911.py"
     ]
   ],
   "deps": [

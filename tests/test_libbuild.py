@@ -290,6 +290,21 @@ class TypeStubs(unittest.TestCase):
         self.assertEqual(libbuild._ignore_debris("lib/audiodev", names), {"__init__.pyi", "py.typed", "pump.pyi", "__pycache__"})
 
 
+class CircuitPythonInstallers(unittest.TestCase):
+    def test_a_driver_with_a_circuitpython_copy_installs_the_copy(self):
+        rendered = libbuild.render_installers(ROOT)
+        folder = ROOT / "board_configs" / "cp" / "fbdisplay" / "esp32-p4-wifi6-touch-lcd-4b"
+        urls = dict(json.loads(rendered[folder / "package.json"])["urls"])
+        self.assertEqual(urls["gt911.py"], "github:PyDevices/omnipython/drivers/touch/circuitpython/gt911.py")
+
+    def test_adafruit_copies_still_come_from_the_bundle(self):
+        rendered = libbuild.render_installers(ROOT)
+        folder = ROOT / "board_configs" / "cp" / "busdisplay" / "spi" / "m5stack-cores3"
+        body = json.loads(rendered[folder / "package.json"])
+        self.assertIn(["adafruit_focaltouch", "latest"], body["circuitpython"])
+        self.assertNotIn("adafruit_focaltouch.py", dict(body["urls"]))
+
+
 class Manifests(unittest.TestCase):
     def setUp(self):
         self.library = Path(tempfile.mkdtemp(prefix="libbuild-manifest-"))

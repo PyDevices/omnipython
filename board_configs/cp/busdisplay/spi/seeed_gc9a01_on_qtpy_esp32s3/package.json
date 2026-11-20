@@ -6,7 +6,7 @@
     ],
     [
       "chsc6x.py",
-      "github:PyDevices/omnipython/drivers/touch/chsc6x.py"
+      "github:PyDevices/omnipython/drivers/touch/circuitpython/chsc6x.py"
     ],
     [
       "gc9a01.py",
