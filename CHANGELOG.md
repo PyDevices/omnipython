@@ -1,3 +1,20 @@
+## v0.8.1.dev2 (2026-11-20)
+
+- ESP32-S31-Touch-LCD-4.3C: the microphones record while the speaker plays (#730)
+- win_audio: device= opens the endpoint with that name (#731)
+- Stack page: audiofm (#726)
+- ESP32-S31-Touch-LCD-4.3C: default volume 85 (#727)
+- Stack page: Bluetooth Receiver
+- Add the Waveshare ESP32-S31-Touch-LCD-4.3C board config, with ES8389, PCF85063 and BQ27220 drivers (#724)
+- gt911: a CircuitPython driver, and CircuitPython configs install CircuitPython driver copies (#722)
+- T-Embed: i2c() is the Qwiic socket on GPIO 43/44 (#723)
+- Board configs: mipidsi.Bus(minimum_frequency=) in the ten DSI configs (#709)
+- usb.host.net: a CDC-ECM adapter on a Linux gadget sends after a bus suspend (#720)
+- Board configs: nine ESP32 SPI panels use the bus's swap_bytes (#714)
+- Library: audioinstruments 0.5.3.dev3 (#718)
+- Library: apps 0.1.3.dev1 and pygraphics 0.2.0 (#717)
+- GIGA Display Shield: the firmware's ROMFS carries usb.core and the host packages (#715)
+
 ## v0.8.1.dev1 (2026-11-18)
 
 - BusDisplay: pixel() sends its colour with send_color() when the bus has it (#713)
