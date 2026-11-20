@@ -65,7 +65,7 @@ contract; do not add a fourth spelling for one of them.
 | `queue_ms` | Playable audio the queue may hold | `sdl2_audio`, `pygame_audio`, `win_audio`, `emulated_audio` loopback |
 | `coalesce_ms` | How much PCM to batch in software before handing a piece to the device | `sdl2_audio`, `pygame_audio`, `win_audio` |
 | `poll_ms` | Sleep between polls while blocked | host PCM backends |
-| `device` | Host device name | `sdl2_audio`, `pygame_audio` (capture) |
+| `device` | Host device name | `sdl2_audio`, `pygame_audio` (capture), `win_audio` |
 
 A backend accepts a name only where the concept exists, rather than accepting
 and ignoring it: `web_audio` playback has no queue or coalesce window at all,
@@ -561,6 +561,22 @@ Playback and capture are queued/pull (`GetBuffer` / `ReleaseBuffer`) with
 `audiodev.auto` selects this on Windows whenever `uwin32` is importable.
 
 Keyword arguments are the shared set in [Buffering options](#buffering-options).
+
+### Choosing the output or input
+
+`device` takes an endpoint's name as the Windows Sound settings show it, and
+`list_audio_devices()` (or `list_audio_devices(capture=True)`) gives those
+names. Leave it out for the Windows default. A name that matches no active
+endpoint raises `OSError` when the stream opens, and the message lists the
+names there are; the stream never falls back to the default.
+
+```python
+from audiodev import AudioFormat, win_audio
+
+print(win_audio.list_audio_devices())
+out = win_audio.pcm_out(AudioFormat(48000, 2, 16), device="Speakers (USB Audio)")
+out.open()
+```
 
 ### On MicroPython, the pump plays to the speaker itself
 
