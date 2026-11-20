@@ -170,5 +170,119 @@ class WriteNowTests(unittest.TestCase):
         self.assertEqual(self.win.starts, 0)
 
 
+def _fake_endpoints(render, capture, default_render, default_capture):
+    """A uwin32 with an endpoint list, so opening by name runs on any host.
+
+    ``render`` and ``capture`` are friendly names; each device is a
+    ``("dev", flow, name)`` tuple, and ``win.live`` counts what is held.
+    """
+    win = types.ModuleType("uwin32")
+    win.eRender, win.eCapture, win.DEVICE_STATE_ACTIVE = 0, 1, 1
+    names = {0: list(render), 1: list(capture)}
+    defaults = {0: default_render, 1: default_capture}
+    win.live = {}
+    win.activated = []
+
+    def hold(obj):
+        win.live[obj] = win.live.get(obj, 0) + 1
+        return obj
+
+    def release(obj):
+        win.live[obj] -= 1
+        if not win.live[obj]:
+            del win.live[obj]
+        return 0
+
+    win.IUnknown_Release = release
+    win.CoInitializeEx = lambda *a: 0
+    win.MMDeviceEnumerator_Create = lambda: hold(("enum",))
+    win.IMMDeviceEnumerator_GetDefaultAudioEndpoint = (
+        lambda enum, flow: hold(("dev", flow, defaults[flow]))
+    )
+    win.IMMDeviceEnumerator_EnumAudioEndpoints = lambda enum, flow, mask: hold(("coll", flow))
+    win.IMMDeviceCollection_GetCount = lambda coll: len(names[coll[1]])
+    win.IMMDeviceCollection_Item = lambda coll, i: hold(("dev", coll[1], names[coll[1]][i]))
+    win.IMMDevice_GetFriendlyName = lambda dev: dev[2]
+
+    def activate(dev):
+        win.activated.append(dev)
+        return hold(("client", dev))
+
+    win.IMMDevice_Activate_IAudioClient = activate
+    win.IAudioClient_Initialize_shared_pcm = lambda client, wfx, ms: None
+    win.IAudioClient_GetBufferSize = lambda client: 4800
+    win.IAudioClient_GetService = lambda client, iid: hold(("svc", iid))
+    win.IID_IAudioRenderClient = "render"
+    win.IID_IAudioCaptureClient = "capture"
+    win.IAudioClient_Start = lambda client: None
+    win.IAudioClient_Stop = lambda client: None
+    win.WAVEFORMATEX_pcm = lambda rate, channels, bits: None
+    return win
+
+
+class NamedDeviceTests(unittest.TestCase):
+    """device= opens the endpoint with that name, or says which there are."""
+
+    FMT = AudioFormat(48000, 2, 16)
+    RENDER = ("Speakers (Realtek(R) Audio)", "Speakers (USB Audio)", "Headphones (USB Audio)")
+    CAPTURE = ("Microphone Array (Realtek(R) Audio)", "Microphone (USB Audio)")
+
+    def setUp(self):
+        self._saved = {k: sys.modules.get(k) for k in ("uwin32", "audiodev.win_audio")}
+        sys.modules.pop("audiodev.win_audio", None)
+        self.win = sys.modules["uwin32"] = _fake_endpoints(
+            self.RENDER, self.CAPTURE, self.RENDER[0], self.CAPTURE[0]
+        )
+        import audiodev.win_audio as mod
+
+        self.mod = mod
+
+    def tearDown(self):
+        for name, module in self._saved.items():
+            if module is None:
+                sys.modules.pop(name, None)
+            else:
+                sys.modules[name] = module
+
+    def test_lists_the_active_endpoints(self):
+        self.assertEqual(self.mod.list_audio_devices(), self.RENDER)
+        self.assertEqual(self.mod.list_audio_devices(capture=True), self.CAPTURE)
+        self.assertEqual(self.win.live, {})
+
+    def test_named_output_opens_that_endpoint(self):
+        out = self.mod.pcm_out(self.FMT, device="Speakers (USB Audio)")
+        out.open()
+        self.assertEqual(self.win.activated, [("dev", 0, "Speakers (USB Audio)")])
+        out.close()
+        self.assertEqual(self.win.live, {})
+
+    def test_named_input_opens_that_endpoint(self):
+        mic = self.mod.pcm_in(AudioFormat(16000, 1, 16), device="Microphone (USB Audio)")
+        mic.open()
+        self.assertEqual(self.win.activated, [("dev", 1, "Microphone (USB Audio)")])
+        mic.close()
+        self.assertEqual(self.win.live, {})
+
+    def test_no_name_opens_the_default(self):
+        out = self.mod.pcm_out(self.FMT)
+        out.open()
+        self.assertEqual(self.win.activated, [("dev", 0, self.RENDER[0])])
+        out.close()
+
+    def test_unknown_name_raises_and_lists_the_names(self):
+        for opener, names in (
+            (lambda: self.mod.pcm_out(self.FMT, device="Speakers (Nowhere)"), self.RENDER),
+            (lambda: self.mod.pcm_in(self.FMT, device="Speakers (USB Audio)"), self.CAPTURE),
+        ):
+            stream = opener()
+            with self.assertRaises(OSError) as caught:
+                stream.open()
+            for name in names:
+                self.assertIn(repr(name), str(caught.exception))
+            self.assertFalse(stream.is_open)
+            self.assertEqual(self.win.activated, [])  # never fell back to the default
+            self.assertEqual(self.win.live, {})
+
+
 if __name__ == "__main__":
     unittest.main()

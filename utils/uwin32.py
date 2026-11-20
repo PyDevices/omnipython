@@ -154,6 +154,9 @@ AUDCLNT_SHAREMODE_SHARED = 0
 AUDCLNT_STREAMFLAGS_AUTOCONVERTPCM = 0x80000000
 AUDCLNT_STREAMFLAGS_SRC_DEFAULT_QUALITY = 0x08000000
 WAVE_FORMAT_PCM = 1
+DEVICE_STATE_ACTIVE = 0x00000001
+STGM_READ = 0x00000000
+VT_LPWSTR = 31
 
 # SDL-style keycodes used by keys.py
 _SDLK_SCANCODE_MASK = 1 << 30
@@ -328,6 +331,7 @@ if _use_ffi:
     _raw_CoUninitialize = ole32.func("v", "CoUninitialize", "")
     _raw_CoCreateInstance = ole32.func("i", "CoCreateInstance", "pPIpp")
     _raw_CoTaskMemFree = ole32.func("v", "CoTaskMemFree", "P")
+    _raw_PropVariantClear = ole32.func("i", "PropVariantClear", "p")
 
     # --- cfgmgr32: device enumeration.
     #
@@ -1315,6 +1319,8 @@ else:
     ole32.CoCreateInstance.restype = HRESULT
     ole32.CoTaskMemFree.argtypes = [LPVOID]
     ole32.CoTaskMemFree.restype = None
+    ole32.PropVariantClear.argtypes = [LPVOID]
+    ole32.PropVariantClear.restype = HRESULT
 
     # --- cfgmgr32: device enumeration. See the ffi branch for why CfgMgr32
     #     rather than SetupAPI.
@@ -2292,6 +2298,126 @@ def IMMDevice_Activate_IAudioClient(device):
         "IMMDevice.Activate",
     )
     return client.value
+
+
+# PKEY_Device_FriendlyName, {a45c254e-df1c-4efd-8020-67d146a850e0} 14, packed
+# as a PROPERTYKEY. A PROPVARIANT keeps its pointer at offset 8 on both widths.
+_PKEY_Device_FriendlyName = struct.pack(
+    "<IHH8BI", 0xA45C254E, 0xDF1C, 0x4EFD, 0x80, 0x20, 0x67, 0xD1, 0x46, 0xA8, 0x50, 0xE0, 14
+)
+_PROPVARIANT_SIZE = 24 if _IS_64 else 16
+
+
+def _wstr_from_ptr(ptr):
+    if not _use_ffi:
+        return ctypes.wstring_at(ptr)
+    chars = []
+    while True:
+        pair = uctypes.bytearray_at(ptr + 2 * len(chars), 2)
+        code = pair[0] | (pair[1] << 8)
+        if not code:
+            return "".join(chars)
+        chars.append(chr(code))
+
+
+def IMMDeviceEnumerator_EnumAudioEndpoints(enumerator, data_flow, state_mask=DEVICE_STATE_ACTIVE):
+    """Return an ``IMMDeviceCollection`` of the endpoints in ``state_mask``."""
+    if _use_ffi:
+        coll_buf = bytearray(_PTR_SIZE)
+        _check(
+            _vcall(enumerator, 3, "i", "iIp", int(data_flow), int(state_mask), coll_buf),
+            "EnumAudioEndpoints",
+        )
+        return _ptr_read(uctypes.addressof(coll_buf))
+    coll = c_void_p()
+    _check(
+        _vcall(
+            enumerator,
+            3,
+            HRESULT,
+            (INT, DWORD, POINTER(c_void_p)),
+            int(data_flow),
+            int(state_mask),
+            byref(coll),
+        ),
+        "EnumAudioEndpoints",
+    )
+    return coll.value
+
+
+def IMMDeviceCollection_GetCount(collection):
+    if _use_ffi:
+        count_buf = bytearray(4)
+        _check(_vcall(collection, 3, "i", "p", count_buf), "IMMDeviceCollection.GetCount")
+        return struct.unpack("<I", count_buf)[0]
+    count = UINT32()
+    _check(
+        _vcall(collection, 3, HRESULT, (POINTER(UINT32),), byref(count)),
+        "IMMDeviceCollection.GetCount",
+    )
+    return int(count.value)
+
+
+def IMMDeviceCollection_Item(collection, index):
+    """Return the ``IMMDevice`` at ``index``; the caller releases it."""
+    if _use_ffi:
+        device_buf = bytearray(_PTR_SIZE)
+        _check(
+            _vcall(collection, 4, "i", "Ip", int(index), device_buf),
+            "IMMDeviceCollection.Item",
+        )
+        return _ptr_read(uctypes.addressof(device_buf))
+    device = c_void_p()
+    _check(
+        _vcall(collection, 4, HRESULT, (UINT, POINTER(c_void_p)), int(index), byref(device)),
+        "IMMDeviceCollection.Item",
+    )
+    return device.value
+
+
+def IMMDevice_GetFriendlyName(device):
+    """Return an endpoint's friendly name, such as ``"Speakers (USB Audio)"``.
+
+    Opens the endpoint's property store read-only and reads
+    ``PKEY_Device_FriendlyName``. Returns None when the endpoint has no name.
+    """
+    if _use_ffi:
+        store_buf = bytearray(_PTR_SIZE)
+        _check(
+            _vcall(device, 4, "i", "Ip", STGM_READ, store_buf),
+            "IMMDevice.OpenPropertyStore",
+        )
+        store = _ptr_read(uctypes.addressof(store_buf))
+        key = bytearray(_PKEY_Device_FriendlyName)
+        value = bytearray(_PROPVARIANT_SIZE)
+        try:
+            _check(_vcall(store, 5, "i", "pp", key, value), "IPropertyStore.GetValue")
+            vt = struct.unpack_from("<H", value, 0)[0]
+            ptr = struct.unpack_from("<" + ("Q" if _IS_64 else "I"), value, 8)[0]
+            name = _wstr_from_ptr(ptr) if vt == VT_LPWSTR and ptr else None
+            _raw_PropVariantClear(value)
+        finally:
+            IUnknown_Release(store)
+        return name
+    store = c_void_p()
+    _check(
+        _vcall(device, 4, HRESULT, (DWORD, POINTER(c_void_p)), STGM_READ, byref(store)),
+        "IMMDevice.OpenPropertyStore",
+    )
+    key = ctypes.create_string_buffer(_PKEY_Device_FriendlyName, len(_PKEY_Device_FriendlyName))
+    value = ctypes.create_string_buffer(_PROPVARIANT_SIZE)
+    try:
+        _check(
+            _vcall(store.value, 5, HRESULT, (LPVOID, LPVOID), ctypes.addressof(key), ctypes.addressof(value)),
+            "IPropertyStore.GetValue",
+        )
+        vt = struct.unpack_from("<H", value.raw, 0)[0]
+        ptr = struct.unpack_from("<" + ("Q" if _IS_64 else "I"), value.raw, 8)[0]
+        name = ctypes.wstring_at(ptr) if vt == VT_LPWSTR and ptr else None
+        ole32.PropVariantClear(ctypes.addressof(value))
+    finally:
+        IUnknown_Release(store.value)
+    return name
 
 
 def WAVEFORMATEX_pcm(rate, channels, bits):

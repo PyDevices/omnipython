@@ -19,6 +19,10 @@ RECOVER_GRACE_MS: int
 RECOVER_SETTLE_MS: int
 WRITE_WAIT_MS: int
 
+def list_audio_devices(capture: bool = False) -> tuple[str, ...]:
+    """Return the friendly names of the active playback or capture endpoints."""
+    ...
+
 class WinPCMOutput(PCMOutput):
     """WASAPI shared-mode playback with a software coalescing queue."""
 

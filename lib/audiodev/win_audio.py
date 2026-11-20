@@ -97,6 +97,71 @@ def _wave_format(fmt):
     return win.WAVEFORMATEX_pcm(fmt.rate, fmt.channels, fmt.bits)
 
 
+def _active_endpoints(enumerator, data_flow):
+    """Yield (friendly name, IMMDevice) for each active endpoint.
+
+    The caller releases every device it is handed.
+    """
+    collection = win.IMMDeviceEnumerator_EnumAudioEndpoints(
+        enumerator, data_flow, win.DEVICE_STATE_ACTIVE
+    )
+    try:
+        for index in range(win.IMMDeviceCollection_GetCount(collection)):
+            device = win.IMMDeviceCollection_Item(collection, index)
+            try:
+                name = win.IMMDevice_GetFriendlyName(device)
+            except OSError:
+                win.IUnknown_Release(device)
+                raise
+            yield name, device
+    finally:
+        win.IUnknown_Release(collection)
+
+
+def list_audio_devices(capture=False):
+    """Return the friendly names of the active playback or capture endpoints.
+
+    These are the names `pcm_out` and `pcm_in` take as ``device``, such as
+    ``"Speakers (USB Audio)"``: the ones the Windows Sound settings show.
+    """
+    win.CoInitializeEx()
+    enumerator = win.MMDeviceEnumerator_Create()
+    names = []
+    try:
+        for name, device in _active_endpoints(enumerator, win.eCapture if capture else win.eRender):
+            win.IUnknown_Release(device)
+            names.append(name)
+    finally:
+        win.IUnknown_Release(enumerator)
+    return tuple(names)
+
+
+def _open_endpoint(enumerator, data_flow, name):
+    """Return the IMMDevice called ``name``, or the default one for None.
+
+    Raises:
+        OSError: no active endpoint has that name. The message lists the ones
+            there are.
+    """
+    if name is None:
+        return win.IMMDeviceEnumerator_GetDefaultAudioEndpoint(enumerator, data_flow)
+    found = None
+    others = []
+    for endpoint_name, device in _active_endpoints(enumerator, data_flow):
+        if found is None and endpoint_name == name:
+            found = device
+        else:
+            others.append(endpoint_name)
+            win.IUnknown_Release(device)
+    if found is None:
+        kind = "capture" if data_flow == win.eCapture else "playback"
+        raise OSError(
+            "no %s device named %r; there are: %s"
+            % (kind, name, ", ".join(repr(n) for n in others) or "none")
+        )
+    return found
+
+
 class WinPCMOutput(PCMOutput):
     def __init__(
         self,
@@ -192,9 +257,12 @@ class WinPCMOutput(PCMOutput):
     def _open(self):
         win.CoInitializeEx()
         self._enumerator = win.MMDeviceEnumerator_Create()
-        self._endpoint = win.IMMDeviceEnumerator_GetDefaultAudioEndpoint(
-            self._enumerator, win.eRender
-        )
+        try:
+            self._endpoint = _open_endpoint(self._enumerator, win.eRender, self.device_name)
+        except OSError:
+            win.IUnknown_Release(self._enumerator)
+            self._enumerator = None
+            raise
         self._client = win.IMMDevice_Activate_IAudioClient(self._endpoint)
         wfx = _wave_format(self.format)
         win.IAudioClient_Initialize_shared_pcm(self._client, wfx, self.queue_ms)
@@ -520,9 +588,12 @@ class WinPCMInput(PCMInput):
     def _open(self):
         win.CoInitializeEx()
         self._enumerator = win.MMDeviceEnumerator_Create()
-        self._endpoint = win.IMMDeviceEnumerator_GetDefaultAudioEndpoint(
-            self._enumerator, win.eCapture
-        )
+        try:
+            self._endpoint = _open_endpoint(self._enumerator, win.eCapture, self.device_name)
+        except OSError:
+            win.IUnknown_Release(self._enumerator)
+            self._enumerator = None
+            raise
         self._client = win.IMMDevice_Activate_IAudioClient(self._endpoint)
         wfx = _wave_format(self.format)
         win.IAudioClient_Initialize_shared_pcm(self._client, wfx, self.queue_ms)
@@ -593,7 +664,12 @@ def pcm_out(
     prebuffer_ms=None,
     poll_ms=2,
 ):
-    """Create a WASAPI-backed `PCMOutput`."""
+    """Create a WASAPI-backed `PCMOutput`.
+
+    ``device`` names the endpoint to play to, exactly as `list_audio_devices`
+    gives it; leave it out for the Windows default. Opening raises OSError
+    when no active endpoint has that name.
+    """
     check_latency(latency)
     p_samples, p_queue_ms, p_coalesce_ms, p_prebuffer_ms = _PLAY_PROFILES[latency]
     fmt = format or AudioFormat(16000, 2, 16)
@@ -617,7 +693,13 @@ def pcm_in(
     queue_ms=None,
     poll_ms=2,
 ):
-    """Create a WASAPI-backed `PCMInput`."""
+    """Create a WASAPI-backed `PCMInput`.
+
+    ``device`` names the endpoint to record from, exactly as
+    ``list_audio_devices(capture=True)`` gives it; leave it out for the
+    Windows default. Opening raises OSError when no active endpoint has that
+    name.
+    """
     check_latency(latency)
     default_samples, default_queue_ms = _CAPTURE_PROFILES[latency]
     fmt = format or AudioFormat(16000, 1, 16)
