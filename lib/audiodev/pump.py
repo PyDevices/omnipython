@@ -793,6 +793,14 @@ class _Driver:
         """Stop the pump. The peripheral, if any, stays open."""
         module().shutdown()
 
+    def pause(self):
+        """Hold the pump at a block boundary: everything playing is paused."""
+        module().park(200000)
+
+    def resume(self):
+        """Let a held pump carry on."""
+        module().unpark()
+
     def status(self):
         """The status block the loop writes, or None to use the caller's."""
         return None
@@ -1224,6 +1232,20 @@ class BusioDriver(_Driver):
         out = self.out
         if out is not None:
             out.stop()
+
+    def pause(self):
+        # The output's own pause, not a park behind its back: `I2SOut` stops
+        # counting starved audio before it parks, and the bus clocks the
+        # pause's zeros on purpose. Parked from here, the pause's silence was
+        # counted as starvation.
+        out = self.out
+        if out is not None and out.playing and not out.paused:
+            out.pause()
+
+    def resume(self):
+        out = self.out
+        if out is not None and out.paused:
+            out.resume()
 
     def playing(self):
         out = self.out
@@ -1888,14 +1910,22 @@ class Pump:
         return bool(self._clients) and all(c.paused for c in self._clients)
 
     def _settle(self):
-        """Park while everything is paused; unpark when something is not."""
+        """Hold the pump while everything is paused; let it go when
+        something is not. The driver does it, because a board's output has a
+        pause of its own that must know it is a pause."""
         mod = module()
         if mod is None or not self._spawned:
             return
+        driver = self._driver
         if self.paused():
-            mod.park(200000)
-        else:
+            if driver is None:
+                mod.park(200000)
+            else:
+                driver.pause()
+        elif driver is None:
             mod.unpark()
+        else:
+            driver.resume()
 
     # --- the graph -------------------------------------------------------
 
