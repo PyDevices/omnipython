@@ -1,0 +1,49 @@
+{
+  "urls": [
+    [
+      "board_config.py",
+      "github:PyDevices/omnipython/board_configs/fbdisplay/esp32-s31-touch-lcd-4_3c/board_config.py"
+    ],
+    [
+      "board_peripherals.py",
+      "github:PyDevices/omnipython/board_configs/fbdisplay/esp32-s31-touch-lcd-4_3c/board_peripherals.py"
+    ],
+    [
+      "gt911.py",
+      "github:PyDevices/omnipython/drivers/touch/gt911.py"
+    ],
+    [
+      "es8389.py",
+      "github:PyDevices/omnipython/drivers/codec/es8389.py"
+    ],
+    [
+      "qmi8658.py",
+      "github:PyDevices/omnipython/drivers/imu/qmi8658.py"
+    ],
+    [
+      "pcf85063.py",
+      "github:PyDevices/omnipython/drivers/rtc/pcf85063.py"
+    ],
+    [
+      "bq27220.py",
+      "github:PyDevices/omnipython/drivers/power/bq27220.py"
+    ],
+    [
+      "rs485.py",
+      "github:PyDevices/omnipython/drivers/bus/rs485.py"
+    ],
+    [
+      "canbus.py",
+      "github:PyDevices/omnipython/drivers/bus/canbus.py"
+    ]
+  ],
+  "deps": [
+    [
+      "omnipython",
+      "latest"
+    ]
+  ],
+  "version": "0.1",
+  "description": "Waveshare ESP32-S31-Touch-LCD-4.3C — 800x480 RGB565 + GT911, ES8389 audio",
+  "generated": "from manifest.py by tools/libbuild.py installers; edit manifest.py, not this"
+}

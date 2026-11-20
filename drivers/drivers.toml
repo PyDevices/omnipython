@@ -49,6 +49,11 @@ version = "0.1.0"
 description = "BMP280 pressure + temperature (dafvid/micropython-bmp280)"
 modules = ["env/bmp280.py"]
 
+[bq27220]
+version = "0.1.0"
+description = "TI BQ27220 battery fuel gauge, MicroPython and CircuitPython"
+modules = ["power/bq27220.py"]
+
 [camera_sensors]
 version = "0.1.0"
 description = "Opens whichever camera is fitted: the firmware's own sensors, then each described one installed (P4 board configs' `camera()` use it)"
@@ -113,6 +118,11 @@ modules = ["codec/es8311.py"]
 version = "0.1.0"
 description = "ES8388 DAC init (Tab5)"
 modules = ["codec/es8388.py"]
+
+[es8389]
+version = "0.1.0"
+description = "ES8389 stereo codec: DAC and two microphone ADCs over I2S, MCLK or BCLK clocked"
+modules = ["codec/es8389.py"]
 
 [ft6x36]
 version = "0.1.0"
@@ -219,6 +229,11 @@ version = "0.1.0"
 description = "PCD8544 display driver"
 modules = ["display/pcd8544.py"]
 requires = ["digitalio"]
+
+[pcf85063]
+version = "0.1.0"
+description = "NXP PCF85063A real-time clock with alarm and countdown, MicroPython and CircuitPython"
+modules = ["rtc/pcf85063.py"]
 
 [pcf8563]
 version = "0.1.0"

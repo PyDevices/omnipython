@@ -24,8 +24,11 @@ SPI sends only from RAM; it has its own name so it can't shadow upstream's.
 | [`codec/es7210.py`](codec/es7210.py) | Minimal ES7210 ADC init for I2S mics (`profile="m5"` for CoreS3/Tab5) |
 | [`codec/aw88298.py`](codec/aw88298.py) | AW88298 smart amp init (CoreS3) |
 | [`codec/es8388.py`](codec/es8388.py) | ES8388 DAC init (Tab5) |
+| [`codec/es8389.py`](codec/es8389.py) | ES8389 DAC and ADC for I2S: speaker out and two mics, clocked from BCLK (ESP32-S31-Touch-LCD-4.3C) |
 | [`power/battery_adc.py`](power/battery_adc.py) | ADC + divider → volts |
+| [`power/bq27220.py`](power/bq27220.py) | TI BQ27220 fuel gauge: voltage, current, charge and battery state |
 | [`rtc/pcf8563.py`](rtc/pcf8563.py) | NXP PCF8563 / BM8563 real-time clock with alarm and countdown, MicroPython and CircuitPython |
+| [`rtc/pcf85063.py`](rtc/pcf85063.py) | NXP PCF85063A real-time clock with alarm and countdown, the PCF8563 driver's API |
 | [`power/axp2101.py`](power/axp2101.py) | X-Powers AXP2101 PMU: rails, battery and charger, power key (T-Watch S3) |
 | [`imu/bma423.py`](imu/bma423.py) | Bosch BMA423 / BMA456 accelerometer; step counter, taps and wrist-wear wake on the BMA423 |
 | [`imu/bma423_config.py`](imu/bma423_config.py) | Bosch's BMA423 feature-engine firmware (BSD-3-Clause), loaded by `bma423.load_features()` |
