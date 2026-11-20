@@ -10,7 +10,7 @@ framebuffer so the pixel-pushing paths can be checked byte-for-byte.
 import unittest
 
 import _env  # noqa: F401
-from _support import make_fbdisplay, make_u16_fbdisplay, quiet
+from _support import FakeFrameBuffer, make_fbdisplay, make_u16_fbdisplay, quiet
 
 
 class TestFBDisplayDrawing(unittest.TestCase):
@@ -145,6 +145,62 @@ class TestFBDisplayU16Buffer(unittest.TestCase):
         self.assertEqual(nbytes, 16)
         self.assertEqual(len(memoryview(buf)), 16)
         self.assertEqual(stride, 8)
+
+    def test_framebuffers_returns_the_same_tuple(self):
+        # GUIs ask every frame; a new tuple each time is garbage on MicroPython.
+        d, _ = make_u16_fbdisplay(4, 2)
+        self.assertIs(d.framebuffers(), d.framebuffers())
+
+
+class _DualFrameBuffer(FakeFrameBuffer):
+    """Two panel buffers whose framebuffers() swaps paint order like DotClockFramebuffer.
+
+    With ``reuse`` it hands back one cached tuple per order, as the native
+    driver does; without it, a new tuple every call, as older firmware does.
+    """
+
+    def __init__(self, width, height, reuse=True):
+        super().__init__(width, height)
+        self.row_stride = width * 2
+        self.bufs = (bytearray(width * height * 2), bytearray(width * height * 2))
+        self.back = 0
+        self.reuse = reuse
+        self.orders = ((self.bufs[0], self.bufs[1]), (self.bufs[1], self.bufs[0]))
+
+    def framebuffers(self):
+        if self.reuse:
+            return self.orders[self.back]
+        return (self.bufs[self.back], self.bufs[1 - self.back])
+
+
+class TestFBDisplayDualBuffers(unittest.TestCase):
+    def _display(self, reuse):
+        from displaydev.fbdisplay import FBDisplay
+
+        fb = _DualFrameBuffer(4, 2, reuse)
+        with quiet():
+            return FBDisplay(fb), fb
+
+    def test_back_buffer_comes_first(self):
+        for reuse in (True, False):
+            d, fb = self._display(reuse)
+            for back in (0, 1, 0, 1):
+                fb.back = back
+                b0, b1, nbytes, stride = d.framebuffers()
+                self.assertIs(b0, fb.bufs[back])
+                self.assertIs(b1, fb.bufs[1 - back])
+                self.assertEqual((nbytes, stride), (16, 8))
+
+    def test_each_order_reuses_its_tuple(self):
+        d, fb = self._display(True)
+        first = d.framebuffers()
+        fb.back = 1
+        second = d.framebuffers()
+        self.assertIsNot(first, second)
+        fb.back = 0
+        self.assertIs(d.framebuffers(), first)
+        fb.back = 1
+        self.assertIs(d.framebuffers(), second)
 
 
 class TestFBDisplaySharing(unittest.TestCase):

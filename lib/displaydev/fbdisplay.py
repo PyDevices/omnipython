@@ -136,6 +136,14 @@ class FBDisplay(DisplayDriver):
                 # No cast: fall back to slow uint16 element stores in blit/fill.
                 self._pixel_bytes = None
 
+        # framebuffers() looks the native method up once: a bound method made
+        # on every call is garbage, and GUIs call it every frame.
+        native = getattr(buffer, "framebuffers", None)
+        self._native_framebuffers = native if callable(native) else None
+        self._fbs_key0 = self._fbs_out0 = None
+        self._fbs_key1 = self._fbs_out1 = None
+        self._fbs_plain = None
+
         super().__init__(quiet=quiet)
 
     def framebuffers(self):
@@ -145,36 +153,63 @@ class FBDisplay(DisplayDriver):
         Prefers native dual FBs from ``dotclockframebuffer.DotClockFramebuffer.framebuffers``
         when present; otherwise a single ``memoryview`` of the raw buffer
         (e.g. mipidsi).
-        """
-        raw = self._raw_buffer
-        bpp = max(1, int(self.color_depth) // 8)
-        stride = getattr(raw, "row_stride", None)
-        stride = int(self._width) * bpp if stride is None else int(stride)
 
-        fbs = getattr(raw, "framebuffers", None)
-        if callable(fbs):
+        Each paint order comes back as the same tuple every time, so a GUI
+        that asks once a frame makes no garbage on MicroPython when the native
+        buffer reuses its own objects too.
+        """
+        native = self._native_framebuffers
+        if native is not None:
             try:
-                fbs = fbs()
+                fbs = native()
             except Exception:
                 fbs = None
-        if fbs is not None:
-            try:
-                n = len(fbs)
-            except TypeError:
-                n = 0
-            if n >= 2:
-                b0, b1 = fbs[0], fbs[1]
-                return b0, b1, len(memoryview(b0)), stride
-            if n == 1:
-                b0 = fbs[0]
-                return b0, None, len(memoryview(b0)), stride
+            if fbs is not None:
+                # The native side alternates between two tuples, one per paint order.
+                if fbs is self._fbs_key0:
+                    return self._fbs_out0
+                if fbs is self._fbs_key1:
+                    return self._fbs_out1
+                out = self._native_framebuffers_tuple(fbs)
+                if out is not None:
+                    self._fbs_key1, self._fbs_out1 = self._fbs_key0, self._fbs_out0
+                    self._fbs_key0, self._fbs_out0 = fbs, out
+                    return out
 
-        # The length is in bytes: a uint16 view (DotClockFramebuffer on
-        # CircuitPython) has half as many elements.
-        if self._buffer_u16 and self._pixel_bytes is not None:
-            return self._pixel_bytes, None, len(self._pixel_bytes), stride
-        mv = memoryview(raw)
-        return mv, None, len(mv) * (2 if self._buffer_u16 else 1), stride
+        out = self._fbs_plain
+        if out is None:
+            raw = self._raw_buffer
+            stride = self._fb_stride()
+            # The length is in bytes: a uint16 view (DotClockFramebuffer on
+            # CircuitPython) has half as many elements.
+            if self._buffer_u16 and self._pixel_bytes is not None:
+                out = (self._pixel_bytes, None, len(self._pixel_bytes), stride)
+            else:
+                mv = memoryview(raw)
+                out = (mv, None, len(mv) * (2 if self._buffer_u16 else 1), stride)
+            self._fbs_plain = out
+        return out
+
+    def _fb_stride(self):
+        stride = getattr(self._raw_buffer, "row_stride", None)
+        if stride is None:
+            return int(self._width) * max(1, int(self.color_depth) // 8)
+        return int(stride)
+
+    # The (buf1, buf2_or_None, nbytes, stride) tuple for what the native
+    # framebuffers() returned, or None when it named no buffer.
+    def _native_framebuffers_tuple(self, fbs):
+        try:
+            n = len(fbs)
+        except TypeError:
+            n = 0
+        if n >= 2:
+            b0, b1 = fbs[0], fbs[1]
+            return b0, b1, len(memoryview(b0)), self._fb_stride()
+        if n == 1:
+            b0 = fbs[0]
+            return b0, None, len(memoryview(b0)), self._fb_stride()
+        return None
 
     ############### Required API Methods ################
 
