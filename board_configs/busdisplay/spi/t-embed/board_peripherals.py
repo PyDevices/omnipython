@@ -79,12 +79,20 @@ _SD_SCK = 40
 _SD_MOSI = 41
 _SD_MISO = 38
 _BAT_VOLT = 4
-# Panel/Qwiic I2C on port 0. Hooks hand drivers the one bus object
+# The on-board I2C on port 0: the ES7210 microphone ADC (0x40) is on it, and
+# nothing else reaches these pins. Hooks hand drivers the one bus object
 # _i2c_bus() returns, never these pins. See docs/boards/board-contract.md.
 _I2C_PORT = 0
 _IIC_SDA = 18
 _IIC_SCL = 8
 _i2c_own = None
+
+# The Qwiic socket, on port 1 so it never shares a controller with the
+# on-board bus. Its pins are the ESP32-S3's UART0 pins: GPIO 43 is U0TXD and
+# GPIO 44 is U0RXD.
+_QWIIC_PORT = 1
+_QWIIC_SDA = 43
+_QWIIC_SCL = 44
 
 _OUT_PORT = 1
 _IN_PORT = 0
@@ -155,7 +163,7 @@ def pixels():
 
 
 def _i2c_bus():
-    """Panel/Qwiic I2C, shared with whatever already opened it.
+    """The on-board I2C (the ES7210), shared with whatever already opened it.
 
     Never ``import board_config`` from here: a non-graphics app importing
     this module must not start a display.
@@ -434,10 +442,22 @@ def battery():
 
 
 def i2c():
-    """T-Embed Qwiic / expansion I2C (LilyGO PIN_IIC_*)."""
+    """The Qwiic socket's I2C: SDA on GPIO 43, SCL on GPIO 44.
+
+    The board has no pull-up resistors on these lines, so the bus leans on
+    the chip's weak internal ones, which the controller turns on, unless the
+    device brings its own (most Qwiic and STEMMA QT breakouts do). With the
+    internal ones alone, 100 kHz works over a short cable; a long one may
+    need a slower clock.
+
+    These are the ESP32-S3's UART0 pins, and GPIO 43 carries the console:
+    the boot ROM's log at every reset, then everything the REPL prints. A
+    device on the socket sees that traffic until this bus opens. Opening it
+    takes GPIO 43 from the console until the next reset.
+    """
     from machine import I2C, Pin
 
-    return I2C(0, sda=Pin(_IIC_SDA), scl=Pin(_IIC_SCL), freq=400_000)
+    return I2C(_QWIIC_PORT, sda=Pin(_QWIIC_SDA), scl=Pin(_QWIIC_SCL), freq=100_000)
 
 
 def wlan():
