@@ -1,3 +1,9 @@
+## v0.8.1.dev3 (2026-11-20)
+
+- audiodev: a paused board output pauses I2SOut, so starved() doesn't count the pause (#734)
+- Stack page: list offheap (#733)
+- FBDisplay: framebuffers() hands back the same tuple for each paint order (#728)
+
 ## v0.8.1.dev2 (2026-11-20)
 
 - ESP32-S31-Touch-LCD-4.3C: the microphones record while the speaker plays (#730)
