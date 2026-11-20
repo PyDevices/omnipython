@@ -23,9 +23,12 @@ shifter, at 3.3 V or 5 V by the header's jumper:
     header GPIOs      48-53
     interrupts        touch 2, clock 3, IMU 54 and 60
 
-The ES8389 plays from 16-bit slots but records only from 32-bit ones, and the
-two directions share one I2S port, so ``pcm_in`` and the speaker can't run at
-once: opening one while the other is open raises OSError.
+The speaker and the microphones share one I2S port. With the audio pump in
+the firmware, ``pcm_in`` reads the receive half of the pump's own channel, so
+it records while ``audio_out`` plays, as a speakerphone needs; both run
+16-bit slots, at the output's rate when it's open. Without the pump,
+``machine.I2S`` takes one direction per port, so ``pcm_in`` and the speaker
+refuse each other: opening one while the other is open raises OSError.
 """
 
 import boarddev
@@ -99,7 +102,9 @@ AUDIO_OUT = AudioCapability(
     channels=(1, 2),
     native_channels=1,  # the amplifier takes the left output only
     bits=(16,),
-    wire=I2SWire(0, sck=_SCLK, ws=_LRCK, sd=_DSDIN),
+    # sd_in is the codec's ADC output. Publishing it lets the audio pump open
+    # the port as one TX/RX pair, so pcm_in records while the output plays.
+    wire=I2SWire(0, sck=_SCLK, ws=_LRCK, sd=_DSDIN, sd_in=_ASDOUT),
 )
 
 # Two microphones, MIC1 on the left slot and MIC2 on the right. The wire runs
@@ -339,17 +344,50 @@ def _input_power(enable):
     codec.enable_input(enable)
 
 
+def _duplex_pump():
+    """``audiodev.pump`` when this firmware records while it plays, else None."""
+    try:
+        from audiodev import pump
+    except ImportError:
+        return None
+    return pump if pump.duplex() else None
+
+
+def _duplex_input_power(enable):
+    # The pump's channel is clocking by now: the codec, which runs from BCLK,
+    # has to be set up with BCLK on its pin. A playing output has already set
+    # the same rate and width, and rewriting the clock tree under it clicks.
+    codec = _get_codec()
+    if enable and (codec.rate != _rate or codec.bits != 16):
+        codec.configure(_rate, 16)
+    codec.enable_input(enable)
+
+
 def _pcm_in(format=None, *, latency=None, queue_ms=None):
     """The two microphones: a raw ``PCMInput`` with hardware gain,
     48 kHz 16-bit stereo by default (MIC1 left, MIC2 right).
 
-    Asking for one channel mixes the two. Opening it while the speaker is
-    open raises OSError, and so does the reverse.
+    Asking for one channel mixes the two. With the audio pump in the
+    firmware, it reads the receive half of the pump's channel, so it records
+    while ``audio_out`` plays, at the output's rate. Without it, opening it
+    while the speaker is open raises OSError, and so does the reverse.
     """
     global _rate
 
     check_latency(latency)
     wire, source = negotiate(AUDIO_IN, format)
+    pump = _duplex_pump()
+    if pump is not None:
+        _rate = wire.rate
+        return pump.PumpPCMInput(
+            source,
+            wire=AUDIO_OUT.wire,
+            ring_bytes=queue_bytes(wire, latency, queue_ms, default=_IBUF, minimum=_MIN_IBUF),
+            take="mix",
+            session=_INPUT_SESSION,
+            set_hardware_gain=lambda value: _get_codec().set_gain(value),
+            power=_duplex_input_power,
+        )
     if wire.channels != 2:
         # The wire takes two slots: open it in stereo and mix down.
         from audiodev import adapt_input_channels

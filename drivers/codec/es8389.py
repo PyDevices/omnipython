@@ -16,10 +16,13 @@ times the rate) or 32 bits (64 times)::
     codec.set_dac_volume(80)
 
 Both ADC channels are differential microphone inputs: MIC1 is the left slot
-and MIC2 the right. Clocked from BCLK, the ADC needs 32-bit slots: at 16-bit
-slots the DAC plays but the ADC sends noise at full scale::
+and MIC2 the right. They record from 16- or 32-bit slots, the same width the
+DAC plays, so one I2S channel can play and record at once. Clocked from BCLK,
+the codec takes its setup only while BCLK runs: start I2S first, then
+configure it, or the ADC sends nothing::
 
-    codec.configure(48000, bits=32)   # then open I2S RX with bits=32
+    # with I2S already clocking 16-bit slots at 16 kHz
+    codec.configure(16000, bits=16)
     codec.enable_input(True)
 """
 
