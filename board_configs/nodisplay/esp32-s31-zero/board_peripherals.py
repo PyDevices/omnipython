@@ -14,7 +14,9 @@ is no ``board_config.py``: import this module.
     RESET button      the chip's enable line; no GPIO
     USB-C             USB Serial/JTAG (GPIO33, GPIO34): the REPL
     USB host pads     DM and DP on the back: the chip's USB 2.0 high-speed
-                      OTG port, wired to nothing else
+                      OTG port, wired to nothing else. The firmware has the
+                      USB host, so they need only wiring: DP to D+, DM to
+                      D-, with 5V and GND, to a USB-A socket
     edge pads         5V, GND, 3V3, GPIO0-6, GPIO46-51 and UART0's TX
                       (GPIO58) and RX (GPIO59), labelled with those numbers
     FPC connector     40 pins: a 16-bit RGB panel, its touch I2C and a
@@ -52,7 +54,9 @@ FPC connector except 33 and 34 drives high and low and reads its own level
 back, a UART opens on TX and RX, and an I2C bus opens on the touch pins.
 Not checked, for want of hands or hardware: the LED's colour by eye, a
 BOOT press, anything on the far side of a pad or the FPC connector, and
-the USB host pads, which need firmware built with USB host support. The
+the USB host pads, which have nothing wired to them here. The same host runs
+on the Waveshare ESP32-S31-Touch-LCD-4.3C's J3 header (see its board
+config). The
 ADC on GPIO46-51 reads near 0 pulled low and full scale pulled high; its
 accuracy against a known voltage is unchecked.
 """

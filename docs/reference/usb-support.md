@@ -30,6 +30,7 @@ are in
 |---|---|---|---|
 | ESP32-S3 | ESP-IDF's USB host library | Full speed | All of the above |
 | ESP32-P4 | ESP-IDF's USB host library | High speed | All of the above |
+| ESP32-S31 | ESP-IDF's USB host library (`espressif/usb`) | High speed | A drive, a MIDI controller, a webcam and a CDC serial port are checked; a sound card hasn't been tried. On the Waveshare ESP32-S31-Touch-LCD-4.3C the host port is the 4-pin header J3 |
 | ESP32-S2 | ESP-IDF's USB host library | Full speed | The same build; the classes are checked on the S3 and P4 |
 | ESP32-P4 on CircuitPython | ESP-IDF's USB host library | High speed | A wireless keyboard and mouse dongle; drives and streams haven't been tried |
 | Arduino GIGA R1 Display Shield | TinyUSB's host, on the USB-A port | Full speed | Control, bulk and interrupt transfers only: a drive, a keyboard and a MIDI controller work |
@@ -40,11 +41,11 @@ are in
 |---|---|---|
 | Audio and video devices | GIGA | TinyUSB's host there has no isochronous transfers |
 | USB tethering and Ethernet adapters | GIGA, CircuitPython | The tethering adapter is built on ESP-IDF's host and lwIP; the GIGA runs TinyUSB's host, and CircuitPython's ESP32-P4 port has no network yet |
-| Any host at all | Boards other than the ESP32-S2, S3, P4 and the GIGA | `usbhost` builds only for those; the module is skipped on other chips, rp2 among them |
+| Any host at all | Boards other than the ESP32-S2, S3, P4, S31 and the GIGA | `usbhost` builds only for those; the module is skipped on other chips, rp2 among them |
 | A high-speed link | ESP32-S2, S3, GIGA | Their host ports are full speed |
 | A webcam and a USB Audio 2.0 speaker in one session | ESP32 | The controller's FIFO split is fixed for each `usb.core.start()`, and a camera and a speaker need different splits |
-| Every device at once | ESP32-S3 | The host has eight channels. A device's control pipe takes one, a bulk pair two and an interrupt IN one, so a drive and a keyboard fit and a drive and a MIDI controller don't |
-| Full- and low-speed devices behind a hub | ESP32-P4 | The port runs at high speed. Start the host with `usb.core.start(full_speed=True)`, which slows the whole bus |
+| Every device at once | ESP32-S3 | The host has eight channels (the P4 and S31 have sixteen). A device's control pipe takes one, a bulk pair two and an interrupt IN one, so a drive and a keyboard fit and a drive and a MIDI controller don't |
+| Full- and low-speed devices behind a hub | ESP32-P4, S31 | The port runs at high speed and the host has no transaction translator. Start the host with `usb.core.start(full_speed=True)`, which slows the whole bus |
 
 ## Device: what a board can present
 
@@ -81,4 +82,5 @@ the firmware's `network.USBD_NCM`, which it has wherever the board has lwIP.
 | What | Because |
 |---|---|
 | More functions than the endpoints allow | `init()` refuses the set with a `ValueError` that names the chip's IN endpoint count and what each function takes, before anything changes. The ESP32-S2, S3 and a full-speed P4 have IN endpoints 1 to 4, a high-speed P4 1 to 7, and the REPL's serial port takes two of them. `builtin_driver=False` leaves the serial port off until the next reset, and the REPL stays on the UART and WebREPL |
+| Device mode on the ESP32-S31 | The S31's firmware has no `machine.USBDevice`; its USB OTG port is the host's |
 | Vendor control requests, WebUSB and WinUSB descriptors | `machine.USBDevice` passes class control requests to Python, but not vendor ones, and has no Binary Object Store descriptor |
