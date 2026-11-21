@@ -363,7 +363,9 @@ its own task. A microphone can too: `Microphone.start(ring)` with an
 audiodsp `audiopump.Ring` feeds the pump straight from the bus.
 
 On the ESP32-P4 the host's port is high speed, so a keyboard or MIDI
-controller behind a hub needs `usb.core.start(full_speed=True)`. On the
+controller behind a hub needs `usb.core.start(full_speed=True)`. The
+ESP32-S31's host does split transactions, so there they work behind a
+high-speed hub, and a camera on the same hub keeps its high speed. On the
 ESP32-P4 WIFI6 DEV-KIT, whose onboard hub nothing in software can power off,
 choose that speed once per power-up: a restart at the other speed can leave
 the hub dead until the board loses power, so `usb.core.start()` refuses it
