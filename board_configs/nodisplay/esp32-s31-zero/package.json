@@ -1,0 +1,17 @@
+{
+  "urls": [
+    [
+      "board_peripherals.py",
+      "github:PyDevices/omnipython/board_configs/nodisplay/esp32-s31-zero/board_peripherals.py"
+    ]
+  ],
+  "deps": [
+    [
+      "omnipython",
+      "latest"
+    ]
+  ],
+  "version": "0.1.0",
+  "description": "board_peripherals for the Waveshare ESP32-S31-Zero, on MicroPython",
+  "generated": "from manifest.py by tools/libbuild.py installers; edit manifest.py, not this"
+}

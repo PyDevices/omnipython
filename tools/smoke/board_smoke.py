@@ -3,8 +3,9 @@
 # SPDX-License-Identifier: MIT
 """The board smoke test. It runs on the board (or a desktop interpreter).
 
-It checks what a board package promises: ``board_config`` imports, the
-display draws, touch reads, and each peripheral in ``PERIPHERALS`` answers
+It checks what a board package promises: ``board_config`` imports (or
+``board_peripherals``, for a board with no display, which ships no
+``board_config``), the display draws, touch reads, and each peripheral in ``PERIPHERALS`` answers
 (its factory builds one without raising). Roles that would take the board
 away, such as ``sleep``, are looked up but never called. It prints one line,
 ``SMOKE {json}``, for ``tools/mark_tested.py`` to read.
@@ -59,15 +60,41 @@ def _close(obj):
 
 
 def _import():
-    import board_config  # noqa: F401
+    try:
+        import board_config  # noqa: F401
+    except ImportError as exc:
+        # A board with no display ships board_peripherals and no board_config.
+        if "board_config" not in str(exc):
+            raise
+        import board_peripherals  # noqa: F401
 
+        return "imported, no board_config"
     return "imported"
+
+
+class _Lazy:
+    """board_peripherals seen as board_config would bind it: a factory role is
+    the factory itself, any other role is built on first access."""
+
+    def __init__(self, mod):
+        self._mod = mod
+        self._factories = frozenset(getattr(mod, "FACTORY_ROLES", ()))
+        self.PERIPHERALS = mod.PERIPHERALS
+
+    def __getattr__(self, name):
+        obj = getattr(self._mod, name)
+        if name in self._factories or name in NEVER_CALL or not callable(obj):
+            return obj
+        return obj()
 
 
 gc.collect()
 _free_before = gc.mem_free() if hasattr(gc, "mem_free") else None
 _run("board_config imports", _import)
 bc = sys.modules.get("board_config")
+if bc is None and "board_peripherals" in sys.modules:
+    _checks[-1]["check"] = "board_peripherals imports"
+    bc = _Lazy(sys.modules["board_peripherals"])
 
 if bc is not None and getattr(bc, "display_drv", None) is not None:
 

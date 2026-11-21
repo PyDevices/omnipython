@@ -58,15 +58,20 @@ battery = _p.battery
 
 
 class TestBoardSmoke(unittest.TestCase):
-    def _smoke(self, skip=()):
+    def _smoke(self, skip=(), board_config=True):
         interpreter = need_micropython(self)
         with tempfile.TemporaryDirectory(prefix="smoke-test-") as tmp:
             pkg = Path(tmp) / "pkg"
             pkg.mkdir()
             (pkg / "board_peripherals.py").write_text(PERIPHERALS, encoding="utf-8")
-            (pkg / "board_config.py").write_text(BOARD_CONFIG, encoding="utf-8")
+            if board_config:
+                (pkg / "board_config.py").write_text(BOARD_CONFIG, encoding="utf-8")
             script = Path(tmp) / "smoke.py"
-            script.write_text(mark_tested.smoke_script(list(skip), str(pkg)), encoding="utf-8")
+            text = mark_tested.smoke_script(list(skip), str(pkg))
+            if not board_config:
+                # Only the package on the path, so no other board_config is found.
+                text = "import sys\nsys.path[:] = []\n" + text
+            script.write_text(text, encoding="utf-8")
             result = run([interpreter, script], timeout=60)
         out = result.stdout + result.stderr
         self.assertNotIn("TOOK THE BOARD AWAY", out)
@@ -92,6 +97,15 @@ class TestBoardSmoke(unittest.TestCase):
         checks = [c["check"] for c in result["checks"]]
         self.assertNotIn("sleep answers", checks)
         self.assertEqual(result["skipped"], ["sleep"])
+
+    def test_a_board_with_no_display_runs_from_board_peripherals(self):
+        result = self._smoke(board_config=False)
+        self.assertTrue(result["board_ok"], result)
+        details = {c["check"]: c["detail"] for c in result["checks"]}
+        self.assertEqual(details["board_peripherals imports"], "imported, no board_config")
+        self.assertEqual(details["sleep answers"], "present, not called")
+        self.assertEqual(details["pcm_out answers"], "object")
+        self.assertEqual(details["battery answers"], "object")
 
 
 if __name__ == "__main__":
