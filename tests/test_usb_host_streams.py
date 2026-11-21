@@ -72,7 +72,6 @@ if "micropython" not in sys.modules:
     sys.modules["micropython"] = _mp
 
 
-
 class FakeHost:
     """_usbhost's host surface, answering as a device would."""
 
