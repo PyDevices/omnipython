@@ -1,0 +1,37 @@
+{
+  "urls": [
+    [
+      "board_config.py",
+      "github:PyDevices/omnipython/board_configs/fbdisplay/esp32-p4-wifi6-dev-kit_lt8912b-hdmi/board_config.py"
+    ],
+    [
+      "board_peripherals.py",
+      "github:PyDevices/omnipython/board_configs/nodisplay/esp32-p4-wifi6-dev-kit/board_peripherals.py"
+    ],
+    [
+      "es8311.py",
+      "github:PyDevices/omnipython/drivers/codec/es8311.py"
+    ],
+    [
+      "camera_sensors.py",
+      "github:PyDevices/omnipython/drivers/camera/camera_sensors.py"
+    ],
+    [
+      "imx219.py",
+      "github:PyDevices/omnipython/drivers/camera/imx219.py"
+    ],
+    [
+      "lt8912b.py",
+      "github:PyDevices/omnipython/drivers/display/lt8912b.py"
+    ]
+  ],
+  "deps": [
+    [
+      "omnipython",
+      "latest"
+    ]
+  ],
+  "version": "0.1.0",
+  "description": "Waveshare ESP32-P4-WIFI6-DEV-KIT with an LT8912B DSI to HDMI board, 720p60 - MicroPython",
+  "generated": "from manifest.py by tools/libbuild.py installers; edit manifest.py, not this"
+}
