@@ -37,15 +37,16 @@ refuse each other: opening one while the other is open raises OSError.
 J3 is the board's only USB host port, for ``usb.core`` and the
 ``usb.host.*`` packages; wire it to a USB-A socket or a hub's upstream cable.
 It runs at high speed. A full-speed device (a keyboard, a MIDI controller)
-plugged straight in works, but behind a high-speed hub it's refused, because
-the host has no transaction translator: start the host with
-``usb.core.start(full_speed=True)`` and the whole port, hub included, runs at
-full speed. Checked through a powered four-port hub on J3: at full speed a
-flash drive read back a 1 MiB file with a matching SHA-256, a USB MIDI
-keyboard's notes arrived, a webcam streamed 640x480 MJPEG and another
-board's CDC console answered; at high speed the drive, the webcam (640x480
-and 1280x720 MJPEG) and the CDC board ran and the keyboard was refused. A
-USB sound card hasn't been run on it. The firmware has no USB device mode,
+works plugged straight in or behind a high-speed hub, since the host sends
+split transactions to the hub's transaction translator.
+``usb.core.start(full_speed=True)`` still holds the whole port, hub
+included, to full speed. Checked through a powered four-port hub on J3: at
+full speed a flash drive read back a 1 MiB file with a matching SHA-256, a
+USB MIDI keyboard's notes arrived, a webcam streamed 640x480 MJPEG and
+another board's CDC console answered; at high speed the drive and the
+webcam (640x480 and 1280x720 MJPEG) ran, and a full-speed board's MIDI,
+keyboard and CDC console ran through the hub's transaction translator while
+the webcam streamed. A USB sound card hasn't been run on it. The firmware has no USB device mode,
 so there is no ``usb_device`` role.
 """
 
