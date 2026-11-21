@@ -403,14 +403,21 @@ class Device:
     def read(self, endpoint, size_or_buffer, timeout=None, *, raise_on_timeout=True):
         """Read from a bulk or interrupt IN endpoint: into a buffer, giving
         the count, or up to a size, giving an array. timeout None or 0 waits
-        for data, a quarter-second at a time so Ctrl-C still works.
+        for data, a quarter-second at a time so Ctrl-C still works. A
+        zero-length packet ends the read and gives 0.
+
+        A read that times out leaves its transfer armed, and the next read
+        of the endpoint collects it, so a packet that arrives as the timeout
+        passes isn't lost. The next read can then return fewer bytes than
+        it asks for, as any read can. (On a firmware whose usbhost predates
+        this, a read that raises USBTimeoutError cancels its transfer, and
+        a packet arriving just then can be lost.)
 
         With ``raise_on_timeout=False`` (as in CircuitPython), a timeout
         returns 0 instead of raising USBTimeoutError, and a read into a
         buffer allocates nothing: poll an interrupt endpoint with a short
-        timeout and "no report yet" costs no garbage. The transfer stays
-        armed between such reads, so a report that lands in between is
-        kept for the next one.
+        timeout and "no report yet" costs no garbage. A zero-length packet
+        also returns 0.
 
         A negative timeout, with ``raise_on_timeout=False``, doesn't wait at
         all: the read returns what the armed transfer has brought, or 0 at
