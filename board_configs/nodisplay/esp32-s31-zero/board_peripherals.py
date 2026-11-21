@@ -15,9 +15,9 @@ is no ``board_config.py``: import this module.
     USB-C             USB Serial/JTAG (GPIO33, GPIO34): the REPL
     USB host pads     DM and DP on the back: the chip's USB 2.0 high-speed
                       OTG port, wired to nothing else
-    edge pads         ``EDGE_PINS``: 5V, GND, 3V3, GPIO0-6, GPIO46-51 and
-                      UART0's TX (GPIO58) and RX (GPIO59)
-    FPC connector     ``LCD_PINS``: a 16-bit RGB panel, its touch I2C and a
+    edge pads         5V, GND, 3V3, GPIO0-6, GPIO46-51 and UART0's TX
+                      (GPIO58) and RX (GPIO59), labelled with those numbers
+    FPC connector     40 pins: a 16-bit RGB panel, its touch I2C and a
                       microSD slot or resistive-touch SPI on a carrier board
     antenna           the chip antenna, or the u.FL socket by moving R8
 
@@ -27,6 +27,19 @@ The edge pads' analog channels come in pairs, ADC1_2 on GPIO46 (N) and 47
 (P), ADC1_3 on 48 and 49, ADC2_0 on 50 and 51. GPIO0-6 are the low-power
 GPIOs (LP_GPIO on the schematic) and have no ADC.
 
+The FPC connector, by the schematic's signal names:
+
+    panel clock       PCLK 40, DE 43, HSYNC 44, VSYNC 45
+    panel control     reset 37, power enable 39, backlight PWM 42
+    panel data        B3-B7 on 8-12, G2-G7 on 13-18, R3 on 19, R4 on 33,
+                      R5 on 34, R6 on 35, R7 on 36 (RGB565)
+    touch             SDA 52, SCL 53, INT 7, reset 38
+    microSD (SDIO)    CLK 24, CMD 25, D0-D3 20-23; a resistive-touch
+                      controller's SPI shares them (MISO on D0, CLK on CLK,
+                      MOSI on CMD)
+    spare             GPIO54
+    power             3V3, 5V and GND
+
 Pins to leave alone: GPIO33 and GPIO34 are the USB-C data lines, so the
 FPC connector's R4 and R5 take the REPL away when a panel drives them.
 GPIO36 (flash voltage, pulled up), GPIO37 (JTAG source), GPIO60 and GPIO61
@@ -34,8 +47,8 @@ GPIO36 (flash voltage, pulled up), GPIO37 (JTAG source), GPIO60 and GPIO61
 
 Checked on a board with nothing attached: every role in ``PERIPHERALS``
 answers, Wi-Fi scans, BLE starts, the LED takes red, green and blue writes,
-and the BOOT button reads released. Every GPIO in ``EDGE_PINS`` and
-``LCD_PINS`` except 33 and 34 drives high and low and reads its own level
+and the BOOT button reads released. Every GPIO on the edge pads and the
+FPC connector except 33 and 34 drives high and low and reads its own level
 back, a UART opens on TX and RX, and an I2C bus opens on the touch pins.
 Not checked, for want of hands or hardware: the LED's colour by eye, a
 BOOT press, anything on the far side of a pad or the FPC connector, and
@@ -51,51 +64,6 @@ PERIPHERALS = frozenset({"pixels", "boot_button", "wlan", "ble"})
 
 _LED = 60
 _BOOT = 61
-
-# The edge pads, by the label printed beside each one. Data, not a role:
-# pass a number to machine.Pin.
-EDGE_PINS = {
-    "0": 0,
-    "1": 1,
-    "2": 2,
-    "3": 3,
-    "4": 4,
-    "5": 5,
-    "6": 6,
-    "46": 46,
-    "47": 47,
-    "48": 48,
-    "49": 49,
-    "50": 50,
-    "51": 51,
-    "TX": 58,
-    "RX": 59,
-}
-
-# The 40-pin FPC connector, by the signal the schematic gives each pin. The
-# RGB data lines follow the panel's bits: B3-B7, G2-G7 and R3-R7 make RGB565.
-# The microSD lines share pins with a resistive-touch controller's SPI
-# (MISO on SD_D0, CLK on SD_CLK, MOSI on SD_CMD).
-LCD_PINS = {
-    "pclk": 40,
-    "de": 43,
-    "hsync": 44,
-    "vsync": 45,
-    "reset": 37,
-    "power": 39,
-    "backlight": 42,
-    "b": (8, 9, 10, 11, 12),
-    "g": (13, 14, 15, 16, 17, 18),
-    "r": (19, 33, 34, 35, 36),
-    "touch_sda": 52,
-    "touch_scl": 53,
-    "touch_int": 7,
-    "touch_reset": 38,
-    "sd_clk": 24,
-    "sd_cmd": 25,
-    "sd_data": (20, 21, 22, 23),
-    "spare": 54,
-}
 
 
 def load_peripherals(ns):

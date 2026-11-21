@@ -261,7 +261,6 @@ Rename consistently even before lazy devices exist:
 | Extra SPI buses | role-qualified: `touch_spi`, `sd_spi`, … |
 | Display protocol bus | `display_bus` (SPIBus / I80Bus / FourWire / MIPI `Bus` / …) |
 | Primary IO expander | `io_expander` |
-| Pins a connector brings out | `<CONNECTOR>_PINS` in `board_peripherals`: a dict from the label on the board or schematic to a GPIO number (or a tuple of them); data, not a role, so it isn't in `PERIPHERALS` |
 
 ## Touch duck-type
 

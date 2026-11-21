@@ -212,7 +212,7 @@ that also runs with a display treats `board_config` as optional.
 | Directory | Board |
 |-----------|-------|
 | `nodisplay/qtpy_esp32_pico_audio_bff` | QT Py ESP32 Pico + Adafruit Audio BFF (MicroPython; `audio_out` on I2S, `boot_button`) |
-| `nodisplay/esp32-s31-zero` | Waveshare ESP32-S31-Zero (MicroPython; `pixels`, `boot_button`, `wlan`, `ble`; its edge pads and FPC connector as `EDGE_PINS` and `LCD_PINS`) |
+| `nodisplay/esp32-s31-zero` | Waveshare ESP32-S31-Zero (MicroPython; `pixels`, `boot_button`, `wlan`, `ble`) |
 | `cp/nodisplay/qtpy_esp32_pico_audio_bff` | the same, on CircuitPython (`audio_out` is `audiobusio.I2SOut`) |
 
 ### Desktop and browser
