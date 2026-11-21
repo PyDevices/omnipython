@@ -22,6 +22,10 @@ shifter, at 3.3 V or 5 V by the header's jumper:
     status LED        55, low to light
     header GPIOs      48-53
     interrupts        touch 2, clock 3, IMU 54 and 60
+    USB host (J3)     4-pin header: GND, USB20_P (D+), USB20_N (D-) and the
+                      board's 5 V, through 2.2 ohm resistors; the chip's
+                      high-speed USB OTG port
+    USB-C             a CH343 serial bridge to UART0, the REPL; not USB
 
 The speaker and the microphones share one I2S port. With the audio pump in
 the firmware, ``pcm_in`` reads the receive half of the pump's own channel, so
@@ -29,6 +33,20 @@ it records while ``audio_out`` plays, as a speakerphone needs; both run
 16-bit slots, at the output's rate when it's open. Without the pump,
 ``machine.I2S`` takes one direction per port, so ``pcm_in`` and the speaker
 refuse each other: opening one while the other is open raises OSError.
+
+J3 is the board's only USB host port, for ``usb.core`` and the
+``usb.host.*`` packages; wire it to a USB-A socket or a hub's upstream cable.
+It runs at high speed. A full-speed device (a keyboard, a MIDI controller)
+plugged straight in works, but behind a high-speed hub it's refused, because
+the host has no transaction translator: start the host with
+``usb.core.start(full_speed=True)`` and the whole port, hub included, runs at
+full speed. Checked through a powered four-port hub on J3: at full speed a
+flash drive read back a 1 MiB file with a matching SHA-256, a USB MIDI
+keyboard's notes arrived, a webcam streamed 640x480 MJPEG and another
+board's CDC console answered; at high speed the drive, the webcam (640x480
+and 1280x720 MJPEG) and the CDC board ran and the keyboard was refused. A
+USB sound card hasn't been run on it. The firmware has no USB device mode,
+so there is no ``usb_device`` role.
 """
 
 import boarddev

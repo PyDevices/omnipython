@@ -48,9 +48,11 @@ datasheet) and wiki:
   started at full speed (``usb.core.start(full_speed=True)``), which lets keyboards,
   MIDI controllers and other full-speed devices through. J8's 5 V is not
   switched, so a device stays powered through a board reset, and so does the
-  hub (it runs from the 3.3 V rail): choose the host's speed once per
-  power-up, because restarting it at the other speed can leave the hub dead
-  until the board loses power. ``usb.core.start()`` refuses that change.
+  hub (it runs from the 3.3 V rail): don't change the host's speed between
+  two starts in one run, because restarting it at the other speed can leave
+  the hub dead until the board loses power, and ``usb.core.start()`` refuses
+  that change. A hard reset in between is fine: after a high-speed run and a
+  reset, the hub enumerated at full speed again.
 - USB Serial/JTAG is the "USB" Type-C (GPIO24/25); a CH343 bridge is the
   "USB TO UART" Type-C (UART0, GPIO37/38). GPIO26/27 (header pins 32 and 37)
   are the full-speed OTG pair, free for a second USB port.

@@ -226,7 +226,7 @@ and Android.
 ## Use USB
 
 - [`usbhost`](https://github.com/PyDevices/omnipython/blob/main/docs/guides/usb.md): Provide the C host port that the `usb.core` packages use. You don't import it yourself.\
-  Get it: firmware build. Runs on: MP on ESP32-S2, S3, P4; CP on P4.
+  Get it: firmware build. Runs on: MP on ESP32-S2, S3, P4, S31; CP on P4.
 - [`usb-core`](https://github.com/PyDevices/omnipython/blob/main/docs/guides/usb.md): Talk to USB devices from a host board, with `usb.core` and `usb.util`, in PyUSB's shape.\
   Get it: `mip usb-core`. Runs on: MP.
 - [`usb-host-dfu`](https://github.com/PyDevices/omnipython/blob/main/docs/guides/usb.md): Read the flash of a board sitting in its USB DFU bootloader.\

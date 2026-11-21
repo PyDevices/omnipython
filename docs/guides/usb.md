@@ -44,7 +44,7 @@ omip.install("github:PyDevices/omnipython/packages/usb/usb-host-msc")
 ## What your firmware needs
 
 The host packages run on a OmniPython firmware built with
-`usbhost`, the C module under `usb.core`, on an ESP32-S2, S3 or P4, or on
+`usbhost`, the C module under `usb.core`, on an ESP32-S2, S3, P4 or S31, or on
 the Arduino GIGA R1 Display Shield's USB-A port, where it runs on TinyUSB's
 host with no isochronous transfers: a drive, keyboard or MIDI controller works
 there, and audio, video and tethering don't. The device packages run on MicroPython's own `machine.USBDevice`; audio and video
