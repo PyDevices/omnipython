@@ -82,8 +82,11 @@ class FakeDevice:
             return self.answers.get(request, b"\x00" * data)
         return 0
 
-    def read(self, endpoint, buf, timeout=None):
+    def read(self, endpoint, buf, timeout=None, *, raise_on_timeout=True):
+        self.kept_reads = getattr(self, "kept_reads", 0) + (not raise_on_timeout)
         if not self.reads:
+            if not raise_on_timeout:
+                return 0
             raise USBTimeoutError("timeout")
         chunk = self.reads.pop(0)
         buf[:len(chunk)] = chunk
@@ -205,6 +208,16 @@ class SerialTests(unittest.TestCase):
         self.assertEqual(port.read(16), b"hello")
         self.assertEqual(port.write(b"x"), 1)
         self.assertEqual(dev.written, [(0x02, b""), (0x02, b"x")])
+
+    def test_a_read_that_times_out_keeps_its_transfer(self):
+        # A timed-out read never cancels the transfer: a packet already on its
+        # way would be lost with it.
+        dev = FakeDevice(0x0403, 0x6001, bcd_device=0x600)
+        port = Serial(dev, baudrate=9600, timeout=5)
+        self.assertIsNone(port.read(16))
+        self.assertGreater(dev.kept_reads, 0)
+        dev.reads = [bytes([0x01, 0x60]) + b"late"]
+        self.assertEqual(port.read(16), b"late")
 
     def test_strip_status_across_packets(self):
         buf = bytearray(b"\x01\x60abc\x01\x60de")
