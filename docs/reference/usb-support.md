@@ -45,7 +45,7 @@ are in
 | A high-speed link | ESP32-S2, S3, GIGA | Their host ports are full speed |
 | A webcam and a USB Audio 2.0 speaker in one session | ESP32 | The controller's FIFO split is fixed for each `usb.core.start()`, and a camera and a speaker need different splits |
 | Every device at once | ESP32-S3 | The host has eight channels (the P4 and S31 have sixteen). A device's control pipe takes one, a bulk pair two and an interrupt IN one, so a drive and a keyboard fit and a drive and a MIDI controller don't |
-| Full- and low-speed devices behind a hub | ESP32-P4 | The port runs at high speed and the host there has no transaction translator. Start the host with `usb.core.start(full_speed=True)`, which slows the whole bus. The S31's host has one |
+| Full- and low-speed devices behind a hub | ESP32-P4 | The port runs at high speed, and the host there can't send split transactions to a hub's transaction translator. Start the host with `usb.core.start(full_speed=True)`, which slows the whole bus. The S31's host sends them, so it doesn't need this |
 
 ## Device: what a board can present
 

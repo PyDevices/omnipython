@@ -20,7 +20,7 @@
 # The host starts with the first find(), or with start(), which takes
 # full_speed=True to hold the port to full speed: on an ESP32-P4, whose port
 # is high speed, that's how full- and low-speed devices behind a hub work
-# (ESP-IDF 5.5's host there has no transaction translator). The ESP32-S31's
+# (ESP-IDF 5.5's host there can't send split transactions). The ESP32-S31's
 # host does split transactions, so they work behind a high-speed hub as they
 # are. Underneath is ESP-IDF's USB host library, driven by the firmware's
 # _usbhost C module (omnipython-builds' modules/usbhost).
@@ -126,7 +126,7 @@ def start(full_speed=False, classes=None, force=False):
 
     ``full_speed=True`` holds the port to full speed, and every high-speed
     device with it. On an ESP32-P4 a keyboard or MIDI controller behind a
-    hub needs it, because the host there has no transaction translator. On
+    hub needs it, because the host there can't send split transactions. On
     an ESP32-S31 they work behind a high-speed hub without it.
 
     ``full_speed`` can't change after the host has run on the ESP32-P4 WIFI6
