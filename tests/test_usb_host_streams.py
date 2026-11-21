@@ -8,7 +8,7 @@ and sent to the device as SET_INTERFACE), the sample rate, a 2.0 clock's
 RANGE, the camera's PROBE and COMMIT. C only moves packets between the
 endpoint and a ring. These tests run the real usb.core over a fake _usbhost
 that answers control requests the way a device does and records the
-streams opened, with a Python stand-in for machine.USBDevice.Ring.
+streams opened, with a Python stand-in for _usbhost.Ring.
 """
 
 import pathlib
@@ -31,7 +31,7 @@ if not hasattr(__import__("time"), "sleep_ms"):
 
 
 class Ring:
-    """machine.USBDevice.Ring's surface: a power-of-two byte ring."""
+    """_usbhost.Ring's surface: a power-of-two byte ring."""
 
     def __init__(self, n):
         size = 2
@@ -63,7 +63,7 @@ class Ring:
 
 
 class PumpRing:
-    """Stands in for an audiopump.Ring: not a USBDevice.Ring."""
+    """Stands in for an audiopump.Ring: not a _usbhost.Ring."""
 
 
 if "micropython" not in sys.modules:
@@ -71,9 +71,6 @@ if "micropython" not in sys.modules:
     _mp.const = lambda x: x
     sys.modules["micropython"] = _mp
 
-machine = types.ModuleType("machine")
-machine.USBDevice = type("USBDevice", (), {"Ring": Ring})
-sys.modules["machine"] = machine
 
 
 class FakeHost:
@@ -197,6 +194,7 @@ class FakeHost:
 
 
 host = FakeHost()
+host.Ring = Ring
 sys.modules["_usbhost"] = host
 
 # Other test modules install fakes of their own under these names; this one
