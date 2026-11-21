@@ -108,6 +108,7 @@ class Camera:
         fmt, frame, interval, payload, frame_bytes, alt = picked
         self.best_effort = alt.max_packet < payload
         self._fmt, self._alt = fmt, alt
+        self._commit = (fmt.interface, fmt.index, frame.index, interval)
         self.encoding = fmt.encoding
         self.width, self.height = frame.width, frame.height
         self.fps = round(_uvc.fps(interval), 2)
@@ -201,6 +202,11 @@ class Camera:
             except OSError:
                 pass
             self._park()
+            # A camera that has streamed forgets its mode once it's back on
+            # alternate 0: a C920e restarted without a new COMMIT sends only
+            # empty packets. So every start commits again, the mode this
+            # Camera agreed to when it was made.
+            _negotiate(self.dev, *self._commit)
             self.dev.set_interface_altsetting(itf, a.alt)
             # Room for a whole frame waiting while the next one builds, each
             # led by its length; the ring rounds up to a power of two.

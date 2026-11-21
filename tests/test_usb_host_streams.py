@@ -631,6 +631,23 @@ class TestCamera(unittest.TestCase):
         self.assertGreaterEqual(host.streams[a.endpoint].size, 2 * (cam.frame_bytes + 4))
         cam.stop()
 
+    def test_every_start_commits_the_mode_again_before_the_alt(self):
+        # A camera parked on alt 0 after streaming forgets its COMMIT, and
+        # restarted without one sends only empty packets.
+        cam = self.camera(max_size=(320, 240))
+        made = [c for c in host.ctrl if c[2] == 0x0200][-1]
+        for _ in range(2):
+            host.ctrl.clear()
+            cam.start()
+            commits = [i for i, c in enumerate(host.ctrl) if c[:3] == (0x21, 0x01, 0x0200)]
+            self.assertEqual(len(commits), 1)
+            self.assertEqual(host.ctrl[commits[0]], made)
+            # After the park on alt 0, before the streaming alt.
+            self.assertEqual(host.ctrl[0][:4], SET_INTERFACE + (0, cam._fmt.interface))
+            self.assertLess(commits[0], len(host.ctrl) - 1)
+            self.assertEqual(host.ctrl[-1][:4], SET_INTERFACE + (cam._alt.alt, cam._fmt.interface))
+            cam.stop()
+
     def test_read_gives_the_newest_whole_frame(self):
         cam = self.camera(max_size=(320, 240))
         buf = bytearray(16)
