@@ -23,9 +23,9 @@ is no ``board_config.py``: import this module.
 
 There is no battery or charger: the board runs from USB-C or the 5V pad.
 
-The edge pads' analog channels come in pairs, ADC1_2 on GPIO46 (N) and 47
-(P), ADC1_3 on 48 and 49, ADC2_0 on 50 and 51. GPIO0-6 are the low-power
-GPIOs (LP_GPIO on the schematic) and have no ADC.
+GPIO46-51 on the edge pads take machine.ADC, single-ended, 0 to 2 V (the
+S31 has one range; readings use the chip's nominal scale, uncalibrated).
+GPIO0-6 are the low-power GPIOs (LP_GPIO on the schematic) and have no ADC.
 
 The FPC connector, by the schematic's signal names:
 
@@ -53,7 +53,8 @@ back, a UART opens on TX and RX, and an I2C bus opens on the touch pins.
 Not checked, for want of hands or hardware: the LED's colour by eye, a
 BOOT press, anything on the far side of a pad or the FPC connector, and
 the USB host pads, which need firmware built with USB host support. The
-ADC on GPIO46-51 answers, but reads each pair differentially.
+ADC on GPIO46-51 reads near 0 pulled low and full scale pulled high; its
+accuracy against a known voltage is unchecked.
 """
 
 import sys
