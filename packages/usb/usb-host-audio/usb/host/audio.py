@@ -40,8 +40,7 @@
 import time
 
 import _usbhost
-
-from machine import USBDevice
+from _usbhost import Ring
 
 from . import _uac
 
@@ -198,7 +197,7 @@ class _Stream:
 
     def start(self):
         if not self._open:
-            self._start(USBDevice.Ring(max(self._ring_bytes, 2 * (self.stream.max_packet & 0x7FF))), 0)
+            self._start(Ring(max(self._ring_bytes, 2 * (self.stream.max_packet & 0x7FF))), 0)
 
     def stop(self):
         if self._open:
@@ -210,7 +209,7 @@ class _Stream:
 
     def capacity(self):
         """The ring's size in bytes; 0 while stopped."""
-        return self._ring.stats()[0] if self._open and isinstance(self._ring, USBDevice.Ring) else 0
+        return self._ring.stats()[0] if self._open and isinstance(self._ring, Ring) else 0
 
     def stats(self):
         """(packets, bytes, dropped, starved, errors, empty): ``dropped``
@@ -237,7 +236,7 @@ class Speaker(_Stream):
 
     def start(self):
         if not self._open:
-            self._start(USBDevice.Ring(max(self._ring_bytes, 2 * (self.stream.max_packet & 0x7FF))), self.rate)
+            self._start(Ring(max(self._ring_bytes, 2 * (self.stream.max_packet & 0x7FF))), self.rate)
 
     def write(self, buf):
         """Queue PCM; returns the bytes taken, whole frames, maybe fewer
@@ -283,7 +282,7 @@ class Microphone(_Stream):
         the bus for the pump to play; read() then has nothing."""
         if not self._open:
             if ring is None:
-                ring = USBDevice.Ring(max(self._ring_bytes, 2 * (self.stream.max_packet & 0x7FF)))
+                ring = Ring(max(self._ring_bytes, 2 * (self.stream.max_packet & 0x7FF)))
             elif self.bits != 16:
                 raise ValueError("an audiopump.Ring takes 16-bit audio; this stream is %d-bit" % self.bits)
             self._start(ring, 0)
@@ -291,7 +290,7 @@ class Microphone(_Stream):
     def read(self, buf):
         """Recorded PCM into buf; returns the bytes read, 0 when none yet."""
         r = self._ring
-        if not self._open or not isinstance(r, USBDevice.Ring):
+        if not self._open or not isinstance(r, Ring):
             return 0
         n = min(len(buf), r.any())
         n -= n % self.frame_bytes
@@ -300,7 +299,7 @@ class Microphone(_Stream):
     def queued(self):
         """Bytes recorded and not yet read."""
         r = self._ring
-        return r.any() if self._open and isinstance(r, USBDevice.Ring) else 0
+        return r.any() if self._open and isinstance(r, Ring) else 0
 
 
 _WAIT_MS = 3000             # how long pcm_out() and pcm_in() wait for a device

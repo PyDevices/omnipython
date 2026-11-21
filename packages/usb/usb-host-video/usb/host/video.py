@@ -23,8 +23,7 @@
 # when the camera offers it, since it carries a far larger picture through
 # the same bus.
 import _usbhost
-
-from machine import USBDevice
+from _usbhost import Ring
 
 from . import _uvc
 
@@ -205,7 +204,7 @@ class Camera:
             self.dev.set_interface_altsetting(itf, a.alt)
             # Room for a whole frame waiting while the next one builds, each
             # led by its length; the ring rounds up to a power of two.
-            ring = USBDevice.Ring(2 * (self.frame_bytes + 4))
+            ring = Ring(2 * (self.frame_bytes + 4))
             try:
                 _usbhost.host_stream(self._id, a.endpoint, ring, a.max_packet, video=True,
                                    max_frame=self.frame_bytes)
