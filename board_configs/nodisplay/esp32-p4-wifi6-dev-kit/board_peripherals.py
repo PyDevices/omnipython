@@ -44,9 +44,10 @@ datasheet) and wiki:
   speaker connector, the end labelled DEVICE (the labels read the opposite
   way to what they do), it goes to the onboard CH334F hub: J8's upper
   socket and both J2 sockets work at once and J8's lower one goes dead.
-  Behind that hub only high-speed devices enumerate, unless the host is
-  started at full speed (``usb.core.start(full_speed=True)``), which lets keyboards,
-  MIDI controllers and other full-speed devices through. J8's 5 V is not
+  The hub is high speed, and keyboards, MIDI controllers and other
+  full-speed devices behind it work through its transaction translator; a
+  firmware built on ESP-IDF's own host library can't do that, and needs the
+  host started at full speed (``usb.core.start(full_speed=True)``). J8's 5 V is not
   switched, so a device stays powered through a board reset, and so does the
   hub (it runs from the 3.3 V rail): don't change the host's speed between
   two starts in one run, because restarting it at the other speed can leave

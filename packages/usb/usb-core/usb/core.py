@@ -18,11 +18,11 @@
 # endpoint's interface is claimed the first time you use it.
 #
 # The host starts with the first find(), or with start(), which takes
-# full_speed=True to hold the port to full speed: on an ESP32-P4, whose port
-# is high speed, that's how full- and low-speed devices behind a hub work
-# (ESP-IDF 5.5's host there can't send split transactions). The ESP32-S31's
-# host does split transactions, so they work behind a high-speed hub as they
-# are. Underneath is ESP-IDF's USB host library, driven by the firmware's
+# full_speed=True to hold the port to full speed. The ESP32-P4's and the
+# ESP32-S31's hosts do split transactions, so full- and low-speed devices
+# work behind a high-speed hub as they are; a P4 firmware built on ESP-IDF
+# 5.5's own host library can't send them, and there full_speed=True is how
+# they work. Underneath is ESP-IDF's USB host library, driven by the firmware's
 # _usbhost C module (omnipython-builds' modules/usbhost).
 #
 # One speed per power-up on the ESP32-P4 WIFI6 DEV-KIT: its onboard hub can't
@@ -125,9 +125,10 @@ def start(full_speed=False, classes=None, force=False):
     None asks for everything, which leans to IN.
 
     ``full_speed=True`` holds the port to full speed, and every high-speed
-    device with it. On an ESP32-P4 a keyboard or MIDI controller behind a
-    hub needs it, because the host there can't send split transactions. On
-    an ESP32-S31 they work behind a high-speed hub without it.
+    device with it. A keyboard or MIDI controller behind a high-speed hub
+    doesn't need it on an ESP32-P4 or S31, whose hosts send split
+    transactions; a P4 firmware built on ESP-IDF's own host library can't,
+    and there it needs ``full_speed=True``.
 
     ``full_speed`` can't change after the host has run on the ESP32-P4 WIFI6
     DEV-KIT. Its onboard hub gets its power from the board's 3.3 V rail and
@@ -136,9 +137,7 @@ def start(full_speed=False, classes=None, force=False):
     both speeds, until the board is power-cycled. There ``start()`` raises
     ``USBError`` instead, before it touches the host, and the running host
     is left as it was. Stopping and starting at the same speed is fine, and
-    so is a different ``classes``. Choose the speed once per power-up:
-    ``full_speed=True`` if a keyboard or MIDI controller will be behind the
-    hub, False otherwise. The memory is the interpreter's: a soft reset
+    so is a different ``classes``. Choose the speed once per power-up. The memory is the interpreter's: a soft reset
     forgets it, and the hub doesn't. ``force=True`` skips the check, for a
     board whose host jumper sends the port straight to a socket, past the hub."""
     global _started, _full_speed, _classes, _ran_full_speed
