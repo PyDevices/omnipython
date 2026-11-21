@@ -143,10 +143,10 @@ class Serial:
         end = time.ticks_add(time.ticks_ms(), max(1, timeout))
         while True:
             left = time.ticks_diff(end, time.ticks_ms())
-            try:
-                n = self.dev.read(self._in, self._buf, max(1, left))
-            except usb.core.USBTimeoutError:
-                return False
+            # A kept read: the transfer stays armed through a timeout, so a
+            # packet the device has already handed over is never canceled
+            # with it and lost. It comes back with the next read.
+            n = self.dev.read(self._in, self._buf, max(1, left), raise_on_timeout=False)
             skip = self._chip.strip if self._chip is not None else 0
             if skip:
                 n = _strip_status(self._buf, n, len(self._buf), skip)
