@@ -62,6 +62,37 @@
         "can"
       ],
       "tool": "tools/mark_tested.py"
+    },
+    {
+      "hardware": "Waveshare ESP32-S31-Touch-LCD-4.3C with an 8 GB FAT32 microSD card and a powered USB 2.0 hub on J3 (a webcam, a MIDI keyboard, a flash drive and another board behind it); the firmware has no machine.CAN or USB device mode, so can was skipped and usb_device is not offered",
+      "firmware": "micropython 1.30.0 (Waveshare ESP32-S31-Touch-LCD-4.3C with ESP32-S31), v1.30.0-preview.160.gb70ae1aca6 on 2026-11-21",
+      "date": "2026-11-21",
+      "smoke": "passed",
+      "checks": [
+        "board_config imports",
+        "display draws",
+        "touch reads",
+        "accelerometer answers",
+        "audio_in_power answers",
+        "audio_out answers",
+        "audio_power answers",
+        "battery answers",
+        "ble answers",
+        "boot_button answers",
+        "gyroscope answers",
+        "i2c answers",
+        "led answers",
+        "pcm_in answers",
+        "pcm_out answers",
+        "rs485 answers",
+        "rtc answers",
+        "sdcard answers",
+        "wlan answers"
+      ],
+      "skipped": [
+        "can"
+      ],
+      "tool": "tools/mark_tested.py"
     }
   ]
 }
