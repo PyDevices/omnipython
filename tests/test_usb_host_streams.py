@@ -88,6 +88,7 @@ class FakeHost:
         self.streams = {}
         self.probe = bytearray(34)
         self.report = None
+        self.replies = []                   # scripted reads: bytes, or None for a timeout
         self.gone = None                    # an errno once the device is unplugged
         self.host_poll = self._host_poll    # absent on a firmware that predates it
 
@@ -110,6 +111,14 @@ class FakeHost:
 
     def host_xfer(self, dev_id, ep, buf, timeout, raise_on_timeout=True):
         self.calls.append(("xfer", ep, timeout, raise_on_timeout))
+        if self.replies:
+            reply = self.replies.pop(0)
+            if reply is None:
+                if raise_on_timeout:
+                    raise OSError(110, "ETIMEDOUT")
+                return 0
+            buf[:len(reply)] = reply
+            return len(reply)
         if self.report is None:
             if raise_on_timeout:
                 raise OSError(110, "ETIMEDOUT")
@@ -715,6 +724,21 @@ class TestCoreForPolling(unittest.TestCase):
     def test_the_default_still_raises(self):
         with self.assertRaises(usb.core.USBTimeoutError):
             self.dev.read(self.ep, bytearray(8), timeout=5)
+
+    def test_a_read_without_a_timeout_waits_through_quarter_seconds(self):
+        host.replies = [None, None, b"\x05\x06\x07"]
+        buf = bytearray(8)
+        self.assertEqual(self.dev.read(self.ep, buf), 3)
+        self.assertEqual(buf[:3], b"\x05\x06\x07")
+        steps = [c for c in host.calls if c[0] == "xfer"]
+        self.assertEqual(steps, [("xfer", self.ep, 250, True)] * 3)
+
+    def test_a_zero_length_packet_ends_a_read_without_a_timeout(self):
+        # The host raises on a timeout and leaves the transfer armed, so a
+        # zero-length packet is told apart from "nothing yet" and returned.
+        host.replies = [None, b"", b"\x01"]
+        self.assertEqual(self.dev.read(self.ep, bytearray(8)), 0)
+        self.assertEqual(host.replies, [b"\x01"])
 
     def test_the_descriptor_is_read_once_not_per_read(self):
         buf = bytearray(8)
