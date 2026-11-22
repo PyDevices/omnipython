@@ -238,6 +238,10 @@ def _sdl_format(fmt):
 
 def list_audio_devices(capture=False):
     """Return SDL playback or capture device names."""
+    # SDL counts devices only while its audio subsystem is up; without it the
+    # count is -1 and the error empty. It stays up, as it does once an output opens.
+    if sdl.SDL_InitSubSystem(sdl.SDL_INIT_AUDIO) != 0:
+        raise OSError(sdl.SDL_GetError())
     count = sdl.SDL_GetNumAudioDevices(bool(capture))
     if count < 0:
         raise OSError(sdl.SDL_GetError())
