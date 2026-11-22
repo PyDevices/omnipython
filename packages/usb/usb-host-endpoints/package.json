@@ -1,0 +1,10 @@
+{
+  "urls": [
+    ["usb/host/endpoints.py", "github:PyDevices/omnipython/packages/usb/usb-host-endpoints/usb/host/endpoints.py"]
+  ],
+  "deps": [
+    ["github:PyDevices/omnipython/packages/usb/usb-core", "main"],
+    ["github:PyDevices/omnipython/packages/endpointkit", "main"]
+  ],
+  "version": "0.1.0"
+}

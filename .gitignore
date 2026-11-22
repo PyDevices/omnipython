@@ -44,3 +44,6 @@ bin/*.provenance
 # are written by hand.
 docs/reference/*.rst
 docs/boards/_tested-boards.inc
+
+# tests/usb_host_endpoints_checks.py's tree, left behind only by a run that crashed
+.usb_host_endpoints_tree/

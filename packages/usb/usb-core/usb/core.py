@@ -198,12 +198,33 @@ def stats():
             "errors": st[3], "devices": st[4], "full_speed": bool(_full_speed), "classes": _classes}
 
 
+def counters():
+    """``(attaches, detaches)`` as `stats` counts them, or None while the
+    host isn't running: one read of the C host and no dict, for a loop that
+    checks often for something plugged in or pulled out."""
+    if _started is None:
+        return None
+    st = _usbhost.host_stats()
+    return (st[1], st[2]) if st and st[0] else None
+
+
 def _start():
     if _started is None:
         start()
     wait = _SETTLE_MS - _ticks_diff(_ticks_ms(), _started)
     if wait > 0:
         _sleep_ms(wait)
+
+
+def attached():
+    """Every device on the port now, as a list of `Device`, without waiting.
+
+    Unlike `find`, it doesn't start the host or wait for a device just
+    plugged in to settle: a device shows up here once it has enumerated.
+    Empty while the host isn't running."""
+    if _started is None:
+        return []
+    return [Device(row) for row in _usbhost.host_devices()]
 
 
 def find(find_all=False, *, idVendor=None, idProduct=None, custom_match=None):
@@ -231,6 +252,9 @@ class Device:
         self.idVendor = row[1]
         self.idProduct = row[2]
         self.speed = _SPEEDS.get(row[6], 0)
+        # What the host saw at enumeration: "hid", "msc", "cdc", "midi",
+        # "uac", "uvc" or "other", one per kind of interface.
+        self.classes = row[5]
         self._claims = {}       # interface -> alternate setting
         self._ep_itf = {}       # endpoint -> its interface, read once
         self._alts = {}         # alternates chosen by set_interface_altsetting

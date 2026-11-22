@@ -239,6 +239,8 @@ and Android.
   Get it: firmware build. Runs on: MP on ESP32-S2, S3, P4, S31 and the GIGA; CP on P4.
 - [`usb-core`](https://github.com/PyDevices/omnipython/blob/main/docs/guides/usb.md): Talk to USB devices from a host board, with `usb.core` and `usb.util`, in PyUSB's shape.\
   Get it: `mip usb-core`. Runs on: MP.
+- [`usb-host-endpoints`](https://github.com/PyDevices/omnipython/blob/main/docs/guides/usb.md): List what's plugged into the board's USB host port as `endpointkit` endpoints, kept current as devices come and go.\
+  Get it: from source. Runs on: MP.
 - [`usb-host-dfu`](https://github.com/PyDevices/omnipython/blob/main/docs/guides/usb.md): Read the flash of a board sitting in its USB DFU bootloader.\
   Get it: `mip usb-host-dfu`. Runs on: MP.
 - [`usb-host-hid`](https://github.com/PyDevices/omnipython/blob/main/docs/guides/usb.md): Read a keyboard or mouse plugged into the board.\
@@ -468,7 +470,7 @@ and Android.
 - **R:** [`Radios`](#drive-a-chip), [`Real-time clocks`](#drive-a-chip), [`REPL`](#run-a-finished-app), [`Roku remote`](#run-a-finished-app)
 - **S:** [`sayso`](#libraries-the-apps-use), [`Security camera`](#run-a-finished-app), [`songmodel`](#play-and-sequence-music), [`Sound card`](#run-a-finished-app), [`soundmodule`](#play-and-sequence-music), [`spectrum`](#draw-on-a-screen), [`Spotify`](#run-a-finished-app), [`Stompbox`](#run-a-finished-app), [`Storage`](#drive-a-chip), [`Surveillance camera`](#run-a-finished-app), [`svgio`](#draw-on-a-screen), [`svgio for CPython`](#draw-on-a-screen), [`Synth Station`](#run-a-finished-app), [`synthio`](#make-and-shape-sound), [`System`](#run-a-finished-app)
 - **T:** [`tflite`](#use-cameras-video-and-ai-on-a-board), [`Touch drivers`](#drive-a-chip), [`touchkit`](#libraries-the-apps-use), [`tsmux`](#use-cameras-video-and-ai-on-a-board), [`ttfio`](#draw-on-a-screen), [`ttfio for CPython`](#draw-on-a-screen)
-- **U:** [`ulab`](#use-cameras-video-and-ai-on-a-board), [`usb-core`](#use-usb), [`usb-device-audio`](#use-usb), [`usb-device-msc`](#use-usb), [`usb-device-net`](#use-usb), [`usb-device-video`](#use-usb), [`usb-hid`](#use-usb), [`usb-host-audio`](#use-usb), [`usb-host-cdc`](#use-usb), [`usb-host-dfu`](#use-usb), [`usb-host-hid`](#use-usb), [`usb-host-msc`](#use-usb), [`usb-host-mtp`](#use-usb), [`usb-host-net`](#use-usb), [`usb-host-video`](#use-usb), [`usbhost`](#use-usb), [`usdl2`](#run-somewhere-other-than-a-board), [`uwin32`](#run-somewhere-other-than-a-board)
+- **U:** [`ulab`](#use-cameras-video-and-ai-on-a-board), [`usb-core`](#use-usb), [`usb-device-audio`](#use-usb), [`usb-device-msc`](#use-usb), [`usb-device-net`](#use-usb), [`usb-device-video`](#use-usb), [`usb-hid`](#use-usb), [`usb-host-audio`](#use-usb), [`usb-host-cdc`](#use-usb), [`usb-host-dfu`](#use-usb), [`usb-host-endpoints`](#use-usb), [`usb-host-hid`](#use-usb), [`usb-host-msc`](#use-usb), [`usb-host-mtp`](#use-usb), [`usb-host-net`](#use-usb), [`usb-host-video`](#use-usb), [`usbhost`](#use-usb), [`usdl2`](#run-somewhere-other-than-a-board), [`uwin32`](#run-somewhere-other-than-a-board)
 - **V:** [`Vamp`](#run-a-finished-app), [`Video doorbell`](#run-a-finished-app), [`Videophone`](#run-a-finished-app), [`vision`](#use-cameras-video-and-ai-on-a-board), [`vtterm`](#draw-on-a-screen)
 - **W:** [`Wake word`](#run-a-finished-app), [`Walkie-talkie`](#run-a-finished-app), [`wasm.py`](#run-somewhere-other-than-a-board), [`Weather`](#run-a-finished-app), [`wifi`](#connect-devices), [`wifi_manager`](#connect-devices)
 

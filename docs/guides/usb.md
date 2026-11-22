@@ -377,6 +377,33 @@ hub, the host's limits, and why its events are drained rather than called back
 are on the host's own page, in omnipython-builds'
 `modules/usbhost/docs/host.md`.
 
+### Find what's plugged in
+
+`usb.host.endpoints` lists every device on the host port under the role it
+plays, and keeps the list current as you plug things in and pull them out.
+It's the `usb-host-endpoints` package, and the lists are `endpointkit`'s, so
+a picker or the status bar shows them with everything else the board can
+connect to:
+
+```python
+import endpointkit
+from usb.host import endpoints
+
+endpoints.register()            # starts the host port if it isn't running
+while True:
+    if endpointkit.poll():      # something came or went
+        for kind in endpoints.KINDS:
+            for ep in endpointkit.endpoints(kind):
+                print(kind, ep.label)
+```
+
+A headset shows up under `audio.out` and `audio.in`, a keyboard with a
+touchpad under `keys` and `pointer`, a flash drive under `storage`. Each poll
+reads only the host's plug and unplug counters, so it's cheap to call from a
+timer: about 0.2 ms of an idle poll on an ESP32-S31 is USB's. Choosing an endpoint doesn't open the device: read the
+choice, and open it with its class driver as above, using
+`endpoints.device(ep)` for the `usb.core.Device`.
+
 ### Make it the board's audio
 
 A store-bought USB sound card, such as a USB-C headphone dongle, USB speakers
