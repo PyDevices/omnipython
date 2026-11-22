@@ -237,6 +237,31 @@ def t_titles_and_icons():
           "kinds() lists the built-in kinds first, then the rest as added: %r" % (order,))
 
 
+def t_pairing():
+    r = Registry()
+    fakes = bench(r, delay=0)
+    seen = []
+    r.subscribe("net", lambda e, k: seen.append(e))
+    cafe = r.find("wlan:cafe")
+    check(cafe.state == endpointkit.NEEDS_PAIRING and cafe.asks == endpointkit.PASSWORD,
+          "a network that needs its password says so")
+    check(r.find("wlan:home").asks is None, "one already joined asks nothing")
+    e = raises(ValueError, r.pair, "wlan:cafe", "latte")
+    check(e is not None and "Wrong password" in str(e) and cafe.state == endpointkit.NEEDS_PAIRING,
+          "a wrong password is refused, with why")
+    got = r.pair("wlan:cafe", "espresso")
+    check(got is cafe and cafe.state == endpointkit.AVAILABLE and "state" in seen,
+          "the right one joins, and subscribers hear the new state")
+    check(r.selection("net") == [], "pairing doesn't choose")
+    check(r.pair("btpan:phone").state == endpointkit.AVAILABLE, "a device that asks nothing pairs with nothing typed")
+    check(raises(ValueError, r.pair, "wlan:nowhere") is not None, "an endpoint that isn't found can't pair")
+    plain = endpointkit.Provider("net", "plain")
+    plain.scan = lambda: [plain.endpoint("x", "Plain")]
+    r.register(plain)
+    check(raises(ValueError, r.pair, "plain:x") is not None, "a provider that doesn't pair refuses")
+    check(("pair", "cafe") in fakes["wlan"].log, "the provider did the pairing")
+
+
 def t_module_registry():
     endpointkit.add_kind("test.kind")
     p = endpointkit.register(FakeProvider("test.kind", "modfake", [("x", "X")]))

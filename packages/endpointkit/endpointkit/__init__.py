@@ -69,7 +69,7 @@ try:
 except ImportError:
     os = None
 
-__version__ = "0.0.2"
+__version__ = "0.0.3"
 
 #: One endpoint of the kind is chosen at a time.
 ONE = 1
@@ -120,6 +120,11 @@ AVAILABLE = "available"
 CONNECTED = "connected"
 NEEDS_PAIRING = "needs pairing"
 UNAVAILABLE = "unavailable"
+
+#: What pairing or joining an endpoint asks a person for (`Endpoint.asks`):
+#: a password (a Wi-Fi network) or a PIN (an older Bluetooth device).
+PASSWORD = "password"
+PIN = "pin"
 
 #: Subscription events: the list of a kind's endpoints changed.
 ENDPOINTS = "endpoints"
@@ -198,9 +203,11 @@ class Endpoint:
         resources (tuple): the shared resources it takes when chosen; the
             provider's own unless the endpoint names others.
         error (str or None): why the provider last failed to start or stop it.
+        asks (str or None): what `Registry.pair` needs typed to pair or
+            join it, `PASSWORD` or `PIN`; None when pairing asks nothing.
     """
 
-    def __init__(self, provider, local_id, label, state=AVAILABLE, caps=None, resources=None):
+    def __init__(self, provider, local_id, label, state=AVAILABLE, caps=None, resources=None, asks=None):
         self.provider = provider
         self.local_id = local_id
         self.id = "%s:%s" % (provider.name, local_id)
@@ -210,6 +217,7 @@ class Endpoint:
         self.caps = caps if caps is not None else {}
         self.resources = tuple(resources) if resources is not None else tuple(provider.resources)
         self.error = None
+        self.asks = asks
 
     def __repr__(self):
         return "<Endpoint %s %r %s>" % (self.id, self.label, self.state)
@@ -221,7 +229,9 @@ class Provider:
     Set ``kind``, ``name`` (unique on the device, the first part of every
     endpoint id) and ``resources``, and write `scan`. A transport whose
     finding is slow writes `poll` too, and one that must do something when
-    an endpoint is chosen or let go writes `apply`.
+    an endpoint is chosen or let go writes `apply`. One whose endpoints
+    must be paired or joined first (Bluetooth, a Wi-Fi network) reports
+    them as `NEEDS_PAIRING` and writes `pair`.
     """
 
     kind = None
@@ -240,9 +250,9 @@ class Provider:
         if ":" in self.name:
             raise ValueError("a provider's name can't hold ':': %r" % self.name)
 
-    def endpoint(self, local_id, label, state=AVAILABLE, caps=None, resources=None):
+    def endpoint(self, local_id, label, state=AVAILABLE, caps=None, resources=None, asks=None):
         """An `Endpoint` of this provider, for `scan` and `poll` to return."""
-        return Endpoint(self, local_id, label, state, caps, resources)
+        return Endpoint(self, local_id, label, state, caps, resources, asks)
 
     def scan(self):
         """The endpoints known now, as a list. It must return quickly; start
@@ -259,6 +269,16 @@ class Provider:
 
         Raise to refuse; the registry records the message on the endpoint.
         """
+
+    def pair(self, endpoint, secret=None):
+        """Pair with or join *endpoint*, with the *secret* its ``asks`` named.
+
+        Keep the secret yourself if it's needed again; the registry never
+        stores it. Raise to refuse (a wrong password); the message is what
+        a person sees. Pairing that takes a while may start here and report
+        the endpoint's new state from `poll`.
+        """
+        raise ValueError("%s can't pair" % self.name)
 
     def stop(self):
         """Release whatever the provider holds; called by `Registry.unregister`."""
@@ -368,6 +388,30 @@ class Registry:
             if ep.id == endpoint_id:
                 return ep
         return None
+
+    def pair(self, endpoint_id, secret=None):
+        """Pair with or join the endpoint *endpoint_id* through its provider,
+        then scan that provider again; returns the endpoint.
+
+        *secret* is what the endpoint's ``asks`` names, typed by a person.
+        It goes to the provider and nowhere else. Pairing doesn't choose
+        the endpoint: `select` it after.
+
+        Raises:
+            ValueError: no such endpoint is found, or the provider refused
+                (a wrong password); the message says why.
+        """
+        ep = self.find(endpoint_id)
+        if ep is None:
+            raise ValueError("%s isn't found" % endpoint_id)
+        ep.provider.pair(ep, secret)
+        try:
+            found = ep.provider.scan()
+        except Exception as exc:  # noqa: BLE001
+            _report("scan", ep.provider.name, exc)
+        else:
+            self._update(ep.provider, found)
+        return self.find(endpoint_id) or ep
 
     # -- choices ---------------------------------------------------------------
 
@@ -614,6 +658,7 @@ class Registry:
             prev.label = ep.label
             prev.caps = ep.caps
             prev.resources = ep.resources
+            prev.asks = ep.asks
             new.append(prev)
         if not list_changed:
             list_changed = [e.id for e in new] != [e.id for e in old]
@@ -698,6 +743,7 @@ unregister = registry.unregister
 providers = registry.providers
 poll = registry.poll
 refresh = registry.refresh
+pair = registry.pair
 endpoints = registry.endpoints
 find = registry.find
 chosen = registry.chosen

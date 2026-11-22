@@ -16,6 +16,8 @@ AVAILABLE: str
 CONNECTED: str
 NEEDS_PAIRING: str
 UNAVAILABLE: str
+PASSWORD: str
+PIN: str
 ENDPOINTS: str
 STATE: str
 SELECTION: str
@@ -53,6 +55,7 @@ class Endpoint:
     caps: dict[str, Any]
     resources: tuple[str, ...]
     error: str | None
+    asks: str | None
     def __init__(
         self,
         provider: Provider,
@@ -61,6 +64,7 @@ class Endpoint:
         state: str = ...,
         caps: dict[str, Any] | None = None,
         resources: Iterable[str] | None = None,
+        asks: str | None = None,
     ) -> None: ...
 
 class Provider:
@@ -77,6 +81,7 @@ class Provider:
         state: str = ...,
         caps: dict[str, Any] | None = None,
         resources: Iterable[str] | None = None,
+        asks: str | None = None,
     ) -> Endpoint:
         """An `Endpoint` of this provider, for `scan` and `poll` to return."""
     def scan(self) -> list[Endpoint]:
@@ -85,6 +90,8 @@ class Provider:
         """A new list of endpoints when something changed, or None."""
     def apply(self, endpoint: Endpoint, chosen: bool) -> None:
         """Start using *endpoint* when *chosen* is True, stop when False."""
+    def pair(self, endpoint: Endpoint, secret: str | None = None) -> None:
+        """Pair with or join *endpoint*; raise to refuse."""
     def stop(self) -> None:
         """Release whatever the provider holds."""
 
@@ -97,6 +104,7 @@ class Registry:
     def providers(self, kind: str | None = None) -> list[Provider]: ...
     def poll(self) -> bool: ...
     def refresh(self, kind: str | None = None) -> None: ...
+    def pair(self, endpoint_id: str, secret: str | None = None) -> Endpoint: ...
     def endpoints(self, kind: str) -> list[Endpoint]: ...
     def find(self, endpoint_id: str) -> Endpoint | None: ...
     def chosen(self, kind: str) -> list[str]: ...
@@ -118,6 +126,7 @@ def unregister(provider: Provider) -> None: ...
 def providers(kind: str | None = None) -> list[Provider]: ...
 def poll() -> bool: ...
 def refresh(kind: str | None = None) -> None: ...
+def pair(endpoint_id: str, secret: str | None = None) -> Endpoint: ...
 def endpoints(kind: str) -> list[Endpoint]: ...
 def find(endpoint_id: str) -> Endpoint | None: ...
 def chosen(kind: str) -> list[str]: ...

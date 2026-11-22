@@ -58,7 +58,11 @@ chat server an assistant app talks to). `add_kind("storage", MANY,
 Material Symbols icon, so a picker shows it like the built-in ones;
 `title(kind)` and `icon(kind)` read them back. A choice that would stop something using the same resource raises
 `Conflict` naming what it stops, so you can ask first and pass
-`confirm=True`. A program can `pin` a kind for itself while it runs. Set a
+`confirm=True`. An endpoint in the `NEEDS_PAIRING` state (a Wi-Fi network
+not yet joined, a Bluetooth device) says in `asks` whether pairing wants a
+`PASSWORD` or a `PIN`, and `pair("wlan:cafe", "its password")` hands that to
+its provider, which keeps it; `select` it after. A program can `pin` a kind
+for itself while it runs. Set a
 file with `set_store` and choices survive a restart.
 
 Install on a board with `mip`:
