@@ -1,3 +1,27 @@
+## v0.8.1.dev4 (2026-11-22)
+
+- icons: the scratch check runs on CircuitPython too (#756)
+- icons: Material Symbols at any size, from a font that stays in flash (#755)
+- usb.host.msc: a drive stays usable after a read fails part way (#753)
+- ttfio for CPython: TrueType glyphs over FreeType, as boards draw them (#754)
+- stack page: list every place each row runs, add hostnet (#751)
+- android.py: start on native Windows (#750)
+- docs: build the audiodev and displaydev endpoint pages again (#752)
+- endpointkit: a computer's audio, MIDI, Rokus, input and network as endpoints (#749)
+- docs: endpointkit on the stack page
+- endpointkit: one list of what a device connects to, one choice per kind (#748)
+- usb.host.audio: say when a hub has no bus time left for a stream (#747)
+- usb.core: the ESP32-P4 needs no full_speed=True behind a high-speed hub (#746)
+- usb.core: a read that times out keeps its transfer, so no packet is lost (#745)
+- ESP32-S31-Touch-LCD-4.3C: smoke-tested with USB host; full-speed devices work behind a hub (#744)
+- usb.host.video: a camera started again streams frames, not empty packets (#743)
+- usb.core: keyboards and MIDI behind a high-speed hub on the ESP32-S31 need no full_speed (#740)
+- usb.host.cdc: a read that times out keeps its transfer, so no packet is lost (#741)
+- USB docs: the ESP32-S31 as a USB host (#739)
+- usb.host.audio, usb.host.video: stream into _usbhost.Ring (#738)
+- ESP32-S31-Zero: the edge pads' ADC reads single-ended, 0 to 2 V (#737)
+- Waveshare ESP32-S31-Zero board package; microSD tested on the S31 Touch LCD 4.3C (#736)
+
 ## v0.8.1.dev3 (2026-11-20)
 
 - audiodev: a paused board output pauses I2SOut, so starved() doesn't count the pause (#734)
