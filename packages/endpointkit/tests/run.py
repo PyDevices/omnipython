@@ -213,6 +213,30 @@ def t_new_kinds_and_unregister():
     check(raises(ValueError, r.register, FakeProvider("net", "wlan")) is not None, "provider names are unique")
 
 
+def t_titles_and_icons():
+    built_in = ["audio.out", "audio.in", "midi.in", "midi.out", "net", "cast.target",
+                "camera", "gamepad", "keys", "pointer", "assistant"]
+    check(all(k in endpointkit.KINDS and k in endpointkit.NAMES for k in built_in)
+          and endpointkit.kinds()[:len(built_in)] == built_in, "every built-in kind has a count, a title and its place")
+    check(endpointkit.title("audio.out") == "Audio out" and endpointkit.icon("audio.out") == "volume_up",
+          "a built-in kind's title and icon")
+    check(endpointkit.KINDS["assistant"] == endpointkit.ONE and endpointkit.title("assistant") == "Assistant",
+          "the assistant kind takes one")
+    check(endpointkit.title("nowhere") == "nowhere" and endpointkit.icon("nowhere") == endpointkit.OTHER_ICON,
+          "an unknown kind is its own name, with the other icon")
+    endpointkit.add_kind("test.named", endpointkit.MANY, "Named things", "hub")
+    check(endpointkit.title("test.named") == "Named things" and endpointkit.icon("test.named") == "hub",
+          "add_kind takes a title and an icon")
+    endpointkit.add_kind("test.named", endpointkit.MANY)
+    check(endpointkit.title("test.named") == "Named things", "adding it again keeps them")
+    endpointkit.add_kind("test.plain")
+    check(endpointkit.title("test.plain") == "test.plain" and endpointkit.icon("test.plain") == endpointkit.OTHER_ICON,
+          "a kind added bare is its own name")
+    order = endpointkit.kinds()
+    check(order[:3] == ["audio.out", "audio.in", "midi.in"] and order.index("test.named") < order.index("test.plain"),
+          "kinds() lists the built-in kinds first, then the rest as added: %r" % (order,))
+
+
 def t_module_registry():
     endpointkit.add_kind("test.kind")
     p = endpointkit.register(FakeProvider("test.kind", "modfake", [("x", "X")]))

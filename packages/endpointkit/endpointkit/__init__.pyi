@@ -10,6 +10,8 @@ __version__: str
 ONE: int
 MANY: int
 KINDS: dict[str, int]
+NAMES: dict[str, tuple[str, str]]
+OTHER_ICON: str
 AVAILABLE: str
 CONNECTED: str
 NEEDS_PAIRING: str
@@ -22,8 +24,14 @@ ERROR: str
 _Ids = str | Iterable[str] | None
 _Callback = Callable[[str, str], object]
 
-def add_kind(name: str, count: int = ...) -> None:
-    """Make a new kind known, choosing `ONE` or `MANY` endpoints at a time."""
+def add_kind(name: str, count: int = ..., title: str | None = None, icon: str | None = None) -> None:
+    """Make a new kind known, choosing `ONE` or `MANY` endpoints at a time, with what it's called and its icon."""
+def kinds() -> list[str]:
+    """Every kind known, in the order they became known."""
+def title(kind: str) -> str:
+    """What a person calls `kind`, or the kind's own name."""
+def icon(kind: str) -> str:
+    """`kind`'s icon, a Material Symbols name; `OTHER_ICON` when it has none."""
 
 class Conflict(Exception):
     """A choice would stop endpoints that are using the same resources."""

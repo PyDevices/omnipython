@@ -52,8 +52,12 @@ restart.
 import endpointkit
 import usb.core
 
-#: Kinds this module adds to endpointkit's: how many of each can be chosen.
-NEW_KINDS = {"storage": endpointkit.MANY, "serial": endpointkit.MANY}
+#: Kinds this module adds to endpointkit's: how many of each can be chosen, what
+#: a person calls them and their icon.
+NEW_KINDS = {
+    "storage": (endpointkit.MANY, "Storage", "sd_card"),
+    "serial": (endpointkit.MANY, "Serial ports", "usb"),
+}
 
 #: The kinds a USB device can serve, in the order `register` makes their providers.
 KINDS = ("audio.out", "audio.in", "midi.in", "midi.out", "keys", "pointer", "gamepad",
@@ -357,8 +361,8 @@ def register(registry=None, start=True, full_speed=False):
         raise OSError("this firmware has no USB host")
     if start and not usb.core.running():
         usb.core.start(full_speed=full_speed)
-    for name, count in NEW_KINDS.items():
-        endpointkit.add_kind(name, count)
+    for name, (count, title, icon) in NEW_KINDS.items():
+        endpointkit.add_kind(name, count, title, icon)
     reg = registry if registry is not None else endpointkit
     host = Host()
     made = [UsbProvider(kind, host, leader=(kind == KINDS[0])) for kind in KINDS]

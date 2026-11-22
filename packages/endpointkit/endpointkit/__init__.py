@@ -25,9 +25,11 @@ The five ideas
 --------------
 A **kind** names a role: ``audio.out``, ``audio.in``, ``midi.in``,
 ``midi.out``, ``net``, ``cast.target``, ``camera``, ``gamepad``, ``keys``,
-``pointer``. Each says whether one endpoint is chosen at a time (a camera, a
+``pointer``, ``assistant``. Each says whether one endpoint is chosen at a time (a camera, a
 cast target, the default network) or many (MIDI inputs merge, audio can fan
-out). `add_kind` adds another without changing anything here.
+out), and what a person calls it, with an icon, for a picker or a status bar
+to show (`title`, `icon`). `add_kind` adds another without changing anything
+here.
 
 A **provider** is one transport for one kind: I2S, USB audio or Bluetooth
 for ``audio.out``. The library that owns the transport registers it, so this
@@ -67,7 +69,7 @@ try:
 except ImportError:
     os = None
 
-__version__ = "0.0.1"
+__version__ = "0.0.2"
 
 #: One endpoint of the kind is chosen at a time.
 ONE = 1
@@ -86,7 +88,33 @@ KINDS = {
     "gamepad": MANY,
     "keys": MANY,
     "pointer": MANY,
+    "assistant": ONE,
 }
+
+#: What a person calls each kind, and its icon: a Material Symbols name, which
+#: the ``icons`` package draws. `add_kind` adds to it.
+NAMES = {
+    "audio.out": ("Audio out", "volume_up"),
+    "audio.in": ("Audio in", "mic"),
+    "midi.in": ("MIDI in", "piano"),
+    "midi.out": ("MIDI out", "music_note"),
+    "net": ("Network", "wifi"),
+    "cast.target": ("Cast to", "cast"),
+    "camera": ("Camera", "photo_camera"),
+    "gamepad": ("Gamepads", "sports_esports"),
+    "keys": ("Keyboards", "keyboard"),
+    "pointer": ("Pointers", "mouse"),
+    "assistant": ("Assistant", "smart_toy"),
+}
+#: The icon of a kind added with none.
+OTHER_ICON = "cable"
+
+# The kinds in the order they became known: a picker lists them this way.
+# Written out, because a MicroPython dict keeps no order.
+_ORDER = [
+    "audio.out", "audio.in", "midi.in", "midi.out", "net", "cast.target",
+    "camera", "gamepad", "keys", "pointer", "assistant",
+]
 
 AVAILABLE = "available"
 CONNECTED = "connected"
@@ -103,10 +131,13 @@ SELECTION = "selection"
 ERROR = "error"
 
 
-def add_kind(name, count=ONE):
+def add_kind(name, count=ONE, title=None, icon=None):
     """Make a new kind known, choosing `ONE` or `MANY` endpoints at a time.
 
-    Adding a kind that exists with the same count does nothing.
+    *title* is what a person calls it ("Storage"), and *icon* a Material
+    Symbols name ("sd_card"); a picker shows the kind's name and `OTHER_ICON`
+    without them. Adding a kind that exists with the same count changes
+    nothing but a title or icon given.
 
     Raises:
         ValueError: the kind exists with the other count.
@@ -114,6 +145,25 @@ def add_kind(name, count=ONE):
     if name in KINDS and KINDS[name] != count:
         raise ValueError("kind %r already chooses %s" % (name, "one" if KINDS[name] == ONE else "many"))
     KINDS[name] = count
+    if name not in _ORDER:
+        _ORDER.append(name)
+    old = NAMES.get(name, (name, OTHER_ICON))
+    NAMES[name] = (title or old[0], icon or old[1])
+
+
+def kinds():
+    """Every kind known, in the order they became known: the built-in ones first."""
+    return list(_ORDER)
+
+
+def title(kind):
+    """What a person calls *kind*: "Audio out" for ``audio.out``, or the kind's own name."""
+    return NAMES.get(kind, (kind, OTHER_ICON))[0]
+
+
+def icon(kind):
+    """*kind*'s icon, a Material Symbols name; `OTHER_ICON` when it has none."""
+    return NAMES.get(kind, (kind, OTHER_ICON))[1]
 
 
 class Conflict(Exception):
