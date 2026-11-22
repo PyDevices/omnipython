@@ -87,6 +87,26 @@ class Drive:
         cbw = struct.pack("<IIIBBB", _CBW, self._tag, length, flags, self.lun, len(cb)) + cb + bytes(16 - len(cb))
         self.dev.write(self._out, cbw, self.timeout)
         try:
+            self._data_and_status(data_in, data_out, length)
+        except usb.core.USBError:
+            # The drive is still in the middle of this command (a read that
+            # timed out, or one the host had no memory for), so the next
+            # command would be out of step with it. Reset it first.
+            try:
+                self._reset()
+            except usb.core.USBError:
+                pass
+            raise
+        sig, tag, _, status = struct.unpack("<IIIB", self._csw)
+        if sig != _CSW or tag != self._tag:
+            self._reset()
+            return 2
+        if status == 2:
+            self._reset()
+        return status
+
+    def _data_and_status(self, data_in, data_out, length):
+        try:
             if data_in is not None and length:
                 # One transfer: it ends full, or early on a short packet.
                 self.dev.read(self._in, data_in, self.timeout)
@@ -104,13 +124,6 @@ class Drive:
                 raise
             self.dev.ctrl_transfer(0x02, 0x01, 0, self._in, None, 1000)
             self.dev.read(self._in, self._csw, self.timeout)
-        sig, tag, _, status = struct.unpack("<IIIB", self._csw)
-        if sig != _CSW or tag != self._tag:
-            self._reset()
-            return 2
-        if status == 2:
-            self._reset()
-        return status
 
     def _reset(self):
         # Bulk-Only Mass Storage Reset, then clear both halts (BOT 5.3.4).
