@@ -1,5 +1,5 @@
 # Material Symbols in the icons package's font. Made by tools/make_icons.py select:
-# iconkit's 129, then the most popular icons in UI actions, Actions, Audio&Video, Hardware, Android, Communicate, Privacy, Home, Images.
+# The names in the keep list, then the most popular icons in UI actions, Actions, Audio&Video, Hardware, Android, Communicate, Privacy, Home, Images.
 123
 abc
 accessibility
@@ -50,6 +50,7 @@ assistant_direction
 assistant_navigation
 assured_workload
 audio_file
+auto_awesome
 auto_stories
 autorenew
 backspace
@@ -91,6 +92,7 @@ camera
 camera_outdoor
 cancel
 cast
+cast_connected
 category
 celebration
 cell_tower
@@ -201,6 +203,7 @@ flash_on
 flutter_dash
 folder
 folder_open
+footprint
 forum
 forward
 forward_to_inbox
@@ -253,6 +256,7 @@ keyboard_double_arrow_left
 keyboard_double_arrow_right
 keyboard_double_arrow_up
 keyboard_return
+keyboard_voice
 label
 label_important
 lan
@@ -267,6 +271,7 @@ library_books
 library_music
 light_mode
 lightbulb
+linear_scale
 link
 link_off
 live_help
@@ -277,6 +282,8 @@ lock_reset
 login
 logout
 looks_one
+loop
+lyrics
 mail
 manage_accounts
 manage_history
@@ -290,6 +297,7 @@ memory
 menu
 menu_open
 mic
+mic_external_on
 mic_off
 minimize
 mode_comment
@@ -302,6 +310,7 @@ mouse
 move_down
 move_up
 movie
+music_cast
 music_note
 nature
 network_intelligence
@@ -346,6 +355,7 @@ play_circle
 play_pause
 playlist_add
 playlist_add_check
+playlist_play
 podcasts
 point_of_sale
 policy
@@ -369,6 +379,7 @@ redo
 refresh
 remove
 repeat
+repeat_one
 replay
 reply
 report
@@ -398,6 +409,7 @@ settings
 settings_accessibility
 settings_applications
 settings_backup_restore
+settings_input_component
 settings_remote
 share
 shield
@@ -411,10 +423,13 @@ skip_previous
 slideshow
 smart_display
 smart_toy
+smartphone
 sms
 sort
 sort_by_alpha
 sound_detection_dog_barking
+sound_sampler
+spatial_audio
 speaker
 speaker_notes
 speed
@@ -425,6 +440,7 @@ star
 star_half
 stars
 start
+steps
 stop
 stop_circle
 storage
@@ -454,6 +470,7 @@ task_alt
 terminal
 thermostat
 timelapse
+timeline
 timer
 today
 toggle_off
@@ -475,11 +492,13 @@ upload_file
 usb
 verified
 verified_user
+vibration
 video_call
 video_camera_front
 video_library
 videocam
 view_in_ar
+view_module
 view_timeline
 visibility
 visibility_off
@@ -490,6 +509,7 @@ volume_up
 vpn_key
 warning
 watch
+waves
 wb_sunny
 web
 web_asset
