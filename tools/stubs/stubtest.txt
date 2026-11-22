@@ -55,6 +55,7 @@ displaydev.sdldisplay
 displaydev.workerdisplay
 endpointkit
 endpointkit.fake
+espnowpeers
 events
 frame_recorder
 hostnet

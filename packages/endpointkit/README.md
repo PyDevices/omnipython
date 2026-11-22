@@ -54,6 +54,10 @@ On a computer, these register the real ones:
 On a board with Wi-Fi, `import wifinet; wifinet.register()` lists the
 networks in range under `net`, and a picker joins them, asking for a new
 network's password ([Wi-Fi guide](../../docs/guides/wifi.md#join-from-a-picker)).
+Boards that each run `import espnowpeers; espnowpeers.register()` find one
+another over ESP-NOW under a new kind, `espnow.peer`, and
+`espnowpeers.send` and `espnowpeers.recv` talk to the ones chosen
+([espnowpeers](../../lib/espnowpeers.py)).
 
 The kinds are `audio.out`, `audio.in`, `midi.in`, `midi.out`, `net`,
 `cast.target`, `camera`, `gamepad`, `keys`, `pointer` and `assistant` (the
