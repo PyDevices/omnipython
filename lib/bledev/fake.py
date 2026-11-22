@@ -325,13 +325,16 @@ class FakeBLE(BLE):
             while True:
                 for advert in self._air.adverts:
                     if advert.address == device.address and advert.connectable:
+                        # Taken off the air as it's found: one advertisement
+                        # takes one connection, and a second central keeps
+                        # waiting for the next, as on a radio.
+                        self._air.adverts.remove(advert)
                         return advert
                 await sleep_ms(SCAN_TICK_MS)
 
         advert = await wait_ms(attempt(), timeout_ms, "connect to {}".format(device.address))
         link = _Link(self, advert.ble, device)
         advert.connection = link.peripheral
-        self._air.adverts.remove(advert)
         advert.event.set()
         return link.central
 
