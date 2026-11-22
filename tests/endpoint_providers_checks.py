@@ -264,6 +264,107 @@ def t_net():
     del net
 
 
+class FakeStation:
+    """wifi_manager's radio: networks in range, the one it's on, and joins
+    that work with the right password ("wrong password" otherwise)."""
+
+    def __init__(self, seen, passwords, on=None):
+        self.seen = seen
+        self.passwords = passwords
+        self.on = on
+        self.joins = []
+        self.surveys = 0
+
+    def survey(self):
+        self.surveys += 1
+        return dict(self.seen)
+
+    def ssid(self):
+        return self.on
+
+    def ip(self):
+        return "10.0.0.7" if self.on else None
+
+    def join(self, ssid, password, timeout):
+        self.joins.append(ssid)
+        if ssid not in self.seen:
+            return "network not found"
+        if self.passwords.get(ssid, "") != password:
+            return "wrong password"
+        self.on = ssid
+        return None
+
+
+def t_wifi():
+    import wifi_manager
+    import wifinet
+
+    store = [{"ssid": "Home", "password": "homepw"}]
+    saved = (wifi_manager._known, wifi_manager._remember)
+    wifi_manager._known = lambda module="secrets": list(store)
+
+    def remember(ssid, password, hidden=False):
+        store[:] = [n for n in store if n["ssid"] != ssid]
+        store.insert(0, {"ssid": ssid, "password": password})
+
+    wifi_manager._remember = remember
+    try:
+        seen = {"Home": (-50, True), "Cafe": (-70, True), "Library": (-60, False), "Office": (-40, True)}
+        radio = FakeStation(seen, {"Home": "homepw", "Cafe": "espresso", "Office": "officepw"}, on="Home")
+        r = Registry()
+        wifinet._provider[:] = []
+        rescan, wifinet.RESCAN_MS = wifinet.RESCAN_MS, 0
+        wifinet.register(r, radio)
+        wifinet.RESCAN_MS = rescan
+        check(r.selection("net") == ["wifi:Home"], "registering adopts the network the board is on")
+        check(radio.surveys == 0, "registering doesn't scan: it holds the interpreter")
+        check(ids(r.endpoints("net")) == ["wifi:Home"], "before a scan only the joined network shows")
+        r.poll()
+        check(radio.surveys == 1, "the first poll after a scan was asked for scans")
+        check(ids(r.endpoints("net")) == ["wifi:Office", "wifi:Home", "wifi:Library", "wifi:Cafe"], "networks list strongest first")
+        states = dict((ep.local_id, ep.state) for ep in r.endpoints("net"))
+        check(states["Home"] == endpointkit.CONNECTED, "the joined network is connected")
+        check(states["Library"] == endpointkit.AVAILABLE, "an open network needs no password")
+        check(states["Cafe"] == endpointkit.NEEDS_PAIRING and r.find("wifi:Cafe").asks == endpointkit.PASSWORD, "a new secured network asks for its password")
+        check(r.find("wifi:Home").caps["address"] == "10.0.0.7", "the joined network carries the board's address")
+        r.poll()
+        check(radio.surveys == 1, "polling doesn't scan again until asked")
+        try:
+            r.pair("wifi:Cafe", "latte")
+            check(False, "a wrong password is refused")
+        except ValueError as exc:
+            check(str(exc) == "Wrong password for Cafe", "the refusal says the password was wrong: %s" % exc)
+        check(r.find("wifi:Cafe").state == endpointkit.NEEDS_PAIRING and "Cafe" not in [n["ssid"] for n in store], "a failed join remembers nothing")
+        ep = r.pair("wifi:Cafe", "espresso")
+        check(ep.state == endpointkit.CONNECTED, "the right password joins")
+        check(store[0] == {"ssid": "Cafe", "password": "espresso"}, "a joined network is remembered for the next boot")
+        check(r.find("wifi:Home").state == endpointkit.AVAILABLE, "the network it left is still known")
+        r.select("net", "wifi:Cafe")
+        check(r.find("wifi:Cafe").error is None and radio.joins[-1] == "Cafe", "choosing the network it's on joins nothing more")
+        net = r.providers("net")[0]
+        net.rescan_ms = 60000
+        r.poll()  # the scan pair() asked for
+        r.select("net", "wifi:Home")
+        check(radio.on == "Home" and r.find("wifi:Home").error is None, "choosing a known network joins it with its saved password")
+        r.poll()
+        check(r.find("wifi:Home").state == endpointkit.CONNECTED, "the next poll shows the network it joined, without waiting rescan_ms")
+        net.rescan_ms = 0
+        r.select("net", "wifi:Office")
+        check(radio.on == "Home" and "join it first" in (r.find("wifi:Office").error or ""), "choosing an unknown secured network is refused")
+        r.select("net", "wifi:Library")
+        check(radio.on == "Library", "choosing an open network joins it")
+        radio.on = None
+        r.poll()
+        check(all(ep.state != endpointkit.CONNECTED for ep in r.endpoints("net")), "a dropped link shows within a poll")
+        r.refresh("net")
+        del seen["Cafe"]
+        r.poll()
+        check("wifi:Cafe" not in ids(r.endpoints("net")), "a scan asked for by refresh drops networks out of range")
+    finally:
+        wifi_manager._known, wifi_manager._remember = saved
+        wifinet._provider[:] = []
+
+
 # -- the real host ---------------------------------------------------------------
 
 

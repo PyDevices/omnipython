@@ -236,6 +236,35 @@ Remembered networks live here, with their passwords in plain text, as in
 
 It keeps 16 at most.
 
+## Join from a picker
+
+`wifinet` puts the networks in range under endpointkit's `net` kind, so a
+picker, such as appkit's, lists them and joins one when you tap it:
+
+```python
+import endpointkit
+import wifinet
+
+wifinet.register()
+endpointkit.refresh("net")   # ask for a scan
+endpointkit.poll()           # the scan runs here, for a second or two
+for ep in endpointkit.endpoints("net"):
+    print(ep.label, ep.state)
+endpointkit.pair("wifi:Cafe", "espresso")
+```
+
+The network the board is on is `connected`, and registering chooses it when
+nothing else is chosen. A network the board knows (from `secrets.py`,
+`settings.toml`, or a join before) is `available`, and choosing it joins it.
+A new secured network `needs pairing`: `pair()` with its password joins it,
+or raises `ValueError("Wrong password for Cafe")`. A network it joins is
+remembered with the others, so `connect()` joins it at the next boot.
+
+A scan only runs when something asks for one, because it holds the board.
+Between scans, each `endpointkit.poll()` notices within three seconds when
+the link drops or the board moves to another network. A join waits up to 20
+seconds (`JOIN_TIMEOUT_S`) for the network.
+
 ## Reference
 
 | Call | Does |

@@ -51,6 +51,10 @@ On a computer, these register the real ones:
 | `keys`, `pointer`, `gamepad` | `from displaydev import endpoints; endpoints.register()` |
 | `net` (reported, never changed) | `import hostnet; hostnet.register()` |
 
+On a board with Wi-Fi, `import wifinet; wifinet.register()` lists the
+networks in range under `net`, and a picker joins them, asking for a new
+network's password ([Wi-Fi guide](../../docs/guides/wifi.md#join-from-a-picker)).
+
 The kinds are `audio.out`, `audio.in`, `midi.in`, `midi.out`, `net`,
 `cast.target`, `camera`, `gamepad`, `keys`, `pointer` and `assistant` (the
 chat server an assistant app talks to). `add_kind("storage", MANY,
