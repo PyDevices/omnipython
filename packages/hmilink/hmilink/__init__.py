@@ -69,8 +69,9 @@ what is in them, so neither the device nor the panel knows which one
 carries it. One module per transport, as in ``midiports``: `hmilink.tcp`
 (TCP with newline framing; the same port also serves a page and speaks
 WebSocket to a browser), `hmilink.local` (in-process, for the
-device's own screen and for tests) and `hmilink.stream` (anything with
-``read``/``write``: a UART or USB CDC). A transport gives you a *link*
+device's own screen and for tests), `hmilink.stream` (anything with
+``read``/``write``: a UART or USB CDC, or a web page's port through
+`hmilink.web`) and `hmilink.ble` (Bluetooth LE). A transport gives you a *link*
 (``send(frame)``, ``recv()`` returning one frame or ``None``, ``close()``,
 ``closed``) or a *listener* (``accept()`` returning a link or ``None``).
 
