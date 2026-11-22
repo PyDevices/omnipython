@@ -1,4 +1,4 @@
-![The 500 built-in icons at 24 px](docs/icons-24.png)
+![The 520 built-in icons at 24 px](docs/icons-24.png)
 
 # icons
 
@@ -23,7 +23,7 @@ for y in range(0, h, 2):
 ```
 
 ```text
-500 icons; wifi is in
+520 icons; wifi is in
                     
                     
    .############.   
@@ -61,10 +61,11 @@ it with `icons.add(module)`.
 ## The font
 
 The built-in font is Material Symbols Outlined, filled, weight 400, at its
-20 px optical size, cut down to 500 icons: 79 KB of flash. The list is
+20 px optical size, cut down to 520 icons: 83 KB of flash. The list is
 [`icons/icons.txt`](icons/icons.txt), the everyday icons of a device's screen
 plus the most used ones in Google's UI, media, hardware and communication
-categories. Material Symbols is Google's, under the Apache License 2.0
+categories, and a few more for playback, casting, sound and input that apps
+on a board reach for. Material Symbols is Google's, under the Apache License 2.0
 ([LICENSE-ICONS](LICENSE-ICONS)).
 
 Frozen, the font costs no RAM. The first icon you draw makes ttfio's 8 KB

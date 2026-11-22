@@ -5,7 +5,7 @@
 
 ``mask("home", 20)`` gives the antialiased shape of an icon as 8-bit alpha,
 ``size * size`` bytes, drawn by `ttfio` from a cut-down Material Symbols font
-of 500 icons. Frozen into firmware, the font is read in place, so the icons
+of 520 icons. Frozen into firmware, the font is read in place, so the icons
 cost flash, not RAM; each mask you ask for is drawn once and kept in a small
 cache. Draw a mask with `icons.gfx` in pygraphics or `icons.lvgl` in LVGL.
 This module imports neither.

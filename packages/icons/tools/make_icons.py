@@ -72,7 +72,7 @@ def select(args):
             chosen.append(icon["name"])
     with open(args.out, "w") as f:
         f.write("# Material Symbols in the icons package's font. Made by tools/make_icons.py select:\n")
-        f.write("# iconkit's 129, then the most popular icons in %s.\n" % ", ".join(CATEGORIES))
+        f.write("# The names in the keep list, then the most popular icons in %s.\n" % ", ".join(CATEGORIES))
         for name in sorted(chosen):
             f.write(name + "\n")
     print("%s: %d names" % (args.out, len(chosen)))

@@ -9,7 +9,7 @@
 
 Bars fixed before the first run:
 
-- 500 names, sorted, every one found by has(), and iconkit's 129 among them;
+- 520 names, sorted, every one found by has(), and iconkit's 129 among them;
 - every icon draws at 16, 20 and 24 px with ink in it, inside its square, and
   one that needs more scratch than the font starts with grows it and draws;
 - mask() keeps a drawn mask and gives the same bytes again; into a buffer it
@@ -53,7 +53,7 @@ def raises(exc, fn, *args):
 
 
 names = icons.names()
-check(len(names) == 500 and names == sorted(names), "500 names, sorted (got %d)" % len(names))
+check(len(names) == 520 and names == sorted(names), "520 names, sorted (got %d)" % len(names))
 check(all(icons.has(n) for n in names), "has() finds every name")
 check(all(n in names for n in ICONKIT), "iconkit's everyday icons are all here")
 
