@@ -60,6 +60,8 @@ frame_recorder
 hostnet
 iconkit
 iconkit.gfx
+icons
+icons.gfx
 jpegio
 keys
 mdns

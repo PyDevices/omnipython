@@ -1,0 +1,10 @@
+{
+  "urls": [
+    ["icons/__init__.py", "github:PyDevices/omnipython/packages/icons/icons/__init__.py"],
+    ["icons/_material.py", "github:PyDevices/omnipython/packages/icons/icons/_material.py"],
+    ["icons/gfx.py", "github:PyDevices/omnipython/packages/icons/icons/gfx.py"],
+    ["icons/lvgl.py", "github:PyDevices/omnipython/packages/icons/icons/lvgl.py"]
+  ],
+  "deps": [],
+  "version": "0.0.1"
+}

@@ -146,6 +146,10 @@ top-level = true
 top-level = true
 pypi-desktop = true
 
+[icons]
+top-level = true
+pypi-desktop = true
+
 [mp4mux]
 top-level = true
 
