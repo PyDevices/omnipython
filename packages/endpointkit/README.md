@@ -1,0 +1,59 @@
+# endpointkit
+
+One list of everything a device can connect to, by kind, and one choice per
+kind for the whole device: where audio goes, which MIDI ports are in, which
+network carries traffic, which camera, which cast target. It runs on
+MicroPython and desktop Python and draws nothing, so a script can list and
+pick, and a picker on screen can sit on top.
+
+```python
+import endpointkit
+from endpointkit.fake import FakeProvider
+
+endpointkit.register(FakeProvider("audio.out", "i2s", [("0", "Headphone jack")], ("i2s.0",)))
+speaker = FakeProvider("audio.out", "a2dp", [("spk", "Speaker")], ("radio.bt",), delay=2)
+endpointkit.register(speaker)
+
+endpointkit.subscribe("audio.out", lambda event, kind: print(event, kind))
+endpointkit.select("audio.out", "a2dp:spk")  # chosen now, used when found
+
+while not endpointkit.selected("audio.out"):
+    endpointkit.poll()  # call this from a timer in a real program
+
+for ep in endpointkit.endpoints("audio.out"):
+    print(ep.id, ep.label, ep.state)
+print("playing on", speaker.started)
+```
+
+prints
+
+```text
+selection audio.out
+endpoints audio.out
+selection audio.out
+i2s:0 Headphone jack available
+a2dp:spk Speaker available
+playing on ['spk']
+```
+
+`FakeProvider` stands in for a transport with no hardware behind it. A real
+transport is a `Provider` subclass in the library that owns it: it says which
+kind it provides, which shared resources it takes (a radio, the USB port, an
+I2S bus), what it finds, and how to start and stop an endpoint.
+
+The kinds are `audio.out`, `audio.in`, `midi.in`, `midi.out`, `net`,
+`cast.target`, `camera`, `gamepad`, `keys` and `pointer`, and `add_kind`
+adds more. A choice that would stop something using the same resource raises
+`Conflict` naming what it stops, so you can ask first and pass
+`confirm=True`. A program can `pin` a kind for itself while it runs. Set a
+file with `set_store` and choices survive a restart.
+
+Install on a board with `mip`:
+
+```python
+import mip
+mip.install("github:PyDevices/omnipython/packages/endpointkit")
+```
+
+Run its checks from the repo root with `python packages/endpointkit/tests/run.py`
+or `micropython packages/endpointkit/tests/run.py`.

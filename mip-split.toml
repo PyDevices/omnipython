@@ -142,6 +142,10 @@ pypi-desktop = true
 [hmilink]
 top-level = true
 
+[endpointkit]
+top-level = true
+pypi-desktop = true
+
 [mp4mux]
 top-level = true
 

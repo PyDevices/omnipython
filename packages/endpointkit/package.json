@@ -1,0 +1,8 @@
+{
+  "urls": [
+    ["endpointkit/__init__.py", "github:PyDevices/omnipython/packages/endpointkit/endpointkit/__init__.py"],
+    ["endpointkit/fake.py", "github:PyDevices/omnipython/packages/endpointkit/endpointkit/fake.py"]
+  ],
+  "deps": [],
+  "version": "0.0.1"
+}
