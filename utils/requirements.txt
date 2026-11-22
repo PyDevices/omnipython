@@ -3,3 +3,4 @@
 zeroconf>=0.132  # mdns.py
 Pillow>=9  # jpegio.py, pngio.py and svgio.py, over Pillow on CPython
 resvg-py>=0.5  # svgio.py draws with resvg
+freetype-py>=2.3  # ttfio.py draws with FreeType, unhinted
