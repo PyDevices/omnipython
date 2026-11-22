@@ -11,6 +11,7 @@ class FakeProvider(endpointkit.Provider):
     """A provider that finds what it's told to."""
 
     fail: list[str]
+    secrets: dict[str, tuple[str, str]]
     started: list[str]
     log: list[tuple[str, str]]
     def __init__(
@@ -21,10 +22,12 @@ class FakeProvider(endpointkit.Provider):
         resources: Iterable[str] = (),
         delay: int = 0,
         fail: Iterable[str] = (),
+        secrets: dict[str, tuple[str, str]] | None = None,
     ) -> None: ...
     def scan(self) -> list[endpointkit.Endpoint]: ...
     def poll(self) -> list[endpointkit.Endpoint] | None: ...
     def apply(self, endpoint: endpointkit.Endpoint, chosen: bool) -> None: ...
+    def pair(self, endpoint: endpointkit.Endpoint, secret: str | None = None) -> None: ...
     def add(self, local_id: str, label: str, state: str = ...) -> None:
         """Find another endpoint."""
     def remove(self, local_id: str) -> None:

@@ -37,18 +37,22 @@ class FakeProvider(endpointkit.Provider):
         delay (int): how many polls pass before the endpoints are found, to
             stand in for a slow scan. 0 finds them at once.
         fail (tuple): local ids whose start raises, to try error paths.
+        secrets (dict): ``{local_id: (asks, secret)}`` for endpoints that
+            ask for a password or a PIN to pair; `pair` refuses any other.
+            An endpoint that needs pairing and isn't here pairs with nothing typed.
 
     Attributes:
         started (list): local ids started and not stopped, in order.
-        log (list): ``("start" or "stop", local_id)`` for every call.
+        log (list): ``("start", "stop" or "pair", local_id)`` for every call.
     """
 
-    def __init__(self, kind, name, found=(), resources=(), delay=0, fail=()):
+    def __init__(self, kind, name, found=(), resources=(), delay=0, fail=(), secrets=None):
         endpointkit.Provider.__init__(self, kind, name, resources)
         self._want = [self._entry(e) for e in found]
         self._delay = delay
         self._dirty = False
         self.fail = list(fail)
+        self.secrets = dict(secrets or {})
         self.started = []
         self.log = []
 
@@ -58,7 +62,10 @@ class FakeProvider(endpointkit.Provider):
         return [e[0], e[1], e[2] if len(e) > 2 else endpointkit.AVAILABLE]
 
     def _list(self):
-        return [self.endpoint(i, label, state) for i, label, state in self._want]
+        return [
+            self.endpoint(i, label, state, asks=self.secrets[i][0] if i in self.secrets else None)
+            for i, label, state in self._want
+        ]
 
     def scan(self):
         return [] if self._delay else self._list()
@@ -83,6 +90,13 @@ class FakeProvider(endpointkit.Provider):
             self.started.append(local)
         elif local in self.started:
             self.started.remove(local)
+
+    def pair(self, endpoint, secret=None):
+        local = endpoint.local_id
+        self.log.append(("pair", local))
+        if local in self.secrets and secret != self.secrets[local][1]:
+            raise ValueError("Wrong %s for %s" % (self.secrets[local][0], endpoint.label))
+        self.set_state(local, endpointkit.AVAILABLE)
 
     # -- changing what's found, reported on the next poll ------------------------
 
@@ -123,7 +137,8 @@ def bench(registry=None, delay=2):
         FakeProvider("midi.in", "blemidi", [("pad", "BLE pad controller")], (), delay),
         FakeProvider("midi.in", "uart", [("1", "MIDI DIN in")], ("uart.1",)),
         FakeProvider("midi.out", "uartout", [("1", "MIDI DIN out")], ("uart.1",)),
-        FakeProvider("net", "wlan", [("home", "Wi-Fi: home", cn)], ("radio.wifi",)),
+        FakeProvider("net", "wlan", [("home", "Wi-Fi: home", cn), ("cafe", "Wi-Fi: cafe", na)], ("radio.wifi",),
+                     secrets={"cafe": (endpointkit.PASSWORD, "espresso")}),
         FakeProvider("net", "eth", [("0", "Ethernet")], ("eth.0",)),
         FakeProvider("net", "usbnet", [("phone", "Phone tethering")], ("usb.host",)),
         FakeProvider("net", "btpan", [("phone", "Phone over Bluetooth", na)], ("radio.bt",), delay),
