@@ -117,3 +117,4 @@
 "https://raw.githubusercontent.com/PyDevices/omnipython/main/utils/uwin32.py" = "/lib/uwin32.py"
 "https://raw.githubusercontent.com/PyDevices/omnipython/main/lib/wifi.py" = "/lib/wifi.py"
 "https://raw.githubusercontent.com/PyDevices/omnipython/main/lib/wifi_manager.py" = "/lib/wifi_manager.py"
+"https://raw.githubusercontent.com/PyDevices/omnipython/main/lib/wifinet.py" = "/lib/wifinet.py"
