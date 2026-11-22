@@ -562,6 +562,27 @@ class _MPRadio:
                 best[ssid] = rec[3]
         return best
 
+    def survey(self):
+        """``{ssid: (best rssi, secured)}`` for every network in range."""
+        best = {}
+        for rec in self.sta.scan():
+            try:
+                ssid = rec[0].decode()
+            except UnicodeError:
+                continue
+            if ssid and (ssid not in best or rec[3] > best[ssid][0]):
+                best[ssid] = (rec[3], rec[4] != 0)
+        return best
+
+    def ssid(self):
+        """The network the station is on, or None."""
+        if not self.ip():
+            return None
+        try:
+            return self.sta.config("ssid")
+        except (OSError, ValueError):
+            return self.sta.config("essid")
+
     def start(self, ssid, password):
         """Begin joining and return; ``ip()`` says when it has."""
         try:
@@ -665,6 +686,22 @@ class _CPRadio:
         finally:
             self.r.stop_scanning_networks()
         return best
+
+    def survey(self):
+        import wifi
+
+        best = {}
+        try:
+            for n in self.r.start_scanning_networks():
+                if n.ssid and (n.ssid not in best or n.rssi > best[n.ssid][0]):
+                    best[n.ssid] = (n.rssi, wifi.AuthMode.OPEN not in n.authmode)
+        finally:
+            self.r.stop_scanning_networks()
+        return best
+
+    def ssid(self):
+        info = self.r.ap_info if self.ip() else None
+        return info.ssid if info is not None else None
 
     def join(self, ssid, password, timeout):
         # A join with no channel scans all of them (about 5 s) before it

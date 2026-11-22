@@ -153,3 +153,4 @@ svgio
 ttfio
 usdl2
 wifi_manager
+wifinet
