@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>hmilink web gate</title>
+  <script>
+    window.gateLog = (line) => {
+      document.getElementById("log").textContent += line + "\n";
+      console.log(line);
+    };
+  </script>
+  <script src="./mock_ports.js"></script>
+</head>
+<body>
+  <button id="go">Connect</button>
+  <pre id="log"></pre>
+  <script type="module" src="./page.js"></script>
+</body>
+</html>
