@@ -37,15 +37,19 @@ ALLOWED = {
     ROOT / "packages" / "usb" / "usb-host-net" / "usb" / "host" / "net.py",
 }
 
+# Packages outside packages/usb that a USB package may depend on:
+# usb-host-endpoints lists its devices through endpointkit.
+OUTSIDE = {"github:PyDevices/omnipython/packages/endpointkit"}
+
 _IMPORT = re.compile(r"^\s*(?:import\s+_usbhost|from\s+_usbhost\s+import)", re.M)
 
 
 class PackageFileTests(unittest.TestCase):
-    def test_the_fourteen_packages_are_here(self):
+    def test_the_fifteen_packages_are_here(self):
         self.assertEqual(
             [p.name for p in PACKAGES],
             ["usb-core", "usb-device-audio", "usb-device-msc", "usb-device-net", "usb-device-video", "usb-hid",
-             "usb-host-audio", "usb-host-cdc", "usb-host-dfu", "usb-host-hid", "usb-host-msc", "usb-host-mtp", "usb-host-net",
+             "usb-host-audio", "usb-host-cdc", "usb-host-dfu", "usb-host-endpoints", "usb-host-hid", "usb-host-msc", "usb-host-mtp", "usb-host-net",
              "usb-host-video"])
 
     def test_every_url_names_a_file_here_and_every_file_is_installed(self):
@@ -68,7 +72,7 @@ class PackageFileTests(unittest.TestCase):
         for pkg in PACKAGES:
             spec = json.loads((pkg / "package.json").read_text())
             for dep, _ref in spec.get("deps", []):
-                if dep.startswith("github:"):
+                if dep.startswith("github:") and dep not in OUTSIDE:
                     with self.subTest(pkg=pkg.name, dep=dep):
                         self.assertTrue(dep.startswith(PREFIX), dep)
                         self.assertIn(dep[len(PREFIX):], names)
