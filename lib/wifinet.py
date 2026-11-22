@@ -104,6 +104,7 @@ class WifiNet(endpointkit.Provider):
         if reason is not None:
             raise error("Couldn't join %s: %s" % (ssid, reason))
         wifi_manager._remember(ssid, password)
+        self._last = _ticks_ms() - self.rescan_ms  # the next poll shows it joined
 
     def _password(self, ssid):
         """The password a known network was joined with; "" for an open one, None when unknown."""

@@ -341,8 +341,14 @@ def t_wifi():
         check(r.find("wifi:Home").state == endpointkit.AVAILABLE, "the network it left is still known")
         r.select("net", "wifi:Cafe")
         check(r.find("wifi:Cafe").error is None and radio.joins[-1] == "Cafe", "choosing the network it's on joins nothing more")
+        net = r.providers("net")[0]
+        net.rescan_ms = 60000
+        r.poll()  # the scan pair() asked for
         r.select("net", "wifi:Home")
         check(radio.on == "Home" and r.find("wifi:Home").error is None, "choosing a known network joins it with its saved password")
+        r.poll()
+        check(r.find("wifi:Home").state == endpointkit.CONNECTED, "the next poll shows the network it joined, without waiting rescan_ms")
+        net.rescan_ms = 0
         r.select("net", "wifi:Office")
         check(radio.on == "Home" and "join it first" in (r.find("wifi:Office").error or ""), "choosing an unknown secured network is refused")
         r.select("net", "wifi:Library")
