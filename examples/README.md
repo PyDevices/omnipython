@@ -31,7 +31,11 @@ Each one says in its docstring what it needs and where it has been run.
 | [bledev_peripheral_simpletest.py](bledev_peripheral_simpletest.py) | Serving a Bluetooth LE counter for a phone or a board to read |
 | [boarddev_simpletest.py](boarddev_simpletest.py) | What hardware a board offers, and a setting made before it starts |
 | [displaydev_simpletest.py](displaydev_simpletest.py) | Boxes and a label drawn straight on the display |
+| [endpointkit_simpletest.py](endpointkit_simpletest.py) | Listing what a device can connect to, and a choice that would stop another one |
+| [endpointkit_desktop.py](endpointkit_desktop.py) | Your computer's sound devices, MIDI ports and network, as they come and go |
 | [events_simpletest.py](events_simpletest.py) | Input events, told apart by type, and one of your own |
+| [icons_simpletest.py](icons_simpletest.py) | A Material Symbols icon drawn at two sizes and printed as text |
+| [icons_display.py](icons_display.py) | A grid of icons with their names on the display |
 | [keys_simpletest.py](keys_simpletest.py) | Key names, a Ctrl+S shortcut, and a USB keyboard's codes |
 | [multimer_simpletest.py](multimer_simpletest.py) | Two timers at once, stopped by a third |
 | [usb_device_audio_headset.py](usb_device_audio_headset.py) | Being a USB headset that plays back what the computer plays to it |
@@ -40,6 +44,7 @@ Each one says in its docstring what it needs and where it has been run.
 | [usb_device_midi_simpletest.py](usb_device_midi_simpletest.py) | Being a USB MIDI device that plays a scale and shows what it hears |
 | [usb_device_net_simpletest.py](usb_device_net_simpletest.py) | A network link to your computer over the USB cable |
 | [usb_device_video_simpletest.py](usb_device_video_simpletest.py) | Being a USB webcam that shows a moving grey ramp |
+| [usb_host_endpoints.py](usb_host_endpoints.py) | What's plugged into the board's USB host port, by kind, as you plug and unplug |
 | [usb_hid_absolute_pointer.py](usb_hid_absolute_pointer.py) | Moving your computer's pointer to the corners of the screen and around a circle |
 | [usb_hid_gamepad.py](usb_hid_gamepad.py) | Being a USB gamepad that works through its buttons, hat and axes |
 | [vtterm_simpletest.py](vtterm_simpletest.py) | The board's REPL on its display, in color |
