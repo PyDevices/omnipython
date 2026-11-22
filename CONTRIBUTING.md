@@ -9,7 +9,7 @@
 | [lib/](lib/) | The libraries that make up the `omnipython` package (`displaydev`, `audiodev`, `appdev`, `multimer`, `bledev` and the rest). |
 | [utils/](utils/) | Desktop helpers that ship in `omnipython-desktop` (`mdns`, `micropython`, `usdl2`, `uwin32` and more). |
 | `packages/usb/usb-core/`, `usb-host-*/`, `usb-device-*/`, `packages/usb/usb-hid/` | The USB packages ([docs/guides/usb.md](docs/guides/usb.md)). |
-| [packages/palettes/](packages/palettes/), [packages/pdwidgets/](packages/pdwidgets/), [packages/iconkit/](packages/iconkit/), [packages/midiports/](packages/midiports/), [packages/vtterm/](packages/vtterm/), [packages/castdisplay/](packages/castdisplay/) | Packages that publish on their own, each with its own README. |
+| [packages/palettes/](packages/palettes/), [packages/pdwidgets/](packages/pdwidgets/), [packages/iconkit/](packages/iconkit/), [packages/midiports/](packages/midiports/), [packages/endpointkit/](packages/endpointkit/), [packages/vtterm/](packages/vtterm/), [packages/castdisplay/](packages/castdisplay/) | Packages that publish on their own, each with its own README. |
 | [docs/](docs/) | The documentation site's source. |
 | [tests/](tests/) | Unit tests for the libraries. |
 
