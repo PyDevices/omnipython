@@ -69,7 +69,7 @@ and Android.
 - [`iconkit`](https://github.com/PyDevices/omnipython/blob/main/packages/iconkit/docs/reference/icons.md): Draw Material icons in any colour, in LVGL or with pygraphics; frozen in, they cost no RAM.\
   Get it: `mip iconkit`, `pip omnipython-iconkit`, firmware build. Runs on: MP, CP, Desktop, Web.
 - [`icons`](https://github.com/PyDevices/omnipython/tree/main/packages/icons): Draw Material Symbols icons at any size from a font that stays in flash.\
-  Get it: firmware build, from source. Runs on: MP, Desktop.
+  Get it: `mip icons`, `pip omnipython-desktop`, firmware build. Runs on: MP, Desktop.
 - [`pdwidgets`](https://github.com/PyDevices/omnipython/tree/main/packages/pdwidgets): See a whole UI toolkit written in Python, with no C, on the OmniPython core: labels, buttons and other small widgets, as a demonstration. For an interface you ship, use LVGL.\
   Get it: `mip pdwidgets`, `pip omnipython-pdwidgets`. Runs on: MP, CP, Desktop, Web.
 - [`lvgl`](https://github.com/PyDevices/omnipython-lvgl/blob/main/README.md): Use LVGL from Python with the same `import lvgl as lv` everywhere.\
@@ -213,7 +213,7 @@ and Android.
 - [`medialink`](https://github.com/PyDevices/omnipython/blob/main/docs/guides/medialink.md): Send live sound and pictures between boards and computers.\
   Get it: `mip medialink`, `pip omnipython`, firmware build. Runs on: MP, CP, Desktop.
 - [`endpointkit`](https://github.com/PyDevices/omnipython/blob/main/packages/endpointkit/README.md): List what a device can connect to, by kind, and choose where audio, MIDI, network, camera and casting go.\
-  Get it: from source. Runs on: MP, Desktop.
+  Get it: `mip endpointkit`, `pip omnipython-desktop`. Runs on: MP, Desktop.
 - [`hostnet`](https://github.com/PyDevices/omnipython/blob/main/utils/hostnet.py): Show a computer's network link as an `endpointkit` endpoint, reported and never changed.\
   Get it: `pip omnipython-desktop`. Runs on: Desktop.
 - [`hmilink`](https://github.com/PyDevices/omnipython/blob/main/packages/hmilink/README.md): Use any screen as a device's front panel, over Wi-Fi, a UART, OSC or in-process.\
