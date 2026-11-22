@@ -16,7 +16,7 @@ from omnipython_docs import configure
 globals().update(configure(
     "omnipython", __file__,
     repo="PyDevices/omnipython", edit_path="docs",
-    source_dirs=["../lib", "../utils", "../packages/vtterm"],
+    source_dirs=["../lib", "../utils", "../packages/vtterm", "../packages/endpointkit"],
     api_packages=["displaydev", "audiodev", "appdev", "multimer", "bledev", "vtterm"],
     mock_imports=["bleak", "_bleio", "bluetooth", "IPython", "pygame", "js",
                   "pyodide", "_wasm_bridge", "uwin32", "aioble", "PIL", "lvgl",
