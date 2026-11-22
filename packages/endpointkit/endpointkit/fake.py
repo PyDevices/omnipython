@@ -113,8 +113,8 @@ def bench(registry=None, delay=2):
     polls to find their endpoints.
     """
     registry = registry or endpointkit.registry
-    endpointkit.add_kind("espnow.peer", endpointkit.MANY)
-    endpointkit.add_kind("thread.net", endpointkit.ONE)
+    endpointkit.add_kind("espnow.peer", endpointkit.MANY, "ESP-NOW peers", "hub")
+    endpointkit.add_kind("thread.net", endpointkit.ONE, "Thread", "lan")
     na, cn = endpointkit.NEEDS_PAIRING, endpointkit.CONNECTED
     fakes = [
         FakeProvider("audio.out", "i2s", [("0", "Headphone jack")], ("i2s.0",)),

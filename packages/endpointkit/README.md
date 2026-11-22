@@ -52,8 +52,11 @@ On a computer, these register the real ones:
 | `net` (reported, never changed) | `import hostnet; hostnet.register()` |
 
 The kinds are `audio.out`, `audio.in`, `midi.in`, `midi.out`, `net`,
-`cast.target`, `camera`, `gamepad`, `keys` and `pointer`, and `add_kind`
-adds more. A choice that would stop something using the same resource raises
+`cast.target`, `camera`, `gamepad`, `keys`, `pointer` and `assistant` (the
+chat server an assistant app talks to). `add_kind("storage", MANY,
+"Storage", "sd_card")` adds another, with what a person calls it and its
+Material Symbols icon, so a picker shows it like the built-in ones;
+`title(kind)` and `icon(kind)` read them back. A choice that would stop something using the same resource raises
 `Conflict` naming what it stops, so you can ask first and pass
 `confirm=True`. A program can `pin` a kind for itself while it runs. Set a
 file with `set_store` and choices survive a restart.
