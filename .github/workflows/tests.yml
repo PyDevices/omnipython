@@ -27,6 +27,7 @@ on:
       - 'packages/vtterm/**'
       - 'packages/castdisplay/**'
       - 'packages/endpointkit/**'
+      - 'packages/icons/**'
       - 'packages/midiports/**'
       # The interpreters' pins and recipe, which tests/test_release_interpreters.py runs.
       - 'scripts/release_interpreters.sh'
@@ -57,6 +58,7 @@ on:
       - 'packages/vtterm/**'
       - 'packages/castdisplay/**'
       - 'packages/endpointkit/**'
+      - 'packages/icons/**'
       - 'packages/midiports/**'
       # The interpreters' pins and recipe, which tests/test_release_interpreters.py runs.
       - 'scripts/release_interpreters.sh'
