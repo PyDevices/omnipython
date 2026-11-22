@@ -645,6 +645,7 @@ _FFI_FUNCS = (
     ("SDL_JoystickOpen", "P", "i"),
     ("SDL_JoystickClose", "v", "P"),
     ("SDL_JoystickInstanceID", "i", "P"),
+    ("_raw_SDL_JoystickName", "s", "P"),
     ("_raw_SDL_GetKeyName", "s", "i"),
     ("_lib_SDL_PumpEvents", "v", ""),
     ("_lib_SDL_PollEvent", "i", "P"),
@@ -783,6 +784,7 @@ else:
         ("SDL_JoystickOpen", _v, (_i,)),
         ("SDL_JoystickClose", None, (_v,)),
         ("SDL_JoystickInstanceID", _i, (_v,)),
+        ("_raw_SDL_JoystickName", _c.c_char_p, (_v,)),
         ("_raw_SDL_GetKeyName", _c.c_char_p, (_i,)),
         ("_lib_SDL_PumpEvents", None, ()),
         ("_lib_SDL_PollEvent", _i, (_v,)),
@@ -889,9 +891,19 @@ _lib_SDL_RenderReadPixels = globals()["_lib_SDL_RenderReadPixels"]
 _lib_SDL_GetDisplayUsableBounds = globals()["_lib_SDL_GetDisplayUsableBounds"]
 _lib_SDL_GetDesktopDisplayMode = globals()["_lib_SDL_GetDesktopDisplayMode"]
 _raw_SDL_GetAudioDeviceName = globals()["_raw_SDL_GetAudioDeviceName"]
+_raw_SDL_JoystickName = globals()["_raw_SDL_JoystickName"]
 _lib_SDL_OpenAudioDevice = globals()["_lib_SDL_OpenAudioDevice"]
 _lib_SDL_QueueAudio = globals()["_lib_SDL_QueueAudio"]
 _lib_SDL_DequeueAudio = globals()["_lib_SDL_DequeueAudio"]
+
+
+def SDL_JoystickName(joystick):
+    name = _raw_SDL_JoystickName(joystick)
+    if name is None:
+        return None
+    if isinstance(name, bytes):
+        return name.decode("utf-8")
+    return name
 
 
 def SDL_GetAudioDeviceName(index, iscapture):

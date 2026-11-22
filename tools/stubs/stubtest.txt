@@ -9,6 +9,7 @@ audiodev.android_audio
 audiodev.auto
 audiodev.bytequeue
 audiodev.emulated_audio
+audiodev.endpoints
 audiodev.i2s_audio
 audiodev.pump
 audiodev.pwm_tone
@@ -46,13 +47,17 @@ displaydev
 displaydev.androidsdl
 displaydev.auto
 displaydev.busdisplay
+displaydev.endpoints
 displaydev.fbdisplay
 displaydev.jndisplay
 displaydev.pixeldisplay
 displaydev.sdldisplay
 displaydev.workerdisplay
+endpointkit
+endpointkit.fake
 events
 frame_recorder
+hostnet
 iconkit
 iconkit.gfx
 jpegio
@@ -70,6 +75,7 @@ medialink.voice
 medialink.wakeword
 midiports
 midiports.ble
+midiports.endpoints
 midiports.linux
 midiports.loopback
 midiports.uart

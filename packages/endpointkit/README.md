@@ -41,6 +41,16 @@ transport is a `Provider` subclass in the library that owns it: it says which
 kind it provides, which shared resources it takes (a radio, the USB port, an
 I2S bus), what it finds, and how to start and stop an endpoint.
 
+On a computer, these register the real ones:
+
+| Kind | Register with |
+|---|---|
+| `audio.out`, `audio.in` | `from audiodev import endpoints; endpoints.register()` |
+| `midi.in`, `midi.out` | `from midiports import endpoints; endpoints.register()` |
+| `cast.target` (Rokus) | `from castdisplay import endpoints; endpoints.register()` |
+| `keys`, `pointer`, `gamepad` | `from displaydev import endpoints; endpoints.register()` |
+| `net` (reported, never changed) | `import hostnet; hostnet.register()` |
+
 The kinds are `audio.out`, `audio.in`, `midi.in`, `midi.out`, `net`,
 `cast.target`, `camera`, `gamepad`, `keys` and `pointer`, and `add_kind`
 adds more. A choice that would stop something using the same resource raises

@@ -3,6 +3,7 @@
     ["castdisplay/__init__.py", "github:PyDevices/omnipython/packages/castdisplay/castdisplay/__init__.py"],
     ["castdisplay/cast_display.py", "github:PyDevices/omnipython/packages/castdisplay/castdisplay/cast_display.py"],
     ["castdisplay/castfast.py", "github:PyDevices/omnipython/packages/castdisplay/castdisplay/castfast.py"],
+    ["castdisplay/endpoints.py", "github:PyDevices/omnipython/packages/castdisplay/castdisplay/endpoints.py"],
     ["castdisplay/hls_display.py", "github:PyDevices/omnipython/packages/castdisplay/castdisplay/hls_display.py"],
     ["castdisplay/micecast.py", "github:PyDevices/omnipython/packages/castdisplay/castdisplay/micecast.py"],
     ["castdisplay/pycast.py", "github:PyDevices/omnipython/packages/castdisplay/castdisplay/pycast.py"],
