@@ -65,35 +65,35 @@ and Android.
 - [`vtterm`](https://github.com/PyDevices/omnipython/blob/main/docs/guides/vtterm.md): Turn a display into a color terminal, for the board's own REPL or another device's.\
   Get it: `mip vtterm`. Runs on: MP, CP, Desktop.
 - [`palettes`](https://github.com/PyDevices/omnipython/tree/main/packages/palettes): Turn a palette index into a color your display can show.\
-  Get it: `mip palettes`, `pip omnipython-palettes`, firmware build. Runs on: MP, CP, Desktop.
+  Get it: `mip palettes`, `pip omnipython-palettes`, firmware build. Runs on: MP, CP, Desktop, Web.
 - [`iconkit`](https://github.com/PyDevices/omnipython/blob/main/packages/iconkit/docs/reference/icons.md): Draw Material icons in any colour, in LVGL or with pygraphics; frozen in, they cost no RAM.\
-  Get it: `mip iconkit`, `pip omnipython-iconkit`, firmware build. Runs on: MP, CP, Desktop.
+  Get it: `mip iconkit`, `pip omnipython-iconkit`, firmware build. Runs on: MP, CP, Desktop, Web.
 - [`pdwidgets`](https://github.com/PyDevices/omnipython/tree/main/packages/pdwidgets): See a whole UI toolkit written in Python, with no C, on the OmniPython core: labels, buttons and other small widgets, as a demonstration. For an interface you ship, use LVGL.\
-  Get it: `mip pdwidgets`, `pip omnipython-pdwidgets`. Runs on: MP, CP, Desktop.
+  Get it: `mip pdwidgets`, `pip omnipython-pdwidgets`. Runs on: MP, CP, Desktop, Web.
 - [`lvgl`](https://github.com/PyDevices/omnipython-lvgl/blob/main/README.md): Use LVGL from Python with the same `import lvgl as lv` everywhere.\
   Get it: `pip omnipython-lvgl`, firmware build. Runs on: MP, CP, Desktop, Web, Android.
 - [`fs_driver`](https://github.com/PyDevices/omnipython-lvgl/blob/main/python/fs_driver.py): Let LVGL read files through Python.\
-  Get it: `pip omnipython-lvgl`, firmware build. Runs on: MP, CP, Desktop.
+  Get it: `pip omnipython-lvgl`, firmware build. Runs on: MP, CP, Desktop, Web.
 - [`display_driver`](https://github.com/PyDevices/omnipython/blob/main/docs/guides/lvgl.md): Connect LVGL to your board's display, input and event loop by importing one module.\
-  Get it: `mip omnipython`, `pip omnipython`, firmware build. Runs on: MP, CP, Desktop.
+  Get it: `mip omnipython`, `pip omnipython`, firmware build. Runs on: MP, CP, Desktop, Web.
 - [`controlkit`](https://github.com/PyDevices/apps/tree/main/lib/controlkit): Add knobs, sliders, meters, lamp buttons, pad grids and a dot-matrix display to an LVGL screen.\
-  Get it: `mip controlkit`, `pip omnipython-applibs`. Runs on: MP, CP, Desktop.
+  Get it: `mip controlkit`, `pip omnipython-applibs`. Runs on: MP, CP, Desktop, Web.
 - [`spectrum`](https://github.com/PyDevices/apps/tree/main/lib/spectrum): Show a spectrum analyzer in part of the screen, sharing the panel with LVGL.\
-  Get it: `mip spectrum`, `pip omnipython-applibs`. Runs on: MP, Desktop.
+  Get it: `mip spectrum`, `pip omnipython-applibs`. Runs on: MP, Desktop, Web.
 - [`jpegio`](https://github.com/PyDevices/omnipython-builds/tree/main/modules/jpegio): Decode and encode JPEG, with CircuitPython's `JpegDecoder` API.\
-  Get it: firmware build. Runs on: MP.
+  Get it: firmware build. Runs on: MP, CP, Web.
 - [`jpegio for CPython`](https://github.com/PyDevices/omnipython/blob/main/utils/jpegio.py): Use the `jpegio` API on a desktop.\
   Get it: `pip omnipython-desktop`. Runs on: Desktop.
 - [`pngio`](https://github.com/PyDevices/omnipython-builds/tree/main/modules/pngio): Turn an RGB565 framebuffer into a PNG and back.\
-  Get it: firmware build. Runs on: MP.
+  Get it: firmware build. Runs on: MP, CP, Web.
 - [`pngio for CPython`](https://github.com/PyDevices/omnipython/blob/main/utils/pngio.py): Use the `pngio` API on a desktop, over Pillow.\
   Get it: `pip omnipython-desktop`. Runs on: Desktop.
 - [`svgio`](https://github.com/PyDevices/omnipython-builds/tree/main/modules/svgio): Draw an SVG at any size into RGB565 with alpha, for pygraphics or LVGL's `lv.image`.\
-  Get it: firmware build. Runs on: MP.
+  Get it: firmware build. Runs on: MP, Web.
 - [`svgio for CPython`](https://github.com/PyDevices/omnipython/blob/main/utils/svgio.py): Use the `svgio` API on a desktop, over resvg-py and Pillow, or in a Pyodide page, over the browser's canvas.\
   Get it: `pip omnipython-desktop`. Runs on: Desktop, Web.
 - [`ppa`](https://github.com/PyDevices/omnipython-builds/tree/main/modules/ppa): Scale, rotate, mirror, crop, convert, fill and blend pictures in memory, in hardware on an ESP32-P4.\
-  Get it: firmware build. Runs on: MP.
+  Get it: firmware build. Runs on: MP, CP, Web.
 - [`offheap`](https://github.com/PyDevices/omnipython-builds/tree/main/modules/offheap): Keep big pixel buffers outside the garbage-collected heap, so they don't slow every collection.\
   Get it: firmware build. Runs on: MP on ESP32, desktop, browser.
 - [`frame_recorder`](https://github.com/PyDevices/omnipython/blob/main/utils/frame_recorder.py): Record a desktop display to video.\
@@ -110,13 +110,13 @@ and Android.
 - [`keys`](https://github.com/PyDevices/omnipython/blob/main/docs/modules.md): Name keys with SDL-style key codes and modifier masks.\
   Get it: `mip omnipython`, `pip omnipython`, firmware build. Runs on: MP, CP, Desktop, Web, Android.
 - [`orientation`](https://github.com/PyDevices/omnipython/blob/main/docs/modules.md): Turn a screen to 0, 90, 180 or 270 degrees from an accelerometer's tilt, steady against a shaky hand.\
-  Get it: `mip omnipython`, `pip omnipython`, firmware build. Runs on: MP, CP, Desktop.
+  Get it: `mip omnipython`, `pip omnipython`, firmware build. Runs on: MP, CP, Desktop, Web.
 - [`backends`](https://github.com/PyDevices/omnipython/blob/main/docs/modules.md): Add a display or audio backend of your own, so the automatic choosers can pick it.\
   Get it: `mip omnipython`, `pip omnipython`, firmware build. Runs on: MP, CP, Desktop, Web, Android.
 - [`appkit`](https://github.com/PyDevices/apps/tree/main/lib/appkit): Run several apps in one program, switch between them, and get each app's memory back when it closes.\
-  Get it: `mip appkit`, `pip omnipython-applibs`. Runs on: MP, CP, Desktop.
+  Get it: `mip appkit`, `pip omnipython-applibs`. Runs on: MP, CP, Desktop, Web.
 - [`applibs`](https://github.com/PyDevices/apps/tree/main/lib): Install every shared app library at once.\
-  Get it: `mip applibs`, `pip omnipython-applibs`. Runs on: MP, CP, Desktop.
+  Get it: `mip applibs`, `pip omnipython-applibs`. Runs on: MP, CP, Desktop, Web.
 
 ## Make and shape sound
 
@@ -125,69 +125,69 @@ and Android.
 - [`audioif`](https://github.com/PyDevices/omnipython-builds/tree/main/modules/audioif): Reach audio hardware from C: the platform drivers under the audio pump, with CircuitPython's `audiobusio.I2SOut` on top.\
   Get it: firmware build. Runs on: MP.
 - [`audiocore`](https://github.com/PyDevices/audiodsp/blob/main/docs/reference/modules.md): Play WAV files and raw samples, as CircuitPython does.\
-  Get it: `pip omnipython-audiodsp`, firmware build. Runs on: MP, CP, Desktop.
+  Get it: `pip omnipython-audiodsp`, firmware build. Runs on: MP, CP, Desktop, Web, Android.
 - [`synthio`](https://github.com/PyDevices/audiodsp/blob/main/docs/reference/sources-and-synthesis.md): Synthesize notes with envelopes, filters and LFOs, including `MidiTrack`, as CircuitPython does.\
-  Get it: `pip omnipython-audiodsp`, firmware build. Runs on: MP, CP, Desktop.
+  Get it: `pip omnipython-audiodsp`, firmware build. Runs on: MP, CP, Desktop, Web, Android.
 - [`audiomixer`](https://github.com/PyDevices/audiodsp/blob/main/docs/reference/modules.md): Mix several sources, as CircuitPython does.\
-  Get it: `pip omnipython-audiodsp`, firmware build. Runs on: MP, CP, Desktop.
+  Get it: `pip omnipython-audiodsp`, firmware build. Runs on: MP, CP, Desktop, Web, Android.
 - [`audiofilters`](https://github.com/PyDevices/audiodsp/blob/main/docs/reference/filters-and-effects.md): Filter, distort and phase a sound.\
-  Get it: `pip omnipython-audiodsp`, firmware build. Runs on: MP, CP, Desktop.
+  Get it: `pip omnipython-audiodsp`, firmware build. Runs on: MP, CP, Desktop, Web, Android.
 - [`audiodelays`](https://github.com/PyDevices/audiodsp/blob/main/docs/reference/filters-and-effects.md): Add echo, chorus, flanger, pitch shift and multi-tap delay.\
-  Get it: `pip omnipython-audiodsp`, firmware build. Runs on: MP, CP, Desktop.
+  Get it: `pip omnipython-audiodsp`, firmware build. Runs on: MP, CP, Desktop, Web, Android.
 - [`audiofreeverb`](https://github.com/PyDevices/audiodsp/blob/main/docs/reference/filters-and-effects.md): Add CircuitPython's Freeverb reverb.\
-  Get it: `pip omnipython-audiodsp`, firmware build. Runs on: MP, CP, Desktop.
+  Get it: `pip omnipython-audiodsp`, firmware build. Runs on: MP, CP, Desktop, Web, Android.
 - [`audiospeed`](https://github.com/PyDevices/audiodsp/blob/main/docs/reference/modules.md): Change a sound's playback speed, as CircuitPython does.\
-  Get it: `pip omnipython-audiodsp`, firmware build. Runs on: MP, CP, Desktop.
+  Get it: `pip omnipython-audiodsp`, firmware build. Runs on: MP, CP, Desktop, Web, Android.
 - [`audiomp3`](https://github.com/PyDevices/audiodsp/blob/main/docs/reference/modules.md): Decode MP3 files, as CircuitPython does.\
-  Get it: `pip omnipython-audiodsp`, firmware build. Runs on: MP, CP, Desktop.
+  Get it: `pip omnipython-audiodsp`, firmware build. Runs on: MP, CP, Desktop, Web, Android.
 - [`audiobiquad`](https://github.com/PyDevices/audiodsp/blob/main/docs/guides/filter-a-sound.md): Filter with biquads and all-passes whose tails reach exact zero.\
-  Get it: `pip omnipython-audiodsp`, firmware build. Runs on: MP, CP, Desktop.
+  Get it: `pip omnipython-audiodsp`, firmware build. Runs on: MP, CP, Desktop, Web, Android.
 - [`audiodynamics`](https://github.com/PyDevices/audiodsp/blob/main/docs/reference/filters-and-effects.md): Compress, limit, expand, gate and shape transients.\
-  Get it: `pip omnipython-audiodsp`, firmware build. Runs on: MP, CP, Desktop.
+  Get it: `pip omnipython-audiodsp`, firmware build. Runs on: MP, CP, Desktop, Web, Android.
 - [`audioecho`](https://github.com/PyDevices/audiodsp/blob/main/docs/reference/filters-and-effects.md): Add a delay with a filter, a soft-clip and a cross-feed in its feedback loop.\
-  Get it: `pip omnipython-audiodsp`, firmware build. Runs on: MP, CP, Desktop.
+  Get it: `pip omnipython-audiodsp`, firmware build. Runs on: MP, CP, Desktop, Web, Android.
 - [`audioroute`](https://github.com/PyDevices/audiodsp/blob/main/docs/guides/change-without-a-click.md): Fan a stream out, scale stereo width, or re-point a wire while it plays.\
-  Get it: `pip omnipython-audiodsp`, firmware build. Runs on: MP, CP, Desktop.
+  Get it: `pip omnipython-audiodsp`, firmware build. Runs on: MP, CP, Desktop, Web, Android.
 - [`audioshaper`](https://github.com/PyDevices/audiodsp/blob/main/docs/reference/filters-and-effects.md): Waveshape with a curve that is data, and sample-and-hold at an exact ratio.\
-  Get it: `pip omnipython-audiodsp`, firmware build. Runs on: MP, CP, Desktop.
+  Get it: `pip omnipython-audiodsp`, firmware build. Runs on: MP, CP, Desktop, Web, Android.
 - [`audioladder`](https://github.com/PyDevices/audiodsp/blob/main/docs/reference/filters-and-effects.md): Filter through a transistor ladder.\
-  Get it: `pip omnipython-audiodsp`, firmware build. Runs on: MP, CP, Desktop.
+  Get it: `pip omnipython-audiodsp`, firmware build. Runs on: MP, CP, Desktop, Web, Android.
 - [`audioverb`](https://github.com/PyDevices/audiodsp/blob/main/docs/reference/filters-and-effects.md): Build a reverberation tank whose line lengths and taps come from Python.\
-  Get it: `pip omnipython-audiodsp`, firmware build. Runs on: MP, CP, Desktop.
+  Get it: `pip omnipython-audiodsp`, firmware build. Runs on: MP, CP, Desktop, Web, Android.
 - [`audiomath`](https://github.com/PyDevices/audiodsp/blob/main/docs/reference/modules.md): Multiply one stream by another, and divide one down in frequency.\
-  Get it: `pip omnipython-audiodsp`, firmware build. Runs on: MP, CP, Desktop.
+  Get it: `pip omnipython-audiodsp`, firmware build. Runs on: MP, CP, Desktop, Web, Android.
 - [`audioconvolve`](https://github.com/PyDevices/audiodsp/blob/main/docs/reference/modules.md): Apply an impulse response by partitioned FFT.\
-  Get it: `pip omnipython-audiodsp`, firmware build. Runs on: MP, CP, Desktop.
+  Get it: `pip omnipython-audiodsp`, firmware build. Runs on: MP, CP, Desktop, Web, Android.
 - [`audiooscillator`](https://github.com/PyDevices/audiodsp/blob/main/docs/reference/sources-and-synthesis.md): Read a band-limited oscillator sample by sample.\
-  Get it: `pip omnipython-audiodsp`, firmware build. Runs on: MP, CP, Desktop.
+  Get it: `pip omnipython-audiodsp`, firmware build. Runs on: MP, CP, Desktop, Web, Android.
 - [`audiofm`](https://github.com/PyDevices/audiodsp/blob/main/docs/guides/play-fm-voices.md): Play six-operator FM voices, and read and write the classic voice format and its 32-voice banks.\
-  Get it: `pip omnipython-audiodsp`, firmware build. Runs on: MP, Desktop.
+  Get it: `pip omnipython-audiodsp`, firmware build. Runs on: MP, Desktop, Web, Android.
 - [`audiomodal`](https://github.com/PyDevices/audiodsp/blob/main/docs/reference/sources-and-synthesis.md): Ring a bank of resonators, for struck and plucked sounds.\
-  Get it: `pip omnipython-audiodsp`, firmware build. Runs on: MP, CP, Desktop.
+  Get it: `pip omnipython-audiodsp`, firmware build. Runs on: MP, CP, Desktop, Web, Android.
 - [`audiograph`](https://github.com/PyDevices/audiodsp/blob/main/docs/reference/sources-and-synthesis.md): Render a whole patch with one C call per block.\
-  Get it: `pip omnipython-audiodsp`, firmware build. Runs on: MP, CP, Desktop.
+  Get it: `pip omnipython-audiodsp`, firmware build. Runs on: MP, CP, Desktop, Web, Android.
 - [`audiosampler`](https://github.com/PyDevices/audiodsp/blob/main/docs/guides/play-recorded-notes.md): Play recorded notes at any pitch, looped, under an envelope.\
-  Get it: `pip omnipython-audiodsp`, firmware build. Runs on: MP, CP, Desktop.
+  Get it: `pip omnipython-audiodsp`, firmware build. Runs on: MP, CP, Desktop, Web, Android.
 - [`audiometer`](https://github.com/PyDevices/audiodsp/blob/main/docs/guides/meter-levels.md): Measure band levels for a spectrum meter.\
-  Get it: `pip omnipython-audiodsp`, firmware build. Runs on: MP, Desktop.
+  Get it: `pip omnipython-audiodsp`, firmware build. Runs on: MP, Desktop, Web, Android.
 - [`audiofeatures`](https://github.com/PyDevices/audiodsp/blob/main/docs/guides/speech-features.md): Extract speech features and detect voice, for a wake word model.\
-  Get it: `pip omnipython-audiodsp`, firmware build. Runs on: MP, Desktop.
+  Get it: `pip omnipython-audiodsp`, firmware build. Runs on: MP, Desktop, Web, Android.
 - [`audiovorbis`](https://github.com/PyDevices/audiodsp/blob/main/docs/guides/decode-vorbis.md): Decode Ogg Vorbis files.\
-  Get it: `pip omnipython-audiodsp`, firmware build. Runs on: MP, CP, Desktop.
+  Get it: `pip omnipython-audiodsp`, firmware build. Runs on: MP, CP, Desktop, Web, Android.
 - [`audiopump`](https://github.com/PyDevices/audiodsp/blob/main/docs/guides/run-the-audio-pump.md): Pull audio off the interpreter thread, so a slow redraw doesn't stop the sound.\
-  Get it: `pip omnipython-audiodsp`, firmware build. Runs on: MP, CP, Desktop.
+  Get it: `pip omnipython-audiodsp`, firmware build. Runs on: MP, CP, Desktop, Web, Android.
 - [`audiodsp_util`](https://github.com/PyDevices/audiodsp/blob/main/docs/reference/modules.md): Hold a setting at the 32-bit float a board would use, so a desktop renders the same bytes.\
-  Get it: `pip omnipython-audiodsp`. Runs on: MP, Desktop.
+  Get it: `pip omnipython-audiodsp`. Runs on: MP, CP, Desktop, Web.
 - [`audiorender`](https://github.com/PyDevices/audiodsp/blob/main/docs/reference/modules.md): Render a whole composition offline to a mixed stereo master and a level report.\
   Get it: `pip omnipython-audiodsp`. Runs on: Desktop.
 - [`audioinstruments`](https://github.com/PyDevices/audioinstruments/blob/main/README.md): Play synthesizers, organs, electric pianos and drum machines, each a patch on a virtual rack.\
-  Get it: `mip audioinstruments`, `pip omnipython-audioinstruments`, firmware build. Runs on: MP, CP, Desktop.
+  Get it: `mip audioinstruments`, `pip omnipython-audioinstruments`, firmware build. Runs on: MP, CP, Desktop, Web.
 - [`audioeffects`](https://github.com/PyDevices/audioeffects/blob/main/README.md): Add compressors, EQs, reverbs, delays, modulation, drive, amp simulation and pitch shifters.\
-  Get it: `mip audioeffects`, `pip omnipython-audioeffects`, firmware build. Runs on: MP, CP, Desktop.
+  Get it: `mip audioeffects`, `pip omnipython-audioeffects`, firmware build. Runs on: MP, CP, Desktop, Web.
 - [`audioairwindows`](https://github.com/PyDevices/airwindows/blob/main/README.md): Use Chris Johnson's Airwindows plug-ins in an audio graph.\
-  Get it: from source, firmware build. Runs on: MP, Desktop.
+  Get it: from source, firmware build. Runs on: MP, Desktop, Web, Android.
 - [`btclassic`](https://github.com/PyDevices/omnipython-builds/tree/main/modules/btclassic): Make a classic ESP32 a Bluetooth speaker and hands-free unit: play from a phone or computer with its track, cover and controls, and take the phone's calls.\
-  Get it: firmware build. Runs on: MP on classic ESP32.
+  Get it: firmware build. Runs on: MP on classic ESP32 and the ESP32-S31.
 - [`picotts`](https://github.com/PyDevices/omnipython-builds/tree/main/modules/picotts): Make a board with PSRAM speak, with no network and no computer.\
   Get it: firmware build. Runs on: MP.
 - [`mpvst`](https://github.com/PyDevices/mpvst/blob/main/README.md): Run Python instruments and effects in your DAW as a VST3 plug-in.\
@@ -208,6 +208,8 @@ and Android.
   Get it: `mip medialink`, `pip omnipython`, firmware build. Runs on: MP, CP, Desktop.
 - [`endpointkit`](https://github.com/PyDevices/omnipython/blob/main/packages/endpointkit/README.md): List what a device can connect to, by kind, and choose where audio, MIDI, network, camera and casting go.\
   Get it: from source. Runs on: MP, Desktop.
+- [`hostnet`](https://github.com/PyDevices/omnipython/blob/main/utils/hostnet.py): Show a computer's network link as an `endpointkit` endpoint, reported and never changed.\
+  Get it: `pip omnipython-desktop`. Runs on: Desktop.
 - [`hmilink`](https://github.com/PyDevices/omnipython/blob/main/packages/hmilink/README.md): Use any screen as a device's front panel, over Wi-Fi, a UART, OSC or in-process.\
   Get it: `mip hmilink`. Runs on: MP, CP, Desktop.
 - [`lite-assistant`](https://github.com/PyDevices/lite-assistant/blob/main/README.md): Chat, speak, transcribe and see through a local, OpenAI-compatible server that a board can call.\
@@ -228,7 +230,7 @@ and Android.
 ## Use USB
 
 - [`usbhost`](https://github.com/PyDevices/omnipython/blob/main/docs/guides/usb.md): Provide the C host port that the `usb.core` packages use. You don't import it yourself.\
-  Get it: firmware build. Runs on: MP on ESP32-S2, S3, P4, S31; CP on P4.
+  Get it: firmware build. Runs on: MP on ESP32-S2, S3, P4, S31 and the GIGA; CP on P4.
 - [`usb-core`](https://github.com/PyDevices/omnipython/blob/main/docs/guides/usb.md): Talk to USB devices from a host board, with `usb.core` and `usb.util`, in PyUSB's shape.\
   Get it: `mip usb-core`. Runs on: MP.
 - [`usb-host-dfu`](https://github.com/PyDevices/omnipython/blob/main/docs/guides/usb.md): Read the flash of a board sitting in its USB DFU bootloader.\
@@ -269,7 +271,7 @@ and Android.
 - [`castdisplay`](https://github.com/PyDevices/omnipython/blob/main/docs/guides/cast-to-a-tv.md): Cast what an app draws to a Roku TV, a Windows laptop or VLC, as a display the app uses unchanged.\
   Get it: `mip castdisplay`. Runs on: MP on ESP32-P4, Desktop.
 - [`tsmux`](https://github.com/PyDevices/omnipython-builds/tree/main/modules/tsmux): Wrap H.264 in MPEG-TS and cut it into HLS segments, so anything that plays HLS can watch a board.\
-  Get it: firmware build. Runs on: MP.
+  Get it: firmware build. Runs on: MP, CP, Web.
 - [`castif`](https://github.com/PyDevices/omnipython-builds/tree/main/modules/castif): Stream what your app draws to a screen across the room.\
   Get it: firmware build. Runs on: MP on ESP32-P4.
 - [`vision`](https://github.com/PyDevices/omnipython-builds/tree/main/modules/vision): Run image models and handle pictures with ESP-DL, plus H.264 and RTSP on the P4.\
@@ -277,7 +279,7 @@ and Android.
 - [`tflite`](https://github.com/PyDevices/omnipython-builds/tree/main/modules/tflite): Run TensorFlow Lite Micro models on a board, from speech to person detection.\
   Get it: firmware build, opt-in. Runs on: MP on ESP32-S3, P4.
 - [`ulab`](https://github.com/v923z/micropython-ulab): Work with numpy-like arrays.\
-  Get it: firmware build. Runs on: MP.
+  Get it: firmware build. Runs on: MP, CP, Web.
 
 ## Drive a chip
 
@@ -302,7 +304,7 @@ and Android.
 - [`I/O expanders`](https://github.com/PyDevices/omnipython/tree/main/drivers/io_expander): Add pins with CH422G, PCA9554, PI4IOE5V and XL9535.\
   Get it: `mip` for some chips, otherwise from source. Runs on: MP.
 - [`Infrared`](https://github.com/PyDevices/omnipython/tree/main/drivers/ir): Send and receive NEC remote-control codes.\
-  Get it: `mip` for some chips, otherwise from source. Runs on: MP.
+  Get it: `mip` for some chips, otherwise from source. Runs on: MP, CP.
 - [`Joysticks`](https://github.com/PyDevices/omnipython/tree/main/drivers/joystick): Read a GPIO joystick.\
   Get it: from source. Runs on: MP.
 - [`LEDs`](https://github.com/PyDevices/omnipython/tree/main/drivers/led): Light DotStar LEDs.\
@@ -312,7 +314,7 @@ and Android.
 - [`Radios`](https://github.com/PyDevices/omnipython/tree/main/drivers/radio): Use an SX1262 radio.\
   Get it: `mip` for some chips, otherwise from source. Runs on: MP.
 - [`Real-time clocks`](https://github.com/PyDevices/omnipython/tree/main/drivers/rtc): Keep time with a PCF8563.\
-  Get it: `mip` for some chips, otherwise from source. Runs on: MP.
+  Get it: `mip` for some chips, otherwise from source. Runs on: MP, CP.
 - [`Storage`](https://github.com/PyDevices/omnipython/tree/main/drivers/storage): Read SD cards on an nRF52.\
   Get it: from source. Runs on: MP.
 
@@ -449,7 +451,7 @@ and Android.
 - **E:** [`endpointkit`](#connect-devices), [`Environment sensors`](#drive-a-chip), [`events`](#write-an-app)
 - **F:** [`frame_recorder`](#draw-on-a-screen), [`fs_driver`](#draw-on-a-screen)
 - **G:** [`Gallery`](#run-a-finished-app), [`Gamepad`](#run-a-finished-app)
-- **H:** [`h264enc`](#use-cameras-video-and-ai-on-a-board), [`Hands free`](#run-a-finished-app), [`Haptics`](#drive-a-chip), [`hmilink`](#connect-devices), [`Home`](#run-a-finished-app), [`Huey`](#run-a-finished-app), [`Huey's Perch`](#run-a-finished-app)
+- **H:** [`h264enc`](#use-cameras-video-and-ai-on-a-board), [`Hands free`](#run-a-finished-app), [`Haptics`](#drive-a-chip), [`hmilink`](#connect-devices), [`Home`](#run-a-finished-app), [`hostnet`](#connect-devices), [`Huey`](#run-a-finished-app), [`Huey's Perch`](#run-a-finished-app)
 - **I:** [`I/O expanders`](#drive-a-chip), [`iconkit`](#draw-on-a-screen), [`IMUs`](#drive-a-chip), [`Infrared`](#drive-a-chip), [`Internet radio`](#run-a-finished-app)
 - **J:** [`Joysticks`](#drive-a-chip), [`jpegio`](#draw-on-a-screen), [`jpegio for CPython`](#draw-on-a-screen), [`jupyter.py`](#run-somewhere-other-than-a-board)
 - **K:** [`keys`](#write-an-app)
