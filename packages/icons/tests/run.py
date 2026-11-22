@@ -1,9 +1,10 @@
 # SPDX-FileCopyrightText: 2026 Brad Barnett
 #
 # SPDX-License-Identifier: MIT
-"""icons' checks, runnable on MicroPython and CPython.
+"""icons' checks, runnable on MicroPython, CircuitPython and CPython.
 
-    micropython tests/run.py      (from packages/icons, with ttfio built in)
+    micropython tests/run.py      (from packages/icons, with ttfio built in;
+                                  CircuitPython the same)
     python tests/run.py           (with omnipython-desktop's ttfio.py on the path)
 
 Bars fixed before the first run:
@@ -71,8 +72,9 @@ check(not empty, "every icon has ink at 16, 20 and 24 px %r" % empty[:5])
 check(not spill, "every icon fits its square %r" % spill[:5])
 
 big = icons.mask("hub", 96)
-# ttfio on CPython has no scratch buffer, so only MicroPython grows one.
-grew = icons._fonts[0][2] > icons.SCRATCH or sys.implementation.name != "micropython"
+# ttfio on CPython has no scratch buffer; the C module on MicroPython and
+# CircuitPython grows one.
+grew = icons._fonts[0][2] > icons.SCRATCH or sys.implementation.name == "cpython"
 check(max(big[0]) == 255 and grew, "hub at 96 px draws (scratch now %d bytes)" % icons._fonts[0][2])
 
 a = icons.mask("wifi", 20)
