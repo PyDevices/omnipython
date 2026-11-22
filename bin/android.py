@@ -22,7 +22,6 @@ Usage:
 from __future__ import annotations
 
 import argparse
-import fcntl
 import json
 import os
 import pathlib
@@ -41,9 +40,11 @@ import urllib.request
 from typing import List, Optional, Tuple
 
 try:
+    import fcntl
     import termios
     import tty
 except ImportError:  # Native Windows host
+    fcntl = None  # type: ignore[assignment]
     termios = None  # type: ignore[assignment]
     tty = None  # type: ignore[assignment]
 
