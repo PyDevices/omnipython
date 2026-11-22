@@ -365,6 +365,173 @@ def t_wifi():
         wifinet._provider[:] = []
 
 
+# -- ESP-NOW ---------------------------------------------------------------------
+
+
+class FakeAir:
+    """Radios in range of each other: what one sends, the others hear."""
+
+    def __init__(self):
+        self.radios = []
+
+
+class FakeEspNow:
+    """MicroPython's espnow.ESPNow in the air: a unicast needs its peer added
+    first, a broadcast reaches every other radio, and recv is never asked
+    to wait."""
+
+    BROADCAST = b"\xff" * 6
+
+    def __init__(self, air, mac):
+        self.air = air
+        self.mac = mac
+        self.peers = []
+        self.queue = []
+        self.sent = []
+        self.waits = []
+        self.peers_table = {}
+        air.radios.append(self)
+
+    def add_peer(self, mac):
+        if mac in self.peers:
+            raise OSError(-12395, "ESP_ERR_ESPNOW_EXIST")
+        self.peers.append(mac)
+
+    def del_peer(self, mac):
+        if mac not in self.peers:
+            raise OSError(-12393, "ESP_ERR_ESPNOW_NOT_FOUND")
+        self.peers.remove(mac)
+
+    def send(self, mac, msg, sync=True):
+        if mac not in self.peers:
+            raise OSError(-12393, "ESP_ERR_ESPNOW_NOT_FOUND")
+        self.sent.append((mac, bytes(msg), sync))
+        for radio in self.air.radios:
+            if radio is not self and mac in (self.BROADCAST, radio.mac):
+                radio.queue.append((self.mac, bytes(msg)))
+        return True
+
+    def recv(self, timeout_ms=None):
+        if timeout_ms != 0:
+            self.waits.append(timeout_ms)
+        if not self.queue:
+            return None, None
+        mac, msg = self.queue.pop(0)
+        self.peers_table[mac] = [-42, 0]
+        return mac, msg
+
+
+def t_espnow():
+    import espnowpeers
+    from endpointkit.fake import FakeProvider
+
+    clock = [1000]
+    saved = (espnowpeers._ticks_ms, espnowpeers._ticks_diff)
+    espnowpeers._ticks_ms = lambda: clock[0]
+    espnowpeers._ticks_diff = lambda a, b: a - b
+    try:
+        air = FakeAir()
+        mac_a, mac_b, mac_c = b"\xdc\xda\x0c\x00\x00\x0a", b"\xdc\xda\x0c\x00\x00\x0b", b"\xdc\xda\x0c\x00\x00\x0c"
+        ra, rb, rc = FakeEspNow(air, mac_a), FakeEspNow(air, mac_b), FakeEspNow(air, mac_c)
+        stranger = FakeEspNow(air, b"\x12\x34\x56\x78\x9a\xbc")
+        a, b, c = Registry(), Registry(), Registry()
+        espnowpeers._provider[:] = []
+        pa = espnowpeers.register(a, ra, "kitchen")
+        check(endpointkit.KINDS["espnow.peer"] == endpointkit.MANY and endpointkit.title("espnow.peer") == "ESP-NOW peers", "registering makes the kind known")
+        check(espnowpeers.register(a) is pa and len(a.providers("espnow.peer")) == 1, "registering again returns the same provider")
+        pb = b.register(espnowpeers.EspNowPeers(rb, "desk"))
+        pc = c.register(espnowpeers.EspNowPeers(rc, "porch"))
+        check(a.endpoints("espnow.peer") == [], "nothing is listed before anything is heard")
+        a.poll()
+        b.poll()
+        c.poll()
+        a.poll()
+        desk, porch, kitchen = "espnow:dcda0c00000b", "espnow:dcda0c00000c", "espnow:dcda0c00000a"
+        check(ids(a.endpoints("espnow.peer")) == [desk, porch], "boards are listed by name after one poll each: %r" % ids(a.endpoints("espnow.peer")))
+        check([ep.label for ep in a.endpoints("espnow.peer")] == ["desk", "porch"], "labels are the boards' names")
+        check(kitchen in ids(b.endpoints("espnow.peer")), "each board lists the others")
+        ep = a.find(desk)
+        check(ep.state == endpointkit.AVAILABLE and ep.caps["mac"] == "dc:da:0c:00:00:0b" and ep.caps["rssi"] == -42, "a peer carries its MAC and signal: %r" % (ep.caps,))
+        sent = len(ra.sent)
+        a.poll()
+        check(len(ra.sent) == sent, "no beacon before beacon_ms")
+        clock[0] += espnowpeers.BEACON_MS
+        a.poll()
+        check(len(ra.sent) == sent + 1 and ra.sent[-1][0] == FakeEspNow.BROADCAST and ra.sent[-1][2] is False, "a beacon every beacon_ms, broadcast, not waited on")
+        check(ra.waits == [], "reads never wait: %r" % ra.waits)
+        stranger.add_peer(FakeEspNow.BROADCAST)
+        stranger.send(FakeEspNow.BROADCAST, b"another program's message")
+        ignored = pa.ignored
+        a.poll()
+        check(ids(a.endpoints("espnow.peer")) == [desk, porch] and pa.ignored == ignored + 1, "another program's messages are passed by")
+        wifi = FakeProvider("net", "wifi", [("Home", "Home")], ("radio.wifi",))
+        a.register(wifi)
+        a.select("net", "wifi:Home")
+        check(a.conflicts("espnow.peer", [desk, porch]) == ([], []), "choosing peers stops neither each other nor Wi-Fi")
+        b.select("espnow.peer", kitchen)
+        check(mac_a in rb.peers, "choosing a board adds it as a peer")
+        b.poll()
+        check(b.find(kitchen).state == endpointkit.CONNECTED, "a chosen board shows as connected")
+        check(pb.send(b"too early") == 1, "send goes to each chosen board")
+        check(pa.recv() is None, "a board that isn't chosen is not heard")
+        a.select("espnow.peer", [desk, porch])
+        check(mac_b in ra.peers and mac_c in ra.peers, "every chosen board is added")
+        check(pb.send(b"ping") == 1 and pa.recv() == (desk, b"ping") and pa.recv() is None, "a message from a chosen board arrives once")
+        check(espnowpeers.send(b"pong") == 2, "the module sends through the registered provider")
+        check(pb.recv() == (kitchen, b"pong") and pc.recv() is None, "a board that hasn't chosen back doesn't hear it")
+        check(espnowpeers.send(b"just you", to=desk) == 1 and pb.recv() == (kitchen, b"just you"), "send to one chosen board")
+        for bad in ((b"x" * (espnowpeers.MAX_DATA + 1), None), (b"x", "espnow:ffffffffffff")):
+            try:
+                pa.send(*bad)
+                check(False, "send refuses %r" % (bad[1],))
+            except ValueError:
+                pass
+        for i in range(espnowpeers.INBOX + 4):
+            pb.send(b"%d" % i)
+        a.poll()
+        check(len(ra.queue) == 4, "a poll reads at most MAX_READS messages: %d left" % len(ra.queue))
+        a.poll()
+        check(pa.dropped == 4 and pa.recv() == (desk, b"4"), "a full inbox drops the oldest and counts them")
+        while pa.recv():
+            pass
+        a.select("espnow.peer", porch)
+        check(mac_b not in ra.peers and mac_c in ra.peers, "letting a board go removes the peer")
+        a.poll()
+        check(a.find(desk).state == endpointkit.AVAILABLE, "a board let go shows as available")
+        pb.send(b"after")
+        check(pa.recv() is None, "a board let go is not heard")
+        a.select("espnow.peer", [desk, porch])
+        step = espnowpeers.BEACON_MS
+        quiet = 0
+        while quiet <= espnowpeers.FORGET_MS:
+            clock[0] += step
+            quiet += step
+            c.poll()
+            a.poll()
+            if quiet < espnowpeers.FORGET_MS:
+                check(desk in ids(a.endpoints("espnow.peer")), "a board stays listed for forget_ms")
+        check(ids(a.endpoints("espnow.peer")) == [porch], "a board that goes quiet drops out after forget_ms")
+        check(mac_b not in ra.peers and desk in a.chosen("espnow.peer"), "its peer is removed and it stays chosen")
+        sent = len(ra.sent)
+        b.poll()
+        a.poll()
+        check(a.find(desk) is not None and mac_b in ra.peers, "a chosen board heard again is added again")
+        check(len(ra.sent) == sent + 1, "a board that hears a new one answers at once, beacon due or not")
+        a.poll()
+        check(a.find(desk).state == endpointkit.CONNECTED, "and shows as connected on the next poll")
+        a.unregister(pa)
+        check(ra.peers == [], "unregistering removes every peer it added and the broadcast one")
+        espnowpeers._provider[:] = []
+        try:
+            espnowpeers.register(Registry())
+            check(False, "register without espnow raises")
+        except ImportError:
+            pass
+    finally:
+        espnowpeers._ticks_ms, espnowpeers._ticks_diff = saved
+        espnowpeers._provider[:] = []
+
+
 # -- the real host ---------------------------------------------------------------
 
 
