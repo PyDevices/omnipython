@@ -136,6 +136,8 @@ class FakeHost:
     def host_claim(self, dev_id, itf, alt=0):
         if self.refuse_claim == "too big":
             raise OSError(7, "E2BIG")
+        if self.refuse_claim == "no room":
+            raise OSError(28, "ENOSPC")
         if self.refuse_claim:
             raise OSError(16, "EBUSY")
         self.calls.append(("claim", itf, alt))
@@ -333,6 +335,16 @@ class TestSpeaker(unittest.TestCase):
             spk.start()
         self.assertEqual(7, e.exception.errno)
         self.assertIn("%d-byte packets" % (spk.stream.max_packet & 0x7FF), str(e.exception))
+        self.assertNotIn("classes=", str(e.exception))
+
+
+    def test_a_hub_with_no_bus_time_left_says_so(self):
+        host.reset(_uac2_blob(), refuse_claim="no room")
+        spk = Speaker(device(), rate=48000)
+        with self.assertRaises(OSError) as e:
+            spk.start()
+        self.assertEqual(28, e.exception.errno)
+        self.assertIn("no bus time left", str(e.exception))
         self.assertNotIn("classes=", str(e.exception))
 
 

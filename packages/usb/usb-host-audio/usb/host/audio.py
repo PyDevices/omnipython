@@ -51,6 +51,7 @@ _CTRL_MS = 3000
 _MAX_SUBRANGES = 8
 _DEFAULT_RING = 8192        # about 43 ms of 48 kHz stereo
 _E2BIG = 7                  # the host refused an endpoint too big for its FIFO
+_ENOSPC = 28                # the hub in front of a full-speed device has no bus time left
 # What the host answers for a stream whose device has gone: ENOENT once the
 # stream is torn down, ENODEV while it is going.
 _GONE = (2, 19)
@@ -179,6 +180,10 @@ class _Stream:
                 raise OSError(_E2BIG, "endpoint 0x%02x declares %d-byte packets, more than this board's "
                               "USB host can buffer (its sizes are printed above)"
                               % (s.endpoint, s.max_packet & 0x7FF))
+            if e.errno == _ENOSPC:
+                raise OSError(_ENOSPC, "the high-speed hub in front of this full-speed device has no bus "
+                              "time left for this stream; stop another audio stream on that hub, or "
+                              "choose a lower rate or fewer channels")
             raise OSError("the interface claim was refused (%s); for a speaker, start the host with "
                           "usb.core.start(classes=(\"uac\",))" % e)
         self._set_rate()
