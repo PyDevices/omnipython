@@ -58,7 +58,7 @@ from displaydev.fbdisplay import FBDisplay
 
 try:
     # Viper, where the build has the native emitter: tens of times faster.
-    from displaydev._remotefast import _diff, _raw, _rle
+    from displaydev._remotefast import _diff, _pal, _raw, _rle
 
     _VIPER = True
 except (ImportError, SyntaxError, AttributeError, ValueError):
@@ -113,6 +113,9 @@ if not _VIPER:
     def _rle(fb, stride, x, y, w, h, dst, off, cap):
         return -1
 
+    def _pal(fb, stride, x, y, w, h, dst, off, cap, scratch):
+        return -1
+
     def _raw(fb, stride, x, y, w, h, dst, off):
         fb = memoryview(fb)
         row = w * 2
@@ -141,6 +144,7 @@ class _Conn:
         self.inbuf = b""
         self.out = b""
         self.done = False  # close once ``out`` is sent
+        self.asked = False  # a WebSocket waiting for the password
 
     def flush(self):
         """Send what the socket takes. False when the connection is gone."""
@@ -181,6 +185,9 @@ class RemoteServer:
             sweeps only the areas the display was told about are compared,
             which is what keeps a large frame cheap. Default 2000.
         bind (str): The address to listen on. Default all of them.
+        password (str): Asked for before a browser sees the display or a
+            video player gets the stream (as an HTTP password, any user
+            name). Default None: anyone on the network can use it.
 
     Attributes:
         url (str): Where to point a browser, as best the board knows its
@@ -190,8 +197,10 @@ class RemoteServer:
         quality (int): JPEG quality, 1 to 100, for a video player. Default 70.
     """
 
-    def __init__(self, display, port=80, period_ms=40, sweep_ms=2000, bind="0.0.0.0"):
+    def __init__(self, display, port=80, period_ms=40, sweep_ms=2000, bind="0.0.0.0", password=None):
         self.display = display
+        self._password = password
+        self._unwatch = None
         self._sweep_ms = sweep_ms
         self._last_sweep = ticks_ms()
         self._full = True
@@ -204,6 +213,7 @@ class RemoteServer:
         self._h = display.height
         ntiles = ((self._w + _TW - 1) // _TW) * ((self._h + _TH - 1) // _TH)
         self._flags = bytearray(ntiles)
+        self._scratch = bytearray(32)  # _pal's colours
         # The last hash of each tile: words for the viper loop, ints otherwise.
         self._hashes = bytearray(4 * ntiles) if _VIPER else [0] * ntiles
         self._buf = None
@@ -212,7 +222,13 @@ class RemoteServer:
         self._fb = None  # (frame, stride) for that update
         self._mjpeg = False  # the viewer is a video player, not the page
         self._jpeg = None  # its encoder
-        self._next = None  # a JPEG to send once its part header is out
+        self._next = []  # what to send once _out is out, in order
+        self._lossy = bytearray(ntiles)  # tiles last sent as JPEG
+        self._nlossy = 0
+        self._jpeg_engine = None  # an encoder for large changes, or False
+        # Large changes as JPEG: None where the chip has a JPEG engine,
+        # True always, False never.
+        self.jpeg_changes = None
         self._last_jpeg = 0
         self._jpeg_gap = 0  # ms to leave the app between two JPEGs
         self._view = None  # the browser's _Conn, once it has a WebSocket
@@ -321,6 +337,10 @@ class RemoteServer:
         flags = self._flags
         if self._range is None:
             tiles = self._tiles()
+            if self._nlossy:
+                # Tiles sent as JPEG are sent again exactly once they stop
+                # changing, wherever they are.
+                tiles = (0, 0, (w + _TW - 1) // _TW, (h + _TH - 1) // _TH)
             if tiles is None:
                 return 0
             tx0, ty0, tx1, ty1 = tiles
@@ -331,7 +351,18 @@ class RemoteServer:
                 self._force = False
                 for i in range(len(flags)):
                     flags[i] = 1
-            elif not n:
+                n = len(flags)
+            if n >= len(flags) >> 3 and self._send_jpeg(fb, stride, tiles):
+                return 0
+            if self._nlossy:
+                lossy = self._lossy
+                for i in range(len(flags)):
+                    if lossy[i]:
+                        lossy[i] = 0
+                        flags[i] = 1
+                        n += 1
+                self._nlossy = 0
+            if not n:
                 return 0
             self._range = tiles
             self._cursor = (ty0, tx0)
@@ -361,8 +392,16 @@ class RemoteServer:
                     # The rest goes in the next message.
                     self._cursor = (ty, t)
                     return off - _WS_ROOM
-                n = _rle(fb, stride, x, y0, rw, th, buf, data, rw * th * 2 - 4)
+                raw = rw * th * 2
+                n = _rle(fb, stride, x, y0, rw, th, buf, data, raw - 4)
                 enc = 1
+                # A few colours that don't run (text, icons) pack smaller as
+                # a palette; skip the try when runs already did well.
+                if n < 0 or n > raw >> 3:
+                    k = _pal(fb, stride, x, y0, rw, th, buf, data, (n if n > 0 else raw) - 2, self._scratch)
+                    if k > 0:
+                        n = k
+                        enc = 3
                 if n < 0:
                     n = _raw(fb, stride, x, y0, rw, th, buf, data)
                     enc = 0
@@ -374,6 +413,76 @@ class RemoteServer:
         self._range = None
         self._fb = None
         return off - _WS_ROOM
+
+    def _jpeg_for_changes(self):
+        if self._jpeg_engine is None:
+            self._jpeg_engine = False
+            if self.jpeg_changes is not False:
+                try:
+                    import jpegio
+
+                    hw = None if self.jpeg_changes else True
+                    self._jpeg_engine = jpegio.JpegEncoder(quality=self.quality, hardware=hw, exact=False)
+                except (ImportError, OSError, ValueError, TypeError):
+                    pass
+        return self._jpeg_engine
+
+    def _send_jpeg(self, fb, stride, tiles):
+        """Send the changed tiles' bounds as one JPEG. False when it can't."""
+        enc = self._jpeg_for_changes()
+        if not enc:
+            return False
+        flags = self._flags
+        cols = (self._w + _TW - 1) // _TW
+        tx0, ty0, tx1, ty1 = tiles
+        bx0, by0, bx1, by1 = tx1, ty1, tx0, ty0
+        for ty in range(ty0, ty1):
+            ti = ty * cols
+            for tx in range(tx0, tx1):
+                if flags[ti + tx]:
+                    bx0 = min(bx0, tx)
+                    bx1 = max(bx1, tx + 1)
+                    by0 = min(by0, ty)
+                    by1 = max(by1, ty + 1)
+        if bx1 <= bx0:
+            return False
+        x = bx0 * _TW
+        y = by0 * _TH
+        rw = min(bx1 * _TW, self._w) - x
+        rh = min(by1 * _TH, self._h) - y
+        try:
+            jpeg = enc.encode(
+                memoryview(fb)[(y * stride + x) * 2 :],
+                rw,
+                rh,
+                stride=stride * 2,
+                swap=bool(self.display.requires_byteswap),
+            )
+        except (OSError, ValueError, MemoryError):
+            self._jpeg_engine = False
+            return False
+        lossy = self._lossy
+        for ty in range(by0, by1):
+            for tx in range(bx0, bx1):
+                if not lossy[ty * cols + tx]:
+                    lossy[ty * cols + tx] = 1
+                    self._nlossy += 1
+        n = len(jpeg)
+        pad = n & 1
+        size = _HEAD + n + pad
+        if size < 65536:
+            ws = bytes((0x82, 126, size >> 8, size & 0xFF))
+        else:
+            ws = bytes((0x82, 127)) + size.to_bytes(8, "big")
+        head = bytearray(len(ws) + _HEAD)
+        head[: len(ws)] = ws
+        _put_head(head, len(ws), x, y, rw, rh, 2, n)
+        self._out = memoryview(head)
+        self._next = [jpeg, b"\0"] if pad else [jpeg]
+        self.sent += size
+        self.frames += 1
+        self._flush_frame()
+        return True
 
     def _send_frame(self, n):
         buf = self._buf
@@ -406,9 +515,8 @@ class RemoteServer:
             if not k:
                 break
             out = out[k:]
-            if not len(out) and self._next is not None:
-                out = memoryview(self._next)
-                self._next = None
+            if not len(out) and self._next:
+                out = memoryview(self._next.pop(0))
         if out is not None and not len(out):
             out = None
         self._out = out
@@ -463,6 +571,8 @@ class RemoteServer:
 
     def _serve(self, conn):
         """Answer one request. "keep", "close", or "view" when it took the display."""
+        if conn.asked:
+            return self._check_password(conn)
         if conn.out or conn.done:
             if not conn.flush():
                 return "close"
@@ -488,9 +598,25 @@ class RemoteServer:
                 headers[k.strip().lower()] = v.strip()
         key = headers.get("sec-websocket-key")
         if key and target == "/ws":
-            self._take_view(conn, key)
-            return "view"
+            self._handshake(conn, key)
+            if self._password is None:
+                self._take_view(conn)
+                return "view"
+            # The display stays with whoever has it until this one gives
+            # the password: a stranger can't even take it away.
+            conn.out += _ws_text(b'{"auth":1}')
+            conn.asked = True
+            conn.flush()
+            return "keep"
         if target == "/stream.mjpg":
+            if self._password is not None and not self._basic_ok(headers.get("authorization", "")):
+                conn.out = (
+                    b"HTTP/1.1 401 Unauthorized\r\nWWW-Authenticate: Basic realm=\"display\"\r\n"
+                    b"Content-Length: 0\r\nConnection: close\r\n\r\n"
+                )
+                conn.done = True
+                conn.flush()
+                return "keep" if conn.out else "close"
             return self._take_stream(conn)
         if target in ("/", "/index.html"):
             conn.out = (
@@ -514,8 +640,7 @@ class RemoteServer:
             old.flush()
         self._drop_view()
 
-    def _take_view(self, conn, key):
-        self._let_go()
+    def _handshake(self, conn, key):
         import binascii
 
         accept = binascii.b2a_base64(_sha1(key.encode() + _WS_GUID)).strip()
@@ -523,6 +648,57 @@ class RemoteServer:
             b"HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\n"
             b"Connection: Upgrade\r\nSec-WebSocket-Accept: " + accept + b"\r\n\r\n"
         )
+
+    def _check_password(self, conn):
+        # The page's first message is ["p", password].
+        if conn.out and not conn.flush():
+            return "close"
+        if conn.done:
+            return "keep" if conn.out else "close"
+        try:
+            data = conn.sock.recv(1024)
+        except OSError as e:
+            return "keep" if _again(e) else "close"
+        if not data:
+            return "close"
+        conn.inbuf += data
+        got = _ws_frame(conn)
+        if got is False:
+            return "close"
+        if got is None:
+            return "keep" if len(conn.inbuf) < _MAX_HEADER else "close"
+        opcode, payload = got
+        given = None
+        if opcode == 1:
+            try:
+                msg = json.loads(payload)
+                if msg[0] == "p":
+                    given = msg[1]
+            except (ValueError, IndexError, TypeError, KeyError):
+                pass
+        if given is None or given != self._password:
+            conn.out += _ws_text(b'{"bye":"password"}')
+            conn.done = True
+            conn.flush()
+            return "keep" if conn.out else "close"
+        conn.asked = False
+        self._take_view(conn)
+        return "view"
+
+    def _basic_ok(self, value):
+        # HTTP Basic: any user name, the password after the colon.
+        import binascii
+
+        if not value.startswith("Basic "):
+            return False
+        try:
+            pair = binascii.a2b_base64(value[6:].strip()).decode()
+        except (ValueError, UnicodeError):
+            return False
+        return pair.partition(":")[2] == self._password
+
+    def _take_view(self, conn):
+        self._let_go()
         self._view = conn
         self._pressed = set()
         self._start_view()
@@ -582,7 +758,7 @@ class RemoteServer:
         # The CRLF in front ends the previous part.
         head = "\r\n--frame\r\nContent-Type: image/jpeg\r\nContent-Length: %d\r\n\r\n" % len(jpeg)
         self._out = memoryview(head.encode())
-        self._next = jpeg
+        self._next = [jpeg]
         self.sent += len(jpeg)
         self.frames += 1
         self._flush_frame()
@@ -591,7 +767,7 @@ class RemoteServer:
         view = self._view
         self._view = None
         self._out = None
-        self._next = None
+        self._next = []
         self._mjpeg = False
         self._range = None
         self._fb = None
@@ -628,40 +804,20 @@ class RemoteServer:
                 self._on_input(msg)
 
     def _ws_message(self, view):
-        buf = view.inbuf
-        if len(buf) < 2:
+        got = _ws_frame(view)
+        if got is None:
             return None
-        opcode = buf[0] & 0x0F
-        masked = buf[1] & 0x80
-        n = buf[1] & 0x7F
-        pos = 2
-        if n == 126:
-            if len(buf) < 4:
-                return None
-            n = (buf[2] << 8) | buf[3]
-            pos = 4
-        elif n == 127:
+        if got is False:
             self._drop_view()  # nothing the page sends is that big
             return None
-        if masked:
-            if len(buf) < pos + 4:
-                return None
-            mask = buf[pos : pos + 4]
-            pos += 4
-        if len(buf) < pos + n:
-            return None
-        payload = bytearray(buf[pos : pos + n])
-        view.inbuf = buf[pos + n :]
-        if masked:
-            for i in range(n):
-                payload[i] ^= mask[i & 3]
+        opcode, payload = got
         if opcode == 8:
             self._drop_view()
             return None
         if opcode == 9:
-            self._send_ws(bytes(payload), 10)
+            self._send_ws(payload, 10)
             return b""
-        return bytes(payload) if opcode == 1 else b""
+        return payload if opcode == 1 else b""
 
     # -- input --
 
@@ -736,6 +892,9 @@ class RemoteServer:
 
     def close(self):
         """Stop serving and let the browser go."""
+        if self._unwatch is not None:
+            self._unwatch()
+            self._unwatch = None
         if self._timer is not None:
             self._timer.deinit()
             self._timer = None
@@ -747,6 +906,46 @@ class RemoteServer:
             self._listener.close()
         except OSError:
             pass
+
+
+def _ws_text(payload):
+    # A short text message from the server: unmasked, under 126 bytes.
+    return bytes((0x81, len(payload))) + payload
+
+
+def _ws_frame(conn):
+    """The next WebSocket message in ``conn.inbuf`` as (opcode, payload).
+
+    None while it is incomplete; False for one too big to be the page's.
+    """
+    buf = conn.inbuf
+    if len(buf) < 2:
+        return None
+    opcode = buf[0] & 0x0F
+    masked = buf[1] & 0x80
+    n = buf[1] & 0x7F
+    pos = 2
+    if n == 126:
+        if len(buf) < 4:
+            return None
+        n = (buf[2] << 8) | buf[3]
+        pos = 4
+    elif n == 127:
+        return False
+    mask = None
+    if masked:
+        if len(buf) < pos + 4:
+            return None
+        mask = buf[pos : pos + 4]
+        pos += 4
+    if len(buf) < pos + n:
+        return None
+    payload = bytearray(buf[pos : pos + n])
+    conn.inbuf = buf[pos + n :]
+    if mask:
+        for i in range(n):
+            payload[i] ^= mask[i & 3]
+    return opcode, bytes(payload)
 
 
 def _put_head(buf, off, x, y, w, h, enc, n):
@@ -783,7 +982,7 @@ def _own_address():
         return "localhost"
 
 
-def mirror(display, port=80, period_ms=40, sweep_ms=2000):
+def mirror(display, port=80, period_ms=40, sweep_ms=2000, password=None):
     """Show ``display``'s panel in a browser as well.
 
     ``display`` must keep its whole frame in memory: an `FBDisplay`
@@ -796,40 +995,56 @@ def mirror(display, port=80, period_ms=40, sweep_ms=2000):
         period_ms (int): How often to send changes. Default 40.
         sweep_ms (int): How often to compare the whole frame, for drawing
             that bypassed the display's methods. Default 2000.
+        password (str): Asked for before a browser sees or uses the
+            display. Default None: anyone on the network can.
 
     Returns:
         RemoteServer: The server. ``close()`` stops it.
     """
     if display.framebuffers() is None:
         raise ValueError("%s keeps no frame in memory; mirror needs an FBDisplay" % type(display).__name__)
-    server = RemoteServer(display, port=port, period_ms=period_ms, sweep_ms=sweep_ms)
+    server = RemoteServer(display, port=port, period_ms=period_ms, sweep_ms=sweep_ms, password=password)
     _watch(display, server)
     return server
 
 
 def _watch(display, server):
     # Tell the server where the display draws, by wrapping this display's
-    # own methods. Drawing still goes straight to the panel.
+    # own methods. Drawing still goes straight to the panel. Closing the
+    # server puts the methods back, or, when something wrapped them since,
+    # stops noting.
     note = server.note
     blit_rect = display.blit_rect
     fill_rect = display.fill_rect
     flush_rect = display.flush_rect
+    live = [True]
 
     def blit(buf, x, y, w, h):
-        note(x, y, w, h)
+        if live[0]:
+            note(x, y, w, h)
         return blit_rect(buf, x, y, w, h)
 
     def fill(x, y, w, h, c):
-        note(x, y, w, h)
+        if live[0]:
+            note(x, y, w, h)
         return fill_rect(x, y, w, h, c)
 
     def flush(x, y, w, h):
-        note(x, y, w, h)
+        if live[0]:
+            note(x, y, w, h)
         return flush_rect(x, y, w, h)
+
+    def unwatch():
+        live[0] = False
+        if display.blit_rect is blit and display.fill_rect is fill and display.flush_rect is flush:
+            display.blit_rect = blit_rect
+            display.fill_rect = fill_rect
+            display.flush_rect = flush_rect
 
     display.blit_rect = blit
     display.fill_rect = fill
     display.flush_rect = flush
+    server._unwatch = unwatch
 
 
 class RemoteDisplay(FBDisplay):
@@ -844,6 +1059,8 @@ class RemoteDisplay(FBDisplay):
         port (int): The TCP port for the page. Default 80.
         period_ms (int): How often to send changes. Default 40.
         sweep_ms (int): How often to compare the whole frame. Default 2000.
+        password (str): Asked for before a browser sees or uses the
+            display. Default None: anyone on the network can.
 
     Attributes:
         server (RemoteServer): Serves the page and the frame.
@@ -851,9 +1068,9 @@ class RemoteDisplay(FBDisplay):
 
     server = None
 
-    def __init__(self, width=480, height=320, port=80, period_ms=40, sweep_ms=2000, *, quiet=False):
+    def __init__(self, width=480, height=320, port=80, period_ms=40, sweep_ms=2000, *, password=None, quiet=False):
         super().__init__(alloc_buffer(width * height * 2), width, height, quiet=quiet)
-        self.server = RemoteServer(self, port=port, period_ms=period_ms, sweep_ms=sweep_ms)
+        self.server = RemoteServer(self, port=port, period_ms=period_ms, sweep_ms=sweep_ms, password=password)
 
     def get_events(self):
         """The browser's input since the last call: give it to the app as ``host_read``."""

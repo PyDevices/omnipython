@@ -9,9 +9,13 @@ pointer, wheel and keys back as small JSON arrays.
 
 Rectangles arrive as binary messages: records of a 16-byte little-endian
 header (x, y, w, h, encoding, 0 as six u16, then the data length as a u32)
-followed by the data. Encoding 0 is raw pixels; 1 is runs of (count, pixel).
-Text messages are JSON: ``{"w":..,"h":..,"swap":..}`` starts a session, and
-``{"bye":"taken"}`` says another browser took the display.
+followed by the data, padded to an even length. Encoding 0 is raw pixels;
+1 is runs of (count, pixel); 2 is a JPEG; 3 is a palette (u16 count, u16 0,
+the colours) and a 4-bit index per pixel, high nibble first.
+Text messages are JSON: ``{"w":..,"h":..,"swap":..}`` starts a session,
+``{"auth":1}`` asks for the password (the page answers ``["p", password]``),
+``{"bye":"password"}`` says it was wrong, and ``{"bye":"taken"}`` says another
+browser took the display.
 """
 
 PAGE = b"""<!doctype html>
@@ -22,12 +26,18 @@ PAGE = b"""<!doctype html>
 html,body{margin:0;height:100%;background:#111;color:#bbb;font:15px system-ui,sans-serif;overflow:hidden}
 #c{position:absolute;inset:0;margin:auto;max-width:100vw;max-height:100vh;touch-action:none;outline:none;image-rendering:pixelated}
 #m{position:fixed;left:0;right:0;top:45%;text-align:center;padding:0 1em}
+#f{position:fixed;left:0;right:0;top:35%;text-align:center;display:none}
+#f input{font:inherit;padding:.4em;margin:.3em;border-radius:4px;border:1px solid #555;background:#222;color:#eee}
 </style></head>
 <body><canvas id="c" tabindex="0" width="1" height="1"></canvas><div id="m">Connecting\xe2\x80\xa6</div>
+<form id="f"><div>This display needs its password.</div><input id="p" type="password" autocomplete="current-password" placeholder="Password"><input type="submit" value="Show"></form>
 <script>
 "use strict";
 const c=document.getElementById("c"),m=document.getElementById("m"),g=c.getContext("2d");
-let img=null,px=null,lut=null,ws=null,taken=false,motion=null;
+let img=null,px=null,lut=null,ws=null,taken=false,motion=null,chain=Promise.resolve(),oc=null,pw=null;
+const f=document.getElementById("f"),pin=document.getElementById("p");
+f.onsubmit=e=>{e.preventDefault();pw=pin.value;f.style.display="none";m.textContent="Connecting\xe2\x80\xa6";
+  if(ws&&ws.readyState===1)ws.send(JSON.stringify(["p",pw]));else connect();};
 function makeLut(swap){
   lut=new Uint32Array(65536);
   for(let v=0;v<65536;v++){
@@ -41,18 +51,32 @@ function start(h){
   px=new Uint32Array(img.data.buffer);makeLut(h.swap);
   m.textContent="";c.focus();
 }
-function paint(buf){
+async function jpeg(buf,o,n,x,y,w,h){
+  const bmp=await createImageBitmap(new Blob([new Uint8Array(buf,o,n)],{type:"image/jpeg"}));
+  if(!oc)oc=document.createElement("canvas");
+  oc.width=w;oc.height=h;const og=oc.getContext("2d",{willReadFrequently:true});og.drawImage(bmp,0,0);
+  const s=new Uint32Array(og.getImageData(0,0,w,h).data.buffer),W=c.width;
+  for(let r=0;r<h;r++)px.set(s.subarray(r*w,r*w+w),(y+r)*W+x);
+}
+async function paint(buf){
   if(!px)return;
   const dv=new DataView(buf),W=c.width;
   let o=0,x0=W,y0=c.height,x1=0,y1=0;
   while(o+16<=buf.byteLength){
     const x=dv.getUint16(o,true),y=dv.getUint16(o+2,true),w=dv.getUint16(o+4,true),
           h=dv.getUint16(o+6,true),e=dv.getUint16(o+8,true),n=dv.getUint32(o+12,true);
-    const d=new Uint16Array(buf,o+16,n>>1);o+=16+n;
+    const at=o+16;o+=16+((n+1)&~1);
+    if(e===2){await jpeg(buf,at,n,x,y,w,h);}
+    else if(e===3){
+      const b=new Uint8Array(buf,at,n),k=b[0]|(b[1]<<8),pal=new Uint16Array(buf,at+4,k),q=4+2*k;
+      let i=0;
+      for(let r=0;r<h;r++){let p=(y+r)*W+x;for(let j=0;j<w;j++,i++){const v=b[q+(i>>1)];px[p++]=lut[pal[i&1?v&15:v>>4]];}}
+    }
+    const d=new Uint16Array(buf,at,(e<2?n:0)>>1);
     if(e===0){
       let i=0;
       for(let r=0;r<h;r++){let p=(y+r)*W+x;for(let q=0;q<w;q++)px[p++]=lut[d[i++]];}
-    }else{
+    }else if(e===1){
       let r=0,q=0,p=y*W+x;
       for(let i=0;i<d.length;i+=2){
         let k=d[i];const v=lut[d[i+1]];
@@ -96,12 +120,19 @@ c.addEventListener("keyup",e=>key(e,0));
 function tick(){if(motion){send(motion);motion=null;}requestAnimationFrame(tick);}
 requestAnimationFrame(tick);
 function connect(){
+  taken=false;
   ws=new WebSocket((location.protocol==="https:"?"wss://":"ws://")+location.host+"/ws");
   ws.binaryType="arraybuffer";
   ws.onmessage=ev=>{
-    if(typeof ev.data!=="string"){paint(ev.data);return;}
+    if(typeof ev.data!=="string"){const b=ev.data;chain=chain.then(()=>paint(b));return;}
     const msg=JSON.parse(ev.data);
-    if(msg.w)start(msg);
+    if(msg.w){f.style.display="none";start(msg);}
+    else if(msg.auth){
+      // A password this page already gave goes again after a reconnect.
+      if(pw!==null)ws.send(JSON.stringify(["p",pw]));
+      else{m.textContent="";f.style.display="block";pin.focus();}
+    }
+    else if(msg.bye==="password"){taken=true;pw=null;m.textContent="That password is wrong.";f.style.display="block";pin.value="";pin.focus();}
     else if(msg.bye){taken=true;m.textContent="Another browser is showing this display now. Reload to take it back.";}
   };
   ws.onclose=()=>{

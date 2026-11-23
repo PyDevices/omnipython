@@ -121,6 +121,20 @@ def t_store():
     del p
 
 
+def t_store_forgets():
+    path = tmpfile("forget")
+    r = Registry(path)
+    shy = FakeProvider("cast.target", "mirror", [("browser", "Browser")])
+    shy.remember = False
+    r.register(shy)
+    r.select("cast.target", "mirror:browser")
+    check(shy.started == ["browser"], "a provider that isn't remembered still starts")
+    r2 = Registry()
+    r2.set_store(path)
+    check(r2.chosen("cast.target") == [], "its choice isn't saved")
+    os.remove(path)
+
+
 def t_conflicts():
     r = Registry()
     bt = r.register(FakeProvider("audio.out", "a2dp", [("spk", "Speaker")], ("radio.bt",)))

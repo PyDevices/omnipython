@@ -73,6 +73,7 @@ class Provider:
     kind: str | None
     name: str | None
     resources: tuple[str, ...]
+    remember: bool
     def __init__(self, kind: str | None = None, name: str | None = None, resources: Iterable[str] | None = None) -> None: ...
     def endpoint(
         self,

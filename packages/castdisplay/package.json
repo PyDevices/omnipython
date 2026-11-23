@@ -6,6 +6,7 @@
     ["castdisplay/endpoints.py", "github:PyDevices/omnipython/packages/castdisplay/castdisplay/endpoints.py"],
     ["castdisplay/hls_display.py", "github:PyDevices/omnipython/packages/castdisplay/castdisplay/hls_display.py"],
     ["castdisplay/micecast.py", "github:PyDevices/omnipython/packages/castdisplay/castdisplay/micecast.py"],
+    ["castdisplay/mirror.py", "github:PyDevices/omnipython/packages/castdisplay/castdisplay/mirror.py"],
     ["castdisplay/pycast.py", "github:PyDevices/omnipython/packages/castdisplay/castdisplay/pycast.py"],
     ["castdisplay/roku_cast.py", "github:PyDevices/omnipython/packages/castdisplay/castdisplay/roku_cast.py"],
     ["castdisplay/roku_companion.py", "github:PyDevices/omnipython/packages/castdisplay/castdisplay/roku_companion.py"],

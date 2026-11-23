@@ -15,5 +15,5 @@ metadata(
 
 package(
     "castdisplay",
-    files=("__init__.py", "cast_display.py", "castfast.py", "endpoints.py", "hls_display.py", "micecast.py", "pycast.py", "roku_cast.py", "roku_companion.py", "uibcinput.py"),
+    files=("__init__.py", "cast_display.py", "castfast.py", "endpoints.py", "hls_display.py", "micecast.py", "mirror.py", "pycast.py", "roku_cast.py", "roku_companion.py", "uibcinput.py"),
 )

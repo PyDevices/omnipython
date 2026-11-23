@@ -57,6 +57,9 @@ def _diff(fb, hashes, stride: int, w: int, h: int, flags, tx0: int, ty0: int, tx
                         hv = (hv ^ a2[p + c]) * 16777619
                         c += 1
                 r += 1
+            # The same width on a 32-bit board and a 64-bit host, where a
+            # word holds more than the 32 bits kept in hashes.
+            hv &= 0x3FFFFFFF
             i = ty * cols_t + tx
             if hs[i] != hv:
                 hs[i] = hv
@@ -122,3 +125,71 @@ def _raw(fb, stride: int, x: int, y: int, w: int, h: int, dst, off: int) -> int:
             c += 1
         r += 1
     return w * h * 2
+
+
+@micropython.viper
+def _pal(fb, stride: int, x: int, y: int, w: int, h: int, dst, off: int, cap: int, scratch) -> int:
+    # The rectangle as a palette of up to 16 colours and a 4-bit index per
+    # pixel, high nibble first: u16 count, u16 0, the colours, the indices,
+    # padded to an even length. -1 when it has more colours or would take
+    # more than cap bytes. dst is written only once it fits.
+    s = ptr16(fb)
+    pal = ptr16(scratch)
+    nc = 0
+    r = 0
+    while r < h:
+        p = (y + r) * stride + x
+        c = 0
+        while c < w:
+            v = s[p + c]
+            k = 0
+            while k < nc:
+                if pal[k] == v:
+                    break
+                k += 1
+            if k == nc:
+                if nc == 16:
+                    return -1
+                pal[nc] = v
+                nc += 1
+            c += 1
+        r += 1
+    size = 4 + 2 * nc + ((w * h + 1) >> 1)
+    size = (size + 1) & ~1
+    if size > cap:
+        return -1
+    d = ptr16(dst)
+    b = ptr8(dst)
+    o = off >> 1
+    d[o] = nc
+    d[o + 1] = 0
+    k = 0
+    while k < nc:
+        d[o + 2 + k] = pal[k]
+        k += 1
+    q = off + 4 + 2 * nc
+    half = 0
+    r = 0
+    while r < h:
+        p = (y + r) * stride + x
+        c = 0
+        while c < w:
+            v = s[p + c]
+            k = 0
+            while pal[k] != v:
+                k += 1
+            if half:
+                b[q] = b[q] | k
+                q += 1
+                half = 0
+            else:
+                b[q] = k << 4
+                half = 1
+            c += 1
+        r += 1
+    if half:
+        q += 1
+    if (q - off) & 1:
+        b[q] = 0
+        q += 1
+    return q - off
