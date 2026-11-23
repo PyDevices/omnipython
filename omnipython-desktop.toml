@@ -120,6 +120,7 @@
 "https://raw.githubusercontent.com/PyDevices/omnipython/main/lib/orientation.py" = "/lib/orientation.py"
 "https://raw.githubusercontent.com/PyDevices/omnipython/main/utils/pngio.py" = "/lib/pngio.py"
 "https://raw.githubusercontent.com/PyDevices/omnipython/main/utils/svgio.py" = "/lib/svgio.py"
+"https://raw.githubusercontent.com/PyDevices/omnipython/main/lib/threadnet.py" = "/lib/threadnet.py"
 "https://raw.githubusercontent.com/PyDevices/omnipython/main/utils/ttfio.py" = "/lib/ttfio.py"
 "https://raw.githubusercontent.com/PyDevices/omnipython/main/utils/usdl2.py" = "/lib/usdl2.py"
 "https://raw.githubusercontent.com/PyDevices/omnipython/main/utils/uwin32.py" = "/lib/uwin32.py"

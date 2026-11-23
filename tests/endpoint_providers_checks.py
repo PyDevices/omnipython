@@ -12,6 +12,7 @@ the host to show it lists without failing. test_endpoint_providers.py runs
 this under both interpreters.
 """
 
+import binascii
 import os
 import sys
 
@@ -677,6 +678,301 @@ def t_espnow():
     finally:
         espnowpeers._ticks_ms, espnowpeers._ticks_diff = saved
         espnowpeers._provider[:] = []
+
+
+# -- Thread ----------------------------------------------------------------------
+
+
+def _tlv(kind, value):
+    return bytes((kind, len(value))) + bytes(value)
+
+
+class FakeThreadAir:
+    """802.15.4 radios in range of each other. Networks made anywhere are numbered
+    in one sequence, so two airs never make the same one."""
+
+    made = 0
+    ups = 0
+
+    def __init__(self):
+        self.nodes = []
+
+
+class FakeOpenThread:
+    """The firmware's openthread module on one board: a node forms a network
+    when nobody else is up on it, joins as a child when a node with the same
+    network key is, and stays detached with the wrong key. A node is
+    "detached" for one role() read after coming up, as a real one is while
+    it attaches. A search reports on the second discovered() call."""
+
+    def __init__(self, air):
+        self.air = air
+        self.tlvs = None
+        self.on = False
+        self.attaching = False
+        self.searching = 0
+        self.since = 0
+        self.calls = []
+        air.nodes.append(self)
+
+    def _info(self):
+        out = {}
+        tlvs = self.tlvs or b""
+        i = 0
+        while i < len(tlvs):
+            out[tlvs[i]] = bytes(tlvs[i + 2 : i + 2 + tlvs[i + 1]])
+            i += 2 + tlvs[i + 1]
+        return out
+
+    def dataset_new(self, name=None, channel=None, panid=None):
+        self.calls.append("dataset_new")
+        FakeThreadAir.made += 1
+        n = FakeThreadAir.made
+        return b"".join((
+            _tlv(14, b"\x00\x00\x00\x00\x00\x01\x00\x00"),  # active timestamp: passed by
+            _tlv(0, bytes((0, 0, channel or 11 + n))),
+            _tlv(1, bytes((0x12, n))),
+            _tlv(2, bytes((0xDE, 0xAD, 0, 0, 0, 0, 0, n))),
+            _tlv(3, (name or "net-%d" % n).encode()),
+            _tlv(5, bytes((n,)) * 16),
+            _tlv(7, b"\xfd\x00\x00\x00\x00\x00\x00\x01"),  # mesh-local prefix: passed by
+        ))
+
+    def dataset(self, tlvs=None):
+        if tlvs is None:
+            self.calls.append("dataset?")
+            return self.tlvs
+        self.calls.append("dataset!")
+        info = self.tlvs, self.tlvs = self.tlvs, bytes(tlvs)
+        got = self._info()
+        if 5 not in got or 0 not in got or 1 not in got:
+            self.tlvs = info[0]
+            raise ValueError("a dataset needs at least a network key, a channel and a PAN ID")
+        return None
+
+    def up(self, on=None):
+        if on is None:
+            return self.on
+        self.calls.append("up(%s)" % on)
+        if on and self.tlvs is None:
+            raise OSError("OpenThread: no dataset; set one with openthread.dataset()")
+        self.on = bool(on)
+        self.attaching = self.on
+        FakeThreadAir.ups += 1
+        self.since = FakeThreadAir.ups
+        return None
+
+    def _peers(self):
+        mine = self._info()
+        return [n for n in self.air.nodes if n is not self and n.on and n._info().get(2) == mine.get(2)]
+
+    def role(self):
+        self.calls.append("role")
+        if not self.on:
+            return "disabled"
+        if self.attaching:
+            self.attaching = False
+            return "detached"
+        key = self._info().get(5)
+        mates = [p for p in self._peers() if p._info().get(5) == key]
+        if self._peers() and not mates:
+            return "detached"  # the network is there, but this key doesn't open it
+        return "child" if any(p.since < self.since for p in mates) else "leader"
+
+    def neighbors(self):
+        key = self._info().get(5)
+        return [("%016x" % i, 0x400 + i, -55, True) for i, p in enumerate(self._peers()) if p._info().get(5) == key]
+
+    def discover(self):
+        self.calls.append("discover")
+        if self.searching:
+            raise OSError("OpenThread: Busy")
+        self.searching = 2
+
+    def discovered(self):
+        self.searching -= 1
+        if self.searching:
+            return None
+        out, seen = [], []
+        for n in self.air.nodes:
+            info = n._info()
+            if n is self or not n.on or info.get(2) in seen:
+                continue
+            seen.append(info[2])
+            out.append((info[3].decode(), binascii.hexlify(info[2]).decode(), info[1][0] << 8 | info[1][1], info[0][2], -60 - len(out)))
+        return out
+
+
+def t_thread():
+    import threadnet
+    from endpointkit.fake import FakeProvider
+
+    clock = [5000]
+    saved = (threadnet._ticks_ms, threadnet._ticks_diff)
+    threadnet._ticks_ms = lambda: clock[0]
+    threadnet._ticks_diff = lambda a, b: a - b
+    threadnet._provider[:] = []
+    threadnet._registry[:] = []
+    try:
+        # The dataset helpers.
+        ds = FakeOpenThread(FakeThreadAir()).dataset_new("garden", channel=20)
+        info = threadnet.parse(ds)
+        n = FakeThreadAir.made
+        check(info == {"name": "garden", "extpanid": "dead0000000000%02x" % n, "panid": 0x1200 + n, "channel": 20, "key": "%02x" % n * 16}, "parse reads name, IDs, channel and key: %r" % (info,))
+        check(threadnet.parse(binascii.hexlify(ds).decode()) == info, "parse takes hex too")
+        built = threadnet.build("garden", "dead0000000000%02x" % n, 0x1200 + n, 20, "%02x" % n * 16)
+        check(threadnet.parse(built) == info, "build makes what parse reads back")
+        for bad in (ds[:-3], "zz", b"\x00"):
+            try:
+                threadnet.parse(bad)
+                check(False, "parse refuses %r" % (bad,))
+            except ValueError:
+                pass
+        for args in (("x", "dead", 1, 20, "01" * 16), ("x", "dead000000000001", 1, 27, "01" * 16), ("x", "dead000000000001", 1, 20, "01"), ("", "dead000000000001", 1, 20, "01" * 16)):
+            try:
+                threadnet.build(*args)
+                check(False, "build refuses %r" % (args,))
+            except ValueError:
+                pass
+
+        air = FakeThreadAir()
+        oa, ob, oc, od = FakeOpenThread(air), FakeOpenThread(air), FakeOpenThread(air), FakeOpenThread(air)
+        a, b, c, d = Registry(), Registry(), Registry(), Registry()
+        pa = threadnet.register(a, oa)
+        check(endpointkit.KINDS["thread.net"] == endpointkit.ONE and endpointkit.title("thread.net") == "Thread" and endpointkit.icon("thread.net") == "lan", "registering makes the kind known")
+        check(threadnet.register(a) is pa and len(a.providers("thread.net")) == 1, "registering again returns the same provider")
+        check(a.endpoints("thread.net") == [] and not oa.on, "a board with no dataset lists nothing and stays down")
+
+        # The first board forms a network and leads it.
+        check(oa.calls.count("discover") == 1, "registering starts a search")
+        a.poll()
+        a.poll()
+        shared = threadnet.form("bench", channel=15)
+        ext = threadnet.extpanid(shared)
+        net = "thread:" + ext
+        check(oa.on and threadnet.parse(oa.dataset())["name"] == "bench", "form sets the new dataset and comes up")
+        check(a.chosen("thread.net") == [net], "form chooses the new network: %r" % a.chosen("thread.net"))
+        check(oa.calls.count("discover") == 1, "no search while the new network attaches")
+        check(a.find(net).label == "bench", "the network is listed by its name")
+        clock[0] += threadnet.RESCAN_MS
+        a.poll()
+        ep = a.find(net)
+        check(ep.state == endpointkit.CONNECTED and ep.caps["role"] == "leader" and ep.caps["channel"] == 15, "the board leads its network: %r %r" % (ep.state, ep.caps))
+        reads = len(oa.calls)
+        a.poll()
+        check(len(oa.calls) == reads, "poll reads nothing before rescan_ms")
+
+        # The radio is Thread's own: Wi-Fi isn't stopped, another 802.15.4 user is.
+        wifi = FakeProvider("net", "wifi", [("Home", "Home")], ("radio.wifi",))
+        a.register(wifi)
+        a.select("net", "wifi:Home")
+        check(a.conflicts("thread.net", [net]) == ([], []), "choosing Thread stops nothing on Wi-Fi")
+        endpointkit.add_kind("zigbee.net", endpointkit.ONE, "Zigbee", "lan")
+        zig = FakeProvider("zigbee.net", "zigbee", [("hub", "Zigbee hub")], ("radio.15_4",))
+        a.register(zig)
+        a.select("zigbee.net", "zigbee:hub", confirm=True)
+        check(a.chosen("thread.net") == [] and not oa.on, "another 802.15.4 choice stops Thread when confirmed")
+        a.select("thread.net", net, confirm=True)
+        check(oa.on and a.chosen("zigbee.net") == [], "and choosing Thread again stops it")
+        a.unregister(zig)
+        clock[0] += threadnet.RESCAN_MS
+        a.poll()
+        a.poll()
+
+        # A second board finds the network and joins it with the network key.
+        pb = b.register(threadnet.ThreadNet(ob))
+        b.refresh("thread.net")
+        check(ob.calls.count("discover") == 1 and b.endpoints("thread.net") == [], "a scan starts a search and lists nothing yet")
+        b.refresh("thread.net")
+        check(ob.calls.count("discover") == 1, "a scan during a search doesn't start another")
+        b.poll()
+        check(b.endpoints("thread.net") == [], "nothing is listed while the search runs")
+        b.poll()
+        ep = b.find(net)
+        check(ep is not None and ep.state == endpointkit.NEEDS_PAIRING and ep.asks == endpointkit.PASSWORD and ep.label == "bench", "the search finds the network, which needs its key: %r" % (ep,))
+        check(ep.caps["channel"] == 15 and ep.caps["rssi"] == -60, "a found network carries its channel and signal: %r" % (ep.caps,))
+        b.select("thread.net", net)
+        check(b.find(net).error and "join it first" in b.find(net).error and not ob.on, "choosing it before pairing is refused: %r" % b.find(net).error)
+        for bad in ("nonsense", "00" * 15, FakeOpenThread(FakeThreadAir()).dataset_new("other").hex()):
+            try:
+                b.pair(net, bad)
+                check(False, "pair refuses %r" % bad)
+            except ValueError:
+                pass
+        check(b.find(net).state == endpointkit.NEEDS_PAIRING, "a refused secret leaves it unpaired")
+        key = threadnet.parse(shared)["key"]
+        b.pair(net, key)
+        check(b.find(net).state == endpointkit.AVAILABLE and not ob.on, "the network key pairs it without joining")
+        b.select("thread.net", net)
+        got = threadnet.parse(ob.dataset())
+        check(ob.on and got["key"] == key and got["channel"] == 15 and got["extpanid"] == ext, "choosing it joins with a dataset made from the search and the key: %r" % (got,))
+        clock[0] += threadnet.RESCAN_MS
+        b.poll()
+        clock[0] += threadnet.RESCAN_MS
+        b.poll()
+        ep = b.find(net)
+        check(ep.state == endpointkit.CONNECTED and ep.caps["role"] == "child" and ep.caps["neighbors"] == 1, "the second board is a child on the network: %r %r" % (ep.state, ep.caps))
+        clock[0] += threadnet.RESCAN_MS
+        a.poll()
+        check(a.find(net).caps["neighbors"] == 1, "the leader hears the child: %r" % (a.find(net).caps,))
+
+        # A third board joins with the whole dataset, a fourth with the wrong key.
+        c.register(threadnet.ThreadNet(oc))
+        c.refresh("thread.net")
+        c.poll()
+        c.poll()
+        c.pair(net, shared)
+        c.select("thread.net", net)
+        clock[0] += threadnet.RESCAN_MS
+        c.poll()
+        clock[0] += threadnet.RESCAN_MS
+        c.poll()
+        check(c.find(net).state == endpointkit.CONNECTED and oc.dataset() == bytes(binascii.unhexlify(shared)), "the whole dataset joins as given")
+        d.register(threadnet.ThreadNet(od))
+        d.refresh("thread.net")
+        d.poll()
+        d.poll()
+        d.pair(net, "ff" * 16)
+        d.select("thread.net", net)
+        clock[0] += threadnet.RESCAN_MS * 3
+        d.poll()
+        check(od.on and d.find(net).state == endpointkit.AVAILABLE and d.find(net).caps["role"] == "detached", "the wrong key stays detached, not connected: %r" % (d.find(net).caps,))
+
+        # Letting go takes the interface down; unregistering does too.
+        b.select("thread.net", [])
+        check(not ob.on, "letting the network go takes the interface down")
+        clock[0] += threadnet.RESCAN_MS
+        b.poll()
+        check(b.find(net).state == endpointkit.AVAILABLE and b.find(net).caps["role"] == "disabled", "a network let go shows as available")
+        c.unregister(c.providers("thread.net")[0])
+        check(not oc.on, "unregistering takes the interface down")
+
+        # A board already on a network adopts it when it registers.
+        threadnet._provider[:] = []
+        threadnet._registry[:] = []
+        oc.up(True)
+        oc.role()
+        e = Registry()
+        threadnet.register(e, oc)
+        check(e.chosen("thread.net") == [net], "registering adopts the network the board is on: %r" % e.chosen("thread.net"))
+
+        threadnet._provider[:] = []
+        threadnet._registry[:] = []
+        try:
+            threadnet.register(Registry())
+            check(False, "register without openthread raises")
+        except ImportError:
+            pass
+        try:
+            threadnet.form("x")
+            check(False, "form before register raises")
+        except RuntimeError:
+            pass
+        del pb
+    finally:
+        threadnet._ticks_ms, threadnet._ticks_diff = saved
+        threadnet._provider[:] = []
+        threadnet._registry[:] = []
 
 
 # -- the real host ---------------------------------------------------------------
