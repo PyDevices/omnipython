@@ -38,7 +38,8 @@ A link's ``state`` says what it's doing: ``"connecting"``, ``"advertising"``,
 sent before it connects wait and go out once it does. When the other side
 goes away the link closes: a device drops it, and a panel's ``closed`` turns
 true. `serve` keeps advertising, so the next central that connects becomes a
-new panel.
+new panel. A connection that fails doesn't stop it: the listener's ``error``
+holds what went wrong, and it advertises again `RETRY_MS` later.
 
 Needs ``bledev``: OmniPython firmware with Bluetooth, ``omnipython[ble]`` on a
 computer, or ``bledev.fake`` in tests.
@@ -54,6 +55,8 @@ from . import stream, ticks_diff, ticks_ms
 #: The shortest time between two runs of the waiting tasks, in milliseconds,
 #: when the program has no event loop of its own.
 PUMP_MS = 4
+#: How long `serve` waits after a failed connection before it advertises again.
+RETRY_MS = 1000
 
 _MP = sys.implementation.name in ("micropython", "circuitpython")
 
@@ -260,14 +263,19 @@ class Listener:
         self._task = self._driver.task(self._keep())
 
     async def _keep(self):
-        try:
-            while True:
+        # One failed connection (a central that times out mid-handshake) must
+        # not end the listener: record it, pause, and advertise again.
+        while True:
+            try:
                 link = await nus.serve(self._ble, self._name, **self._options)
-                self.links += 1
-                self._pending.append(Link(_Opened(link), "connected", False))
-        except Exception as e:  # noqa: BLE001 - kept in error and state
-            self.error = e
-            self.state = "stopped: %s" % (e,)
+            except Exception as e:  # noqa: BLE001 - kept in error and state
+                self.error = e
+                self.state = "retrying: %s" % (e,)
+                await asyncio.sleep(RETRY_MS / 1000)
+                self.state = "advertising"
+                continue
+            self.links += 1
+            self._pending.append(Link(_Opened(link), "connected", False))
 
     def accept(self):
         self._driver.pump()
