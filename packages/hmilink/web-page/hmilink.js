@@ -263,6 +263,9 @@ export class Link {
     port._ondata = (bytes) => this._feed(bytes);
     if (port.waiting) this._feed(port.read(port.waiting));
     port.onclose = (error) => this.onclose && this.onclose(error);
+    // Greet the device as a panel does: if this page took over a connection
+    // an earlier page left open, the device sends the document again.
+    this.send({ t: "hello", v: 1 });
   }
 
   get closed() {
