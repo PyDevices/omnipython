@@ -1213,7 +1213,7 @@ async def auto_picks_or_explains(air):
     import bledev.auto as auto
 
     name = auto.backend_name()
-    expect(name in (None, "mpble", "bleak", "webble", "fake"), "backend_name: {!r}".format(name))
+    expect(name in (None, "mpble", "cpble", "bleak", "winrt", "bluez", "webble", "fake"), "backend_name: {!r}".format(name))
     ble = auto.adapter(backend="fake", air=air)
     equal(ble.backend, "fake", "forced backend")
     if name is None:

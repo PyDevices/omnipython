@@ -23,6 +23,7 @@ bledev
 bledev.auto
 bledev.battery
 bledev.bleak
+bledev.bluez
 bledev.cyclingpower
 bledev.cyclingspeed
 bledev.deviceinfo

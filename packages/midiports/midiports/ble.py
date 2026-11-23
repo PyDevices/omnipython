@@ -388,6 +388,7 @@ def ports(name=None, *, adapter=None, pump=None, pump_ms=PUMP_MS, queue_limit=QU
 
     Args:
         name: what the board advertises; the board's name when ``None``.
+            On Windows the PC's own Bluetooth name, and it must stay ``None``.
         adapter: a ``bledev`` adapter; ``bledev.auto.adapter()`` when ``None``.
         pump: whether ``any()`` runs the event loop's waiting tasks. ``None``
             decides from whether a loop is running when `ports` is called.
@@ -411,7 +412,9 @@ def ports(name=None, *, adapter=None, pump=None, pump_ms=PUMP_MS, queue_limit=QU
         if name is None:
             import boarddev
 
-            name = boarddev.name()
+            # Windows advertises the PC's own name, so it stays None there.
+            if adapter.capabilities().get("advertise_name", True):
+                name = boarddev.name()
         link = BleIn(name, adapter, pump=pump, pump_ms=pump_ms, queue_limit=queue_limit)
     except Exception:
         # A radio that failed to start keeps what it took, internal RAM
