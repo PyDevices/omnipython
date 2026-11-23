@@ -234,6 +234,25 @@ def t_parsers():
     check(kinds == ["camera"], "the captured C920e's twelve streaming alternates are one camera: %r" % kinds)
 
 
+def t_not_started():
+    # Registered with start=False, nothing starts the port: its devices are
+    # listed on the first poll after a program starts it.
+    reg = endpointkit.Registry()
+    made = endpoints.register(reg, start=False)
+    late = FakeDevice(0x1234, 0x0001, config(itf(0, 3, 1, 1, 1), ep(0x81, 3, 8)), ("hid",), "Late Keyboard")
+    dev_id = fake.plug(late)
+    reg.poll()
+    check(not usb.core.running() and not fake.running, "register(start=False) leaves the port stopped")
+    check("Late Keyboard" not in labels("keys", reg), "and lists nothing while it's stopped")
+    usb.core.start(full_speed=True)
+    reg.poll()
+    check("Late Keyboard" in labels("keys", reg), "a program starting the port gets its devices listed on the next poll")
+    fake.pull(dev_id)
+    reg.poll()
+    endpoints.unregister(reg, made)
+    usb.core.stop()
+
+
 def t_hotplug():
     reg = endpointkit.Registry()
     check(not usb.core.running(), "the port isn't running before register")
@@ -341,6 +360,61 @@ def t_no_host():
     usb.core._usbhost = saved
 
 
+def t_audio_out():
+    # A USB speaker chosen under audio.out opens through usb.host.audio, on
+    # the device the endpoint names. A stand-in records what it was asked.
+    reg = endpointkit.Registry()
+    made = endpoints.register(reg)
+    out = [p for p in made if p.kind == "audio.out"][0]
+    check(isinstance(out, endpoints.UsbAudioOut), "audio.out's provider can open what it lists")
+    if not [d for d in fake.devices.values() if d is CODEC]:
+        fake.plug(CODEC)
+    reg.poll()
+    codec = [e for e in reg.endpoints("audio.out") if e.label == "USB Audio CODEC"][0]
+    try:
+        out.open_out(codec)
+        raised = None
+    except ImportError as exc:
+        raised = str(exc)
+    check(raised and "usb-host-audio" in raised, "without usb-host-audio, opening says what's missing (%r)" % raised)
+
+    class Audio:
+        calls = []
+
+        @staticmethod
+        def audio_out(format=None, **kwargs):
+            Audio.calls.append((format, kwargs))
+            return "player"
+
+    import usb.host
+
+    sys.modules["usb.host.audio"] = Audio
+    usb.host.audio = Audio
+    try:
+        reg.select("audio.out", codec.id)
+        check(reg.find(codec.id).state == endpointkit.CONNECTED, "choosing the codec marks it connected")
+        got = out.open_out(codec, "fmt", latency="buffered")
+        fmt, kwargs = Audio.calls[-1] if Audio.calls else (None, {})
+        check(got == "player" and fmt == "fmt", "open_out hands back usb.host.audio's player for the format asked")
+        check(kwargs.get("dev") is endpoints.device(codec) and kwargs.get("dev") is not None,
+              "on the device the endpoint names")
+        check(kwargs.get("latency") == "buffered", "with the keywords it was given: %r" % kwargs)
+        for dev_id, dev in list(fake.devices.items()):
+            if dev is CODEC:
+                fake.pull(dev_id)
+        reg.poll()
+        try:
+            out.open_out(codec)
+            code = None
+        except OSError as exc:
+            code = exc.args[0]
+        check(code == 19, "a pulled-out speaker can't be opened (%r)" % code)
+    finally:
+        del sys.modules["usb.host.audio"]
+        del usb.host.audio
+        endpoints.unregister(reg, made)
+
+
 def _cleanup():
     for d in ("/usb/host/endpoints.py", "/usb/core.py", "/usb/util.py"):
         try:
@@ -356,8 +430,10 @@ def _cleanup():
 
 try:
     t_parsers()
+    t_not_started()
     t_hotplug()
     t_flaky()
+    t_audio_out()
     t_no_host()
 finally:
     _cleanup()

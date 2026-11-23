@@ -22,10 +22,29 @@ plays subscribes to ``audio.out`` and opens its stream on the chosen device.
 
 Devices plugged in later are found by `endpointkit.poll`, which lists them
 again every ``rescan_ms``.
+
+On a board, `route` lists the board's own output and makes its
+``audio_out`` play wherever ``audio.out`` is chosen::
+
+    import board_peripherals
+    import endpointkit
+    from audiodev import endpoints
+
+    endpoints.route(board_peripherals)
+    endpointkit.select("audio.out", "usb-audio-out:0d8c-0014-i1")
+    out = board_peripherals.audio_out(fmt)  # plays on the USB sound card
+
+``audio_out`` opens the first chosen endpoint that is connected, through
+its provider's ``open_out``; the USB host's and the Bluetooth providers
+(``usb.host.endpoints`` and `audiodev.bt_audio`) have one. With none
+connected, it opens the board's own output, as it did before anything was
+chosen. A program that plays follows ``audio.out`` and opens ``audio_out``
+again when the choice moves.
 """
 
 import time
 
+import boarddev
 import endpointkit
 
 #: How often, in milliseconds, `endpointkit.poll` lists the devices again.
@@ -136,3 +155,130 @@ def devices(kind="audio.out", registry=None):
     """The device names of every chosen, found endpoint of *kind*, for a
     program that plays to several at once."""
     return [ep.caps.get("device") for ep in (registry or endpointkit.registry).selected(kind)]
+
+
+class BoardAudio(endpointkit.Provider):
+    """A board's own audio output, the one its ``audio_out`` role opens.
+
+    Its one endpoint, ``board-out:main``, is what the board plays on when
+    nothing else is chosen. It takes the board's I2S port as a resource
+    (``"i2s.0"``) when the role's capability names one.
+
+    Args:
+        factory (callable): the board's ``audio_out`` role, before `route`
+            replaces it.
+        label (str): what a picker shows.
+    """
+
+    def __init__(self, factory, label="Built-in audio"):
+        wire = getattr(getattr(factory, "capability", None), "wire", None)
+        port = getattr(wire, "port", None)
+        endpointkit.Provider.__init__(self, "audio.out", "board-out", () if port is None else ("i2s.%d" % port,))
+        self.factory = factory
+        self.label = label
+        self.chosen = False
+
+    def scan(self):
+        state = endpointkit.CONNECTED if self.chosen else endpointkit.AVAILABLE
+        return [self.endpoint("main", self.label, state)]
+
+    def apply(self, endpoint, chosen):
+        self.chosen = bool(chosen)
+        endpoint.state = endpointkit.CONNECTED if chosen else endpointkit.AVAILABLE
+
+    def open_out(self, endpoint, *args, **kwargs):
+        """Open the board's own output, with the arguments ``audio_out`` was given."""
+        return self.factory(*args, **kwargs)
+
+
+class RoutedAudioOut:
+    """A board's ``audio_out`` that opens whichever ``audio.out`` endpoint is chosen.
+
+    `route` puts one in place of the board's role. It keeps the role's
+    ``capability``, so code that asks what the board's own output takes
+    still hears it.
+
+    Args:
+        board (BoardAudio): the board's own output, opened when no chosen
+            endpoint is connected.
+        registry (endpointkit.Registry): whose choice to follow.
+        capability: what the board's own role says it takes.
+    """
+
+    def __init__(self, board, registry, capability=None):
+        self.board = board
+        self.registry = registry
+        self.capability = capability
+
+    def __call__(self, *args, **kwargs):
+        ep = playing_on(self.registry)
+        if ep is None:
+            return self.board.factory(*args, **kwargs)
+        return ep.provider.open_out(ep, *args, **kwargs)
+
+    def __repr__(self):
+        return "RoutedAudioOut(%r)" % (self.capability,)
+
+
+def playing_on(registry=None):
+    """The ``audio.out`` endpoint a routed ``audio_out`` opens now, or None
+    for the board's own output.
+
+    It's the first chosen endpoint that is connected. A chosen Bluetooth
+    speaker counts once its link is up, and a USB sound card from when it's
+    chosen until it's pulled out.
+
+    Raises:
+        ValueError: that endpoint's provider can't be opened on a board (it
+            has no ``open_out``).
+    """
+    for ep in (registry or endpointkit.registry).selected("audio.out"):
+        if ep.state != endpointkit.CONNECTED:
+            continue
+        if not hasattr(ep.provider, "open_out"):
+            raise ValueError("%s (%s) is chosen, but a board can't open it as its audio out" % (ep.label, ep.id))
+        return ep
+    return None
+
+
+_routes = []  # (registry, BoardAudio)
+
+
+def route(peripherals, registry=None, label="Built-in audio"):
+    """List the board's own output under ``audio.out``, and make its
+    ``audio_out`` play wherever ``audio.out`` is chosen.
+
+    Call it once, before anything opens ``audio_out``; again with the same
+    registry, it returns the provider it made. `boarddev.replace_role`
+    puts the routed role in place, so ``board_config.audio_out`` follows
+    the choice too.
+
+    Args:
+        peripherals: the board's ``board_peripherals`` module.
+        registry (endpointkit.Registry): endpointkit's own when None.
+        label (str): what a picker calls the board's own output.
+
+    Returns:
+        BoardAudio: the board's own output's provider.
+
+    Raises:
+        ValueError: the board has no ``audio_out``, or it isn't a factory
+            role (one called with a format, listed in ``FACTORY_ROLES``).
+    """
+    registry = registry or endpointkit.registry
+    for reg, provider in _routes:
+        if reg is registry:
+            return provider
+    own = getattr(peripherals, "audio_out", None)
+    if own is None:
+        raise ValueError("this board has no audio_out to route")
+    if "audio_out" not in getattr(peripherals, "FACTORY_ROLES", ()):
+        raise ValueError("this board's audio_out isn't a factory role, so it can't open a chosen output")
+    if isinstance(own, RoutedAudioOut):
+        own = own.board.factory
+    capability = getattr(own, "capability", None) or getattr(peripherals, "AUDIO_OUT", None)
+    board = BoardAudio(own, label)
+    registry.register(board)
+    boarddev.replace_role(peripherals, "audio_out", RoutedAudioOut(board, registry, capability))
+    _routes.append((registry, board))
+    return board
