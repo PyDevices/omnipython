@@ -137,6 +137,7 @@ class Merged(PortIn):
     """
 
     def __init__(self, provider):
+        PortIn.__init__(self)
         self.provider = provider
         self._order = []
         self._at = 0
@@ -157,6 +158,20 @@ class Merged(PortIn):
         for _ in range(len(ports)):
             port = ports[self._at % len(ports)]
             got = port.readinto(buf, nbytes)
+            if got:
+                self._last = port
+                return got
+            self._at += 1
+        return None
+
+    def read(self, nbytes=None):
+        """The next waiting bytes from one chosen input, as ``bytes``, or
+        ``None``. Each port's own ``read`` does the reading, so a SysEx comes
+        out whole where that port hands one out whole."""
+        ports = self._ports()
+        for _ in range(len(ports)):
+            port = ports[self._at % len(ports)]
+            got = port.read(nbytes)
             if got:
                 self._last = port
                 return got
