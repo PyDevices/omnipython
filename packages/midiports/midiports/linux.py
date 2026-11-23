@@ -19,8 +19,10 @@ opens one.
 
 It reads the kernel's own files (``/proc/asound`` and ``/dev/snd/midiC*D*``)
 rather than linking ``libasound``, so it needs no privileges or packages.
-On MicroPython's unix port it lists ports but can't open them yet: that
-port's ``os`` has no ``open`` or ``read``. It
+MicroPython's and CircuitPython's unix ports have no ``os.open`` or
+``os.read``, so there a port is the builtin ``open()`` and ``select.poll``
+tells an input when a read would find something: the same ports, listed and
+opened the same way. (``serial_ports`` needs CPython's ``termios``.) It
 doesn't see ALSA sequencer-only ports; a DAW's virtual ports usually are, so
 on Linux load ``snd-virmidi`` to get a raw device a DAW can also open.
 
@@ -45,6 +47,11 @@ it in ``WholeMessages`` too.
 
 import os
 import struct
+
+try:
+    import select
+except ImportError:  # only the unix ports of MicroPython and CircuitPython need it, and have it
+    select = None
 
 from . import IN, INOUT, OUT, PortIn, PortInfo, PortOut, WholeMessages, _count
 
@@ -244,28 +251,48 @@ def _closed():
     return OSError("MIDI port is closed")
 
 
+#: Whether this interpreter has ``os.open`` and ``os.read`` (CPython does; the
+#: unix ports of MicroPython and CircuitPython don't, and use ``open()``).
+_FD_API = hasattr(os, "open") and hasattr(os, "O_NONBLOCK")
+
+
 class LinuxMidiIn(PortIn):
     """The input half of an ALSA raw MIDI endpoint."""
 
     def __init__(self, info, path, flags=0):
         PortIn.__init__(self)
         self.info = info
-        # Without O_NONBLOCK a read on a silent instrument blocks your loop.
-        # Some old MicroPython unix builds lack it; refuse rather than hang.
-        nonblock = getattr(os, "O_NONBLOCK", None)
-        if nonblock is None:
-            raise OSError(
-                "os.O_NONBLOCK is missing on this build, so a MIDI read could "
-                "block forever; output ports still work")
-        self._fd = os.open(path, os.O_RDONLY | nonblock | flags)
+        self._file = None
+        self._poll = None
+        if _FD_API:
+            # Without O_NONBLOCK a read on a silent instrument blocks your loop.
+            self._fd = os.open(path, os.O_RDONLY | os.O_NONBLOCK | flags)
+        else:
+            self._file = open(path, "rb")
+            self._fd = self._file
+            self._poll = select.poll()
+            self._poll.register(self._file, select.POLLIN)
 
     def readinto(self, buf, nbytes=None):
         if self._fd is None:
             raise _closed()
-        try:
-            data = os.read(self._fd, _count(buf, nbytes))
-        except OSError:
-            return None                   # EAGAIN: nothing waiting
+        if self._poll is not None:
+            # A byte at a time while poll says one is there: MicroPython's
+            # read(n) and readinto() both wait until n bytes have come.
+            size = _count(buf, nbytes)
+            n = 0
+            while n < size and self._poll.poll(0):
+                byte = self._file.read(1)
+                if not byte:
+                    break                 # end of file
+                buf[n] = byte[0]
+                n += 1
+            return n or None
+        else:
+            try:
+                data = os.read(self._fd, _count(buf, nbytes))
+            except OSError:
+                return None               # EAGAIN: nothing waiting
         n = len(data)
         if not n:
             return None
@@ -274,7 +301,13 @@ class LinuxMidiIn(PortIn):
 
     def close(self):
         fd, self._fd = self._fd, None
-        if fd is not None:
+        if fd is None:
+            return
+        if self._poll is not None:
+            self._poll.unregister(self._file)
+            self._poll = None
+            self._file.close()
+        else:
             os.close(fd)
 
     deinit = close
@@ -285,17 +318,29 @@ class LinuxMidiOut(PortOut):
 
     def __init__(self, info, path, flags=0):
         self.info = info
-        self._fd = os.open(path, os.O_WRONLY | flags)
+        if _FD_API:
+            self._fd = os.open(path, os.O_WRONLY | flags)
+            self._file = None
+        else:
+            self._file = open(path, "wb")
+            self._fd = self._file
 
     def write(self, buf, nbytes=None):
         if self._fd is None:
             raise _closed()
         n = _count(buf, nbytes)
+        if self._file is not None:
+            self._file.write(bytes(buf[:n]))
+            return n
         return os.write(self._fd, bytes(buf[:n]))
 
     def close(self):
         fd, self._fd = self._fd, None
-        if fd is not None:
+        if fd is None:
+            return
+        if self._file is not None:
+            self._file.close()
+        else:
             os.close(fd)
 
     deinit = close

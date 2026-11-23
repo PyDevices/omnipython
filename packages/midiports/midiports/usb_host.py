@@ -245,6 +245,8 @@ class _All(PortIn):
         self._next = 0
         self._since = 0
         self._cut = False   # an 0xF7 owed: a SysEx that stopped, or whose device left
+        self._held = 0      # how much of a SysEx read() holds back, and when it grew
+        self._grew = 0
         self._scanned = 0
         self.scan()
 
@@ -355,6 +357,32 @@ class _All(PortIn):
                 if t is not None:
                     _stamp(stamps, b, t)
         return n
+
+    def read(self, nbytes=None):
+        """Up to ``nbytes`` waiting bytes as ``bytes``, or ``None``; a SysEx
+        comes out whole when ``nbytes`` allows, as from one device's port."""
+        if not self.any():
+            return None
+        if self._cut:
+            return self._read(1)
+        port = self._ins[self._cur]
+        try:
+            n = port._whole(port.LONGEST if nbytes is None else nbytes)
+        except OSError:  # unplugged under us
+            self._drop(self._cur)
+            return self._read(1) if self._cut else None
+        if not n:
+            # Its SysEx is still coming: hold it while it grows.
+            now = ticks_us()
+            have = port._end - port._start
+            if have != self._held:
+                self._held = have
+                self._grew = now
+            if ticks_diff(now, self._grew) < self._stall:
+                return None
+            n = have  # it stopped: what came, then any() ends it
+        self._held = 0
+        return self._read(n)
 
     def close(self):
         for i in range(len(self._ins) - 1, -1, -1):

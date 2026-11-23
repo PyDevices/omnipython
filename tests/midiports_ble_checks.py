@@ -12,7 +12,10 @@ MicroPython::
 
 The board's side is ``midiports.ble.ports()`` on a fake peripheral; the other
 side is ``bledev.midi.connect()`` on a fake central, the way a controller or a
-phone connects. The packet format itself (timestamps, running status, SysEx
+phone connects. The other way round, ``midiports.ble.connect_ports()`` is the
+board as a fake central, and ``bledev.midi.serve()`` on a fake peripheral is
+the foot controller it finds, connects to, and connects to again after the
+controller drops the link. The packet format itself (timestamps, running status, SysEx
 across packets) is checked against hand-worked vectors in
 ``bledev_midi_codec.py``; these checks follow it through to the port: whole
 messages out, arrival stamps that keep a packet's spacing, and notes let go
@@ -42,8 +45,12 @@ import midiports
 from midiports import ble
 
 MICROPYTHON = sys.implementation.name == "micropython"
+#: ``--adafruit=DIR`` (where ``adafruit_midi/`` is, as test_midiports.py
+#: fetches it) adds the checks that run Adafruit's library over the port.
+ADAFRUIT = False
 CHECK_TIMEOUT_S = 10
 NAME = "synth"
+PEDAL = "footctrl"
 
 #: Faults the checks must catch.
 PLANTS = ("no-release", "flat-stamps", "split-message", "radio-left-on")
@@ -204,6 +211,73 @@ async def sysex_across_packets_is_one_message(air):
 
 
 @check
+async def sysex_of_64_and_1024_bytes_go_both_ways(air):
+    midi_in, midi_out, client, _ = await pair(air)
+    small = bytes([0xF0] + [i % 128 for i in range(62)] + [0xF7])
+    large = bytes([0xF0] + [(i * 7) % 128 for i in range(1022)] + [0xF7])
+    equal((len(small), len(large)), (64, 1024), "the two sizes")
+    client.write(small + large + b"\x90\x40\x40")
+    got = await messages(midi_in, 3, buf=bytearray(1100))
+    equal(got, [small, large, b"\x90\x40\x40"], "up: a 64-byte and a 1 KB SysEx, then a note")
+    midi_out.write(small + large)
+    first = await client.receive(timeout_ms=2000)
+    second = await client.receive(timeout_ms=2000)
+    equal([first[1], second[1]], [small, large], "down: the same two, whole")
+    midi_in.close()
+
+
+@check
+async def adafruit_midi_round_trip(air):
+    if not ADAFRUIT:
+        print("     (skipped: no --adafruit=DIR)")
+        return
+    import adafruit_midi
+    from adafruit_midi.control_change import ControlChange
+    from adafruit_midi.note_off import NoteOff
+    from adafruit_midi.note_on import NoteOn
+    from adafruit_midi.system_exclusive import SystemExclusive
+    from adafruit_midi.timing_clock import TimingClock
+
+    midi_in, midi_out, client, _ = await pair(air)
+    board = adafruit_midi.MIDI(midi_in=midi_in, midi_out=midi_out, in_channel=0, out_channel=0, in_buf_size=1100)
+    # controller -> board: the bytes a controller sends, parsed by adafruit_midi
+    client.write(b"\x90\x3c\x64\x3e\x50\x80\x3c\x00\xb0\x07\x7f")  # running status
+    client.write(bytes([0xF0, 0x7D] + list(range(61)) + [0xF7]))  # a 64-byte SysEx
+    client.write(bytes([0xF0, 0x7D] + [i % 128 for i in range(1021)] + [0xF7]))  # 1 KB
+    client.write(b"\xf8")
+    seen = []
+    for _ in range(3000):
+        message = board.receive()
+        if message is not None:
+            seen.append(message)
+        if len(seen) >= 7:
+            break
+        await asyncio.sleep(0.001)
+    equal(len(seen), 7, "seven messages parsed")
+    expect(isinstance(seen[0], NoteOn) and seen[0].note == 0x3C and seen[0].velocity == 0x64, "NoteOn 60")
+    expect(isinstance(seen[1], NoteOn) and seen[1].note == 0x3E and seen[1].velocity == 0x50, "NoteOn 62 on running status")
+    expect(isinstance(seen[2], NoteOff) or (isinstance(seen[2], NoteOn) and seen[2].velocity == 0), "note off")
+    expect(isinstance(seen[3], ControlChange) and seen[3].control == 7 and seen[3].value == 127, "control change")
+    # A clock byte may pass a SysEx that waits for room in the reader's buffer.
+    sysex = [m for m in seen if isinstance(m, SystemExclusive)]
+    expect(len(sysex) == 2, "two SysEx messages, got " + str([type(m).__name__ for m in seen]))
+    equal([len(m.data) for m in sysex], [61, 1021], "the 64-byte and 1 KB SysEx, whole and in order")
+    expect(len([m for m in seen if isinstance(m, TimingClock)]) == 1, "a clock byte")
+    # board -> controller: adafruit_midi's bytes arrive whole, stamped
+    board.send(NoteOn(72, 100))
+    board.send(SystemExclusive([0x7D], bytes(range(61))))
+    board.send(NoteOff(72, 0))
+    ts, message = await client.receive(timeout_ms=1000)
+    equal(message, b"\x90\x48\x64", "NoteOn out")
+    expect(0 <= ts <= 0x1FFF, "a 13-bit timestamp")
+    _, message = await client.receive(timeout_ms=1000)
+    equal(message, bytes([0xF0, 0x7D] + list(range(61)) + [0xF7]), "SysEx out")
+    _, message = await client.receive(timeout_ms=1000)
+    equal(message[0] & 0xF0, 0x80, "NoteOff out")
+    midi_in.close()
+
+
+@check
 async def four_hundred_notes_and_a_hundred_chords_arrive(air):
     midi_in, _, client, _ = await pair(air)
     sent = []
@@ -330,6 +404,89 @@ async def a_radio_found_off_goes_back_off(air):
         ble._radio_on, ble.BleIn = radio, link
 
 
+# -- the board as the central: connect_ports() ------------------------------------------
+
+
+async def pedal_pair(air):
+    """The board's ports connected to a foot controller that was waiting."""
+    pedal = FakeBLE(air=air)
+    board = FakeBLE(air=air, peripheral=False)
+    serving = asyncio.create_task(midi.serve(pedal, name=PEDAL, timeout_ms=3000))
+    midi_in, midi_out = ble.connect_ports(PEDAL, adapter=board, scan_ms=300, retry_ms=5)
+    expect(not midi_in._pump, "connect_ports() inside a loop leaves the loop to run the tasks")
+    equal(midi_in.state, "scanning", "state before it finds the controller")
+    port = await serving
+    await until(lambda: midi_in.state == "connected")
+    return midi_in, midi_out, port, pedal
+
+
+@check
+async def connect_ports_finds_the_controller_and_reads_it_whole(air):
+    midi_in, midi_out, pedal_port, _ = await pedal_pair(air)
+    equal(midi_in.read(), None, "read() with nothing sent")
+    equal(midi_in.links, 1, "one link")
+    pedal_port.write(b"\xb0\x40\x7f\x40\x00\x90\x3c\x64")  # running status, then a note
+    got = await messages(midi_in, 3)
+    equal(got, [b"\xb0\x40\x7f", b"\xb0\x40\x00", b"\x90\x3c\x64"], "messages")
+    for _ in range(3):
+        expect(midi_in.take_timestamp() is not None, "a stamp for each message")
+    equal(midi_in.take_timestamp(), None, "no more stamps than messages")
+    midi_out.write(b"\xc0\x05")
+    _, message = await pedal_port.receive(timeout_ms=1000)
+    equal(message, b"\xc0\x05", "board -> controller")
+    midi_in.close()
+    equal(await messages(midi_in, 1), [b"\x80\x3c\x00"], "the note-off closing left")
+
+
+@check
+async def connect_ports_scans_until_the_controller_is_switched_on(air):
+    board = FakeBLE(air=air, peripheral=False)
+    midi_in, _ = ble.connect_ports(PEDAL, adapter=board, scan_ms=20, retry_ms=5)
+    await until(lambda: midi_in.misses >= 2)
+    equal(midi_in.state, "scanning", "still scanning after scans that found nothing")
+    expect(midi_in.error is None, "a scan that finds nothing doesn't stop the link")
+    equal(midi_in.any(), 0, "nothing to read meanwhile")
+    port = await midi.serve(FakeBLE(air=air), name=PEDAL, timeout_ms=3000)
+    await until(lambda: midi_in.state == "connected")
+    port.write(b"\x90\x40\x40")
+    equal(await messages(midi_in, 1), [b"\x90\x40\x40"], "the late controller's note")
+    midi_in.close()
+
+
+@check
+async def connect_ports_reconnects_after_a_drop_and_lets_notes_go(air):
+    midi_in, _, pedal_port, pedal = await pedal_pair(air)
+    pedal_port.write(b"\x90\x3c\x64\xb1\x40\x7f")
+    await messages(midi_in, 2)
+    while midi_in.take_timestamp() is not None:
+        pass
+    serving = asyncio.create_task(midi.serve(pedal, name=PEDAL, timeout_ms=3000))
+    await pedal_port.aclose()  # the controller drops the link, note 60 and channel 2's pedal down
+    got = await messages(midi_in, 2)
+    equal(got, [b"\x80\x3c\x00", b"\xb1\x40\x00"], "note-off and pedal up after the drop")
+    expect(midi_in.take_timestamp() is not None, "the note-off is stamped")
+    pedal_port = await serving  # and it's found again
+    await until(lambda: midi_in.state == "connected")
+    equal(midi_in.links, 2, "a second link")
+    pedal_port.write(b"\x90\x45\x60")
+    equal(await messages(midi_in, 1), [b"\x90\x45\x60"], "a note on the second link")
+    midi_in.close()
+    equal(midi_in.state, "closed", "state after close")
+
+
+@check
+async def connect_ports_without_a_central_says_so(air):
+    midi_in, _ = ble.connect_ports(PEDAL, adapter=FakeBLE(air=air, central=False), scan_ms=20, retry_ms=5)
+    await until(lambda: midi_in.error is not None)
+    expect(midi_in.state.startswith("stopped"), "state says it stopped: %r" % midi_in.state)
+    try:
+        midi_in.any()
+    except Exception:
+        pass
+    else:
+        raise Failed("any() raises what stopped the link")
+
+
 def pumped(air):
     """With no loop running, ``any()`` runs the link's tasks itself, as an
     app polling from a timer needs (MicroPython: one event loop for all)."""
@@ -360,6 +517,43 @@ def pumped(air):
     midi_in.close()
 
 
+def pumped_central(air):
+    """connect_ports() with no loop running: polling alone finds the
+    controller, reads it, and finds it again after it drops the link."""
+    pedal = FakeBLE(air=air)
+    board = FakeBLE(air=air, peripheral=False)
+    midi_in, _ = ble.connect_ports(PEDAL, adapter=board, pump_ms=0, scan_ms=300, retry_ms=5)
+    expect(midi_in._pump, "connect_ports() outside a loop runs the tasks itself")
+    box = {}
+
+    async def pedal_side():
+        for round_ in range(2):
+            port = await midi.serve(pedal, name=PEDAL, timeout_ms=3000)
+            port.write(bytes((0x90, 0x3C + round_, 0x64)))
+            await port.drain()
+            for _ in range(300):
+                if box.get("heard", 0) > round_:
+                    break
+                await asyncio.sleep(0.001)
+            await port.aclose()
+
+    task = asyncio.create_task(pedal_side())
+    got = []
+    buf = bytearray(16)
+    for _ in range(50000):
+        k = midi_in.readinto(buf)
+        if k:
+            got.extend(split(bytes(buf[:k])))
+            box["heard"] = len([m for m in got if m[0] == 0x90])
+        if len(got) >= 4:
+            break
+    equal(got, [b"\x90\x3c\x64", b"\x80\x3c\x00", b"\x90\x3d\x64", b"\x80\x3d\x00"],
+          "a note, its note-off at the drop, and the same on the second link, by polling alone")
+    equal(midi_in.links, 2, "two links")
+    task.cancel()
+    midi_in.close()
+
+
 def run(only=None):
     failed = 0
     count = 0
@@ -386,6 +580,16 @@ def run(only=None):
             print("FAIL pumped -", type(e).__name__, e)
         else:
             print("PASS pumped")
+    if MICROPYTHON and (not only or "pumped_central" in only):
+        count += 1
+        asyncio.new_event_loop()
+        try:
+            pumped_central(Air())
+        except Exception as e:
+            failed += 1
+            print("FAIL pumped_central -", type(e).__name__, e)
+        else:
+            print("PASS pumped_central")
     print("%d checks, %d failed (%s)" % (count, failed, sys.implementation.name))
     return failed
 
@@ -393,7 +597,11 @@ def run(only=None):
 def main(argv):
     only = []
     for arg in argv:
-        if arg.startswith("--plant="):
+        if arg.startswith("--adafruit="):
+            global ADAFRUIT
+            ADAFRUIT = True
+            sys.path.insert(0, arg.split("=", 1)[1])
+        elif arg.startswith("--plant="):
             _plant(arg.split("=", 1)[1])
             print("PLANTED", arg.split("=", 1)[1])
         else:

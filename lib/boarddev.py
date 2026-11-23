@@ -355,7 +355,7 @@ def name(new=_GET):
 
     A new name is saved where `wifi_manager` keeps networks: ``esp32.NVS``
     on an ESP32, ``OMNIPYTHON_BOARD_NAME`` in ``settings.toml`` on
-    CircuitPython, ``/omnipython.json`` on other boards (``/flash`` on an
+    a CircuitPython board, ``/omnipython.json`` on other boards (``/flash`` on an
     STM32). On a desktop or in a browser it sets the
     ``OMNIPYTHON_BOARD_NAME`` environment variable for this process only;
     it never renames the computer. Stacks that already started keep the old
@@ -411,10 +411,10 @@ def check_name(text):
 
 def _name_store(impl, platform):
     """Where a saved name lives here: "env", "toml", "nvs" or "file"."""
+    if platform in _BROWSERS or platform.startswith(_DESKTOPS):
+        return "env"  # includes CircuitPython's unix port, which has no CIRCUITPY drive
     if impl == "circuitpython":
         return "toml"
-    if platform in _BROWSERS or platform.startswith(_DESKTOPS):
-        return "env"
     try:
         import esp32
 
@@ -511,14 +511,14 @@ def _toml_write(path, key, value):
 
 
 def _name_default(impl, platform):
+    if platform in _BROWSERS:
+        return _name_random()
+    if platform.startswith(_DESKTOPS):  # CircuitPython's unix port too: no microcontroller module
+        return _computer_name() or _name_random()
     if impl == "circuitpython":
         import microcontroller
 
         return _name_from_id(microcontroller.cpu.uid)
-    if platform in _BROWSERS:
-        return _name_random()
-    if platform.startswith(_DESKTOPS):
-        return _computer_name() or _name_random()
     import machine
 
     return _name_from_id(machine.unique_id())

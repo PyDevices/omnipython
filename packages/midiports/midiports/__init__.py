@@ -150,24 +150,45 @@ PortInfo = namedtuple("PortInfo", " ".join(PORT_FIELDS))  # noqa: PYI024
 # -- the clock stamps are taken on ----------------------------------------------------
 
 if hasattr(time, "ticks_us"):  # MicroPython
-    ticks_us = time.ticks_us
-    ticks_diff = time.ticks_diff
 
     def _typecode():
         # The narrowest array that holds every tick and reads back without
         # allocating: "l" is 32 bits on a board, where ticks wrap at 2**30,
-        # and 64 on the unix port. "q" reads back as a new long int, so it's
-        # the last resort (the Windows port, whose "l" is 32 bits).
+        # and 64 on the unix port. None when ticks are wider than any "l":
+        # the Windows port, whose ticks wrap at 2**62 and whose "l" is 32
+        # bits. "q" would hold them, but reads back as a new long int.
         top = time.ticks_add(0, -1)
-        for tc in ("l", "q"):
-            try:
-                if array(tc, [top])[0] == top:
-                    return tc
-            except (OverflowError, ValueError):
-                pass
-        return "q"
+        try:
+            if array("l", [top])[0] == top:
+                return "l"
+        except (OverflowError, ValueError):
+            pass
+        return None
 
     _TICKS_TYPE = _typecode()
+    if _TICKS_TYPE:
+        ticks_us = time.ticks_us
+        ticks_diff = time.ticks_diff
+        ticks_add = time.ticks_add
+    else:
+        # Wrap the clock at 2**30 us (about 18 minutes), as a board's does,
+        # so a stamp fits a 32-bit array and reads back without allocating.
+        _TICKS_TYPE = "l"
+        _PERIOD = 1 << 30
+
+        def ticks_us():
+            """Microseconds now, wrapping at 2**30."""
+            return time.ticks_us() & (_PERIOD - 1)
+
+        def ticks_diff(end, start):
+            """``end - start`` in microseconds, across a wrap."""
+            d = (end - start) & (_PERIOD - 1)
+            return d - _PERIOD if d >= _PERIOD >> 1 else d
+
+        def ticks_add(t, d):
+            """``t + d`` on the wrapping clock."""
+            return (t + d) & (_PERIOD - 1)
+
 else:
     if sys.platform == "emscripten":  # Pyodide: Web MIDI's own clock
 
@@ -208,6 +229,10 @@ else:
             """``end - start`` in microseconds; this clock doesn't wrap."""
             return end - start
 
+        def ticks_add(t, d):
+            """``t + d``; this clock doesn't wrap."""
+            return t + d
+
     else:
         # A board whose arrays are 32 bits wraps the clock as MicroPython
         # does, at 2**30 us (about 18 minutes), so a stamp always fits.
@@ -221,6 +246,10 @@ else:
             """``end - start`` in microseconds, across a wrap."""
             d = (end - start) & (_PERIOD - 1)
             return d - _PERIOD if d >= _PERIOD >> 1 else d
+
+        def ticks_add(t, d):
+            """``t + d`` on the wrapping clock."""
+            return (t + d) & (_PERIOD - 1)
 
 
 class Stamps:
@@ -306,6 +335,18 @@ class PortIn:
             return None
         return bytes(self._view[:n])
 
+    def _read(self, n):
+        """Up to ``n`` waiting bytes as ``bytes``, or ``None``. The scratch
+        buffer grows to ``n`` first, so a long SysEx can come out in one
+        piece: ``adafruit_midi`` drops one it's handed in parts."""
+        if n > len(self._scratch):
+            self._scratch = bytearray(n)
+            self._view = memoryview(self._scratch)
+        n = self.readinto(self._view, n)
+        if not n:
+            return None
+        return bytes(self._view[:n])
+
     def close(self):
         pass
 
@@ -375,17 +416,29 @@ class WholeMessages(PortIn):
     status to belong to (a cable plugged in mid-message) is dropped and
     counted in `desync`.
 
+    ``read`` hands a SysEx out in one piece, because ``adafruit_midi`` drops
+    one it's handed in parts. While its 0xF7 is still on the way, ``read``
+    hands out the messages before it and then returns ``None``, and the
+    buffer grows to hold it. That's up to ``nbytes``, or `LONGEST` bytes
+    with no ``nbytes``; a longer SysEx comes out in parts, as it always does
+    from ``readinto``. So give ``adafruit_midi.MIDI`` an ``in_buf_size``
+    bigger than the longest SysEx you expect.
+
     Each message is stamped with the time the read that found its first byte
     returned (see the contract's arrival times), so a stamp is as fine as how
     often you poll. ``stamps`` sizes the ring; the default holds one for every
     message this port and ``adafruit_midi`` can have waiting at once.
 
     Nothing is allocated per byte or per poll: the state lives in buffers made
-    once.
+    once. Only a SysEx too long for them grows them.
     """
 
+    #: The longest SysEx a ``read()`` with no ``nbytes`` holds back to hand
+    #: out whole.
+    LONGEST = 4096
+
     def __init__(self, port, size=32, stamps=None):
-        PortIn.__init__(self, 2 * size + 4)
+        PortIn.__init__(self, 2 * size + 12)
         self._stamps = Stamps(2 * size + 36 if stamps is None else stamps)
         self._now = 0
         self._t0 = 0
@@ -405,6 +458,7 @@ class WholeMessages(PortIn):
         self._need = 0
         self._status = 0
         self._sysex = False
+        self._sx = False  # an 0xF0 went into _out since it was last empty
 
     def _emit(self, b):
         self._out[self._end] = b
@@ -437,6 +491,7 @@ class WholeMessages(PortIn):
             self._have = 0
             if b == 0xF0:
                 self._sysex = True
+                self._sx = True
                 self._status = 0
                 self._emit(b)
                 _stamp(self._stamps, b, self._now)
@@ -475,20 +530,95 @@ class WholeMessages(PortIn):
             self._have = 0
             _stamp(self._stamps, self._msg[0], self._t0)
 
+    def _pull(self):
+        """Read what the port has into ``_out``; whether there was any."""
+        raw = self._raw
+        n = self.port.readinto(self._rawv, len(raw))
+        if not n:
+            return False
+        self._now = ticks_us()
+        for i in range(n):
+            self._byte(raw[i])
+        return True
+
     def any(self):
         if self._start == self._end:
             self._start = self._end = 0
-            raw = self._raw
+            self._sx = False
             # Keep reading while the bytes so far make no whole message yet
             # but the port still has more.
             while not self._end:
-                n = self.port.readinto(self._rawv, len(raw))
-                if not n:
+                if not self._pull():
                     return 0
-                self._now = ticks_us()
-                for i in range(n):
-                    self._byte(raw[i])
         return self._end - self._start
+
+    def _whole(self, cap):
+        """How many waiting bytes the next ``read`` hands out, at most
+        ``cap``: everything up to a SysEx, then that SysEx whole. 0 while
+        the SysEx's end is still on the way."""
+        start = self._start
+        end = self._end
+        n = end - start
+        if self._sx:
+            out = self._out
+            i = start
+            while i < end and out[i] != 0xF0:
+                i += 1
+            if i == start:
+                n = self._sysex_length(cap)
+            elif i < end:
+                n = i - start
+        return n if n < cap else cap
+
+    def _sysex_length(self, cap):
+        """The length of the SysEx at the front of ``_out``, reading on until
+        its 0xF7 arrives, the port has no more (0), or ``cap`` bytes are
+        held (``cap``)."""
+        k = 1  # how far past the 0xF0 the search has looked
+        while True:
+            out = self._out
+            start = self._start
+            end = self._end
+            i = start + k
+            while i < end and out[i] != 0xF7:
+                i += 1
+            k = i - start
+            if i < end:
+                return k + 1
+            if k >= cap or not self._sysex:
+                return k
+            self._room()
+            if not self._pull():
+                return 0
+
+    def _room(self):
+        """Make room in ``_out`` for one more read of the port: move what's
+        waiting to the front, then grow it if that's not enough."""
+        out = self._out
+        start = self._start
+        n = self._end - start
+        need = n + 2 * len(self._raw) + 12
+        if need > len(out):
+            grown = bytearray(max(need, 2 * len(out)))
+        elif start:
+            grown = out
+        else:
+            return
+        for i in range(n):
+            grown[i] = out[start + i]
+        self._out = grown
+        self._start = 0
+        self._end = n
+
+    def read(self, nbytes=None):
+        """Up to ``nbytes`` waiting bytes as ``bytes``, or ``None``; a SysEx
+        comes out whole when ``nbytes`` allows."""
+        if not self.any():
+            return None
+        n = self._whole(self.LONGEST if nbytes is None else nbytes)
+        if not n:
+            return None
+        return self._read(n)
 
     def readinto(self, buf, nbytes=None):
         if not self.any():

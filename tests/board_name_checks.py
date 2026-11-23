@@ -15,10 +15,12 @@ import os
 import sys
 
 try:
-    _HERE = __file__.rsplit("/", 1)[0]
-except (NameError, IndexError):
-    _HERE = "tests"
-sys.path.insert(0, _HERE + "/../lib")
+    _here = __file__
+except NameError:  # pragma: no cover
+    _here = sys.argv[0]
+_sep = "\\" if "\\" in _here else "/"
+_dir = _here.rsplit(_sep, 1)[0] if _sep in _here else "."
+sys.path.insert(0, _dir + _sep + ".." + _sep + "lib")
 
 import boarddev  # noqa: E402
 
@@ -161,6 +163,7 @@ def test_circuitpython():
     _fake("microcontroller", cpu=_Cpu())
     try:
         check(boarddev._name_store("circuitpython", "Espressif") == "toml", "CircuitPython keeps it in settings.toml")
+        check(boarddev._name_store("circuitpython", "linux") == "env", "CircuitPython's unix port has no drive: the environment")
         check(boarddev._name_default("circuitpython", "Espressif") == "omnipython-0a0b0c", "cpu.uid's last three bytes")
     finally:
         _unfake("microcontroller")

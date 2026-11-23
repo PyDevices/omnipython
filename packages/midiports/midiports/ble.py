@@ -2,22 +2,32 @@
 #
 # SPDX-License-Identifier: MIT
 
-"""MIDI over Bluetooth LE: the board as a BLE-MIDI instrument that a keyboard,
-a phone or a computer connects to and plays.
+"""MIDI over Bluetooth LE, both ways round: the board as a BLE-MIDI instrument
+that a keyboard, a phone or a computer connects to and plays, or the board
+connecting to a BLE-MIDI controller, such as a foot controller, that waits to
+be connected to.
 
 ::
 
     from midiports import ble
 
     if ble.available():
-        midi_in, midi_out = ble.ports("Synth")
+        midi_in, midi_out = ble.ports("Synth")              # be connected to
+        midi_in, midi_out = ble.connect_ports("FootCtrl")   # connect to it
 
-The board advertises the standard BLE-MIDI service as ``name`` (the board's
-name when you pass none), and a BLE-MIDI controller, a phone app or a
-computer's MIDI settings connect to it. When the link drops, the board
+With `ports`, the board advertises the standard BLE-MIDI service as ``name``
+(the board's name when you pass none), and a BLE-MIDI controller, a phone app
+or a computer's MIDI settings connect to it. When the link drops, the board
 advertises again, so the next connection needs nothing from your program.
-Nothing about Bluetooth starts until you call `ports`: `available` only asks
-whether the firmware has it.
+
+With `connect_ports`, the board scans for a BLE-MIDI device advertising as
+``name`` (the first one it finds when you pass none) and connects to it. Until
+it's found, and again after the link drops, it keeps scanning, so a
+controller switched on later, or switched off and on, is picked up without
+your program doing anything.
+
+Nothing about Bluetooth starts until you call one of them: `available` only
+asks whether the firmware has it.
 
 The ports keep the package's contract. ``read``, ``readinto`` and ``any``
 never block and hand out whole messages, running status expanded, SysEx in
@@ -35,8 +45,8 @@ loop of its own, such as an app polling from a timer, needs nothing more: each
 program that runs an event loop calls `ports` from inside it, and the loop runs
 the tasks.
 
-``state`` says what the link is doing: ``"advertising"``, ``"connected"`` or
-``"closed"``. ``error`` holds what stopped it, if something did, and
+``state`` says what the link is doing: ``"advertising"`` (`ports`) or
+``"scanning"`` (`connect_ports`), ``"connected"`` or ``"closed"``. ``error`` holds what stopped it, if something did, and
 ``any()`` raises it once what arrived before it has been read.
 
 Needs ``bledev`` and a firmware with Bluetooth LE: MicroPython with
@@ -51,6 +61,7 @@ import time
 import asyncio
 
 from . import INOUT, PortIn, PortOut, Stamps, _stamp, ticks_us
+from . import ticks_add as _ticks_add
 
 #: Messages waiting for a reader before the oldest are dropped and counted.
 QUEUE_LIMIT = 256
@@ -58,23 +69,12 @@ QUEUE_LIMIT = 256
 PUMP_MS = 4
 #: How often the link is checked for a drop, in milliseconds.
 WATCH_MS = 100
+#: How long `connect_ports` scans for its device each time, in milliseconds.
+SCAN_MS = 5000
+#: How long `connect_ports` waits between one scan that found nothing and the next.
+RETRY_MS = 1000
 
 _MASK = 0x1FFF  # BLE-MIDI timestamps: 13 bits of milliseconds
-
-try:
-    from time import ticks_add as _ticks_add
-except ImportError:
-    from . import ticks_diff as _ticks_diff
-
-    if _ticks_diff(0, 1 << 29) > 0:  # a clock that wraps at 2**30
-
-        def _ticks_add(t, d):
-            return (t + d) & ((1 << 30) - 1)
-
-    else:
-
-        def _ticks_add(t, d):
-            return t + d
 
 
 if hasattr(time, "ticks_ms"):
@@ -197,7 +197,7 @@ class BleIn(PortIn):
         self._midi = bledev.midi
         self.name = name
         self.direction = INOUT
-        self.state = "advertising"
+        self.state = self._idle
         self.peer = None
         self.links = 0
         self.dropped = 0
@@ -225,12 +225,20 @@ class BleIn(PortIn):
 
     # -- the link
 
+    #: What ``state`` says while there's no link.
+    _idle = "advertising"
+
+    async def _open(self):
+        """The next link's `bledev.midi.Port`, or ``None`` to try again."""
+        return await self._midi.serve(self._ble, name=self.name)
+
     async def _keep(self):
-        midi = self._midi
         try:
             while not self._closed:
-                self.state = "advertising"
-                port = await midi.serve(self._ble, name=self.name)
+                self.state = self._idle
+                port = await self._open()
+                if port is None:
+                    continue
                 if self._closed:
                     port.close()
                     break
@@ -334,6 +342,18 @@ class BleIn(PortIn):
         self._waiting -= n
         return n or None
 
+    def read(self, nbytes=None):
+        """Waiting MIDI bytes as ``bytes``, or ``None``. A SysEx comes out in
+        one piece when ``nbytes`` allows: the read buffer grows to hold the
+        next message, so ``adafruit_midi``, which can't join a SysEx handed
+        out in parts, gets a long one whole."""
+        if not self._waiting and not self.any():
+            return None
+        pending = self._pending
+        need = len(pending) - self._pos if self._pos < len(pending) else len(self._msgs[0])
+        n = need if need > len(self._scratch) else len(self._scratch)
+        return self._read(n if nbytes is None or nbytes > n else nbytes)
+
     def write(self, buf, nbytes=None):
         port = self._port
         if port is None:
@@ -364,6 +384,43 @@ class BleIn(PortIn):
             _radio_stop(self._ble)
 
     deinit = close
+
+
+class BleCentralIn(BleIn):
+    """The input port `connect_ports` makes, and the link behind both ports:
+    `BleIn`, with the board as the central that finds and connects.
+
+    ``name`` is the device it looks for (``None``: the first BLE-MIDI device
+    found), ``misses`` how many scans or connections have failed, and
+    ``miss`` why the last one did. Those failures aren't the link stopping:
+    it tries again after ``retry_ms``.
+    """
+
+    _idle = "scanning"
+
+    def __init__(self, name, ble, *, scan_ms=SCAN_MS, retry_ms=RETRY_MS, connect_options=None, **options):
+        import bledev
+
+        # Set before BleIn starts the link, which opens it at once.
+        self.scan_ms = scan_ms
+        self.retry_ms = retry_ms
+        self.misses = 0
+        self.miss = None
+        self._options = dict(connect_options or {})
+        self._errors = (bledev.BLEError, bledev.UnsupportedError)
+        BleIn.__init__(self, name, ble, **options)
+
+    async def _open(self):
+        retry, unsupported = self._errors
+        try:
+            return await self._midi.connect(self._ble, name=self.name, timeout_ms=self.scan_ms, **self._options)
+        except unsupported:
+            raise  # this adapter can't be a central: stop, and say so
+        except retry as e:  # not found, or it went before the link was set up
+            self.misses += 1
+            self.miss = e
+            await _sleep_ms(self.retry_ms)
+            return None
 
 
 class BleOut(PortOut):
@@ -401,6 +458,57 @@ def ports(name=None, *, adapter=None, pump=None, pump_ms=PUMP_MS, queue_limit=QU
     Raises:
         ImportError: ``bledev`` (or MicroPython's ``aioble``) isn't installed.
     """
+    return _open_ports(BleIn, name, adapter, pump=pump, pump_ms=pump_ms, queue_limit=queue_limit)
+
+
+def connect_ports(
+    name=None,
+    *,
+    adapter=None,
+    pump=None,
+    pump_ms=PUMP_MS,
+    queue_limit=QUEUE_LIMIT,
+    scan_ms=SCAN_MS,
+    retry_ms=RETRY_MS,
+    **connect_options,
+):
+    """``(midi_in, midi_out)``: find the BLE-MIDI device advertising as
+    ``name``, connect to it, and connect again whenever the link drops.
+
+    Args:
+        name: the device's advertised name; ``None`` takes the first device
+            advertising the BLE-MIDI service.
+        adapter: a ``bledev`` adapter; ``bledev.auto.adapter()`` when ``None``.
+        pump: whether ``any()`` runs the event loop's waiting tasks. ``None``
+            decides from whether a loop is running when this is called.
+        pump_ms: the shortest time between two of those runs.
+        queue_limit: messages kept for a reader that isn't reading.
+        scan_ms: how long each scan looks before it counts as a miss.
+        retry_ms: how long to wait after a miss before scanning again.
+        connect_options: passed to ``bledev.midi.connect`` and on to the
+            device's ``connect()``, such as ``min_conn_interval_us``.
+
+    It returns at once, scanning: ``midi_in.state`` turns ``"connected"``
+    when the device is found, and reads return ``None`` until then. Writes
+    raise ``OSError`` while nothing is connected.
+
+    Raises:
+        ImportError: ``bledev`` (or MicroPython's ``aioble``) isn't installed.
+    """
+    return _open_ports(
+        BleCentralIn,
+        name,
+        adapter,
+        pump=pump,
+        pump_ms=pump_ms,
+        queue_limit=queue_limit,
+        scan_ms=scan_ms,
+        retry_ms=retry_ms,
+        connect_options=connect_options,
+    )
+
+
+def _open_ports(cls, name, adapter, **options):
     import bledev.midi  # noqa: F401 - raises here, before anything starts, when it's missing
 
     was_on = _radio_on()
@@ -409,13 +517,13 @@ def ports(name=None, *, adapter=None, pump=None, pump_ms=PUMP_MS, queue_limit=QU
             import bledev.auto
 
             adapter = bledev.auto.adapter()
-        if name is None:
+        if name is None and cls is BleIn:
             import boarddev
 
             # Windows advertises the PC's own name, so it stays None there.
             if adapter.capabilities().get("advertise_name", True):
                 name = boarddev.name()
-        link = BleIn(name, adapter, pump=pump, pump_ms=pump_ms, queue_limit=queue_limit)
+        link = cls(name, adapter, **options)
     except Exception:
         # A radio that failed to start keeps what it took, internal RAM
         # the board's other drivers need, until it's turned off again.

@@ -31,6 +31,9 @@ def ticks_us() -> int:
 def ticks_diff(end: int, start: int) -> int:
     """``end - start`` in microseconds, across a wrap where the clock wraps."""
 
+def ticks_add(t: int, d: int) -> int:
+    """``t`` plus ``d`` microseconds, wrapping where the clock wraps."""
+
 class Stamps:
     """Arrival times, one per message, oldest first, in a ring made once."""
 
@@ -89,6 +92,10 @@ class WholeMessages(PortIn):
 
     port: Any
     desync: int
+    LONGEST: int
+    """The longest SysEx a ``read()`` with no ``nbytes`` holds back to hand out whole."""
     def __init__(self, port: Any, size: int = 32, stamps: int | None = None) -> None: ...
+    def read(self, nbytes: int | None = None) -> bytes | None:
+        """Waiting bytes; a SysEx comes out whole when ``nbytes`` allows."""
     def any(self) -> int:
         """How many bytes are waiting, without taking them."""

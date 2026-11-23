@@ -23,6 +23,7 @@ It prints one PASS/FAIL line per check and exits non-zero on any failure.
 """
 
 import gc
+import time
 import sys
 
 try:
@@ -42,6 +43,28 @@ for _arg in sys.argv[1:]:
         PLANT = _arg.split("=", 1)[1]
 
 MICROPYTHON = sys.implementation.name == "micropython"
+
+
+def _allocation_is_measurable():
+    """Whether "allocates nothing" can be asked of this interpreter: only
+    MicroPython counts its heap, and a build that heap-allocates a frame for
+    every Python call (the Windows port's) would fail any poll no matter what
+    the poll does, so it's measured with an empty function first."""
+    if not MICROPYTHON:
+        return False
+
+    def nothing(_):
+        pass
+
+    nothing(0)
+    gc.collect()
+    before = gc.mem_alloc()
+    for i in range(50):
+        nothing(i)
+    return gc.mem_alloc() == before
+
+
+MEASURE_ALLOC = _allocation_is_measurable()
 
 import adafruit_midi
 from adafruit_midi.control_change import ControlChange
@@ -228,7 +251,7 @@ def c_whole_messages_edges():
            % (got,))
     got, _ = through(b"\xe0\x00\x40\xfa\x01\x40")
     expect(got == b"\xe0\x00\x40\xfa\xe0\x01\x40", "bend, start, running bend %r" % (got,))
-    if MICROPYTHON:
+    if MEASURE_ALLOC:
         empty = WholeMessages(FakeIn())
         empty.read(30)
         gc.collect()
@@ -261,7 +284,7 @@ def c_shapes():
 
 
 def c_empty_poll_allocates_nothing():
-    if not MICROPYTHON:
+    if not MEASURE_ALLOC:
         return  # CPython allocates for any call; the promise is MicroPython's
     port = FakeIn()
     port.read(30)
@@ -410,7 +433,7 @@ def _install_fake_usb():
     sys.modules.pop("midiports.usb_device", None)
     from midiports import usb_device
 
-    if not MICROPYTHON:
+    if not hasattr(time, "ticks_ms"):  # CPython; CircuitPython's unix port has ticks too
         usb_device.time = _Ticks()
     return usb_device
 
@@ -667,11 +690,19 @@ def whole_or_why(data):
     return None
 
 
-def drain(midi_in, nbytes):
+def drain(midi_in, nbytes, into=False):
+    """Everything ``midi_in`` hands out, ``nbytes`` at a time. With ``into``
+    it reads through ``readinto``, which hands a SysEx out in parts as they
+    come rather than holding it back to hand it out whole as ``read`` does."""
     data = bytearray()
+    buf = bytearray(nbytes)
     idle = 0
     while idle < 3:
-        chunk = midi_in.read(nbytes)
+        if into:
+            n = midi_in.readinto(buf, nbytes)
+            chunk = bytes(buf[:n]) if n else None
+        else:
+            chunk = midi_in.read(nbytes)
         if chunk is None:
             idle += 1
         else:
@@ -696,7 +727,7 @@ def c_usb_host_all():
         a.feed_events((0x6, 0x03, 0xF7, 0), (0x9, 0x90, 0x3C, 0x64))
         b.feed(b"\xb1\x07\x7f")
         # Small reads, so every message is handed out in pieces.
-        data = drain(midi_in, 2)
+        data = drain(midi_in, 2, into=True)
         why = whole_or_why(data)
         expect(why is None, "%s in %s" % (why, data.hex()))
         expect(b"\xf0\x7e\x7f\x06\x01\x02\x03\xf7" in data, "a's SysEx, whole: " + data.hex())
@@ -1197,7 +1228,7 @@ def any_first(midi_in, midi_out, notes=200, pump=None):
 
 
 def quiet_any_allocates_nothing(port):
-    if not MICROPYTHON:
+    if not MEASURE_ALLOC:
         return
     port.any()
     gc.collect()
@@ -1460,21 +1491,23 @@ def c_stamps_realtime_in_sysex_usb_device():
 def stamps_after_drain(midi_in, pump=None):
     """Read every byte the port hands out, then parse them in one go.
 
-    adafruit_midi drops a SysEx it sees only part of in one buffer, whatever
-    the port does, so these cases give it the port's whole output at once.
-    The stamps still come from the port.
+    It reads with ``readinto``, which hands a SysEx out in parts as they
+    arrive, where ``read`` would hold it back until its end, so the pump
+    that feeds one packet a read keeps going. The stamps still come from the
+    port.
     """
     data = bytearray()
+    buf = bytearray(64)
     idle = 0
     while idle < 3:
         if pump is not None:
             pump()
-        chunk = midi_in.read(64)
-        if chunk is None:
+        n = midi_in.readinto(buf, 64)
+        if not n:
             idle += 1
         else:
             idle = 0
-            data.extend(chunk)
+            data.extend(buf[:n])
 
     class _Stamped(FakeIn):
         def take_timestamp(self):
@@ -1654,7 +1687,7 @@ def c_stamps_ring_is_fixed():
         stamps.push(t)
     expect(len(stamps) == 4, "a full ring holds 4, has %d" % len(stamps))
     expect([stamps.take() for _ in range(5)] == [6, 7, 8, 9, None], "keeps the newest")
-    if MICROPYTHON:
+    if MEASURE_ALLOC:
         now = midiports.ticks_us()
         stamps.push(now)
         stamps.take()
@@ -1684,6 +1717,152 @@ def c_clock_helpers():
     b = midiports.ticks_us()
     expect(isinstance(a, int), "ticks_us is a whole number of microseconds")
     expect(midiports.ticks_diff(b, a) >= 0, "the clock runs forward")
+
+
+# -- a long SysEx reaches adafruit_midi whole ----------------------------------------
+
+# 1 KB: 0xF0, a manufacturer, 1021 data bytes, 0xF7. adafruit_midi drops a
+# SysEx it's handed in parts, so a port's read() must hand it out in one.
+SYSEX_1K = bytes([0xF0, 0x7D] + [i % 128 for i in range(1021)] + [0xF7])
+NOTE_BEFORE = b"\x90\x3c\x64"
+NOTE_AFTER = b"\x80\x3c\x00"
+
+
+def sysex_1k_received(midi_in, feed, parts):
+    """Feed ``parts`` one per ``receive()``, as they'd arrive between polls,
+    then read until the port is quiet; every message adafruit_midi made."""
+    midi = adafruit_midi.MIDI(midi_in=midi_in, in_channel=0, in_buf_size=1100)
+    parts = list(parts)
+    got = []
+    idle = 0
+    while idle < 3:
+        if parts:
+            feed(parts.pop(0))
+        msg = midi.receive()
+        if msg is not None:
+            got.append(msg)
+            idle = 0
+        elif not parts:
+            idle += 1
+    return got
+
+
+def expect_sysex_1k(got, where, clock=False):
+    names = [type(m).__name__ for m in got]
+    want = ["NoteOn", "SystemExclusive"] + (["TimingClock"] if clock else []) + ["NoteOff"]
+    expect(names == want, "%s: got %r, want %r" % (where, names, want))
+    sx = got[1]
+    expect(bytes(sx.manufacturer_id) == b"\x7d" and bytes(sx.data) == SYSEX_1K[2:-1],
+           "%s: the SysEx's body (%d bytes) isn't the one sent" % (where, len(sx.data)))
+
+
+def _pieces(data, size):
+    return [data[i:i + size] for i in range(0, len(data), size)]
+
+
+def c_sysex_1k_whole_messages():
+    # A raw stream in 20-byte pieces, as a UART's driver might hand it over,
+    # with a clock inside the SysEx.
+    stream = NOTE_BEFORE + SYSEX_1K[:500] + b"\xf8" + SYSEX_1K[500:] + NOTE_AFTER
+    port = FakeIn()
+    got = sysex_1k_received(WholeMessages(port), port.chunks.append, _pieces(stream, 20))
+    expect_sysex_1k(got, "WholeMessages", clock=True)
+    # All of it waiting at once.
+    got = sysex_1k_received(WholeMessages(FakeIn([stream])), None, ())
+    expect_sysex_1k(got, "WholeMessages, all at once", clock=True)
+    # A read too short for the SysEx gets it in parts, as readinto would.
+    port = WholeMessages(FakeIn([SYSEX_1K]))
+    expect(len(port.read(100)) == 100, "read(100) hands out 100 bytes of a longer SysEx")
+
+
+def c_sysex_1k_uart():
+    sys.modules["machine"] = _FakeMachine
+    try:
+        from midiports import uart
+
+        midi_in, _ = uart.ports(1, tx=17, rx=18)
+        u = FakeUART.made[-1]
+        got = sysex_1k_received(midi_in, lambda data: u.rx.extend(data), _pieces(NOTE_BEFORE + SYSEX_1K + NOTE_AFTER, 32))
+        expect_sysex_1k(got, "uart")
+    finally:
+        del sys.modules["machine"]
+
+
+def _packets(data):
+    """USB-MIDI packets of 16 events for whole messages ``data``."""
+    events = _whole_events(data)
+    return [events[i:i + 16] for i in range(0, len(events), 16)]
+
+
+def c_sysex_1k_usb_host():
+    usb_host = _usb_host()
+    try:
+        dev = FakeMidiDevice()
+        midi_in, _ = usb_host.ports(dev, size=64)
+        packets = _packets(NOTE_BEFORE + SYSEX_1K + NOTE_AFTER)
+        got = sysex_1k_received(midi_in, lambda events: dev.feed_events(*events), packets)
+        expect_sysex_1k(got, "usb_host")
+        # Through the merge of every device, with another device playing.
+        a, b = FakeMidiDevice(), FakeMidiDevice()
+        find, _ = _hosted(a, b)
+        merged = usb_host._All(find, 64, 0, 1000, 0, 500)
+
+        def feed(events):
+            a.feed_events(*events)
+            b.feed(b"\x91\x40\x50")
+
+        midi = adafruit_midi.MIDI(midi_in=merged, in_buf_size=1100)
+        got = []
+        parts = list(packets)
+        idle = 0
+        while idle < 3:
+            if parts:
+                feed(parts.pop(0))
+            msg = midi.receive()
+            if msg is not None:
+                got.append(msg)
+                idle = 0
+            elif not parts:
+                idle += 1
+        mine = [m for m in got if getattr(m, "channel", None) != 1]
+        expect_sysex_1k(mine, "usb_host all_ports")
+        others = [m for m in got if getattr(m, "channel", None) == 1]
+        expect(len(others) == len(packets), "%d of %d notes from the other device"
+               % (len(others), len(packets)))
+    finally:
+        _drop_usb_host()
+
+
+class _NoteRing(PortIn):
+    """Hands out the same note-on every read, from a buffer made once."""
+
+    def __init__(self):
+        PortIn.__init__(self)
+        self.note = bytearray(NOTE_BEFORE)
+
+    def readinto(self, buf, nbytes=None):
+        for i in range(3):
+            buf[i] = self.note[i]
+        return 3
+
+
+def c_short_read_allocates_only_its_bytes():
+    if not MEASURE_ALLOC:
+        return  # the promise is MicroPython's
+    raw = _NoteRing()
+    port = WholeMessages(_NoteRing())
+
+    def cost(p):
+        p.read(30)
+        gc.collect()
+        before = gc.mem_alloc()
+        for _ in range(20):
+            p.read(30)
+        return gc.mem_alloc() - before
+
+    plain, whole_ = cost(raw), cost(port)
+    expect(whole_ == plain, "20 note reads allocated %d bytes through WholeMessages, %d plain"
+           % (whole_, plain))
 
 
 CHECKS = (
@@ -1725,6 +1904,10 @@ CHECKS = (
     ("stamps: usb_device, real-time bytes inside a SysEx", c_stamps_realtime_in_sysex_usb_device),
     ("stamps: WholeMessages and usb_host, real-time bytes inside a SysEx", c_stamps_realtime_in_sysex_streams),
     ("stamps: webmidi, real-time bytes beside a SysEx", c_stamps_realtime_in_sysex_webmidi),
+    ("a 1 KB SysEx reaches adafruit_midi whole through WholeMessages", c_sysex_1k_whole_messages),
+    ("a 1 KB SysEx reaches adafruit_midi whole over a UART", c_sysex_1k_uart),
+    ("a 1 KB SysEx reaches adafruit_midi whole from a hosted USB device, alone and merged", c_sysex_1k_usb_host),
+    ("a short message's read allocates only its bytes, through WholeMessages", c_short_read_allocates_only_its_bytes),
 )
 
 

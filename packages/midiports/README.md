@@ -33,6 +33,7 @@ To use another transport, change the line that opens the ports:
 | USB, every MIDI device plugged into the board, merged | `usb_host.all_ports()` |
 | A UART (5-pin DIN, TRS, board to board) | `uart.ports(1, tx=17, rx=18)` |
 | Bluetooth LE, the board as an instrument a controller, phone or computer connects to | `ble.ports("Synth")` |
+| Bluetooth LE, the board connecting to a controller that waits, such as a foot controller | `ble.connect_ports("FootCtrl")` |
 | Windows' MIDI ports (a keyboard, loopMIDI, a DAW) | `windows.ports("loopMIDI")` |
 | Windows' loopback, for trying MIDI with no hardware | `windows.ports(midiports.LOOPBACK)` |
 | Linux raw MIDI | `linux.ports("DMK25")` |
@@ -43,15 +44,17 @@ To use another transport, change the line that opens the ports:
 
 Import each from `midiports`.
 
-Over Bluetooth LE the board advertises the standard BLE-MIDI service under the
-name you give, and advertises again when a link drops. `ble.available()` says
+Over Bluetooth LE, `ble.ports` advertises the standard BLE-MIDI service under
+the name you give, and advertises again when a link drops. Most foot
+controllers and many keyboards advertise themselves and wait to be connected
+to: `ble.connect_ports` scans for one by name, connects, and scans again when
+the link drops, so a controller switched on late, or off and on, is picked up. `ble.available()` says
 whether the firmware has Bluetooth without starting it, so a program can offer
 the choice and start nothing until it's picked. When a link drops with notes
 still sounding, the input hands out a note-off for each, so none is left
 hanging. It needs [`bledev`](../../docs/guides/bluetooth-le.md), and `aioble` on
 MicroPython; an app with no event loop of its own needs nothing more, as each
-`any()` runs Bluetooth's tasks. To make the board the central that connects to
-a named controller instead, use `bledev.midi.connect`.
+`any()` runs Bluetooth's tasks.
 
 An Android phone works as the keyboard. Plug it into the board's host port,
 pick **MIDI** in its USB settings (the notification that appears when it's
@@ -261,10 +264,16 @@ clock a worker's relayed times are on.
 
 ## Limits
 
+- `adafruit_midi` drops a SysEx it's handed in parts, so `read()` holds one
+  back until its 0xF7 arrives and hands it out whole. Give `MIDI` an
+  `in_buf_size` bigger than the longest SysEx you expect (the default is 30
+  bytes); a longer one still comes out in parts.
 - Windows: a write holds a SysEx until its 0xF7, then returns once the port
   has sent it, so a long one blocks for as long as it takes to send.
-- Linux: MicroPython's unix port can list ports but not open them, since its
-  `os` has no `open` or `read`. CPython opens them.
+- Linux: MicroPython's and CircuitPython's unix ports have no `os.open` or
+  `os.read`, so they open a port with `open()` and `select.poll`, a byte at a
+  time. It's checked against a pipe and plain files standing in for the device,
+  not yet against a kernel MIDI port. `serial_ports()` needs CPython's `termios`.
 - Linux serial: `serial_ports()` sets MIDI's 31250 baud through the driver's
   custom-rate call, and raises if the driver can't come within 1% of it. A
   Pi whose UART clock was changed so that 38400 comes out as 31250 takes
