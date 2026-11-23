@@ -40,6 +40,7 @@ sources) and ``mpy-cross`` (``pip install mpy-cross``, or a path in
 from __future__ import annotations
 
 import argparse
+import ast
 import hashlib
 import html
 import json
@@ -129,17 +130,16 @@ class Pinned:
     ref: str
     description: str
     pypi: str | None
-    # A repository whose lib/ holds several packages: each is published under
-    # its own name with its own description, and this one requires them all.
-    packages: dict[str, str] = field(default_factory=dict)
-    # What one of those packages requires beyond itself, by member name: appkit
-    # draws with iconkit, which is a package of its own in this repository.
-    member_requires: dict[str, tuple[str, ...]] = field(default_factory=dict)
-    # What a member needs from micropython-lib, and from Adafruit's bundle on
-    # CircuitPython in its place: the same two keys a package of this
-    # repository carries in ``repo``, by member name.
-    member_upstream: dict[str, tuple[str, ...]] = field(default_factory=dict)
-    member_circuitpython: dict[str, tuple[str, ...]] = field(default_factory=dict)
+    # A repository whose lib/ holds several packages, published as this one
+    # package: it installs every folder of that lib/ with an __init__.py, each
+    # under its own import name, and requires what they require. The lockfile
+    # says only "bundle"; the folders and their requires are read from the
+    # pinned source (bundle_members), so a folder added there is published
+    # with no edit here.
+    bundle: bool = False
+    # What the bundle takes from Adafruit's bundle on CircuitPython: the same
+    # key a package of this repository carries in ``repo``.
+    circuitpython: tuple[str, ...] = ()
 
     @property
     def version(self) -> str:
@@ -185,28 +185,25 @@ def read_lock(root: Path) -> Lock:
             raise BuildError(f"{LOCKFILE} repo.{name} has no description")
     pinned = {}
     for name, entry in data.get("pinned", {}).items():
-        extra = sorted(set(entry) - {"repository", "ref", "description", "pypi", "packages", "requires", "upstream", "circuitpython"})
+        extra = sorted(set(entry) - {"repository", "ref", "description", "pypi", "bundle", "circuitpython"})
         if extra:
             raise BuildError(f"{LOCKFILE} pinned.{name} has unknown keys: {', '.join(extra)}")
         for key in ("repository", "ref", "description"):
             if not entry.get(key):
                 raise BuildError(f"{LOCKFILE} pinned.{name} has no {key}")
-        by_member = {}
-        for key in ("requires", "upstream", "circuitpython"):
-            by_member[key] = {member: tuple(needed) for member, needed in entry.get(key, {}).items()}
-            for member in by_member[key]:
-                if member not in entry.get("packages", {}):
-                    raise BuildError(f"{LOCKFILE} pinned.{name}.{key} names {member!r}, which is not one of its packages")
+        bundle = entry.get("bundle", False)
+        if not isinstance(bundle, bool):
+            raise BuildError(f"{LOCKFILE} pinned.{name}.bundle is true or false, not {bundle!r}")
+        if entry.get("circuitpython") and not bundle:
+            raise BuildError(f"{LOCKFILE} pinned.{name}.circuitpython is for a bundle")
         pinned[name] = Pinned(
             name,
             entry["repository"],
             entry["ref"],
             entry["description"],
             entry.get("pypi"),
-            entry.get("packages", {}),
-            by_member["requires"],
-            by_member["upstream"],
-            by_member["circuitpython"],
+            bundle=bundle,
+            circuitpython=tuple(entry.get("circuitpython", ())),
         )
     folders = {}
     for name, entry in data.get("folders", {}).items():
@@ -226,7 +223,7 @@ def read_lock(root: Path) -> Lock:
 
 
 def _ignore_member_extras(directory: str, names: list[str]) -> set[str]:
-    """What a package of a several-package repository keeps out of the index."""
+    """What a bundle member keeps out of the index."""
     return _ignore_debris(directory, names) | {name for name in names if name in ("docs", "examples", "tests", "manifest.py")}
 
 
@@ -544,55 +541,135 @@ def assemble_repo_packages(root: Path, lock: Lock, version: str, tree: Tree, lib
     )
 
 
-def assemble_several(pinned: Pinned, source_root: Path, tree: Tree, library: str, local: frozenset[str]) -> None:
-    """Each package under its own name, and one named for them all that requires them."""
-    for name, description in pinned.packages.items():
-        source = source_root / "lib" / name
-        if not source.is_dir():
-            raise BuildError(f"{pinned.repository} at {pinned.ref} has no lib/{name}")
-        if name in tree.packages:
-            raise BuildError(f"two packages are named {name!r}: {tree.packages[name]} and {pinned.repository}")
-        tree.packages[name] = f"{pinned.repository}@{pinned.ref}"
-        if name in pinned.member_upstream:
-            tree.upstream[name] = pinned.member_upstream[name]
-        if name in pinned.member_circuitpython:
-            tree.circuitpython[name] = pinned.member_circuitpython[name]
-        destination = tree.path / name
-        shutil.copytree(source, destination / name, ignore=_ignore_member_extras)
-        (destination / "manifest.py").write_text(
-            render_manifest(
-                description=description,
-                version=pinned.version,
-                pypi=None,
-                requires=pinned.member_requires.get(name, ()),
-                payloads=(f'package("{name}")',),
-                library=library,
-                local=local,
-            ),
-            encoding="utf-8",
-        )
+def member_requires(manifest: Path, name: str) -> tuple[str, ...]:
+    """Each require("...") in *manifest*, in order, read without running it.
+
+    Every call counts, including one behind an option: a member's manifest
+    keeps its requires behind ``requires=True`` so that a firmware including
+    it freezes the member alone.
+    """
+    if not manifest.is_file():
+        return ()
+    try:
+        module = ast.parse(manifest.read_text(encoding="utf-8"), filename=str(manifest))
+    except SyntaxError as exc:
+        raise BuildError(f"{manifest} does not parse: {exc}") from None
+    calls = sorted(
+        (node for node in ast.walk(module)
+         if isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id == "require"),
+        key=lambda node: (node.lineno, node.col_offset),
+    )
+    needs: list[str] = []
+    for call in calls:
+        if not call.args or not isinstance(call.args[0], ast.Constant) or not isinstance(call.args[0].value, str):
+            raise BuildError(f"{manifest}:{call.lineno}: require() must name its package as a string literal")
+        need = call.args[0].value
+        if need == name:
+            raise BuildError(f"{manifest}:{call.lineno}: {name} requires itself")
+        if need not in needs:
+            needs.append(need)
+    return tuple(needs)
+
+
+def bundle_members(pinned: Pinned, source_root: Path) -> dict[str, tuple[str, ...]]:
+    """Every folder of *source_root*'s lib/ with an ``__init__.py``, by name, and
+    what each one's own ``manifest.py`` requires."""
+    lib = source_root / "lib"
+    if not lib.is_dir():
+        raise BuildError(f"{pinned.repository} at {pinned.ref} has no lib/")
+    folders = sorted(
+        (folder for folder in lib.iterdir()
+         if folder.is_dir() and not folder.name.startswith(".") and (folder / "__init__.py").is_file()),
+        key=lambda folder: folder.name,
+    )
+    if not folders:
+        raise BuildError(f"{pinned.repository} at {pinned.ref}: lib/ holds no package (a folder with an __init__.py)")
+    return {folder.name: member_requires(folder / "manifest.py", folder.name) for folder in folders}
+
+
+def render_bundle_manifest(
+    pinned: Pinned, members: dict[str, tuple[str, ...]], library: str, local: frozenset[str]
+) -> str:
+    """The bundle's manifest: every member, and what they require from outside it.
+
+    On the index it installs everything. A firmware build can freeze some of
+    it, with whatever those members need from among the rest:
+    ``require("applibs", library="omnipython-lib", packages=("appkit", "touchkit"))``.
+    """
+    # What each member brings along from inside the bundle, itself included.
+    closure: dict[str, set[str]] = {}
+    for name in members:
+        seen: set[str] = set()
+        todo = [name]
+        while todo:
+            member = todo.pop()
+            if member not in seen:
+                seen.add(member)
+                todo.extend(need for need in members[member] if need in members)
+        closure[name] = seen
+    # For each member, and each package from outside: the members that bring it.
+    wanted_by = {name: {m for m in members if name in closure[m]} for name in members}
+    outside: dict[str, set[str]] = {}
+    for name in members:
+        for member in closure[name]:
+            for need in members[member]:
+                if need not in members:
+                    outside.setdefault(need, set()).add(name)
+
+    def names(found) -> str:
+        return ", ".join(f'"{n}"' for n in sorted(found))
+
+    lines = [
+        "metadata(",
+        f"    description={pinned.description!r},",
+        f'    version="{pinned.version}",',
+        f'    author="{AUTHOR}",',
+        '    license="MIT",',
+    ]
+    if pinned.pypi:
+        lines.append(f'    pypi_publish="{pinned.pypi}",')
+    lines += [
+        ")",
+        "# The index installs every member. packages=(...) freezes only those, and what they need.",
+        "options.defaults(opt=None, packages=None)",
+        f"_MEMBERS = ({names(members)},)",
+        "for _name in options.packages or ():",
+        "    if _name not in _MEMBERS:",
+        f'        raise ValueError("{pinned.name} has no package %r" % (_name,))',
+        "",
+        "",
+        "def _wants(*names):",
+        "    return options.packages is None or any(name in options.packages for name in names)",
+        "",
+        "",
+    ]
+    for need in sorted(outside):
+        call = f'require("{need}", library="{library}", opt=options.opt)' if need in local else f'require("{need}")'
+        lines += [f"if _wants({names(outside[need])}):", f"    {call}"]
+    for name in members:
+        lines += [f"if _wants({names(wanted_by[name])}):", f'    package("{name}", opt=options.opt)']
+    lines.append("")
+    return "\n".join(lines)
+
+
+def assemble_bundle(pinned: Pinned, source_root: Path, tree: Tree, library: str, local: frozenset[str]) -> None:
+    """One package named for the repository, holding every package in its lib/."""
+    members = bundle_members(pinned, source_root)
     if pinned.name in tree.packages:
         raise BuildError(f"two packages are named {pinned.name!r}: {tree.packages[pinned.name]} and {pinned.repository}")
     tree.packages[pinned.name] = f"{pinned.repository}@{pinned.ref}"
+    if pinned.circuitpython:
+        tree.circuitpython[pinned.name] = pinned.circuitpython
     destination = tree.path / pinned.name
     destination.mkdir()
-    (destination / "manifest.py").write_text(
-        render_manifest(
-            description=pinned.description,
-            version=pinned.version,
-            pypi=pinned.pypi,
-            requires=tuple(pinned.packages),
-            payloads=(),
-            library=library,
-            local=local,
-        ),
-        encoding="utf-8",
-    )
+    for name in members:
+        shutil.copytree(source_root / "lib" / name, destination / name, ignore=_ignore_member_extras)
+    (destination / "manifest.py").write_text(render_bundle_manifest(pinned, members, library, local), encoding="utf-8")
 
 
 def assemble_pinned(pinned: Pinned, source_root: Path, tree: Tree, library: str, local: frozenset[str]) -> None:
-    if pinned.packages:
-        assemble_several(pinned, source_root, tree, library, local)
+    if pinned.bundle:
+        assemble_bundle(pinned, source_root, tree, library, local)
         return
     source = source_root / "lib" / pinned.name
     if not source.is_dir():
@@ -669,8 +746,6 @@ def local_names(root: Path, lock: Lock) -> frozenset[str]:
     """Every package name the library will hold, known before assembling it."""
     split = read_split(root)
     names = {"omnipython", "omnipython-desktop", *lock.pinned, *lock.folders}
-    for pinned in lock.pinned.values():
-        names.update(pinned.packages)
     names.update(find_boards(root))
     names.update(read_drivers(root))
     if (root / DESKTOP_BOARD_DIR).is_dir():
@@ -1580,11 +1655,6 @@ def check_shape(root: Path, upstream: frozenset[str] | None, library: str = DEFA
             stub.mkdir()
             (stub / "manifest.py").write_text(f'metadata(version="{pinned.version}")\n', encoding="utf-8")
             tree.packages[pinned.name] = pinned.repository
-            for name in pinned.packages:
-                stub = tree.path / name
-                stub.mkdir()
-                (stub / "manifest.py").write_text(f'metadata(version="{pinned.version}")\n', encoding="utf-8")
-                tree.packages[name] = pinned.repository
         assemble_boards(root, boards, version, tree, library, local)
         assemble_drivers(root, drivers, tree, library, local)
 
@@ -1615,11 +1685,6 @@ def check_shape(root: Path, upstream: frozenset[str] | None, library: str = DEFA
             for missing in entry.get("upstream", ()):
                 if upstream is not None and missing not in upstream:
                     problems.append(f"{LOCKFILE} repo.{name}: upstream {missing!r} is no package in micropython-lib")
-        for name, pinned in sorted(lock.pinned.items()):
-            for member, needed in sorted(pinned.member_upstream.items()):
-                for missing in needed:
-                    if upstream is not None and missing not in upstream:
-                        problems.append(f"{LOCKFILE} pinned.{name}.upstream.{member}: {missing!r} is no package in micropython-lib")
 
         for name, manifest in sorted(manifests.items()):
             source = tree.packages[name]

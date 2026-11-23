@@ -64,6 +64,13 @@ repositories (palettes, pdwidgets, pygraphics, audioinstruments, audioeffects)
 are cloned at the tags [`lib-lock.json`](../lib-lock.json) names; pass
 `--source palettes=../palettes` to build one from a local checkout instead.
 
+A pin marked `"bundle": true` (applibs, from the apps repository) is one
+package holding every folder of that repository's `lib/` with an
+`__init__.py`, each under its own import name. It requires what each folder's
+own `manifest.py` require()s, so a folder added there is in the next build with
+nothing to edit here. A firmware can freeze some of it, and what those need:
+`require("applibs", library="omnipython-lib", packages=("appkit", "touchkit"))`.
+
 A package that requires one of micropython-lib's (the board configs that
 need `sdcard`, say) is built without it, and the build says so: install the
 upstream package from micropython-lib's index first. `--upstream-lib PATH` includes it from a
