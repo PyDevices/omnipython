@@ -244,7 +244,7 @@ and Android.
 - [`usb-core`](https://github.com/PyDevices/omnipython/blob/main/docs/guides/usb.md): Talk to USB devices from a host board, with `usb.core` and `usb.util`, in PyUSB's shape.\
   Get it: `mip usb-core`. Runs on: MP.
 - [`usb-host-endpoints`](https://github.com/PyDevices/omnipython/blob/main/docs/guides/usb.md): List what's plugged into the board's USB host port as `endpointkit` endpoints, kept current as devices come and go.\
-  Get it: from source. Runs on: MP.
+  Get it: `mip usb-host-endpoints`. Runs on: MP.
 - [`usb-host-dfu`](https://github.com/PyDevices/omnipython/blob/main/docs/guides/usb.md): Read the flash of a board sitting in its USB DFU bootloader.\
   Get it: `mip usb-host-dfu`. Runs on: MP.
 - [`usb-host-hid`](https://github.com/PyDevices/omnipython/blob/main/docs/guides/usb.md): Read a keyboard or mouse plugged into the board.\
