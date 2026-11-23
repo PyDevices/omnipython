@@ -234,6 +234,25 @@ def t_parsers():
     check(kinds == ["camera"], "the captured C920e's twelve streaming alternates are one camera: %r" % kinds)
 
 
+def t_not_started():
+    # Registered with start=False, nothing starts the port: its devices are
+    # listed on the first poll after a program starts it.
+    reg = endpointkit.Registry()
+    made = endpoints.register(reg, start=False)
+    late = FakeDevice(0x1234, 0x0001, config(itf(0, 3, 1, 1, 1), ep(0x81, 3, 8)), ("hid",), "Late Keyboard")
+    dev_id = fake.plug(late)
+    reg.poll()
+    check(not usb.core.running() and not fake.running, "register(start=False) leaves the port stopped")
+    check("Late Keyboard" not in labels("keys", reg), "and lists nothing while it's stopped")
+    usb.core.start(full_speed=True)
+    reg.poll()
+    check("Late Keyboard" in labels("keys", reg), "a program starting the port gets its devices listed on the next poll")
+    fake.pull(dev_id)
+    reg.poll()
+    endpoints.unregister(reg, made)
+    usb.core.stop()
+
+
 def t_hotplug():
     reg = endpointkit.Registry()
     check(not usb.core.running(), "the port isn't running before register")
@@ -411,6 +430,7 @@ def _cleanup():
 
 try:
     t_parsers()
+    t_not_started()
     t_hotplug()
     t_flaky()
     t_audio_out()
