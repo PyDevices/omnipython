@@ -934,6 +934,137 @@ def test_osc():
     device.close()
 
 
+def _retry_run(keep=None):
+    """A board whose first connection fails still takes the next laptop."""
+    real = ble.nus.serve
+    calls = []
+
+    async def flaky(*args, **kwargs):
+        calls.append(1)
+        if len(calls) == 1:
+            raise OSError(116)  # ETIMEDOUT, as a board's radio reports it
+        return await real(*args, **kwargs)
+
+    ble.nus.serve = flaky
+    retry, ble.RETRY_MS = ble.RETRY_MS, 10
+    saved = ble.Listener._keep
+    if keep is not None:
+        ble.Listener._keep = keep
+    try:
+        air = Air()
+        board = FakeBLE(air=air)
+        laptop = FakeBLE(air=air, peripheral=False)
+        device = hmilink.Device(Knobs())
+        lst = device.add(ble.serve("rack", adapter=board))
+        panel = hmilink.Panel(ble.connect("rack", adapter=laptop))
+        try:
+            pump(device, (panel,))
+            check(lst.error is not None, "the failed connection is kept in error")
+            check(lst.links == 1 and panel.ready, "and the next laptop still connects: %r" % lst.state)
+        finally:
+            panel.close()
+            device.close()
+            pump(device, (panel,), rounds=5)
+    finally:
+        ble.nus.serve = real
+        ble.RETRY_MS = retry
+        ble.Listener._keep = saved
+
+
+def test_ble_retry():
+    global ROUNDS
+    rounds, ROUNDS = ROUNDS, 60
+    try:
+        _retry_run()
+    finally:
+        ROUNDS = rounds
+
+
+def test_ble_retry_plant():
+    """A listener that stops at its first failure must fail the retry check."""
+
+    async def gives_up(self):
+        try:
+            while True:
+                link = await ble.nus.serve(self._ble, self._name, **self._options)
+                self.links += 1
+                self._pending.append(ble.Link(ble._Opened(link), "connected", False))
+        except Exception as e:  # noqa: BLE001
+            self.error = e
+            self.state = "stopped: %s" % (e,)
+
+    global ROUNDS
+    rounds, ROUNDS = ROUNDS, 60
+    try:
+        check(planted(lambda: _retry_run(gives_up)), "a listener that gives up must fail the retry check")
+    finally:
+        ROUNDS = rounds
+
+
+def _unsupported_run(keep=None):
+    """An adapter that can't advertise stops the listener, once, saying why."""
+    real = ble.nus.serve
+    calls = []
+
+    async def counted(*args, **kwargs):
+        calls.append(1)
+        return await real(*args, **kwargs)
+
+    ble.nus.serve = counted
+    retry, ble.RETRY_MS = ble.RETRY_MS, 10
+    saved = ble.Listener._keep
+    if keep is not None:
+        ble.Listener._keep = keep
+    try:
+        air = Air()
+        central_only = FakeBLE(air=air, peripheral=False)
+        device = hmilink.Device(Knobs())
+        lst = device.add(ble.serve("rack", adapter=central_only))
+        try:
+            pump(device, ())
+            check(isinstance(lst.error, ble.bledev.UnsupportedError), "the adapter's refusal is kept: %r" % lst.error)
+            check(lst.state.startswith("stopped"), "and the listener stops: %r" % lst.state)
+            check(len(calls) == 1, "without trying again: %d tries" % len(calls))
+        finally:
+            device.close()
+    finally:
+        ble.nus.serve = real
+        ble.RETRY_MS = retry
+        ble.Listener._keep = saved
+
+
+def test_ble_unsupported():
+    global ROUNDS
+    rounds, ROUNDS = ROUNDS, 60
+    try:
+        _unsupported_run()
+    finally:
+        ROUNDS = rounds
+
+
+def test_ble_unsupported_plant():
+    """A listener that retries on every error must fail the unsupported check."""
+
+    async def retries_anything(self):
+        while True:
+            try:
+                link = await ble.nus.serve(self._ble, self._name, **self._options)
+            except Exception as e:  # noqa: BLE001
+                self.error = e
+                self.state = "retrying: %s" % (e,)
+                await ble.asyncio.sleep(ble.RETRY_MS / 1000)
+                continue
+            self.links += 1
+            self._pending.append(ble.Link(ble._Opened(link), "connected", False))
+
+    global ROUNDS
+    rounds, ROUNDS = ROUNDS, 60
+    try:
+        check(planted(lambda: _unsupported_run(retries_anything)), "a listener that retries on anything must fail")
+    finally:
+        ROUNDS = rounds
+
+
 def test_all():
     test_ops()
     print("ops ok")
@@ -953,6 +1084,12 @@ def test_all():
         test_ble()
         test_ble_plant()
         print("ble ok over bledev.fake (serve, connect, advertise; a flipped byte caught)")
+        test_ble_retry()
+        test_ble_retry_plant()
+        print("ble retry ok (a failed connection doesn't stop advertising; a listener that gives up caught)")
+        test_ble_unsupported()
+        test_ble_unsupported_plant()
+        print("ble unsupported ok (an adapter that can't advertise stops it; one that retries anyway caught)")
     else:
         print("ble skipped: no bledev")
     try:
