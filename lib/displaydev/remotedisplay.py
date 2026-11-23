@@ -836,7 +836,7 @@ class RemoteDisplay(FBDisplay):
     """A display with no panel: you see and use it in a web browser.
 
     The frame lives in RAM (PSRAM on boards that have it): ``width * height
-    * 2`` bytes, and as much again for what the browser was last sent.
+    * 2`` bytes. Give ``get_events`` to the app as ``host_read``.
 
     Args:
         width (int): Width in pixels. Default 480.
@@ -847,7 +847,6 @@ class RemoteDisplay(FBDisplay):
 
     Attributes:
         server (RemoteServer): Serves the page and the frame.
-        get_events: The browser's input; give it to the app as ``host_read``.
     """
 
     server = None
