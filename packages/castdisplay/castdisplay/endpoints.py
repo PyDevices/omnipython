@@ -315,7 +315,8 @@ class Mirror(endpointkit.Provider):
 
     Args:
         display: The display to mirror; ``board_config.display_drv`` by
-            default. One without ``framebuffers()`` lists no endpoint.
+            default. One without ``framebuffers()`` lists no endpoint, and
+            nor does a `RemoteDisplay`, which is in the browser already.
         push_key (callable): Types a key the browser sends: a character, or
             an LVGL key code. ``appkit.keys.push`` in the Shell. Keys are
             dropped without one.
@@ -364,6 +365,8 @@ class Mirror(endpointkit.Provider):
         d = self._display()
         if d is None or not hasattr(d, "framebuffers") or d.framebuffers() is None:
             return []
+        if hasattr(getattr(d, "server", None), "note"):
+            return []  # a RemoteDisplay: already in the browser
         if not self._password():
             return [self.endpoint("browser", "Browser on this network", endpointkit.UNAVAILABLE,
                                   caps={"why": "Set a WebREPL password to mirror this screen"})]

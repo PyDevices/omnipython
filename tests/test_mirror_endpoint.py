@@ -105,6 +105,11 @@ class MirrorTest(unittest.TestCase):
     def test_not_remembered(self):
         self.assertFalse(Mirror.remember)
 
+    def test_remote_display_no_endpoint(self):
+        panel = Panel()
+        panel.server = types.SimpleNamespace(note=lambda *a: None)
+        self.assertEqual(self.provider(panel, password="x").scan(), [])
+
     def test_no_frame_no_endpoint(self):
         self.assertEqual(self.provider(NoFrame(), password="x").scan(), [])
 
