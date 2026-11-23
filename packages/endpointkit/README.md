@@ -54,6 +54,9 @@ On a computer, these register the real ones:
 On a board with Wi-Fi, `import wifinet; wifinet.register()` lists the
 networks in range under `net`, and a picker joins them, asking for a new
 network's password ([Wi-Fi guide](../../docs/guides/wifi.md#join-from-a-picker)).
+On one with an Ethernet port too, `import ethnet; ethnet.register()` adds it
+as `eth:0`, and choosing it moves the board's traffic there with Wi-Fi left up
+([Ethernet and back](../../docs/guides/wifi.md#move-traffic-to-ethernet-and-back)).
 Boards that each run `import espnowpeers; espnowpeers.register()` find one
 another over ESP-NOW under a new kind, `espnow.peer`, and
 `espnowpeers.send` and `espnowpeers.recv` talk to the ones chosen

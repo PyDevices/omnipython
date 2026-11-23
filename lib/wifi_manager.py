@@ -547,6 +547,17 @@ class _MPRadio:
     def set_hostname(self, name):
         self._net.hostname(name)
 
+    def make_default(self):
+        """Have the station carry the board's traffic, where the firmware can choose.
+
+        Firmware without ``ipconfig(default=...)`` routes by its own
+        priorities, which already put the station first.
+        """
+        try:
+            self.sta.ipconfig(default=True)
+        except (AttributeError, TypeError, ValueError):
+            pass
+
     def mac(self):
         return bytes(self.sta.config("mac"))
 

@@ -265,6 +265,30 @@ Between scans, each `endpointkit.poll()` notices within three seconds when
 the link drops or the board moves to another network. A join waits up to 20
 seconds (`JOIN_TIMEOUT_S`) for the network.
 
+### Move traffic to Ethernet and back
+
+On a board with an Ethernet port as well, such as the ESP32-P4-WIFI6-DEV-KIT,
+`ethnet` adds the port as `eth:0`. Choosing it moves the board's traffic onto
+Ethernet while Wi-Fi stays joined, and choosing the Wi-Fi network moves it
+back:
+
+```python
+import endpointkit
+import ethnet
+import wifinet
+
+wifinet.register()
+ethnet.register()                       # board_peripherals.ethernet()
+endpointkit.select("net", "eth:0")      # traffic leaves by Ethernet
+endpointkit.select("net", "wifi:Home")  # and by Wi-Fi again
+```
+
+This needs firmware whose `network` interfaces take `ipconfig(default=True)`,
+which OmniPython's ESP32 builds have; elsewhere choosing `eth:0` is refused
+with a message that says so. The DNS server stays as it was set; one out on
+the internet is reached by whichever link is chosen, and `network.ipconfig(dns=...)`
+sets another.
+
 ## Reference
 
 | Call | Does |
