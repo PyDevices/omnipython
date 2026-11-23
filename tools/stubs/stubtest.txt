@@ -57,6 +57,7 @@ displaydev.workerdisplay
 endpointkit
 endpointkit.fake
 espnowpeers
+ethnet
 events
 frame_recorder
 hostnet

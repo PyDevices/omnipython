@@ -218,6 +218,8 @@ and Android.
   Get it: `pip omnipython-desktop`. Runs on: Desktop.
 - [`espnowpeers`](https://github.com/PyDevices/omnipython/blob/main/lib/espnowpeers.py): Find boards nearby over ESP-NOW and talk to the ones chosen, as `endpointkit` peers.\
   Get it: `mip omnipython`, `pip omnipython`, firmware build. Runs on: MP.
+- [`ethnet`](https://github.com/PyDevices/omnipython/blob/main/lib/ethnet.py): Move a board's traffic onto its Ethernet port from a picker, with Wi-Fi left up, as an `endpointkit` endpoint.\
+  Get it: `mip omnipython`, `pip omnipython`, firmware build. Runs on: MP.
 - [`hmilink`](https://github.com/PyDevices/omnipython/blob/main/packages/hmilink/README.md): Use any screen as a device's front panel, over Wi-Fi, a UART, Bluetooth LE, OSC, a web page's WebSerial or Web Bluetooth port, or in-process.\
   Get it: `mip hmilink`. Runs on: MP, CP, Desktop, Web.
 - [`lite-assistant`](https://github.com/PyDevices/lite-assistant/blob/main/README.md): Chat, speak, transcribe and see through a local, OpenAI-compatible server that a board can call.\
@@ -464,7 +466,7 @@ and Android.
 - **B:** [`Baby monitor`](#run-a-finished-app), [`backends`](#write-an-app), [`Backline`](#run-a-finished-app), [`Bit World`](#run-a-finished-app), [`bledev`](#connect-devices), [`bledev_hid`](#connect-devices), [`Bluetooth Receiver`](#run-a-finished-app), [`Bluetooth speaker`](#run-a-finished-app), [`Board configs`](#set-up-a-board), [`boarddev`](#set-up-a-board), [`btclassic`](#make-and-shape-sound), [`Bus drivers`](#drive-a-chip), [`Buttons and keypads`](#drive-a-chip)
 - **C:** [`Camera`](#run-a-finished-app), [`Camera for the ESP32-P4`](#run-a-finished-app), [`Camera sensors`](#drive-a-chip), [`cameraif`](#use-cameras-video-and-ai-on-a-board), [`Cast`](#run-a-finished-app), [`castdisplay`](#use-cameras-video-and-ai-on-a-board), [`castif`](#use-cameras-video-and-ai-on-a-board), [`chatclient`](#libraries-the-apps-use), [`Clock`](#run-a-finished-app), [`controlkit`](#draw-on-a-screen)
 - **D:** [`deskkit`](#libraries-the-apps-use), [`Display drivers`](#drive-a-chip), [`display_driver`](#draw-on-a-screen), [`displaydev`](#draw-on-a-screen), [`displayif`](#draw-on-a-screen), [`Doorbell`](#run-a-finished-app)
-- **E:** [`endpointkit`](#connect-devices), [`Environment sensors`](#drive-a-chip), [`espnowpeers`](#connect-devices), [`events`](#write-an-app)
+- **E:** [`endpointkit`](#connect-devices), [`Environment sensors`](#drive-a-chip), [`espnowpeers`](#connect-devices), [`ethnet`](#connect-devices), [`events`](#write-an-app)
 - **F:** [`frame_recorder`](#draw-on-a-screen), [`fs_driver`](#draw-on-a-screen)
 - **G:** [`Gallery`](#run-a-finished-app), [`Gamepad`](#run-a-finished-app)
 - **H:** [`h264enc`](#use-cameras-video-and-ai-on-a-board), [`Hands free`](#run-a-finished-app), [`Haptics`](#drive-a-chip), [`hmilink`](#connect-devices), [`Home`](#run-a-finished-app), [`hostnet`](#connect-devices), [`Huey`](#run-a-finished-app), [`Huey's Perch`](#run-a-finished-app)

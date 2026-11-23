@@ -336,6 +336,112 @@ class FakeStation:
         return None
 
 
+class FakeRouting:
+    """The firmware's one default interface, as ipconfig(default=True) sets it."""
+
+    def __init__(self):
+        self.default = None
+
+
+class FakeLAN:
+    """network.LAN on firmware that can pick the default interface (``routing``) or can't (None)."""
+
+    def __init__(self, routing, active=True, address="192.168.137.32"):
+        self.routing = routing
+        self.on = active
+        self.lease = address
+
+    def active(self, on=None):
+        if on is None:
+            return self.on
+        self.on = on
+        return None
+
+    def isconnected(self):
+        return self.on and self.lease is not None
+
+    def ipconfig(self, *args, **kwargs):
+        if self.routing is None and (kwargs or args[0] == "default"):
+            raise ValueError("unexpected key")
+        if kwargs:
+            self.routing.default = self
+            return None
+        if args[0] == "default":
+            return self.routing.default is self
+        return (self.lease or "0.0.0.0", "255.255.255.0")
+
+
+class RoutedStation(FakeStation):
+    """A station that takes the default back, as wifi_manager's radio does."""
+
+    def __init__(self, routing, *args, **kwargs):
+        FakeStation.__init__(self, *args, **kwargs)
+        self.routing = routing
+        routing.default = self  # Wi-Fi's route priority puts it first
+
+    def make_default(self):
+        self.routing.default = self
+
+
+def t_eth():
+    import ethnet
+    import wifi_manager
+    import wifinet
+
+    saved = wifi_manager._known
+    wifi_manager._known = lambda module="secrets": [{"ssid": "Home", "password": "homepw"}]
+    try:
+        routing = FakeRouting()
+        radio = RoutedStation(routing, {"Home": (-50, True)}, {"Home": "homepw"}, on="Home")
+        lan = FakeLAN(routing)
+        r = Registry()
+        wifinet._provider[:] = []
+        ethnet._provider[:] = []
+        wifinet.register(r, radio)
+        eth = ethnet.register(r, lan)
+        eth.rescan_ms = 0
+        check(r.selection("net") == ["wifi:Home"], "registering Ethernet leaves the Wi-Fi choice alone")
+        ep = r.find("eth:0")
+        check(ep is not None and ep.state == endpointkit.CONNECTED, "a port with a lease is connected")
+        check(ep.label == "Ethernet (192.168.137.32)" and ep.caps["default"] is False, "the port shows its address, not carrying traffic")
+        r.select("net", "eth:0")
+        check(routing.default is lan and ep.error is None, "choosing Ethernet makes it the default")
+        check(radio.on == "Home", "Wi-Fi stays up when Ethernet carries traffic")
+        r.poll()
+        check(r.find("eth:0").caps["default"] is True, "the next poll shows Ethernet carrying traffic")
+        r.select("net", "wifi:Home")
+        check(routing.default is radio and r.find("wifi:Home").error is None, "choosing the Wi-Fi network it's on takes traffic back")
+        check(lan.on and not eth.brought_up, "Ethernet stays up after it's let go")
+        lan.lease = None
+        r.poll()
+        check(r.find("eth:0").state == endpointkit.AVAILABLE and r.find("eth:0").label == "Ethernet", "a pulled cable shows within a poll")
+        ethnet._provider[:] = []
+        r.unregister(eth)
+        off = FakeLAN(routing, active=False, address=None)
+        eth = ethnet.register(r, off)
+        r.select("net", "eth:0")
+        check(off.on and eth.brought_up and routing.default is off, "choosing a port that's off turns it on")
+        ethnet._provider[:] = []
+        r.unregister(eth)
+        r.select("net", "wifi:Home")
+        routed = FakeLAN(routing)
+        routing.default = routed
+        r2 = Registry()
+        ethnet.register(r2, routed)
+        check(r2.selection("net") == ["eth:0"], "registering adopts Ethernet when it already carries traffic")
+        ethnet._provider[:] = []
+        stock = FakeLAN(None)
+        r3 = Registry()
+        eth = ethnet.register(r3, stock)
+        check(r3.find("eth:0").caps["default"] is None, "firmware that can't pick the default says so")
+        r3.select("net", "eth:0")
+        check("can't move traffic" in (r3.find("eth:0").error or ""), "choosing Ethernet on that firmware is refused")
+    finally:
+        wifi_manager._known = saved
+        wifinet._provider[:] = []
+        ethnet._provider[:] = []
+
+
 def t_wifi():
     import wifi_manager
     import wifinet

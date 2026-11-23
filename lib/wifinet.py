@@ -27,7 +27,8 @@ board is on, which costs nothing. Joining waits for the network, up to
 `wifi_manager.JOIN_TIMEOUT_S` seconds.
 
 Choosing another uplink leaves Wi-Fi up: nothing takes down a link it
-didn't bring up.
+didn't bring up. Choosing a Wi-Fi network again (`ethnet` moves traffic to
+Ethernet) makes the station carry the board's traffic once more.
 """
 
 import endpointkit
@@ -87,12 +88,15 @@ class WifiNet(endpointkit.Provider):
         if not chosen:
             return
         ssid = endpoint.local_id
-        if self.radio.ssid() == ssid:
-            return
-        password = self._password(ssid)
-        if password is None:
-            raise OSError("%s needs its password: join it first" % ssid)
-        self._join(ssid, password, OSError)
+        if self.radio.ssid() != ssid:
+            password = self._password(ssid)
+            if password is None:
+                raise OSError("%s needs its password: join it first" % ssid)
+            self._join(ssid, password, OSError)
+        # Another uplink (Ethernet) may carry traffic now; Wi-Fi takes it back.
+        make_default = getattr(self.radio, "make_default", None)
+        if make_default is not None:
+            make_default()
 
     def pair(self, endpoint, secret=None):
         self._join(endpoint.local_id, secret or "", ValueError)

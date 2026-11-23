@@ -54,6 +54,9 @@ On a computer, these register the real ones:
 On a board with Wi-Fi, `import wifinet; wifinet.register()` lists the
 networks in range under `net`, and a picker joins them, asking for a new
 network's password ([Wi-Fi guide](../../docs/guides/wifi.md#join-from-a-picker)).
+On one with an Ethernet port too, `import ethnet; ethnet.register()` adds it
+as `eth:0`, and choosing it moves the board's traffic there with Wi-Fi left up
+([Ethernet and back](../../docs/guides/wifi.md#move-traffic-to-ethernet-and-back)).
 On a board, `from audiodev import endpoints; endpoints.route(board_peripherals)`
 lists the board's own sound output under `audio.out` and makes its
 `audio_out` play wherever `audio.out` is chosen: a USB speaker that
