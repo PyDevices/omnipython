@@ -114,7 +114,11 @@ def _uint8(data):
     except ImportError:
         return bytes(data)
     out = Uint8Array.new(len(data))
-    out.assign(data)
+    try:
+        out.assign(data)  # Pyodide's JsProxy copies in one call
+    except AttributeError:  # MicroPython's has no assign: set each byte
+        for i, b in enumerate(data):
+            out[i] = b
     return out
 
 

@@ -22,6 +22,7 @@ import struct
 import subprocess
 import sys
 import tempfile
+import threading
 import time
 import types
 import unittest
@@ -166,10 +167,10 @@ class BleMidi(unittest.TestCase):
         self.assertIn(" 0 failed", result.stdout)
 
     def test_cpython(self):
-        self.assertPasses(run([sys.executable, BLE_CHECKS]))
+        self.assertPasses(run([sys.executable, BLE_CHECKS, "--adafruit=" + adafruit_dir(self)]))
 
     def test_micropython(self):
-        result = run([need_micropython(self), BLE_CHECKS])
+        result = run([need_micropython(self), BLE_CHECKS, "--adafruit=" + adafruit_dir(self)])
         self.assertPasses(result)
         self.assertIn("PASS pumped", result.stdout)
 
@@ -203,6 +204,44 @@ def _make_asound(root, entries):
     with open(root + "/devices", "w") as handle:
         handle.write("\n".join(lines) + "\n")
     return root
+
+
+class WasmUnderNode(unittest.TestCase):
+    """The MicroPython WebAssembly build under node, driven by ``wasm_node_run.mjs``.
+
+    The build has no ``asyncio.run`` and a ``js`` module of its own, so this
+    is where a Pyodide-only call in ``midiports.webmidi`` shows. The build is
+    ``OMNIPYTHON_MICROPYTHON_MJS`` or the workspace's ``bin/micropython.mjs``."""
+
+    def _run(self, script, *flags):
+        node = shutil.which("node")
+        mjs = os.environ.get("OMNIPYTHON_MICROPYTHON_MJS")
+        if not mjs:
+            found = [p / "bin" / "micropython.mjs" for p in Path(__file__).resolve().parents if (p / "bin" / "micropython.mjs").is_file()]
+            mjs = str(found[0]) if found else None
+        if not node or not mjs:
+            message = "no node or no micropython.mjs: midiports did NOT run on the WebAssembly build"
+            if os.environ.get("OMNIPYTHON_REQUIRE_MICROPYTHON") == "1":
+                self.fail(message)
+            sys.stderr.write("\n*** " + message + " ***\n")
+            self.skipTest(message)
+        adafruit = Path(adafruit_dir(self)) / "adafruit_midi"
+        result = run([node, Path(__file__).resolve().parent / "wasm_node_run.mjs", mjs, adafruit, script, *flags], timeout=600)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        return result
+
+    def test_the_contract(self):
+        result = self._run("midiports_contract.py", "--plain")
+        self.assertIn(" 0 failed", result.stdout)
+
+    def test_ble_over_the_fake_radio(self):
+        result = self._run("midiports_ble_checks.py")
+        self.assertIn(" 0 failed", result.stdout)
+
+    def test_bledev_contract(self):
+        """All 59 checks, about two minutes."""
+        result = self._run("bledev_contract.py")
+        self.assertIn(" 0 failed", result.stdout)
 
 
 class LinuxPort(unittest.TestCase):
@@ -276,6 +315,70 @@ class LinuxPort(unittest.TestCase):
     def test_no_matching_port_says_so(self):
         _make_asound(self.proc, {})
         self.assertRaises(OSError, linux.ports, "nothing", proc=self.proc, dev=self.dev)
+
+
+@unittest.skipUnless(sys.platform.startswith("linux"), "named pipes and ALSA")
+class LinuxPortOnEveryUnixInterpreter(unittest.TestCase):
+    """``midiports.linux`` on CPython, unix MicroPython and unix CircuitPython
+    (``midiports_linux_checks.py``): the last two have no ``os.open``, so they
+    open ports with ``open()`` and ``select.poll``. A named pipe held open for
+    writing stands in for a MIDI device that has nothing to say yet."""
+
+    def _interpreter(self, name):
+        if name == "cpython":
+            return sys.executable
+        variable = "OMNIPYTHON_MICROPYTHON" if name == "micropython" else "OMNIPYTHON_CIRCUITPYTHON"
+        found = os.environ.get(variable) or shutil.which(name)
+        if not found:
+            candidates = [p / "bin" / name for p in Path(__file__).resolve().parents if (p / "bin" / name).is_file()]
+            found = str(candidates[0]) if candidates else None
+        if not found:
+            message = "no {} binary: midiports.linux did NOT run on it".format(name)
+            if os.environ.get("OMNIPYTHON_REQUIRE_MICROPYTHON") == "1":
+                self.fail(message)
+            sys.stderr.write("\n*** " + message + " ***\n")
+            self.skipTest(message)
+        return found
+
+    def _check(self, name):
+        interpreter = self._interpreter(name)
+        script = Path(__file__).resolve().parent / "midiports_linux_checks.py"
+        with tempfile.TemporaryDirectory() as scratch:
+            fifo = os.path.join(scratch, "device")
+            os.mkfifo(fifo)
+            keep = os.open(fifo, os.O_RDWR | os.O_NONBLOCK)  # a writer, so the reader's open returns
+            try:
+                child = subprocess.Popen(
+                    [interpreter, str(script), scratch, fifo], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True
+                )
+                lines = []
+                timer = threading.Timer(60, child.kill)  # a hang fails the test, it can't stall it
+                timer.start()
+                try:
+                    for line in child.stdout:
+                        lines.append(line)
+                        if line.startswith("READY"):
+                            os.write(keep, b"\x90\x40\x7f")
+                    child.wait()
+                finally:
+                    child.stdout.close()
+                    timer.cancel()
+                    if child.poll() is None:
+                        child.kill()
+            finally:
+                os.close(keep)
+        output = "".join(lines)
+        self.assertEqual(child.returncode, 0, output)
+        self.assertIn(" 0 failed (" + name, output)
+
+    def test_cpython(self):
+        self._check("cpython")
+
+    def test_micropython(self):
+        self._check("micropython")
+
+    def test_circuitpython(self):
+        self._check("circuitpython")
 
 
 @unittest.skipUnless(sys.platform.startswith("linux"), "Linux serial ports")

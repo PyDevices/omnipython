@@ -31,6 +31,9 @@ def ticks_us() -> int:
 def ticks_diff(end: int, start: int) -> int:
     """``end - start`` in microseconds, across a wrap where the clock wraps."""
 
+def ticks_add(t: int, d: int) -> int:
+    """``t`` plus ``d`` microseconds, wrapping where the clock wraps."""
+
 class Stamps:
     """Arrival times, one per message, oldest first, in a ring made once."""
 

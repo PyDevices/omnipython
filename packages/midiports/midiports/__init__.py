@@ -150,24 +150,45 @@ PortInfo = namedtuple("PortInfo", " ".join(PORT_FIELDS))  # noqa: PYI024
 # -- the clock stamps are taken on ----------------------------------------------------
 
 if hasattr(time, "ticks_us"):  # MicroPython
-    ticks_us = time.ticks_us
-    ticks_diff = time.ticks_diff
 
     def _typecode():
         # The narrowest array that holds every tick and reads back without
         # allocating: "l" is 32 bits on a board, where ticks wrap at 2**30,
-        # and 64 on the unix port. "q" reads back as a new long int, so it's
-        # the last resort (the Windows port, whose "l" is 32 bits).
+        # and 64 on the unix port. None when ticks are wider than any "l":
+        # the Windows port, whose ticks wrap at 2**62 and whose "l" is 32
+        # bits. "q" would hold them, but reads back as a new long int.
         top = time.ticks_add(0, -1)
-        for tc in ("l", "q"):
-            try:
-                if array(tc, [top])[0] == top:
-                    return tc
-            except (OverflowError, ValueError):
-                pass
-        return "q"
+        try:
+            if array("l", [top])[0] == top:
+                return "l"
+        except (OverflowError, ValueError):
+            pass
+        return None
 
     _TICKS_TYPE = _typecode()
+    if _TICKS_TYPE:
+        ticks_us = time.ticks_us
+        ticks_diff = time.ticks_diff
+        ticks_add = time.ticks_add
+    else:
+        # Wrap the clock at 2**30 us (about 18 minutes), as a board's does,
+        # so a stamp fits a 32-bit array and reads back without allocating.
+        _TICKS_TYPE = "l"
+        _PERIOD = 1 << 30
+
+        def ticks_us():
+            """Microseconds now, wrapping at 2**30."""
+            return time.ticks_us() & (_PERIOD - 1)
+
+        def ticks_diff(end, start):
+            """``end - start`` in microseconds, across a wrap."""
+            d = (end - start) & (_PERIOD - 1)
+            return d - _PERIOD if d >= _PERIOD >> 1 else d
+
+        def ticks_add(t, d):
+            """``t + d`` on the wrapping clock."""
+            return (t + d) & (_PERIOD - 1)
+
 else:
     if sys.platform == "emscripten":  # Pyodide: Web MIDI's own clock
 
@@ -208,6 +229,10 @@ else:
             """``end - start`` in microseconds; this clock doesn't wrap."""
             return end - start
 
+        def ticks_add(t, d):
+            """``t + d``; this clock doesn't wrap."""
+            return t + d
+
     else:
         # A board whose arrays are 32 bits wraps the clock as MicroPython
         # does, at 2**30 us (about 18 minutes), so a stamp always fits.
@@ -221,6 +246,10 @@ else:
             """``end - start`` in microseconds, across a wrap."""
             d = (end - start) & (_PERIOD - 1)
             return d - _PERIOD if d >= _PERIOD >> 1 else d
+
+        def ticks_add(t, d):
+            """``t + d`` on the wrapping clock."""
+            return (t + d) & (_PERIOD - 1)
 
 
 class Stamps:

@@ -30,6 +30,9 @@ class BleIn(PortIn):
     def any(self) -> int:
         """How many MIDI bytes are waiting, after running the link's tasks."""
 
+    def read(self, nbytes: int | None = None) -> bytes | None:
+        """Waiting MIDI bytes; a SysEx comes out whole when ``nbytes`` allows."""
+
     def write(self, buf: ReadableBuffer, nbytes: int | None = None) -> int: ...
 
 class BleOut(PortOut):

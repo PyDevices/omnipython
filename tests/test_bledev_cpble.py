@@ -505,6 +505,39 @@ class OnCircuitPython(unittest.TestCase):
                 self.assertIn("circuitpython", result.stdout)
 
 
+    def test_midiports_over_the_fake_radio(self):
+        """``midiports.ble`` over ``bledev.fake`` with ``adafruit_midi``, and
+        midiports' own contract, on CircuitPython's unix port."""
+        import os
+        import shutil
+        import subprocess
+        from pathlib import Path
+
+        from test_midiports import adafruit_dir
+
+        binary = os.environ.get("OMNIPYTHON_CIRCUITPYTHON") or shutil.which("circuitpython")
+        here = Path(__file__).resolve().parent
+        if not binary:
+            found = [p / "bin" / "circuitpython" for p in here.parents if (p / "bin" / "circuitpython").is_file()]
+            binary = str(found[0]) if found else None
+        if not binary:
+            message = "no circuitpython binary: midiports' BLE checks did NOT run on CircuitPython"
+            if os.environ.get("OMNIPYTHON_REQUIRE_CIRCUITPYTHON") == "1":
+                self.fail(message)
+            sys.stderr.write("\n*** " + message + " ***\n")
+            self.skipTest(message)
+        # The unix port freezes asyncio into ``.frozen``.
+        env = dict(os.environ, MICROPYPATH=str(here.parent / "lib") + ":.frozen")
+        adafruit = "--adafruit=" + adafruit_dir(self)
+        for script in ("midiports_ble_checks.py", "midiports_contract.py"):
+            with self.subTest(script=script):
+                result = subprocess.run(
+                    [binary, str(here / script), adafruit], capture_output=True, text=True, timeout=600, env=env
+                )
+                self.assertIn("(circuitpython)", result.stdout, result.stdout[-2000:] + result.stderr[-2000:])
+                self.assertIn(" 0 failed", result.stdout, result.stdout[-2000:])
+
+
 class Planted(unittest.TestCase):
     """cpble's send reverted to a plain PacketBuffer.write(data): the checks above must fail."""
 
