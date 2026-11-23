@@ -149,7 +149,9 @@ class Port:
     timestamp is the sender's 13-bit millisecond clock. Use it or ``read()``,
     not both. ``overflowed`` turns true if more than ``queue_limit``
     messages waited unread; they are counted in ``dropped``, not lost
-    silently.
+    silently. If receiving stops on an error rather than a disconnect,
+    ``error`` holds it, and ``read``, ``readinto`` and ``receive`` raise it
+    once everything that arrived before it has been read.
     """
 
     def __init__(self, connection, name, *, queue_limit=QUEUE_LIMIT, running_status=True):
@@ -176,6 +178,7 @@ class Port:
         self._idle = asyncio.Event()
         self._idle.set()
         self._send_error = None
+        self.error = None
         self._closed = False
         self._sender = asyncio.create_task(self._send_loop())
 
@@ -202,6 +205,10 @@ class Port:
         if not self.is_open:
             raise OSError("MIDI port is closed")
 
+    def _check_error(self):
+        if self.error is not None and not self._messages and self._pos >= len(self._pending):
+            raise self.error
+
     def readinto(self, buf, nbytes=None):
         """Waiting MIDI bytes into ``buf`` (at most ``nbytes``); how many, or
         ``None`` when nothing has arrived. Never blocks, allocates nothing.
@@ -214,6 +221,7 @@ class Port:
         out in parts, the rest on the next call.
         """
         self._check_open()
+        self._check_error()
         size = len(buf) if nbytes is None or nbytes > len(buf) else nbytes
         n = 0
         while n < size:
@@ -241,6 +249,7 @@ class Port:
         want = self._waiting if nbytes is None else min(nbytes, self._waiting)
         if want <= 0:
             self._check_open()
+            self._check_error()
             return None
         if want > len(self._scratch):
             self._scratch = bytearray(want)
@@ -270,6 +279,7 @@ class Port:
                 item = self._messages.pop(0)
                 self._waiting -= len(item[1])
                 return item
+            self._check_error()
             if self._closed or not self.connection.is_connected():
                 raise DisconnectedError("MIDI link closed")
             self._arrived.clear()
@@ -369,6 +379,11 @@ class Port:
         if was_open and self.connection.is_connected():
             await self.connection.disconnect()
 
+    def _fail(self, e):
+        if self.error is None:
+            self.error = e if isinstance(e, BLEError) else BLEError("MIDI receive: {}".format(e))
+        self._finish()
+
     def _finish(self):
         self._closed = True
         self._wake.set()
@@ -403,8 +418,12 @@ class _ClientPort(Port):
         try:
             while True:
                 self._packet(await self._char.notified())
-        except Exception:
+        except DisconnectedError:
             pass
+        except Exception as e:
+            # A dropped link ends this loop too; anything else is an error to report.
+            if self.is_open and self.connection.is_connected():
+                self._fail(e)
         finally:
             self._finish()
 
@@ -461,6 +480,11 @@ class _Server:
                 port = self._port_for(connection)
                 if port is not None:
                     port._packet(data)
+        except Exception as e:
+            # Every port this task served would otherwise wait forever.
+            ports, self.ports = self.ports, []
+            for port in ports:
+                port._fail(e)
         finally:
             self._task = None
 
