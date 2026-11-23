@@ -1209,6 +1209,36 @@ async def midi_take_never_waits(air):
 
 
 @check
+async def midi_a_receive_error_reaches_the_port(air):
+    server, client = await midi_pair(air)
+    client.write(b"\x90\x3c\x64")
+    for _ in range(200):
+        if server.any():
+            break
+        await asyncio.sleep(0.001)
+
+    async def overrun(timeout_ms):
+        raise BLEError("receive overrun")
+
+    async def notify_fails():
+        raise BLEError("notify failed")
+
+    board_char = server._server.char
+    board_char.written = overrun
+    client._char.notified = notify_fails
+    client._receiver = asyncio.create_task(client._receive())
+    for _ in range(200):
+        if server.error is not None and client.error is not None:
+            break
+        await asyncio.sleep(0.005)
+    expect(isinstance(server.error, BLEError), "the board's port holds the error: {!r}".format(server.error))
+    expect(isinstance(client.error, BLEError), "the central's port holds the error: {!r}".format(client.error))
+    equal(server.read(), b"\x90\x3c\x64", "what came before the error is still read")
+    await raises(BLEError, server.receive(timeout_ms=200))
+    raises_sync(BLEError, server.read)
+
+
+@check
 async def auto_picks_or_explains(air):
     import bledev.auto as auto
 

@@ -246,13 +246,15 @@ class BleIn(PortIn):
                 self.peer = port.connection.device.address
                 self.links += 1
                 self.state = "connected"
-                while not self._closed and port.connection.is_connected():
+                while not self._closed and port.connection.is_connected() and port.error is None:
                     await _sleep_ms(WATCH_MS)
                 self._drain()  # what arrived before the drop comes first
                 self._port = None
                 self.peer = None
                 self.dropped += port.dropped
                 port.close()
+                if port.error is not None:
+                    raise port.error
                 self._queue(self._held.release(), ticks_us())
         except asyncio.CancelledError:
             raise
