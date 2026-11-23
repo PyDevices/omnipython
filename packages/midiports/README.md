@@ -261,6 +261,10 @@ clock a worker's relayed times are on.
 
 ## Limits
 
+- `adafruit_midi` drops a SysEx it's handed in parts, so `read()` holds one
+  back until its 0xF7 arrives and hands it out whole. Give `MIDI` an
+  `in_buf_size` bigger than the longest SysEx you expect (the default is 30
+  bytes); a longer one still comes out in parts.
 - Windows: a write holds a SysEx until its 0xF7, then returns once the port
   has sent it, so a long one blocks for as long as it takes to send.
 - Linux: MicroPython's and CircuitPython's unix ports have no `os.open` or

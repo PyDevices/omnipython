@@ -325,15 +325,12 @@ class BleIn(PortIn):
         one piece when ``nbytes`` allows: the read buffer grows to hold the
         next message, so ``adafruit_midi``, which can't join a SysEx handed
         out in parts, gets a long one whole."""
-        if self._waiting or self.any():
-            pending = self._pending
-            need = len(pending) - self._pos if self._pos < len(pending) else len(self._msgs[0])
-            if need > len(self._scratch):
-                need = need if nbytes is None or nbytes > need else nbytes
-                if need > len(self._scratch):
-                    self._scratch = bytearray(need)
-                    self._view = memoryview(self._scratch)
-        return PortIn.read(self, nbytes)
+        if not self._waiting and not self.any():
+            return None
+        pending = self._pending
+        need = len(pending) - self._pos if self._pos < len(pending) else len(self._msgs[0])
+        n = need if need > len(self._scratch) else len(self._scratch)
+        return self._read(n if nbytes is None or nbytes > n else nbytes)
 
     def write(self, buf, nbytes=None):
         port = self._port
