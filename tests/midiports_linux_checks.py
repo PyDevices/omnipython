@@ -4,13 +4,16 @@
 """``midiports.linux`` against a synthetic ALSA tree, runnable on CPython,
 unix MicroPython and unix CircuitPython::
 
-    python tests/midiports_linux_checks.py SCRATCH_DIR [FIFO]
+    python tests/midiports_linux_checks.py SCRATCH_DIR [FIFO [--adafruit=DIR]]
 
 WSL has no ``snd-virmidi`` and CI has no sound card, so ``SCRATCH_DIR`` gets a
 fake ``/proc/asound`` and a ``/dev/snd`` of plain files, which the port reads
 and writes the way it would a raw MIDI device. With ``FIFO`` (a named pipe the
 caller holds open for writing) it also proves an empty input returns at once
-instead of blocking, then reads what the caller writes. MicroPython's and
+instead of blocking, then reads what the caller writes. With ``--adafruit=DIR`` too (where
+``adafruit_midi/`` is), it then prints ``SYSEX`` and reads `SYSEX_STREAM`,
+which the caller writes in parts, through ``adafruit_midi``: the 1 KB SysEx
+must come out as one message. MicroPython's and
 CircuitPython's ``os`` have no ``open``, so there this goes through the
 builtin ``open()`` and ``select.poll``.
 
@@ -33,8 +36,16 @@ import time
 import midiports
 from midiports import linux
 
-SCRATCH = sys.argv[1]
-FIFO = sys.argv[2] if len(sys.argv) > 2 else None
+ARGS = [a for a in sys.argv[1:] if not a.startswith("--adafruit=")]
+ADAFRUIT = [a.split("=", 1)[1] for a in sys.argv[1:] if a.startswith("--adafruit=")]
+SCRATCH = ARGS[0]
+FIFO = ARGS[1] if len(ARGS) > 1 else None
+if ADAFRUIT:
+    sys.path.insert(0, ADAFRUIT[0])
+
+#: What the caller writes after ``SYSEX``: a note, a 1 KB SysEx, a note-off.
+SYSEX_1K = bytes([0xF0, 0x7D] + [i % 128 for i in range(1021)] + [0xF7])
+SYSEX_STREAM = bytes((0x90, 0x3C, 0x64)) + SYSEX_1K + bytes((0x80, 0x3C, 0x00))
 FAILED = 0
 COUNT = 0
 
@@ -66,6 +77,35 @@ def tree():
     write(proc + "/card0/midi0", b"DONNER DMK25Pro\n\nOutput 0\nInput 0\n")
     write(proc + "/card1/midi0", b"Some Synth\n\nOutput 0\n")
     return proc, dev
+
+
+def sysex_whole(port):
+    """A 1 KB SysEx written to the pipe in parts reaches adafruit_midi whole."""
+    import adafruit_midi
+    # Importing a message's module is what teaches adafruit_midi to read it.
+    import adafruit_midi.note_off  # noqa: F401
+    import adafruit_midi.note_on  # noqa: F401
+    import adafruit_midi.system_exclusive  # noqa: F401
+
+    midi = adafruit_midi.MIDI(midi_in=midiports.WholeMessages(port), in_channel=0, in_buf_size=1100)
+    print("SYSEX")
+    sys.stdout.flush()
+    got = []
+    for _ in range(500):
+        msg = midi.receive()
+        if msg is None:
+            if len(got) >= 3:
+                break
+            time.sleep(0.01)
+        else:
+            got.append(msg)
+    names = [type(m).__name__ for m in got]
+    check("a 1 KB SysEx written in parts reaches adafruit_midi whole",
+          names == ["NoteOn", "SystemExclusive", "NoteOff"], names)
+    if len(got) == 3:
+        check("the SysEx's body is the one sent",
+              bytes(got[1].manufacturer_id) == b"\x7d" and bytes(got[1].data) == SYSEX_1K[2:-1],
+              len(got[1].data))
 
 
 def main():
@@ -126,6 +166,8 @@ def main():
                     break
                 time.sleep(0.01)
             check("what the writer sent arrives", data == bytes((0x90, 0x40, 0x7F)), data)
+            if ADAFRUIT:
+                sysex_whole(port)
         finally:
             port.close()
     print("%d checks, %d failed (%s)" % (COUNT, FAILED, sys.implementation.name))

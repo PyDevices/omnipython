@@ -92,6 +92,10 @@ class WholeMessages(PortIn):
 
     port: Any
     desync: int
+    LONGEST: int
+    """The longest SysEx a ``read()`` with no ``nbytes`` holds back to hand out whole."""
     def __init__(self, port: Any, size: int = 32, stamps: int | None = None) -> None: ...
+    def read(self, nbytes: int | None = None) -> bytes | None:
+        """Waiting bytes; a SysEx comes out whole when ``nbytes`` allows."""
     def any(self) -> int:
         """How many bytes are waiting, without taking them."""
