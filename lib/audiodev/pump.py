@@ -2056,6 +2056,19 @@ class Pump:
             this one did not. A number that climbs says the app's timer is
             faster than its own rearrangement, which is worth knowing and is
             not worth an exception.
+        ``starved``
+            Bytes of silence an I2S output played because the pump had not
+            written them in time. **This is the other one that means audio was
+            not heard**: a graph that takes longer to render than the audio it
+            makes falls behind the wire, not the ring, so ``dropped`` stays 0
+            while this climbs. 0 on an output that can't tell.
+        ``slowest_us``
+            The longest the pump took to pull one block. Longer than a block
+            lasts means the graph is too heavy for this processor.
+        ``cedes``
+            Times a pump that was behind gave its core to the tasks under it,
+            so that Bluetooth and Wi-Fi keep running. 0 on a firmware without
+            the hook.
         ``waited`` / ``waited_us``
             Times the pump slept because the ring was full, and how long in
             total. On a desktop this is the number that says the ring really
@@ -2082,6 +2095,9 @@ class Pump:
             "clients": len(self._clients),
             "reentered": reentered(),
             "dropped": 0,
+            "starved": 0,
+            "slowest_us": 0,
+            "cedes": 0,
             "waited": 0,
             "waited_us": 0,
             "blocks": 0,
@@ -2098,6 +2114,12 @@ class Pump:
                 try:
                     report["dropped"] = getter()
                 except Exception:    # noqa: BLE001 - a health call never raises
+                    pass
+            getter = getattr(driver, "starved", None)
+            if getter is not None:
+                try:
+                    report["starved"] = getter()
+                except Exception:    # noqa: BLE001
                     pass
             getter = getattr(driver, "waited", None)
             if getter is not None:
@@ -2116,6 +2138,9 @@ class Pump:
                 w = struct.unpack("<%dQ" % mod.STATUS_WORDS, self.status())
                 report["blocks"] = w[0]
                 report["bytes"] = w[1]
+                report["slowest_us"] = w[20]
+                if len(w) > 34:
+                    report["cedes"] = w[34]
             except Exception:        # noqa: BLE001
                 pass
         return report
