@@ -1,3 +1,7 @@
+## v0.8.1.dev8 (2026-11-23)
+
+- displaydev: RemoteDisplay's fast loops freeze into any firmware (#807)
+
 ## v0.8.1.dev7 (2026-11-23)
 
 - Library: applibs 0.1.3.dev6 (#805)
