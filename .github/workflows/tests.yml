@@ -29,6 +29,7 @@ on:
       - 'packages/endpointkit/**'
       - 'packages/icons/**'
       - 'packages/midiports/**'
+      - 'packages/hmilink/**'
       # The interpreters' pins and recipe, which tests/test_release_interpreters.py runs.
       - 'scripts/release_interpreters.sh'
       - 'scripts/release_interpreters/**'
@@ -60,6 +61,7 @@ on:
       - 'packages/endpointkit/**'
       - 'packages/icons/**'
       - 'packages/midiports/**'
+      - 'packages/hmilink/**'
       # The interpreters' pins and recipe, which tests/test_release_interpreters.py runs.
       - 'scripts/release_interpreters.sh'
       - 'scripts/release_interpreters/**'
@@ -184,6 +186,11 @@ jobs:
           OMNIPYTHON_REQUIRE_MICROPYTHON: '1'
         timeout-minutes: 5
         run: python -m unittest discover -s tests -p 'test_endpointkit.py' -k EndpointkitOnMicroPython -v
+
+      - name: hmilink on MicroPython
+        working-directory: omnipython
+        timeout-minutes: 5
+        run: ${{ github.workspace }}/micropython/ports/unix/build-standard/micropython packages/hmilink/tests/run.py
 
       - name: the desktop endpoint providers on MicroPython
         working-directory: omnipython

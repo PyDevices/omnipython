@@ -59,11 +59,10 @@ _MP = sys.implementation.name in ("micropython", "circuitpython")
 
 
 def _loop_running():
+    # current_task() raises with no loop running on every interpreter;
+    # CircuitPython's get_running_loop() returns its loop even then.
     try:
-        if hasattr(asyncio, "get_running_loop"):
-            asyncio.get_running_loop()
-        else:
-            asyncio.current_task()
+        asyncio.current_task()
         return True
     except RuntimeError:
         return False
