@@ -12,6 +12,8 @@ _SD_MOSI = 11
 _SD_SCK = 12
 _SD_MISO = 13
 _SD_CS_EXIO = 4  # CH422G
+_SD_SPI = 2
+_SD_BAUD = 20_000_000
 # Same wiring as the 4.3: the FSUSB42UMX throws the ESP32-S3's own USB pins
 # between the second USB-C connector and the TJA1051, so CAN TX/RX are the
 # D+/D- pair. RS485 is the SP3485 on GPIO15/16, whose net names read backwards
@@ -28,20 +30,21 @@ def load_peripherals(ns):
 
 
 def sdcard():
-    """TF card SPI; CS on CH422G EXIO4."""
+    """TF card on hardware SPI at 20 MHz; CS on CH422G EXIO4."""
     import board_config as bc
-    from machine import Pin, SoftSPI
+    from machine import Pin, SPI
 
     from sdcard import SDCard
 
     cs = bc.io_expander.Pin(_SD_CS_EXIO, Pin.OUT, value=1)
-    spi = SoftSPI(
-        baudrate=1_000_000,
+    spi = SPI(
+        _SD_SPI,
+        baudrate=400_000,
         sck=Pin(_SD_SCK),
         mosi=Pin(_SD_MOSI),
         miso=Pin(_SD_MISO),
     )
-    return SDCard(spi, cs)
+    return SDCard(spi, cs, baudrate=_SD_BAUD)
 
 
 def can():
