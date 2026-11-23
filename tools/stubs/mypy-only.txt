@@ -1,4 +1,5 @@
 # Modules whose import fails or blocks under CPython: mypy reads their stubs, stubtest can't.
+audiodev.bt_audio
 audiodev.wasm_audio
 audiodev.win_audio
 bledev.cpble

@@ -419,57 +419,121 @@ class ShapeCheck(unittest.TestCase):
                 libbuild.check_shape(root, self.UPSTREAM)
 
 
-class SeveralPackages(unittest.TestCase):
-    """A pinned repository whose lib/ holds several packages."""
+class Bundle(unittest.TestCase):
+    """A pinned repository whose lib/ holds several packages, published as one."""
 
     def setUp(self):
-        self.scratch = Path(tempfile.mkdtemp(prefix="libbuild-several-"))
+        self.scratch = Path(tempfile.mkdtemp(prefix="libbuild-bundle-"))
         self.addCleanup(shutil.rmtree, self.scratch, ignore_errors=True)
-        for name in ("one", "two"):
-            folder = self.scratch / "src" / "lib" / name
-            (folder / "examples").mkdir(parents=True)
-            (folder / "__init__.py").write_text("", encoding="utf-8")
-            (folder / "manifest.py").write_text("", encoding="utf-8")
-            (folder / "examples" / "demo.py").write_text("", encoding="utf-8")
+        self.member("one", 'options.defaults(requires=False)\nif options.requires:\n    require("icons")\n    require("requests")\n')
+        self.member("two", 'require("one")\n')
+        self.member("three")
+        (self.scratch / "src" / "lib" / "one" / "examples").mkdir()
+        (self.scratch / "src" / "lib" / "one" / "examples" / "demo.py").write_text("", encoding="utf-8")
+        (self.scratch / "src" / "lib" / "data").mkdir()
+        (self.scratch / "src" / "lib" / "data" / "table.txt").write_text("", encoding="utf-8")
         self.tree = libbuild.Tree(self.scratch / "library")
         self.tree.path.mkdir()
-        self.pinned = libbuild.Pinned("both", "Org/repo", "v1.2.3", "Both", None, {"one": "First", "two": "Second"})
-        self.local = frozenset({"both", "one", "two"})
+        self.pinned = libbuild.Pinned("all", "Org/repo", "v1.2.3", "All of them", None, bundle=True, circuitpython=("adafruit_requests",))
+        self.local = frozenset({"all", "icons"})
 
-    def test_each_is_published_alone_and_the_named_one_requires_them(self):
+    def member(self, name, manifest=None):
+        folder = self.scratch / "src" / "lib" / name
+        folder.mkdir(parents=True)
+        (folder / "__init__.py").write_text(f"NAME = {name!r}\n", encoding="utf-8")
+        if manifest is not None:
+            (folder / "manifest.py").write_text(manifest, encoding="utf-8")
+
+    def manifest(self):
+        return (self.tree.path / "all" / "manifest.py").read_text(encoding="utf-8")
+
+    def freeze(self, packages=None):
+        """What MicroPython's manifestfile would freeze from the bundle: (requires, packages)."""
+        required, frozen = [], []
+
+        class Options:
+            def __init__(self):
+                self.given = {"packages": packages}
+                self.defaults_ = {}
+
+            def defaults(self, **kwargs):
+                self.defaults_ = kwargs
+
+            def __getattr__(self, name):
+                return self.given.get(name, self.defaults_.get(name))
+
+        exec(self.manifest(), {
+            "metadata": lambda **kw: None,
+            "options": Options(),
+            "require": lambda name, **kw: required.append(name),
+            "package": lambda name, **kw: frozen.append(name),
+        })
+        return required, frozen
+
+    def test_one_package_installs_every_folder_with_an_init(self):
         libbuild.assemble_pinned(self.pinned, self.scratch / "src", self.tree, "lib", self.local)
-        for name in ("one", "two"):
-            self.assertTrue((self.tree.path / name / name / "__init__.py").is_file())
-            self.assertFalse((self.tree.path / name / name / "examples").exists())
-            self.assertFalse((self.tree.path / name / name / "manifest.py").exists())
-            self.assertIn('version="1.2.3"', (self.tree.path / name / "manifest.py").read_text(encoding="utf-8"))
-        both = (self.tree.path / "both" / "manifest.py").read_text(encoding="utf-8")
-        self.assertIn('require("one", library="lib", opt=options.opt)', both)
-        self.assertIn('require("two", library="lib", opt=options.opt)', both)
-        self.assertNotIn("package(", both)
+        self.assertEqual(sorted(self.tree.packages), ["all"])
+        for name in ("one", "two", "three"):
+            self.assertTrue((self.tree.path / "all" / name / "__init__.py").is_file())
+            self.assertFalse((self.tree.path / "all" / name / "manifest.py").exists())
+            self.assertFalse((self.tree.path / name).exists())
+        self.assertFalse((self.tree.path / "all" / "one" / "examples").exists())
+        self.assertFalse((self.tree.path / "all" / "data").exists())
+        self.assertIn('version="1.2.3"', self.manifest())
+        self.assertEqual(self.freeze(), (["icons", "requests"], ["one", "three", "two"]))
 
-    def test_a_member_can_require_a_package_of_its_own_from_elsewhere(self):
-        pinned = libbuild.Pinned("both", "Org/repo", "v1.2.3", "Both", None, {"one": "First", "two": "Second"}, {"one": ("icons",)})
-        libbuild.assemble_pinned(pinned, self.scratch / "src", self.tree, "lib", self.local | {"icons"})
-        one = (self.tree.path / "one" / "manifest.py").read_text(encoding="utf-8")
-        self.assertIn('require("icons", library="lib", opt=options.opt)', one)
-        two = (self.tree.path / "two" / "manifest.py").read_text(encoding="utf-8")
-        self.assertNotIn("icons", two)
+    def test_a_new_folder_is_published_with_no_other_change(self):
+        self.member("four")
+        libbuild.assemble_pinned(self.pinned, self.scratch / "src", self.tree, "lib", self.local)
+        self.assertIn("four", self.freeze()[1])
+        self.assertTrue((self.tree.path / "all" / "four" / "__init__.py").is_file())
 
-    def test_a_member_can_name_what_it_needs_from_each_interpreter_s_own_libraries(self):
-        pinned = libbuild.Pinned(
-            "both",
-            "Org/repo",
-            "v1.2.3",
-            "Both",
-            None,
-            {"one": "First", "two": "Second"},
-            member_upstream={"one": ("requests",)},
-            member_circuitpython={"one": ("adafruit_requests",)},
-        )
-        libbuild.assemble_pinned(pinned, self.scratch / "src", self.tree, "lib", self.local)
-        self.assertEqual(self.tree.upstream, {"one": ("requests",)})
-        self.assertEqual(self.tree.circuitpython, {"one": ("adafruit_requests",)})
+    def test_requires_from_the_library_and_from_micropython_lib(self):
+        libbuild.assemble_pinned(self.pinned, self.scratch / "src", self.tree, "lib", self.local)
+        manifest = self.manifest()
+        self.assertIn('require("icons", library="lib", opt=options.opt)', manifest)
+        self.assertIn('    require("requests")\n', manifest)
+        self.assertNotIn('require("one"', manifest)
+        self.assertEqual(self.tree.circuitpython, {"all": ("adafruit_requests",)})
+
+    def test_a_firmware_can_freeze_some_members_and_what_they_need(self):
+        libbuild.assemble_pinned(self.pinned, self.scratch / "src", self.tree, "lib", self.local)
+        self.assertEqual(self.freeze(("two",)), (["icons", "requests"], ["one", "two"]))
+        self.assertEqual(self.freeze(("three",)), ([], ["three"]))
+        with self.assertRaisesRegex(ValueError, "has no package 'nine'"):
+            self.freeze(("nine",))
+
+    def test_the_index_installs_the_bundle_and_its_requires(self):
+        libbuild.assemble_pinned(self.pinned, self.scratch / "src", self.tree, "lib", self.local)
+        icons = self.tree.path / "icons"
+        icons.mkdir()
+        (icons / "manifest.py").write_text('metadata(version="1.0.0")\n', encoding="utf-8")
+        manifest = libbuild.read_manifest("lib", self.tree.path, "all", None)
+        self.assertEqual(manifest.deps, ["icons"])
+        self.assertEqual(manifest.left_out, ["requests"])
+        self.assertEqual(sorted({item.target_path.split("/")[0] for item in manifest.files}), ["one", "three", "two"])
+
+    def test_a_require_that_names_no_string_fails(self):
+        (self.scratch / "src" / "lib" / "three" / "manifest.py").write_text('name = "x"\nrequire(name)\n', encoding="utf-8")
+        with self.assertRaisesRegex(libbuild.BuildError, "string literal"):
+            libbuild.assemble_pinned(self.pinned, self.scratch / "src", self.tree, "lib", self.local)
+
+    def test_a_member_that_requires_itself_fails(self):
+        (self.scratch / "src" / "lib" / "three" / "manifest.py").write_text('require("three")\n', encoding="utf-8")
+        with self.assertRaisesRegex(libbuild.BuildError, "requires itself"):
+            libbuild.assemble_pinned(self.pinned, self.scratch / "src", self.tree, "lib", self.local)
+
+    def test_an_empty_lib_fails(self):
+        for name in ("one", "two", "three"):
+            shutil.rmtree(self.scratch / "src" / "lib" / name)
+        with self.assertRaisesRegex(libbuild.BuildError, "holds no package"):
+            libbuild.assemble_pinned(self.pinned, self.scratch / "src", self.tree, "lib", self.local)
+
+    def test_the_lock_publishes_applibs_as_one_bundle(self):
+        # deskkit asks the network through appkit.net: requests on MicroPython, from its own manifest.
+        pinned = libbuild.read_lock(ROOT).pinned["applibs"]
+        self.assertTrue(pinned.bundle)
+        self.assertEqual(pinned.circuitpython, ("adafruit_requests",))
 
     def test_a_repository_that_stands_in_for_a_module_says_so(self):
         source = self.scratch / "stand"
@@ -485,18 +549,6 @@ class SeveralPackages(unittest.TestCase):
         shutil.copytree(source / "lib" / "gfx", source / "lib" / "gfx2")
         libbuild.assemble_pinned(other, source, self.tree, "lib", self.local)
         self.assertNotIn("gfx2", self.tree.stands_in_for)
-
-    def test_the_lock_gives_deskkit_a_client_on_each_interpreter(self):
-        # deskkit asks the network through appkit.net; touchkit gets the client by requiring deskkit.
-        pinned = libbuild.read_lock(ROOT).pinned["applibs"]
-        self.assertEqual(pinned.member_upstream["deskkit"], ("requests",))
-        self.assertEqual(pinned.member_circuitpython["deskkit"], ("adafruit_requests",))
-
-    def test_a_missing_folder_fails_the_build(self):
-        shutil.rmtree(self.scratch / "src" / "lib" / "two")
-        with self.assertRaisesRegex(libbuild.BuildError, "has no lib/two"):
-            libbuild.assemble_pinned(self.pinned, self.scratch / "src", self.tree, "lib", self.local)
-
 
 class Lockfile(unittest.TestCase):
     def test_every_pinned_package_names_a_repository_and_a_tag(self):

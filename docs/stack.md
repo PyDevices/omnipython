@@ -79,9 +79,9 @@ and Android.
 - [`display_driver`](https://github.com/PyDevices/omnipython/blob/main/docs/guides/lvgl.md): Connect LVGL to your board's display, input and event loop by importing one module.\
   Get it: `mip omnipython`, `pip omnipython`, firmware build. Runs on: MP, CP, Desktop, Web.
 - [`controlkit`](https://github.com/PyDevices/apps/tree/main/lib/controlkit): Add knobs, sliders, meters, lamp buttons, pad grids and a dot-matrix display to an LVGL screen.\
-  Get it: `mip controlkit`, `pip omnipython-applibs`. Runs on: MP, CP, Desktop, Web.
+  Get it: `mip applibs`, `pip omnipython-applibs`. Runs on: MP, CP, Desktop, Web.
 - [`spectrum`](https://github.com/PyDevices/apps/tree/main/lib/spectrum): Show a spectrum analyzer in part of the screen, sharing the panel with LVGL.\
-  Get it: `mip spectrum`, `pip omnipython-applibs`. Runs on: MP, Desktop, Web.
+  Get it: `mip applibs`, `pip omnipython-applibs`. Runs on: MP, Desktop, Web.
 - [`jpegio`](https://github.com/PyDevices/omnipython-builds/tree/main/modules/jpegio): Decode and encode JPEG, with CircuitPython's `JpegDecoder` API.\
   Get it: firmware build. Runs on: MP, CP, Web.
 - [`jpegio for CPython`](https://github.com/PyDevices/omnipython/blob/main/utils/jpegio.py): Use the `jpegio` API on a desktop.\
@@ -120,7 +120,7 @@ and Android.
 - [`backends`](https://github.com/PyDevices/omnipython/blob/main/docs/modules.md): Add a display or audio backend of your own, so the automatic choosers can pick it.\
   Get it: `mip omnipython`, `pip omnipython`, firmware build. Runs on: MP, CP, Desktop, Web, Android.
 - [`appkit`](https://github.com/PyDevices/apps/tree/main/lib/appkit): Run several apps in one program, switch between them, and get each app's memory back when it closes.\
-  Get it: `mip appkit`, `pip omnipython-applibs`. Runs on: MP, CP, Desktop, Web.
+  Get it: `mip applibs`, `pip omnipython-applibs`. Runs on: MP, CP, Desktop, Web.
 - [`applibs`](https://github.com/PyDevices/apps/tree/main/lib): Install every shared app library at once.\
   Get it: `mip applibs`, `pip omnipython-applibs`. Runs on: MP, CP, Desktop, Web.
 
@@ -204,9 +204,9 @@ and Android.
 - [`midiports`](https://github.com/PyDevices/omnipython/tree/main/packages/midiports): Connect `adafruit_midi` to USB, UART, Bluetooth LE, Web MIDI or a computer's own MIDI ports.\
   Get it: `mip midiports`, `pip omnipython-desktop`. Runs on: MP, Desktop, Web.
 - [`soundmodule`](https://github.com/PyDevices/apps/blob/main/docs/guides/play-the-sound-module.md): Play MIDI through a sound engine, headless from a port or through files.\
-  Get it: `mip soundmodule`, `pip omnipython-applibs`. Runs on: MP, Desktop.
+  Get it: `mip applibs`, `pip omnipython-applibs`. Runs on: MP, Desktop.
 - [`songmodel`](https://github.com/PyDevices/apps/tree/main/lib/songmodel): Edit a groovebox's song as plain data, and carry it to a front panel.\
-  Get it: `mip songmodel`, `pip omnipython-applibs`. Runs on: MP, Desktop, Web.
+  Get it: `mip applibs`, `pip omnipython-applibs`. Runs on: MP, Desktop, Web.
 
 ## Connect devices
 
@@ -246,7 +246,7 @@ and Android.
 - [`usb-core`](https://github.com/PyDevices/omnipython/blob/main/docs/guides/usb.md): Talk to USB devices from a host board, with `usb.core` and `usb.util`, in PyUSB's shape.\
   Get it: `mip usb-core`. Runs on: MP.
 - [`usb-host-endpoints`](https://github.com/PyDevices/omnipython/blob/main/docs/guides/usb.md): List what's plugged into the board's USB host port as `endpointkit` endpoints, kept current as devices come and go.\
-  Get it: from source. Runs on: MP.
+  Get it: `mip usb-host-endpoints`. Runs on: MP.
 - [`usb-host-dfu`](https://github.com/PyDevices/omnipython/blob/main/docs/guides/usb.md): Read the flash of a board sitting in its USB DFU bootloader.\
   Get it: `mip usb-host-dfu`. Runs on: MP.
 - [`usb-host-hid`](https://github.com/PyDevices/omnipython/blob/main/docs/guides/usb.md): Read a keyboard or mouse plugged into the board.\
@@ -439,15 +439,15 @@ and Android.
 ## Libraries the apps use
 
 - [`deskkit`](https://github.com/PyDevices/apps/blob/main/docs/guides/put-a-clock-on-your-desk.md): Put a clock and the weather on a screen on your desk, with swipes between them and the screen dark at night.\
-  Get it: `mip deskkit`, from source. Runs on: MP on an LVGL touch board.
+  Get it: `mip applibs`, from source. Runs on: MP on an LVGL touch board.
 - [`touchkit`](https://github.com/PyDevices/apps/tree/main/lib/touchkit): Reuse what the apps on an ESP32-P4 touch board share: the shell, settings, clock, network and camera helpers.\
-  Get it: `mip touchkit`, `pip omnipython-applibs`. Runs on: MP on an ESP32-P4 touch board.
+  Get it: `mip applibs`, `pip omnipython-applibs`. Runs on: MP on an ESP32-P4 touch board.
 - [`programkit`](https://github.com/PyDevices/apps/tree/main/lib/programkit): Give a program the board it runs on: its roles, a press from any key, touch or Boot button, and rows of text on any display.\
-  Get it: `mip programkit`, from source. Runs on: MP.
+  Get it: `mip applibs`, from source. Runs on: MP.
 - [`chatclient`](https://github.com/PyDevices/apps/tree/main/lib/chatclient): Ask any OpenAI-compatible server for a chat reply, whole, streamed, or as JSON held to a schema.\
-  Get it: `mip chatclient`, `pip omnipython-applibs`. Runs on: MP, Desktop.
+  Get it: `mip applibs`, `pip omnipython-applibs`. Runs on: MP, Desktop.
 - [`sayso`](https://github.com/PyDevices/apps/tree/main/lib/sayso): Call the Spotify Web API from a small object layer, with sign-in helpers.\
-  Get it: `mip sayso`, `pip omnipython-applibs`. Runs on: MP, CP, Desktop.
+  Get it: `mip applibs`, `pip omnipython-applibs`. Runs on: MP, CP, Desktop.
 
 ## Find the project's own sites
 

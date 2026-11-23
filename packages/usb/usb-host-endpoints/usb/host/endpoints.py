@@ -36,8 +36,10 @@ kinds are:
 
 Finding a device is cheap: each `endpointkit.poll` reads the host's plug and
 unplug counters once, and looks at the devices again only when they move.
-Choosing an endpoint marks it connected and opens nothing: a program reads
-the choice and opens the device with its class driver (``usb.host.audio``,
+A speaker chosen under ``audio.out`` is where a board's ``audio_out`` plays
+once ``audiodev.endpoints.route`` has routed it: `UsbAudioOut.open_out`
+opens it. Choosing anything else marks it connected and opens nothing: a
+program reads the choice and opens the device with its class driver (``usb.host.audio``,
 ``usb.host.hid``, ``usb.host.msc`` and the rest), which `device` and
 `interface` hand it::
 
@@ -337,6 +339,34 @@ class UsbProvider(endpointkit.Provider):
             endpoint.state = endpointkit.AVAILABLE
 
 
+class UsbAudioOut(UsbProvider):
+    """The USB speakers and headsets on the host port, under ``audio.out``.
+
+    Choosing one marks it connected, and a board's routed ``audio_out``
+    (``audiodev.endpoints.route``) then opens it through `open_out`.
+    """
+
+    def __init__(self, host, leader=False):
+        UsbProvider.__init__(self, "audio.out", host, leader)
+
+    def open_out(self, endpoint, format=None, **kwargs):
+        """The endpoint's device as an ``audiodev.AudioOut``, from
+        ``usb.host.audio.audio_out``, which takes the same keywords.
+
+        Raises:
+            ImportError: usb-host-audio isn't installed.
+            OSError: the device was pulled out.
+        """
+        try:
+            from usb.host import audio
+        except ImportError as exc:
+            raise ImportError("playing to a USB speaker needs usb-host-audio: %s" % exc)
+        dev = device(endpoint)
+        if dev is None:
+            raise OSError(19, "%s was pulled out" % endpoint.label)
+        return audio.audio_out(format, dev=dev, **kwargs)
+
+
 _registered = []
 
 
@@ -365,7 +395,8 @@ def register(registry=None, start=True, full_speed=False):
         endpointkit.add_kind(name, count, title, icon)
     reg = registry if registry is not None else endpointkit
     host = Host()
-    made = [UsbProvider(kind, host, leader=(kind == KINDS[0])) for kind in KINDS]
+    made = [UsbAudioOut(host, leader=(kind == KINDS[0])) if kind == "audio.out"
+            else UsbProvider(kind, host, leader=(kind == KINDS[0])) for kind in KINDS]
     for provider in made:
         reg.register(provider)
     if registry is None:

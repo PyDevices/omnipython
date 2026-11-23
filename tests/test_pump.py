@@ -1330,6 +1330,16 @@ class TheBoardPlaysThroughAudiobusio(PumpFixture):
         self.board()
         self.assertEqual(pump_mod.owner()._driver.starved(), 7)
 
+    def test_health_says_when_the_wire_went_short(self):
+        """A graph slower than real time never overflows the ring: the wire
+        runs short instead, and ``dropped`` stays 0 while the listener hears
+        gaps. `health` has to carry the output's own count of that."""
+        self.board()
+        report = pump_mod.owner().health()
+        self.assertEqual(report["starved"], 7)
+        self.assertIn("slowest_us", report)
+        self.assertIn("cedes", report)
+
     def test_a_file_still_goes_through_audiodevs_own_prefetch(self):
         """``I2SOut`` feeds only the TAIL, and ``audiodev`` mixes."""
         sample = FakeSample(blocks=3)
@@ -1992,7 +2002,8 @@ class ATickInsideAnyOfThem(PumpFixture):
         """
         engine = pump_mod.owner()
         before = engine.health()
-        for key in ("clients", "reentered", "dropped", "waited", "waited_us",
+        for key in ("clients", "reentered", "dropped", "starved",
+                    "slowest_us", "cedes", "waited", "waited_us",
                     "blocks", "bytes", "running", "ahead_ms", "fault",
                     "blocked"):
             self.assertIn(key, before, "health() lost " + key)

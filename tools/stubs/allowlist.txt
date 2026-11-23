@@ -1,7 +1,8 @@
 # Differences stubtest is told to accept, one regular expression a line.
 # Say why above each one.
-# Testing the audiodev package walks its submodules, and these two cannot be
-# imported under CPython here (they need _wasm_bridge and Windows); mypy checks their stubs.
+# Testing the audiodev package walks its submodules, and these three cannot be
+# imported under CPython here (they need a board's btclassic, _wasm_bridge and Windows); mypy checks their stubs.
+audiodev\.bt_audio
 audiodev\.wasm_audio
 audiodev\.win_audio
 # displaydev and bledev likewise walk platform backends that need pygame, a browser,
