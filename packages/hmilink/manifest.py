@@ -6,7 +6,7 @@
 # MicroPython, CircuitPython and CPython; a board carries them all (tcp
 # needs sockets, local needs nothing, stream needs a UART or CDC object,
 # osc needs sockets, ble needs bledev, and aioble on MicroPython). web is
-# for Python in a browser page, beside js/hmilink.js, which isn't frozen.
+# for Python in a browser page, beside web-page/hmilink.js, which isn't frozen.
 metadata(
     description="Any screen as a device's front panel: one document, ops, telemetry and events over any transport.",
     version="0.0.1",

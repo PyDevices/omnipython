@@ -10,7 +10,7 @@
 //                WebSerial, the host a panel (the browser as the box)
 // The ports are the stand-ins in mock_ports.js. The page logs PAGE lines;
 // the test reads them and checks the host's side itself.
-import { openSerial, openBluetooth, Link } from "/packages/hmilink/js/hmilink.js";
+import { openSerial, openBluetooth, Link } from "/packages/hmilink/web-page/hmilink.js";
 
 const q = new URLSearchParams(location.search);
 const CASE = q.get("case");

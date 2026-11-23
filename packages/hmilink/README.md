@@ -70,7 +70,7 @@ OmniPython firmware with Bluetooth carries; on a laptop, `pip install
 with no event loop needs nothing more; one with a loop gives it time between
 polls. [`hmilink/ble.py`](hmilink/ble.py)'s docstring has the rest.
 
-On a web page, [`js/hmilink.js`](js/hmilink.js) opens a board through
+On a web page, [`web-page/hmilink.js`](web-page/hmilink.js) opens a board through
 WebSerial or Web Bluetooth from a click. A page written in JavaScript speaks
 hmilink with its `Link`. Python running in the page (MicroPython's
 WebAssembly build, or Pyodide) wraps the port with `hmilink.web.stream()`
