@@ -1,3 +1,11 @@
+## v0.8.1.dev7 (2026-11-23)
+
+- Library: applibs 0.1.3.dev6 (#805)
+- castdisplay Mirror: a quick click from the browser reaches LVGL (#804)
+- RemoteDisplay: a password, JPEG for large changes, a palette, and a cast picker entry (#803)
+- esp32-s3-touch-lcd-7: TF card on hardware SPI at 20 MHz (#802)
+- displaydev: RemoteDisplay and mirror show a display in a browser (#801)
+
 ## v0.8.1.dev6 (2026-11-23)
 
 - Library: audioinstruments 0.5.3.dev5 (#798)
