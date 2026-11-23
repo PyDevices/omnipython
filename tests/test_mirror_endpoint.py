@@ -114,5 +114,62 @@ class MirrorTest(unittest.TestCase):
         self.assertEqual(self.provider(NoFrame(), password="x").scan(), [])
 
 
+class _Lv:
+    # Enough of lvgl for the mirror's pointer input.
+    class KEY:
+        ENTER, BACKSPACE, NEXT, ESC, DEL = 10, 8, 9, 27, 127
+        UP, DOWN, LEFT, RIGHT, HOME, END = 17, 18, 20, 19, 2, 3
+
+    class INDEV_TYPE:
+        POINTER = 1
+
+    class INDEV_STATE:
+        RELEASED, PRESSED = 0, 1
+
+    class _Indev:
+        def set_type(self, t):
+            pass
+
+        def set_read_cb(self, cb):
+            self.cb = cb
+
+        def delete(self):
+            pass
+
+    @classmethod
+    def indev_create(cls):
+        return cls._Indev()
+
+
+class _Data:
+    def __init__(self):
+        self.point = types.SimpleNamespace(x=0, y=0)
+        self.state = None
+
+
+class PointerTest(unittest.TestCase):
+    def setUp(self):
+        sys.modules["lvgl"] = _Lv
+        self.addCleanup(sys.modules.pop, "lvgl", None)
+
+    def test_a_quick_click_is_seen(self):
+        import events
+
+        from castdisplay.endpoints import _Input
+
+        queue = [[
+            events.Button(events.MOUSEBUTTONDOWN, (40, 50), 1, False, None),
+            events.Button(events.MOUSEBUTTONUP, (40, 50), 1, False, None),
+        ]]
+        server = types.SimpleNamespace(read=lambda: queue.pop() if queue else [])
+        pointer = _Input(server, None)
+        seen = []
+        for _ in range(3):
+            data = _Data()
+            pointer._read(None, data)
+            seen.append((data.state, data.point.x, data.point.y))
+        self.assertEqual(seen, [(1, 40, 50), (0, 40, 50), (0, 40, 50)])
+
+
 if __name__ == "__main__":
     unittest.main()
