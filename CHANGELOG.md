@@ -1,3 +1,10 @@
+## v0.8.1.dev6 (2026-11-23)
+
+- Library: audioinstruments 0.5.3.dev5 (#798)
+- ethnet: move a board's traffic onto Ethernet from a picker, Wi-Fi left up (#795)
+- audiodev: pump health() reports starved audio, the slowest block and cedes (#793)
+- stack: usb-host-endpoints installs by mip (#797)
+
 ## v0.8.1.dev5 (2026-11-23)
 
 - Library index: applibs is one package holding every library in apps' lib/ (#794)
