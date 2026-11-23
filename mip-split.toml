@@ -94,11 +94,12 @@ host-only = [
 own-package = true
 # The services advertise the board's name, boarddev.name(), from OmniPython.
 requires = ["omnipython"]
-# The central-only host backends go in omnipython-desktop, as for the other
-# packages here. A name listed before its file exists fails the sync.
-host-only = ["bleak", "webble"]
+# The host backends (bleak, and winrt and bluez on top of it) go in
+# omnipython-desktop, as for the other packages here. A name listed before its file exists fails the sync.
+host-only = ["bleak", "winrt", "bluez", "webble"]
 # On PyPI bledev stays inside the OmniPython wheel. bleak is optional, behind
-# `pip install "omnipython[ble]"`.
+# `pip install "omnipython[ble]"`; it brings the WinRT packages winrt uses on
+# Windows and the dbus-fast bluez uses on Linux.
 pypi-extras = { ble = ["bleak>=1.0"] }
 
 [medialink]

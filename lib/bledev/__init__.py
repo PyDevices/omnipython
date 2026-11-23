@@ -5,7 +5,8 @@
 """Portable Bluetooth Low Energy: the contract every bledev backend implements.
 
 You write a BLE program once against this module, and it runs on a board
-(`bledev.mpble`), on a laptop (``bledev.bleak``), in a browser
+(`bledev.mpble`), on a laptop (``bledev.winrt``, ``bledev.bluez`` or
+``bledev.bleak``), in a browser
 (``bledev.webble``), or against the in-process loopback in tests
 (`bledev.fake`). The guide is ``docs/guides/bluetooth-le.md``.
 
@@ -14,7 +15,8 @@ The shape is aioble's, and it is async throughout. The pieces:
 * `UUID`, the errors, and the ``FLAG_*`` property bits.
 * `BLE`, the adapter. A backend subclasses it. ``capabilities()`` says
   which roles it can take, because roles aren't symmetric: bleak and Web
-  Bluetooth are central only, and a board can be either.
+  Bluetooth are central only, and a board, a Windows PC or a Linux laptop
+  can be either.
 * The peripheral side: `Service` and `Characteristic` describe a
   GATT server, ``ble.register_services()`` installs it, and
   ``await ble.advertise()`` returns a `Connection` when a central
@@ -385,8 +387,11 @@ class BLE:
         roles it can take), ``mtu`` (the ATT MTU it asks for), ``max_mtu``,
         ``indicate``, ``pairing`` and ``l2cap`` (bools), ``long_read``:
         whether a read returns values longer than one packet (``mtu - 1``),
-        and ``write_notifies``: whether setting a served characteristic's
-        value already notifies its subscribers (CircuitPython's ``_bleio``).
+        ``write_notifies``: whether setting a served characteristic's
+        value already notifies its subscribers (CircuitPython's ``_bleio``),
+        and ``advertise_name``: whether ``advertise(name=...)`` can choose the
+        name on the air. Windows can't: it always advertises the PC's own
+        Bluetooth name, and ``advertise()`` takes ``name=None`` there.
         """
         return {
             "backend": self.backend,
@@ -399,6 +404,7 @@ class BLE:
             "write_notifies": False,
             "l2cap": False,
             "long_read": True,
+            "advertise_name": True,
         }
 
     def config(self, *names, **settings):
@@ -1042,6 +1048,20 @@ async def passkey_value(passkey):
     if passkey is None:
         return None
     return int(passkey)
+
+
+def advertised_name(ble, name, default):
+    """The name a profile's ``serve()`` advertises.
+
+    ``name`` when given. Otherwise ``default()`` (the board's name) where the
+    adapter can choose its name, and ``None`` where it can't (Windows), so the
+    host advertises its own.
+    """
+    if name is not None:
+        return name
+    if ble.capabilities().get("advertise_name", True):
+        return default()
+    return None
 
 
 async def connect_and_set_up(

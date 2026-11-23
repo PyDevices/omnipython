@@ -1,7 +1,7 @@
 # bledev internals: writing a backend
 
 This page is for you if you're adding a backend (`bledev.bleak`,
-`bledev.webble`, `bledev.cpble`) or changing one. What an app can rely
+`bledev.winrt`, `bledev.bluez`, `bledev.webble`, `bledev.cpble`) or changing one. What an app can rely
 on is in [The rules every backend keeps](#the-rules-every-backend-keeps), below, and in the
 [Bluetooth LE guide](../guides/bluetooth-le.md); this is how a backend delivers it.
 
@@ -16,6 +16,8 @@ standalone module per backend, and an optional selector.
 | `fake.py` | In-process loopback. The reference implementation of every hook. |
 | `mpble.py` | MicroPython, over aioble. |
 | `bleak.py` | CPython on Windows, Linux and macOS, over bleak. Central only. |
+| `winrt.py` | CPython on Windows: `bleak.py`'s central plus a GATT server through WinRT. Both roles. |
+| `bluez.py` | CPython on Linux: `bleak.py`'s central plus a GATT server through BlueZ over D-Bus. Both roles. |
 | `cpble.py` | CircuitPython, over `_bleio`. Both roles. |
 | `webble.py` | Web Bluetooth in a browser, central only. |
 | `nus.py` | Nordic UART byte stream, built only on the contract. |
@@ -32,7 +34,7 @@ standalone module per backend, and an optional selector.
 
 A backend module imports `bledev` and whatever its host provides, and nothing
 else in bledev except the base classes. `auto.BACKENDS` expects
-`bledev.bleak.BleakBLE` and `bledev.webble.WebBLE`; if you name your class
+`bledev.bleak.BleakBLE`, `bledev.winrt.WinRTBLE`, `bledev.bluez.BlueZBLE` and `bledev.webble.WebBLE`; if you name your class
 differently, change that table.
 
 Anything under `lib/` must also be listed in [`omnipython-desktop.toml`](https://github.com/PyDevices/omnipython/blob/main/omnipython-desktop.toml) (a test
@@ -48,7 +50,9 @@ built on them.
 
 - `backend` (class attribute): the module's short name.
 - `capabilities()`: start from `BLE.capabilities(self)` and set `central`,
-  `peripheral`, `mtu`, `max_mtu`, `indicate`, `pairing`, `l2cap`.
+  `peripheral`, `mtu`, `max_mtu`, `indicate`, `pairing`, `l2cap`, and
+  `advertise_name` (False where the host picks the advertised name, as
+  Windows does; `bledev.advertised_name()` reads it).
 - `config(*names, **settings)`: at least `mtu`; raise `UnsupportedError` for
   anything else you don't have. `addr_mode` (`ADDR_MODE_*`) only where the stack
   has private addresses: mpble passes it to NimBLE and says `UnsupportedError`
@@ -210,6 +214,32 @@ no difference to nus throughput.
 
 After a disconnect bleak sets `client.services` to `None`, so every client call
 checks the connection first and raises `DisconnectedError`.
+
+## How winrt and bluez get there
+
+Both subclass `BleakBLE`, so the central side is bleak's, unchanged, and add a
+GATT server from the operating system: WinRT's `GattServiceProvider` through
+the `winrt-*` packages bleak already installs on Windows, and BlueZ's
+`GattManager1` and `LEAdvertisingManager1` through `dbus-fast`, which bleak
+installs on Linux. They're separate modules because the two servers share
+nothing but the contract. `bledev.auto` picks `winrt` on Windows and `bluez`
+on Linux whenever bleak imports, and `bleak` everywhere else.
+
+WinRT raises its requests on its own threads. The backend hands each one to the
+event loop with `call_soon_threadsafe` and answers them one at a time, in the
+order they arrived, per characteristic: with a task per request, a burst of
+BLE-MIDI writes came out of order. Windows reports each advertisement start as
+an abort with error `Success` before it reports it started, and its status
+lags behind calls to start and stop, so the backend tracks which providers it
+started itself. A `GattSession`'s `close()` leaves the link up, which is why
+`Connection.disconnect()` raises rather than pretending.
+
+BlueZ calls the exported objects' `ReadValue`, `WriteValue`, `StartNotify` and
+`StopNotify` on the event loop. A notification is a `PropertiesChanged` signal
+on the characteristic's `Value`, which BlueZ sends to every subscriber; that's
+why `notify(connection)` refuses while more than one central is connected.
+Connections come from `Device1`'s `Connected` property, matched while the
+adapter advertises.
 
 ## Reconnecting fast
 

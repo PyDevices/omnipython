@@ -74,8 +74,9 @@ for name, address in finder.find("garage"):
 ```
 
 The sound still goes over the network; Bluetooth only carries the address.
-A computer can find a board this way but can't advertise, since bledev's
-computer backend only scans. Anyone nearby can read the advertisement, so
+A Linux computer can advertise this way too. Windows and macOS computers can
+only find: Windows can't advertise manufacturer data, so `advertise()` raises
+`bledev.UnsupportedError` there. Anyone nearby can read the advertisement, so
 it carries nothing secret: never a password.
 
 ### Without the house network: a hotspot

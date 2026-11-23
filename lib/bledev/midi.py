@@ -53,6 +53,7 @@ from . import (
     Service,
     UnsupportedError,
     UUID,
+    advertised_name,
     connect_and_set_up,
     is_adapter,
     sleep_ms,
@@ -480,19 +481,23 @@ async def serve(ble, name=None, *, timeout_ms=None, interval_us=100000, mtu=MTU,
     ``boarddev.name()``) and return a `Port` when a central connects. Call it
     again for the next connection.
 
+    On Windows the PC advertises under its own Bluetooth name and an app
+    can't choose another: leave ``name`` as ``None`` there, and any other
+    name raises `bledev.UnsupportedError`.
+
     The service is registered once per adapter, the first time; don't register
     other services on the same adapter afterwards.
     """
     ble = _adapter(ble)
-    if name is None:
-        name = boarddev.name()
+    name = advertised_name(ble, name, boarddev.name)
     server = _server_for(ble, name, mtu)
     # Hosts that pair (Windows, macOS) name the MIDI port after the GAP device
     # name, not the advertised one; without this Windows lists "MPY ESP32".
-    try:
-        ble.config(gap_name=name)
-    except (UnsupportedError, ValueError, OSError):
-        pass
+    if name is not None:
+        try:
+            ble.config(gap_name=name)
+        except (UnsupportedError, ValueError, OSError):
+            pass
     connection = await ble.advertise(interval_us, name=name, services=[SERVICE], timeout_ms=timeout_ms)
     port = _ServerPort(connection, server, **options)
     server.add(port)

@@ -32,13 +32,15 @@ transport can talk to it too.
 |---|---|---|---|
 | `bledev.mpble` | MicroPython with `bluetooth` (ESP32, S3, P4 + C6, Pico W) | yes | yes |
 | `bledev.cpble` | CircuitPython with `_bleio` (ESP32-S3 measured) | yes | yes |
+| `bledev.winrt` | CPython on Windows | yes, through bleak | yes |
+| `bledev.bluez` | CPython on Linux | yes, through bleak | yes |
 | `bledev.bleak` | CPython on Windows, Linux, macOS | yes | no |
 | `bledev.webble` | Browsers: PyScript, the Workbench simulator | yes | no |
 | `bledev.fake` | Anywhere: tests | yes | yes |
 
-Roles aren't symmetric. A laptop or a browser can only scan and connect, so
-when a board talks to one, the board advertises. Only board-to-board links put
-a board in the central role. `ble.capabilities()` tells you which roles you
+Roles aren't symmetric. A browser, and a Mac, can only scan and connect, so
+when a board talks to one, the board advertises. A Windows or Linux laptop can
+take either role, so a board can be the central there too. `ble.capabilities()` tells you which roles you
 have, and anything a backend can't do raises `bledev.UnsupportedError` rather
 than doing nothing.
 
@@ -65,8 +67,8 @@ mip.install("bledev", index="https://lib.omnipython.org")
 ```
 
 Firmware that freezes aioble doesn't need it. On a laptop, bledev is inside
-the `omnipython` wheel, and `pip install "omnipython[ble]"` adds bleak, which
-the laptop backend needs.
+the `omnipython` wheel, and `pip install "omnipython[ble]"` adds bleak and
+what the laptop backends need on your system.
 
 CircuitPython has its own steps: `omip.install("bledev")` works on a board with
 Wi-Fi, and the files can be copied by hand. They are in
@@ -95,9 +97,14 @@ ble = bledev.mpble.get()        # the board has one radio, so get() shares one a
 On a laptop:
 
 ```python
-import bledev.bleak
-ble = bledev.bleak.BleakBLE()   # central only
+import bledev.auto
+ble = bledev.auto.adapter()     # winrt on Windows, bluez on Linux: both roles
 ```
+
+`bledev.bleak.BleakBLE()` is central only, on any of them, macOS included. A
+Windows PC advertises under its own name, so leave `name` out when you serve
+there; [On a laptop](../reference/bluetooth-le-support.md#on-a-laptop) has the
+rest of what differs.
 
 On CircuitPython ([copied onto the board by hand](../reference/bluetooth-le-support.md#installing-bledev), with the `asyncio` library):
 
@@ -110,7 +117,7 @@ Anywhere, if you don't want to name the backend:
 
 ```python
 import bledev.auto
-ble = bledev.auto.adapter()     # mpble, cpble, webble or bleak, whichever this host has
+ble = bledev.auto.adapter()     # mpble, cpble, winrt, bluez, webble or bleak, whichever this host has
 ```
 
 `bledev.auto` is optional, and nothing else in bledev imports it. Set

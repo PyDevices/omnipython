@@ -349,7 +349,8 @@ class LinuxPortOnEveryUnixInterpreter(unittest.TestCase):
             keep = os.open(fifo, os.O_RDWR | os.O_NONBLOCK)  # a writer, so the reader's open returns
             try:
                 child = subprocess.Popen(
-                    [interpreter, str(script), scratch, fifo], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True
+                    [interpreter, str(script), scratch, fifo, "--adafruit=" + adafruit_dir(self)],
+                    stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True,
                 )
                 lines = []
                 timer = threading.Timer(60, child.kill)  # a hang fails the test, it can't stall it
@@ -359,6 +360,12 @@ class LinuxPortOnEveryUnixInterpreter(unittest.TestCase):
                         lines.append(line)
                         if line.startswith("READY"):
                             os.write(keep, b"\x90\x40\x7f")
+                        elif line.startswith("SYSEX"):
+                            # A 1 KB SysEx in three parts, as a cable delivers it over time.
+                            stream = b"\x90\x3c\x64" + bytes([0xF0, 0x7D] + [i % 128 for i in range(1021)] + [0xF7]) + b"\x80\x3c\x00"
+                            for i in range(0, len(stream), 350):
+                                os.write(keep, stream[i:i + 350])
+                                time.sleep(0.05)
                     child.wait()
                 finally:
                     child.stdout.close()

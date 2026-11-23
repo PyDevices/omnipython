@@ -9,9 +9,12 @@
 
 picks, in order: ``mpble`` where MicroPython's ``bluetooth`` module exists,
 ``cpble`` where CircuitPython's ``_bleio`` does, ``webble`` in a browser (PyScript, Pyodide, the Workbench simulator), and
-``bleak`` on CPython when bleak is installed (``pip install omnipython[ble]``),
-Android included: an app built with python-for-android gets bleak from its
-recipe, and bledev asks for the Bluetooth permissions at the first scan.
+on CPython with bleak installed (``pip install omnipython[ble]``): ``winrt``
+on Windows and ``bluez`` on Linux, which serve as a peripheral and connect
+as a central through bleak, and ``bleak`` itself elsewhere (macOS), central
+only. ``backend="bleak"`` still gives the central-only adapter anywhere.
+Android gets ``bleak`` too: an app built with python-for-android gets it from
+its recipe, and bledev asks for the Bluetooth permissions at the first scan.
 Pass ``backend="fake"`` (or set ``BLEDEV_BACKEND``) to force one; extra
 keyword arguments go to the backend's constructor.
 
@@ -32,6 +35,8 @@ BACKENDS = {
     "mpble": ("bledev.mpble", "MPBLE"),
     "cpble": ("bledev.cpble", "CPBLE"),
     "bleak": ("bledev.bleak", "BleakBLE"),
+    "winrt": ("bledev.winrt", "WinRTBLE"),
+    "bluez": ("bledev.bluez", "BlueZBLE"),
     "webble": ("bledev.webble", "WebBLE"),
     "fake": ("bledev.fake", "FakeBLE"),
 }
@@ -76,6 +81,10 @@ def backend_name():
     if _in_browser():
         return "webble"
     if _importable("bleak"):
+        if sys.platform == "win32":
+            return "winrt"
+        if sys.platform.startswith("linux"):
+            return "bluez"
         return "bleak"
     return None
 

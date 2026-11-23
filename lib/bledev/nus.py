@@ -41,6 +41,7 @@ from . import (
     Service,
     UnsupportedError,
     UUID,
+    advertised_name,
     connect_and_set_up,
     is_adapter,
     sleep_ms,
@@ -314,13 +315,14 @@ def _server_for(ble, mtu):
 async def serve(ble, name=None, *, timeout_ms=None, interval_us=100000, mtu=MTU):
     """Advertise the Nordic UART service as ``name`` (default: the board's
     name, ``boarddev.name()``) and return a `Link` when a central connects.
+    On Windows the PC advertises under its own Bluetooth name: leave ``name``
+    as ``None`` there, and any other name raises `bledev.UnsupportedError`.
 
     Call it again for the next connection; the service is registered once per
     adapter, so don't register other services on the same adapter afterwards.
     """
     ble = _adapter(ble)
-    if name is None:
-        name = boarddev.name()
+    name = advertised_name(ble, name, boarddev.name)
     server = _server_for(ble, mtu)
     connection = await ble.advertise(interval_us, name=name, services=[SERVICE], timeout_ms=timeout_ms)
     link = _ServerLink(connection, server)

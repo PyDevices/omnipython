@@ -293,6 +293,8 @@ class ClientDescriptor:
 def is_adapter(obj: object) -> bool:
     """True for a bledev `BLE`; False for a raw `bluetooth.BLE` or anything else."""
 async def passkey_value(passkey: _Passkey | None) -> int | None: ...
+def advertised_name(ble: BLE, name: str | None, default: Callable[[], str]) -> str | None:
+    """The name a profile's `serve()` advertises: `name`, else `default()`, else `None` on a host that can't choose (Windows)."""
 async def connect_and_set_up(
     ble: BLE,
     setup: Callable[[Connection], Awaitable[_T]],

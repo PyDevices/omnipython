@@ -16,6 +16,10 @@ asks for one of two sessions with a SysEx command, ``F0 7D 10 <mode> F7``:
 * mode 2, echo: every message that arrives goes straight back, until the
   link closes. The client times the round trips.
 
+On a laptop it runs as is, with the laptop's peripheral backend
+(``bledev.winrt`` or ``bledev.bluez``); Windows advertises the PC's own name,
+so the client there passes ``--service``.
+
 It serves one connection after another until reset. ``PLANT`` breaks what
 this side sends on the air: ``"drop"`` leaves out the 20th packet of the
 gate's downstream, ``"flip"`` flips a bit in it. The client must then FAIL.
@@ -28,8 +32,12 @@ import bledev.midi as midi
 
 if sys.implementation.name == "circuitpython":
     import bledev.cpble as backend  # mcuctl run keeps Bluetooth on here
-else:
+elif sys.implementation.name == "micropython":
     import bledev.mpble as backend
+else:
+    import bledev.auto as backend  # a laptop: bledev.winrt or bledev.bluez
+
+    backend.get = backend.adapter
 
 PLANT = None  # None, "drop" or "flip"
 LOG = "/midi_server.log"
@@ -145,9 +153,11 @@ async def main():
     except OSError:
         pass
     ble = backend.get()
-    log("serving BLE-MIDI as", NAME, "plant", PLANT)
+    # Windows advertises the PC's own name; a client there finds it by service.
+    name = NAME if ble.capabilities().get("advertise_name", True) else None
+    log("serving BLE-MIDI as", name or ble.config("gap_name"), "on", ble.backend, "plant", PLANT)
     while True:
-        port = await midi.serve(ble, name=NAME)
+        port = await midi.serve(ble, name=name)
         log("connected, mtu", port.connection.mtu)
         try:
             ts, command = await port.receive(timeout_ms=20000)
@@ -162,8 +172,11 @@ async def main():
         try:
             await port.connection.disconnected(timeout_ms=30000)
         except Exception:
-            await port.aclose()
+            try:
+                await port.aclose()
+            except midi.UnsupportedError:
+                # Windows can't drop a central; wait for it to leave.
+                await port.connection.disconnected()
 
 
-if sys.implementation.name in ("micropython", "circuitpython"):
-    asyncio.run(main())
+asyncio.run(main())
