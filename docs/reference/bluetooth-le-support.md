@@ -85,8 +85,19 @@ On Linux:
   it raises `BLEError`, and `write(data, send_update=True)` reaches them all.
 - A connection reports an MTU of 23 until its central has read or written
   something, because that's when BlueZ passes the real one.
-- `config(gap_name=)` sets the adapter's alias, which BlueZ may refuse
-  without the right D-Bus policy.
+- `config(gap_name=)` sets the adapter's alias. BlueZ keeps an alias across
+  restarts, so `close()` and `aclose()` put back the one it had; a program
+  that's killed leaves it, and `bluetoothctl system-alias NAME` puts it back.
+- Linux asks a central that connects for a 30 to 50 ms connection interval,
+  whatever the central wanted, so a MIDI note takes about 45 ms each way. Set
+  `MinConnectionInterval=6` and `MaxConnectionInterval=12` (7.5 to 15 ms)
+  under `[LE]` in `/etc/bluetooth/main.conf` and restart Bluetooth: on a
+  Raspberry Pi 4 that took the one-way time from 46 ms to 18 ms, and to 11 ms
+  when the central asked for 7.5 ms.
+- As a central, bledev asks BlueZ for notifications on a socket of their own
+  (`AcquireNotify`). bleak's default, `StartNotify`, reports this side's own
+  writes as notifications, and after a link drops and is made again in the
+  same program it delivers every notification twice.
 
 ## On CircuitPython
 

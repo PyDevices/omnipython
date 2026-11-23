@@ -597,6 +597,14 @@ class _BleakClientCharacteristic(ClientCharacteristic):
             kwargs = {}
             if self._route == "indicate" and sys.platform == "win32":
                 kwargs["force_indicate"] = True
+            elif self._route == "notify" and sys.platform.startswith("linux"):
+                # bleak's default on BlueZ, StartNotify, reports every change to the
+                # characteristic's cached value: this side's own writes come back as
+                # notifications, and after a link drops and is made again in the same
+                # program each notification arrives twice. AcquireNotify gives them a
+                # socket of their own; bleak falls back to StartNotify where BlueZ
+                # doesn't offer it.
+                kwargs["bluez"] = {"use_start_notify": False}
             await self._client.start_notify(self._native, self._received, **kwargs)
             self._subscribed = True
         except (BleakError, OSError) as e:

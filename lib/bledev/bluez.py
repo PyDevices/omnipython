@@ -28,7 +28,10 @@ pretending:
   while this adapter advertises, or with its first read or write.
 * Prepared (long) writes are refused.
 * ``config(gap_name=...)`` sets the adapter's alias, which BlueZ may refuse
-  without the right D-Bus policy; ``addr_mode`` is BlueZ's to pick.
+  without the right D-Bus policy; ``addr_mode`` is BlueZ's to pick. BlueZ
+  keeps an alias across restarts, so ``close()`` and ``aclose()`` put back the
+  one the adapter had. A program that's killed leaves it set; ``bluetoothctl
+  system-alias NAME`` puts it back by hand.
 """
 
 import asyncio
@@ -118,6 +121,9 @@ class BlueZBLE(BleakBLE):
         self._registered = False
         self._generation = 0
         self._advertisement = None
+        # The adapter's alias before ours, put back on close; None until we set one.
+        self._alias_before = None
+        self._restoring = None
         # device path -> the live peripheral-side connection
         self._centrals = {}
         self._backlog = []
@@ -150,10 +156,37 @@ class BlueZBLE(BleakBLE):
             for path, _ in self._exported:
                 self._bus.unexport(path)
             self._exported = []
-            self._bus.disconnect()
-            self._bus = None
+            bus, self._bus = self._bus, None
+            try:
+                loop = asyncio.get_running_loop()
+            except RuntimeError:
+                loop = None
+            if self._alias_before is not None and loop is not None:
+                # Putting the alias back is a D-Bus call; the bus closes after it.
+                self._restoring = loop.create_task(self._restore_alias(bus))
+            else:
+                bus.disconnect()
         self._registered = False
         BleakBLE.close(self)
+
+    async def aclose(self):
+        """``close()``, waiting until the adapter has its old alias back and every connection is gone."""
+        await BleakBLE.aclose(self)
+        task, self._restoring = self._restoring, None
+        if task is not None:
+            await task
+
+    async def _restore_alias(self, bus):
+        before, self._alias_before = self._alias_before, None
+        try:
+            await bus.call(
+                Message(
+                    destination=BLUEZ, path=self.adapter_path, interface=_PROPERTIES, member="Set",
+                    signature="ssv", body=["org.bluez.Adapter1", "Alias", Variant("s", before)],
+                )
+            )
+        finally:
+            bus.disconnect()
 
     # -- D-Bus
 
@@ -270,6 +303,14 @@ class BlueZBLE(BleakBLE):
         self._registered = True
 
     async def _set_alias(self, alias):
+        if self._alias_before is None:
+            # An empty alias is BlueZ's way back to the adapter's own name.
+            (alias_now,) = await self._call(
+                self.adapter_path, _PROPERTIES, "Get", "ss", ("org.bluez.Adapter1", "Alias")
+            )
+            (name,) = await self._call(self.adapter_path, _PROPERTIES, "Get", "ss", ("org.bluez.Adapter1", "Name"))
+            alias_now, name = alias_now.value, name.value
+            self._alias_before = "" if alias_now == name else alias_now
         await self._call(
             self.adapter_path, _PROPERTIES, "Set", "ssv", ("org.bluez.Adapter1", "Alias", Variant("s", alias))
         )

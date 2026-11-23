@@ -303,5 +303,56 @@ class WindowsPairing(unittest.TestCase):
         self.assertTrue(conn.authenticated)
 
 
+class _NotifyClient:
+    """Records how bledev.bleak asks bleak for notifications."""
+
+    def __init__(self):
+        self.calls = []
+
+    async def start_notify(self, native, callback, **kwargs):
+        self.calls.append(kwargs)
+
+    async def stop_notify(self, native):
+        pass
+
+
+def _client_characteristic(properties):
+    client = _NotifyClient()
+    connection = types.SimpleNamespace(
+        _client=client, _ble=types.SimpleNamespace(queue_limit=8), _inboxes=[], _live=lambda what: None
+    )
+    service = types.SimpleNamespace(connection=connection)
+    native = types.SimpleNamespace(uuid="7772e5db-3868-4112-a1a9-f2669d106bf3", properties=properties)
+    return bb._BleakClientCharacteristic(service, native), client
+
+
+class LinuxNotifications(unittest.TestCase):
+    def setUp(self):
+        saved = bb.sys
+        self.addCleanup(setattr, bb, "sys", saved)
+
+    def test_notify_on_linux_takes_bluezs_own_socket(self):
+        # StartNotify echoes this side's writes and doubles notifications after
+        # a reconnect, which a BLE-MIDI echo shows on a Raspberry Pi.
+        bb.sys = types.SimpleNamespace(platform="linux")
+        char, client = _client_characteristic(["notify", "write-without-response"])
+        asyncio.run(char.subscribe(notify=True))
+        self.assertEqual(client.calls, [{"bluez": {"use_start_notify": False}}])
+
+    def test_indicate_on_linux_stays_on_start_notify(self):
+        # BlueZ's AcquireNotify is for notifications only.
+        bb.sys = types.SimpleNamespace(platform="linux")
+        char, client = _client_characteristic(["indicate"])
+        asyncio.run(char.subscribe(notify=False, indicate=True))
+        self.assertEqual(client.calls, [{}])
+
+    def test_windows_is_unchanged(self):
+        bb.sys = types.SimpleNamespace(platform="win32")
+        char, client = _client_characteristic(["notify", "indicate"])
+        asyncio.run(char.subscribe(notify=True))
+        asyncio.run(char.subscribe(notify=False, indicate=True))
+        self.assertEqual(client.calls, [{}, {"force_indicate": True}])
+
+
 if __name__ == "__main__":
     unittest.main()
