@@ -18,7 +18,7 @@ globals().update(configure(
     repo="PyDevices/omnipython", edit_path="docs",
     source_dirs=["../lib", "../utils", "../packages/vtterm", "../packages/endpointkit"],
     api_packages=["displaydev", "audiodev", "appdev", "multimer", "bledev", "vtterm"],
-    mock_imports=["bleak", "_bleio", "bluetooth", "IPython", "pygame", "js",
+    mock_imports=["bleak", "winrt", "dbus_fast", "_bleio", "bluetooth", "IPython", "pygame", "js",
                   "pyodide", "_wasm_bridge", "uwin32", "aioble", "PIL", "lvgl",
                   # vtterm draws with pygraphics and colors from palettes.
                   "pygraphics", "palettes", "usb"],
