@@ -116,7 +116,9 @@ def build(name, extpanid, panid, channel, key):
     """A dataset as TLVs from a network's name, IDs, channel and key.
 
     Enough for a board to join the network: once it's on, the leader
-    gives it the rest (the mesh-local prefix, the security policy).
+    gives it the rest (the mesh-local prefix, the security policy). A board
+    can't lead on it: with no network to join it stays detached. Make the
+    network with form() on the leader, and give its dataset to the others.
 
     Args:
         name (str): the network name.
