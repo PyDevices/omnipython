@@ -445,6 +445,7 @@ def ports(name=None, *, adapter=None, pump=None, pump_ms=PUMP_MS, queue_limit=QU
 
     Args:
         name: what the board advertises; the board's name when ``None``.
+            On Windows the PC's own Bluetooth name, and it must stay ``None``.
         adapter: a ``bledev`` adapter; ``bledev.auto.adapter()`` when ``None``.
         pump: whether ``any()`` runs the event loop's waiting tasks. ``None``
             decides from whether a loop is running when `ports` is called.
@@ -457,10 +458,6 @@ def ports(name=None, *, adapter=None, pump=None, pump_ms=PUMP_MS, queue_limit=QU
     Raises:
         ImportError: ``bledev`` (or MicroPython's ``aioble``) isn't installed.
     """
-    if name is None:
-        import boarddev
-
-        name = boarddev.name()
     return _open_ports(BleIn, name, adapter, pump=pump, pump_ms=pump_ms, queue_limit=queue_limit)
 
 
@@ -520,6 +517,12 @@ def _open_ports(cls, name, adapter, **options):
             import bledev.auto
 
             adapter = bledev.auto.adapter()
+        if name is None and cls is BleIn:
+            import boarddev
+
+            # Windows advertises the PC's own name, so it stays None there.
+            if adapter.capabilities().get("advertise_name", True):
+                name = boarddev.name()
         link = cls(name, adapter, **options)
     except Exception:
         # A radio that failed to start keeps what it took, internal RAM

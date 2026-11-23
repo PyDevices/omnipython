@@ -3,6 +3,7 @@ audiodev.wasm_audio
 audiodev.win_audio
 bledev.cpble
 bledev.mpble
+bledev.winrt
 displaydev.pgdisplay
 displaydev.psdisplay
 displaydev.wasmdisplay

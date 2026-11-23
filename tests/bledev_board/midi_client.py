@@ -20,6 +20,9 @@ trip is what BLE adds one way. ``--fast`` asks for a 7.5 ms connection
 interval (on a laptop, Windows' throughput parameters) instead of the
 default. Prints median, p90, p99 and max, and ends ``RESULT PASS`` or
 ``RESULT FAIL``.
+
+``--service`` connects to the first device advertising BLE-MIDI, whatever its
+name: a Windows server advertises the PC's own name.
 """
 import asyncio
 import sys
@@ -42,10 +45,12 @@ if MICROPYTHON:
         return time.ticks_diff(time.ticks_us(), t0)
 
     ARGS = []
+    LOG = "/midi_client.log"
     try:
         import midi_client_args
 
         ARGS = midi_client_args.ARGS
+        LOG = getattr(midi_client_args, "LOG", LOG)
     except ImportError:
         pass
 else:
@@ -58,8 +63,9 @@ else:
         return now_us() - t0
 
     ARGS = sys.argv[1:]
+    LOG = None
 
-LOG = "/midi_client.log" if MICROPYTHON else None
+
 failures = []
 
 
@@ -85,6 +91,10 @@ def adapter():
     import bledev.bleak
 
     return bledev.bleak.BleakBLE()
+
+
+def target():
+    return None if "--service" in ARGS else NAME
 
 
 def options(fast):
@@ -144,7 +154,7 @@ def plant(port):
 
 
 async def gate(ble, fast, planted):
-    port = await midi.connect(ble, name=NAME, timeout_ms=15000, **options(fast))
+    port = await midi.connect(ble, name=target(), timeout_ms=15000, **options(fast))
     log("gate: connected, mtu", port.connection.mtu)
     t0 = now_us()
     port.send(b"\xf0\x7d\x10\x01\xf7")
@@ -198,7 +208,7 @@ class Rand:
 
 
 async def latency(ble, fast):
-    port = await midi.connect(ble, name=NAME, timeout_ms=15000, **options(fast))
+    port = await midi.connect(ble, name=target(), timeout_ms=15000, **options(fast))
     label = "7.5 ms interval" if fast and MICROPYTHON else ("throughput parameters" if fast else "default parameters")
     log("latency ({}): connected, mtu {}".format(label, port.connection.mtu))
     port.send(b"\xf0\x7d\x10\x02\xf7")

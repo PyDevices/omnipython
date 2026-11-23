@@ -5,11 +5,11 @@ What `bledev` can do on each host, and what it can't. The
 
 ## Roles and features by host
 
-| | MicroPython | CircuitPython | Laptop (`bleak`) | Browser (`webble`) |
+| | MicroPython | CircuitPython | Laptop (`winrt`, `bluez`, `bleak`) | Browser (`webble`) |
 |---|---|---|---|---|
-| Peripheral: advertise, serve a GATT table | Yes | Yes | No | No |
+| Peripheral: advertise, serve a GATT table | Yes | Yes | Windows and Linux, with [the limits below](#on-a-laptop); not macOS | No |
 | Central: scan, connect | Yes | Yes | Yes | The browser's chooser stands in for a scan |
-| Indications sent by a peripheral | Yes, waits for the acknowledgement | Sent, but the acknowledgement isn't reported | No | No |
+| Indications sent by a peripheral | Yes, waits for the acknowledgement | Sent, but the acknowledgement isn't reported | Yes, waits for the acknowledgement | No |
 | Indications received by a central | Yes | No | Yes | Yes |
 | Long reads, past one packet | No | No | Yes | Yes |
 | Resolvable private addresses | Yes on NimBLE (the ESP32 family), with `config(addr_mode=)` | No | No | No |
@@ -21,8 +21,8 @@ What `bledev` can do on each host, and what it can't. The
 
 | Part | What it is | Roles |
 |---|---|---|
-| `bledev.nus` | Nordic UART: a two-way byte stream | `serve()` on a board, `connect()` from any host |
-| `bledev.midi` | BLE-MIDI 1.0 as a MIDI port | `serve()` on a board, `connect()` from anywhere that can be a central |
+| `bledev.nus` | Nordic UART: a two-way byte stream | `serve()` on a board or a laptop, `connect()` from any host |
+| `bledev.midi` | BLE-MIDI 1.0 as a MIDI port | `serve()` on a board or a laptop, `connect()` from anywhere that can be a central |
 | `bledev.improv` | Wi-Fi setup with Improv | `serve()` on a board, `provision()` from a laptop or another board |
 | `bledev.repl` | The REPL over Bluetooth, behind a password, with optional pairing | `start()` on MicroPython, `connect()` from any central |
 | `bledev.filetransfer` | CircuitPython's file transfer service (`0xFEBB`) | `start()` on MicroPython, `connect()` from any central; CircuitPython serves it itself |
@@ -41,7 +41,9 @@ What `bledev` can do on each host, and what it can't. The
 
 | What | Where | Because |
 |---|---|---|
-| Peripheral role | Laptop, browser | `bleak` has no GATT server, and Web Bluetooth is central only |
+| Peripheral role | macOS, browser | bledev has no macOS GATT server yet, and Web Bluetooth is central only |
+| Choosing the advertised name | Windows | Windows advertises under the PC's Bluetooth name. A different `name` raises `UnsupportedError` |
+| Notifying one central of several | Linux | BlueZ sends a notification to every subscribed central, so `notify(connection)` raises `BLEError` while more than one is connected |
 | Scanning | Browser | A page can't scan; `find()` opens the browser's device chooser |
 | Passkey and numeric comparison | CircuitPython | `_bleio` has no call for them: `authenticated=True` raises `UnsupportedError`, and it always bonds |
 | Receiving indications | CircuitPython | Its ESP32 port ignores them |
@@ -51,6 +53,41 @@ What `bledev` can do on each host, and what it can't. The
 | Resolvable and non-resolvable private addresses | Pico W on MicroPython; CircuitPython; laptop; browser | BTstack has no RPA or NRPA, `_bleio` has no call for them, and a laptop or browser leaves the address to the operating system |
 | A BLE radio | ESP32-P4 on CircuitPython | CircuitPython builds no Bluetooth for the P4 |
 
+## On a laptop
+
+`bledev.auto.adapter()` gives you `winrt` on Windows and `bluez` on Linux.
+Both serve a GATT table and advertise it, and both scan and connect through
+bleak, so one adapter takes either role. Elsewhere, macOS included, it gives
+you `bleak`, which is central only. Name `bledev.bleak.BleakBLE()` yourself to
+stay central only on any of them.
+
+On Windows:
+
+- The PC advertises under its own Bluetooth name, which is the computer's name
+  unless you've renamed the radio. Leave `name` as `None`: `midi.serve()`,
+  `nus.serve()` and `midiports.ble.ports()` do that for you there, and any
+  other name raises `UnsupportedError`.
+- An advertisement carries services, so `advertise()` needs `services=`, each
+  of them registered. It can't carry an appearance or manufacturer data, and
+  it's always connectable.
+- A central shows up as a `Connection` with its first read, write or
+  subscription, not when it connects.
+- The PC can't drop a central or start pairing: `Connection.disconnect()` and
+  `pair()` raise `UnsupportedError`. The central disconnects, and Windows
+  pairs when an `encrypted=True` characteristic asks for it.
+- A PC doesn't see its own advertisement, so another program on the same PC,
+  Windows MIDI Services included, can't connect to it. Use a second radio.
+
+On Linux:
+
+- BlueZ sends a notification to every central that subscribed. With one
+  central connected, `notify(connection)` works as everywhere else; with more,
+  it raises `BLEError`, and `write(data, send_update=True)` reaches them all.
+- A connection reports an MTU of 23 until its central has read or written
+  something, because that's when BlueZ passes the real one.
+- `config(gap_name=)` sets the adapter's alias, which BlueZ may refuse
+  without the right D-Bus policy.
+
 ## On CircuitPython
 
 On CircuitPython, `adafruit_midi` and `adafruit_hid` are already the way to do MIDI and HID over `usb_midi` and `usb_hid`; over BLE, use `bledev.midi` and `bledev.hid`. The CircuitPython-compatible build for the ESP32-P4 has no Bluetooth at all, so there is no BLE MIDI or HID there, and no USB device either until CircuitPython gives the P4 one.
@@ -59,7 +96,8 @@ On CircuitPython, `adafruit_midi` and `adafruit_hid` are already the way to do M
 
 
 On a laptop, bledev is inside the `omnipython` wheel. `pip install "omnipython[ble]"`
-adds bleak, which the laptop backend needs.
+adds bleak, with the WinRT packages on Windows and `dbus-fast` on Linux that
+the laptop backends need.
 
 With Wi-Fi, `omip.install("bledev")` runs on the board once
 `boot.py` has made the drive writable, and `omip` tells you how if it isn't. It
@@ -79,7 +117,7 @@ won't load on CircuitPython):
   `security.py`. Those are the parts measured on CircuitPython (see
   [What differs](#what-differs)).
 
-Leave out `mpble.py`, `bleak.py`, `webble.py` and `fake.py`; they're for other
+Leave out `mpble.py`, `bleak.py`, `winrt.py`, `bluez.py`, `webble.py` and `fake.py`; they're for other
 hosts. bledev also needs CircuitPython's `asyncio` library: `circup install
 asyncio`, which brings `adafruit_ticks`, or `omip.install("asyncio")` on the board.
 

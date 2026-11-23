@@ -12,6 +12,7 @@ displaydev\.wasmdisplay
 displaydev\.windisplay
 bledev\.cpble
 bledev\.mpble
+bledev\.winrt
 # midiports likewise walks the USB device and host transports, which need micropython-lib's
 # usb package, and the Windows one, which needs Windows.
 midiports\.usb_device
