@@ -79,6 +79,7 @@
 "https://raw.githubusercontent.com/PyDevices/omnipython/main/lib/displaydev/windisplay.py" = "/lib/displaydev/windisplay.py"
 "https://raw.githubusercontent.com/PyDevices/omnipython/main/lib/displaydev/workerdisplay.py" = "/lib/displaydev/workerdisplay.py"
 "https://raw.githubusercontent.com/PyDevices/omnipython/main/lib/espnowpeers.py" = "/lib/espnowpeers.py"
+"https://raw.githubusercontent.com/PyDevices/omnipython/main/lib/ethnet.py" = "/lib/ethnet.py"
 "https://raw.githubusercontent.com/PyDevices/omnipython/main/lib/events.py" = "/lib/events.py"
 "https://raw.githubusercontent.com/PyDevices/omnipython/main/utils/frame_recorder.py" = "/lib/frame_recorder.py"
 "https://raw.githubusercontent.com/PyDevices/omnipython/main/utils/hostnet.py" = "/lib/hostnet.py"
