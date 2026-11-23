@@ -19,6 +19,7 @@ faq
 guides/bring-up-a-board
 guides/write-an-application
 guides/displays
+guides/show-a-display-in-a-browser
 guides/the-app-loop
 guides/timers
 guides/upgrade-multimer-from-0.5

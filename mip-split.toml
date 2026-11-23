@@ -31,11 +31,11 @@
 
 [displaydev]
 # SDL, pygame, Windows GDI, Jupyter, PyScript, the browser canvas, Android.
-# `_desktop`, `_domkeys`, `_webcanvas` and `_webinput` are shared helpers for
-# those and nothing else.
+# `_desktop`, `_webcanvas` and `_webinput` are shared helpers for those and
+# nothing else. `_domkeys` is not: `remotedisplay` reads a browser's keys on a
+# board with it.
 host-only = [
     "_desktop",
-    "_domkeys",
     "_webcanvas",
     "_webinput",
     "androidsdl",

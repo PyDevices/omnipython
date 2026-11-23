@@ -14,7 +14,9 @@ worker too.
 
 import events
 import keys
-from displaydev._domkeys import (
+from displaydev._domkeys import (  # noqa: F401  (_buttons_tuple re-exported)
+    _buttons_tuple,
+    _caps,
     dom_key_scrolls_page,
     enrich_mod,
     key_to_keycode,
@@ -26,29 +28,6 @@ try:  # Gamepads are a page API; a worker has no getGamepads().
 except ImportError:
     navigator = None
 
-
-def _buttons_tuple(buttons):
-    """Convert a DOM ``buttons`` bitmask to an (left, middle, right) tuple."""
-    return (
-        1 if buttons & 1 else 0,  # left
-        1 if buttons & 4 else 0,  # middle
-        1 if buttons & 2 else 0,  # right
-    )
-
-
-
-def _caps(key, shift):
-    """KMOD_CAPS when Caps Lock is on, read from the key itself.
-
-    The keycode is the same for "a" and "A" (SDL style), and the browser
-    reports Shift but not Caps Lock, so a capital typed with Caps Lock came
-    out small. A letter whose case disagrees with Shift (a capital without
-    it, or a small letter with it) means Caps Lock is on.
-    """
-    if isinstance(key, str) and len(key) == 1 and key.isalpha() and key.lower() != key.upper():
-        if key.isupper() != bool(shift):
-            return keys.KMOD_CAPS
-    return 0
 
 class WebInput:
     """Pointer, wheel, keyboard and gamepad input as an appdev HOST device.

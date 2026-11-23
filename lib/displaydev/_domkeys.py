@@ -183,3 +183,26 @@ def dom_key_scrolls_page(keycode):
     the game canvas is focused.
     """
     return keycode in _BROWSER_SCROLL_KEYCODES
+
+
+def _buttons_tuple(buttons):
+    """Convert a DOM ``buttons`` bitmask to an (left, middle, right) tuple."""
+    return (
+        1 if buttons & 1 else 0,  # left
+        1 if buttons & 4 else 0,  # middle
+        1 if buttons & 2 else 0,  # right
+    )
+
+
+def _caps(key, shift):
+    """KMOD_CAPS when Caps Lock is on, read from the key itself.
+
+    The keycode is the same for "a" and "A" (SDL style), and the browser
+    reports Shift but not Caps Lock, so a capital typed with Caps Lock came
+    out small. A letter whose case disagrees with Shift (a capital without
+    it, or a small letter with it) means Caps Lock is on.
+    """
+    if isinstance(key, str) and len(key) == 1 and key.isalpha() and key.lower() != key.upper():
+        if key.isupper() != bool(shift):
+            return keys.KMOD_CAPS
+    return 0

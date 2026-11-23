@@ -17,6 +17,7 @@ See [Architecture](../how-it-works/architecture.md) for how drivers connect to `
 | CircuitPython RGB / USB video | `FBDisplay` | varies |
 | Jupyter notebook | `JNDisplay` | [`board_configs/jndisplay/`](https://github.com/PyDevices/omnipython/tree/main/board_configs/jndisplay) |
 | PyScript browser | `PSDisplay` | [`board_configs/psdisplay/`](https://github.com/PyDevices/omnipython/tree/main/board_configs/psdisplay) |
+| A board with no screen, shown in a browser | `RemoteDisplay` | [Show a display in a browser](show-a-display-in-a-browser.md) |
 
 Install the matching [board config](../boards/board-configs.md) — it constructs the driver for you.
 
@@ -63,6 +64,13 @@ PyGame desktop backend. `displaydev.auto.AutoDisplay` (used by [`board_configs/d
 Works with CircuitPython `framebufferio.FramebufferDisplay` — dotclock (RGB), USB Video, RGB Matrix.
 
 USB Video lets a board stream the framebuffer as a USB webcam (RP2040; host support varies).
+
+### RemoteDisplay
+
+A display with no panel, shown and used in a browser on the board's network.
+`displaydev.remotedisplay.mirror` shows an `FBDisplay` panel there as well, and
+the board serves a Motion JPEG stream for VLC. See
+[Show a display in a browser](show-a-display-in-a-browser.md).
 
 ### JNDisplay
 
