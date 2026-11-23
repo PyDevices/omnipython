@@ -4,8 +4,11 @@
 
 """Viper loops for `displaydev.remotedisplay`: hash tiles, pack runs.
 
-A module of its own so a build without the native emitter fails to import
-it, and remotedisplay uses its plain-Python versions instead.
+The loops are compiled here, on the board, when this module is imported, so
+the module freezes into any firmware: viper compiles for one architecture
+only, and a firmware whose port has no native emitter can't freeze it as
+code. Where viper isn't available the import fails, and remotedisplay uses
+its plain-Python versions instead.
 """
 
 import sys
@@ -13,6 +16,7 @@ import sys
 if sys.implementation.name != "micropython":
     raise ImportError("viper runs on MicroPython only")
 
+_SOURCE = """
 import micropython
 
 
@@ -193,3 +197,10 @@ def _pal(fb, stride: int, x: int, y: int, w: int, h: int, dst, off: int, cap: in
         b[q] = 0
         q += 1
     return q - off
+"""
+
+try:
+    exec(_SOURCE)  # defines _diff, _rle, _raw and _pal here
+except SyntaxError as e:  # no native emitter in this firmware
+    raise ImportError("viper isn't available: %s" % e)
+del _SOURCE
