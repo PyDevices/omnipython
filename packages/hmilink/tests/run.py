@@ -23,7 +23,7 @@ except (NameError, IndexError):
     pass
 
 import hmilink  # noqa: E402
-from hmilink import local, stream  # noqa: E402
+from hmilink import local, stream, web  # noqa: E402
 
 try:
     from hmilink import tcp
@@ -34,6 +34,12 @@ try:
     from hmilink import osc
 except ImportError:
     osc = None
+
+try:
+    from hmilink import ble
+    from bledev.fake import Air, FakeBLE
+except ImportError:
+    ble = None
 
 # Windows refuses some ports with 10013 and the set moves (Hyper-V and WSL
 # reserve ranges as they go; 19411 and later 8765 were refused here on
@@ -122,10 +128,14 @@ class Knobs(hmilink.Model):
         raise ValueError("no such command")
 
 
-def pump(device, panels, rounds=8):
+#: Rounds of polling each step of `exercise` gets; the BLE checks need more.
+ROUNDS = 8
+
+
+def pump(device, panels, rounds=None):
     import time
 
-    for _ in range(rounds):
+    for _ in range(rounds or ROUNDS):
         device.poll()
         for p in panels:
             p.poll()
@@ -335,6 +345,178 @@ def test_stream():
     p1 = hmilink.Panel(stream.link(b))
     p2 = hmilink.Panel(stream.link(d))
     exercise(device, p1, p2, telemetry=False)
+
+
+class Flipper(FakeStream):
+    """A stream that turns the value 0.9 into 0.8 on its way: a planted fault."""
+
+    def write(self, data):
+        return FakeStream.write(self, data.replace(b"0.9", b"0.8"))
+
+
+def planted(run):
+    """True when ``run`` fails a check, as it must with a fault planted."""
+    try:
+        run()
+    except AssertionError:
+        return True
+    return False
+
+
+def test_stream_plant():
+    """The stream checks catch a changed byte in the first op panel 1 sends."""
+
+    def run():
+        a, b = FakeStream(), Flipper()
+        a.peer, b.peer = b, a
+        c, d = FakeStream(), FakeStream()
+        c.peer, d.peer = d, c
+        device = hmilink.Device(Knobs())
+        device.add(stream.link(a))
+        device.add(stream.link(c))
+        p1 = hmilink.Panel(stream.link(b))
+        p2 = hmilink.Panel(stream.link(d))
+        exercise(device, p1, p2, telemetry=False)
+
+    check(planted(run), "a changed byte must fail the stream checks")
+
+
+class PagePort:
+    """What ``hmilink.js`` gives Python, in Python: ``read`` hands back a
+    ``Uint8Array``-like object, ``write`` takes text, all or none."""
+
+    class Bytes:
+        def __init__(self, data):
+            self.data = data
+            self.length = len(data)
+
+        def __iter__(self):
+            return iter(self.data)
+
+    def __init__(self):
+        self.closed = False
+        self.peer = None
+        self.buf = b""
+        self.writes = 0
+
+    def read(self, n):
+        data, self.buf = self.buf[:n], self.buf[n:]
+        return PagePort.Bytes(data) if data else None
+
+    def write(self, text):
+        self.writes += 1
+        if self.writes % 3 == 0:
+            return 0  # a write still going out, now and then
+        data = text.encode()
+        self.peer.buf += data
+        return len(data)
+
+
+def test_web():
+    """`hmilink.web` over two stand-ins for the page's ports."""
+    a, b = PagePort(), PagePort()
+    a.peer, b.peer = b, a
+    c, d = PagePort(), PagePort()
+    c.peer, d.peer = d, c
+    device = hmilink.Device(Knobs())
+    device.add(stream.link(web.stream(a)))
+    device.add(stream.link(web.stream(c)))
+    p1 = hmilink.Panel(stream.link(web.stream(b)))
+    p2 = hmilink.Panel(stream.link(web.stream(d)))
+    exercise(device, p1, p2)
+    b.closed = True
+    pump(device, (p1, p2))
+    check(p1.closed, "a port the page closed closes the panel")
+    device.close()
+
+
+def test_ble():
+    """`hmilink.ble` over `bledev.fake`: a board serving two laptops, and a board
+    advertising as a panel for a laptop's document."""
+    global ROUNDS
+    rounds, ROUNDS = ROUNDS, 60
+    try:
+        air = Air()
+        board = FakeBLE(air=air)
+        laptop = FakeBLE(air=air, peripheral=False)
+        laptop2 = FakeBLE(air=air, peripheral=False)
+        device = hmilink.Device(Knobs())
+        lst = device.add(ble.serve("rack", adapter=board))
+        p1 = hmilink.Panel(ble.connect("rack", adapter=laptop))
+        p2 = hmilink.Panel(ble.connect("rack", adapter=laptop2))
+        check(p1.link.state == "connecting", "a link starts connecting: %r" % p1.link.state)
+        exercise(device, p1, p2)
+        check(p1.link.state == "connected" and lst.links == 2, "both connected")
+        p1.close()
+        pump(device, (p2,))
+        check(len(device.links) == 1, "a panel that hangs up is dropped")
+        device.close()
+        p2.close()
+
+        # The other way round: the document on the laptop, the board its panel.
+        air = Air()
+        board = FakeBLE(air=air)
+        laptop = FakeBLE(air=air, peripheral=False)
+        panel = hmilink.Panel(ble.advertise("desk", adapter=board))
+        device = hmilink.Device(Knobs())
+        device.add(ble.connect("desk", adapter=laptop))
+        pump(device, (panel,))
+        check(panel.ready and panel.doc == device.model.doc, "the board's panel has the laptop's document")
+        panel.set("/knobs/b", 0.25)
+        pump(device, (panel,))
+        check(device.model.doc["knobs"]["b"] == 0.25, "and its edit reached the laptop")
+        device.close()
+        pump(device, (panel,))
+        check(panel.closed, "the laptop hanging up closes the board's panel")
+
+        # Nobody advertising: the link gives up and says why.
+        air = Air()
+        lonely = ble.connect("nobody", adapter=FakeBLE(air=air, peripheral=False), timeout_ms=50)
+        panel = hmilink.Panel(lonely)
+        import time
+
+        for _ in range(100):
+            panel.poll()
+            if panel.closed:
+                break
+            time.sleep(0.005)
+        check(panel.closed and lonely.error is not None, "a link that can't connect closes with an error")
+    finally:
+        ROUNDS = rounds
+
+
+def test_ble_plant():
+    """The BLE checks catch a changed byte on the radio."""
+
+    def run():
+        air = Air()
+        board = FakeBLE(air=air)
+        laptop = FakeBLE(air=air, peripheral=False)
+        laptop2 = FakeBLE(air=air, peripheral=False)
+        device = hmilink.Device(Knobs())
+        device.add(ble.serve("rack", adapter=board))
+        p1 = hmilink.Panel(ble.connect("rack", adapter=laptop))
+        p2 = hmilink.Panel(ble.connect("rack", adapter=laptop2))
+        write = p1.link.obj.write
+
+        def flip(data):
+            # The op setting /knobs/a to 0.9 leaves as 0.8.
+            return write(data.replace(b"0.9", b"0.8"))
+
+        p1.link.obj.write = flip
+        try:
+            exercise(device, p1, p2)
+        finally:
+            device.close()
+            p1.close()
+            p2.close()
+
+    global ROUNDS
+    rounds, ROUNDS = ROUNDS, 60
+    try:
+        check(planted(run), "a flipped byte must fail the BLE checks")
+    finally:
+        ROUNDS = rounds
 
 
 class WSClient:
@@ -721,7 +903,16 @@ def test_all():
     test_order()
     print("order ok (crossed lists, a swapped op caught)")
     test_stream()
-    print("stream ok")
+    test_stream_plant()
+    print("stream ok (and a flipped byte caught)")
+    test_web()
+    print("web ok (a page's port, from Python)")
+    if ble is not None:
+        test_ble()
+        test_ble_plant()
+        print("ble ok over bledev.fake (serve, connect, advertise; a flipped byte caught)")
+    else:
+        print("ble skipped: no bledev")
     try:
         import fcntl  # noqa: F401
         import tty  # noqa: F401

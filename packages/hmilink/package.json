@@ -4,7 +4,9 @@
     ["hmilink/tcp.py", "github:PyDevices/omnipython/packages/hmilink/hmilink/tcp.py"],
     ["hmilink/local.py", "github:PyDevices/omnipython/packages/hmilink/hmilink/local.py"],
     ["hmilink/stream.py", "github:PyDevices/omnipython/packages/hmilink/hmilink/stream.py"],
-    ["hmilink/osc.py", "github:PyDevices/omnipython/packages/hmilink/hmilink/osc.py"]
+    ["hmilink/osc.py", "github:PyDevices/omnipython/packages/hmilink/hmilink/osc.py"],
+    ["hmilink/ble.py", "github:PyDevices/omnipython/packages/hmilink/hmilink/ble.py"],
+    ["hmilink/web.py", "github:PyDevices/omnipython/packages/hmilink/hmilink/web.py"]
   ],
   "deps": [],
   "version": "0.0.1"

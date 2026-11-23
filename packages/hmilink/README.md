@@ -57,7 +57,25 @@ Transports are swappable and neither side knows which carries it:
 | Wi-Fi, a browser (same port: HTTP page, WebSocket at `/ws`) | `tcp.serve(9000, page=...)` | the page |
 | In-process (the device's own screen; tests) | `local.serve()` | `local.connect(listener)` |
 | A UART or USB CDC | `stream.link(uart)` | `stream.link(uart)` |
+| Bluetooth LE, the Nordic UART service | `ble.serve("rack")` | `ble.connect("rack")` |
+| A web page, over WebSerial or Web Bluetooth | `stream.link(web.stream(port))` | `stream.link(web.stream(port))`, or `Link` in JavaScript |
 | Wi-Fi, OSC over UDP (a phone's OSC controller app, TouchOSC) | `osc.serve(8000)` | the app |
+
+Over Bluetooth, the board advertises and a laptop, a phone's browser or
+another board connects. When a laptop or a browser holds the document and a
+board is its panel, the board advertises with `ble.advertise("desk")` and
+the laptop's device adds `ble.connect("desk")`. It needs `bledev`, which
+OmniPython firmware with Bluetooth carries; on a laptop, `pip install
+"omnipython[ble]"`. Each `poll()` runs the Bluetooth tasks, so a program
+with no event loop needs nothing more; one with a loop gives it time between
+polls. [`hmilink/ble.py`](hmilink/ble.py)'s docstring has the rest.
+
+On a web page, [`web-page/hmilink.js`](web-page/hmilink.js) opens a board through
+WebSerial or Web Bluetooth from a click. A page written in JavaScript speaks
+hmilink with its `Link`. Python running in the page (MicroPython's
+WebAssembly build, or Pyodide) wraps the port with `hmilink.web.stream()`
+and runs a device or a panel over `stream.link()`, as
+[`hmilink/web.py`](hmilink/web.py) shows.
 
 Announce the device and a panel finds it without its address.
 `tcp.serve(9000, page="index.html", announce=True)` announces the board's
@@ -79,8 +97,8 @@ Use it on a network you trust. hmilink has no encryption and no passwords, so
 anyone who can reach the device's port can read its document and change it.
 Keep it off public and guest Wi-Fi, and don't forward its port to the internet.
 
-Runs on MicroPython, CircuitPython and CPython, with no threads and no
-asyncio. [`packages/hmilink/tests/run.py`](tests/run.py) runs on all three (CircuitPython has no
+Runs on MicroPython, CircuitPython and CPython, with no threads, and no
+asyncio except under the Bluetooth transport. [`packages/hmilink/tests/run.py`](tests/run.py) runs on all three (CircuitPython has no
 sockets on the desktop, so the TCP checks are skipped there).
 
 This is a preview: it isn't released yet, and the names may still change.
