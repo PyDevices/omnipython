@@ -336,7 +336,8 @@ class _BleakScanner(Scanner):
                 Device(self._ble, native.address, name=name or native.name, native=native),
                 rssi=adv.rssi,
                 name=name,
-                services=[UUID(u) for u in adv.service_uuids],
+                # bleak's Android backend gives None for an advert that lists no services.
+                services=[UUID(u) for u in adv.service_uuids or ()],
                 manufacturer=[(k, bytes(v)) for k, v in adv.manufacturer_data.items()],
                 service_data=[(UUID(k), bytes(v)) for k, v in adv.service_data.items()],
             )

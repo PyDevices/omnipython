@@ -28,6 +28,7 @@ class _Phone:
         self.granted = set()
         self.asked = []
         self.scans = []
+        self.adverts = []
 
 
 phone = _Phone()
@@ -51,9 +52,11 @@ class BleakError(Exception):
 class BleakScanner:
     def __init__(self, callback, scanning_mode="active", **kwargs):
         phone.scans.append(scanning_mode)
+        self._callback = callback
 
     async def start(self):
-        pass
+        for native, adv in phone.adverts:
+            self._callback(native, adv)
 
     async def stop(self):
         pass
@@ -102,6 +105,12 @@ async def _scan():
         pass
 
 
+async def _scan_results():
+    ble = bb.BleakBLE()
+    async with ble.scan(10) as scan:
+        return [result async for result in scan]
+
+
 class Permissions(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -146,6 +155,21 @@ class Permissions(unittest.TestCase):
         self.assertIn("BLUETOOTH_SCAN", str(caught.exception))
         self.assertNotIn("CONNECT", str(caught.exception))
         self.assertEqual(phone.scans, [])
+
+
+    def test_an_advert_with_no_service_list(self):
+        # bleak's Android backend passes None, not [], when an advert lists no services.
+        phone.reset(sdk=33)
+        native = types.SimpleNamespace(address="AA:BB:CC:DD:EE:FF", name="tag")
+        adv = types.SimpleNamespace(local_name="tag", rssi=-60, service_uuids=None,
+                                    manufacturer_data={}, service_data={})
+        phone.adverts = [(native, adv)]
+        try:
+            results = asyncio.run(_scan_results())
+        finally:
+            phone.adverts = []
+        self.assertEqual(len(results), 1)
+        self.assertEqual(list(results[0].services()), [])
 
 
 class Auto(unittest.TestCase):
