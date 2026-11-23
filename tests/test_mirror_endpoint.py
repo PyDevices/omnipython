@@ -87,6 +87,21 @@ class MirrorTest(unittest.TestCase):
         # Letting it go puts the panel's own drawing back.
         self.assertEqual(panel.blit_rect, plain)
 
+    def test_poll_reports_choosing_and_letting_go(self):
+        p = self.provider(password="x")
+        (e,) = p.scan()
+        self.assertIsNone(p.poll())
+        p.apply(e, True)
+        (e,) = p.poll()
+        self.assertEqual(e.state, endpointkit.CONNECTED)
+        self.assertTrue(e.caps["url"].startswith("http://"))
+        self.assertFalse(e.caps["viewing"])
+        self.assertIsNone(p.poll())
+        p.apply(e, False)
+        (e,) = p.poll()
+        self.assertEqual(e.state, endpointkit.AVAILABLE)
+        self.assertIsNone(e.caps["url"])
+
     def test_not_remembered(self):
         self.assertFalse(Mirror.remember)
 

@@ -339,6 +339,7 @@ class Mirror(endpointkit.Provider):
         self.server = None
         self._input = None
         self._viewing = False
+        self._shown = None
 
     def _display(self):
         if self._display_drv is None:
@@ -372,12 +373,15 @@ class Mirror(endpointkit.Provider):
                               caps={"url": url, "viewing": self._viewing})]
 
     def scan(self):
+        self._shown = (self.server is not None, self._viewing)
         return self._list()
 
     def poll(self):
-        viewing = self.server is not None and self.server.connected
-        if viewing != self._viewing:
-            self._viewing = viewing
+        # Report a start, a stop, and a browser coming or going.
+        self._viewing = self.server is not None and self.server.connected
+        now = (self.server is not None, self._viewing)
+        if now != self._shown:
+            self._shown = now
             return self._list()
         return None
 
