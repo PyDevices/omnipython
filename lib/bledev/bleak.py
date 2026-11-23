@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: MIT
 
-"""CPython backend over bleak: Windows, Linux and macOS. Central only.
+"""CPython backend over bleak: Windows, Linux, macOS and Android. Central only.
 
     from bledev.bleak import BleakBLE
     ble = BleakBLE()
@@ -33,6 +33,12 @@ translates:
   own, out of sight, so a later ``pair()`` fails without asking for the
   passkey. `bledev.connect_and_set_up` (and so ``nus``, ``repl`` and
   ``filetransfer`` with ``pair=True``) pairs this way.
+* On Android (an app built with python-for-android, with bleak's recipe), the
+  first scan or connection asks for the Bluetooth permissions, and for
+  location, which bleak needs to scan; the app must declare them in its
+  manifest. A refusal raises `bledev.BLEError` saying which. Scans there are
+  always active: a passive scan on Android only hears what another app's scan
+  finds.
 * On Windows, ``connect(priority="throughput")`` (or asking for a connection
   interval of 15 ms or less, as ``nus.connect()`` does on a board) asks WinRT
   for its throughput-optimized parameters, which roughly quarters the time a
@@ -40,6 +46,7 @@ translates:
 """
 
 import asyncio
+import os
 import sys
 
 from bleak import BleakClient, BleakScanner
@@ -93,6 +100,45 @@ _PAIR_MS = 30000
 # without asking anything, and how long it waits between tries.
 _PAIR_TRIES = 3
 _PAIR_RETRY_MS = 1000
+
+
+# An app built with python-for-android: bleak's p4android backend.
+_ANDROID = sys.platform == "android" or os.environ.get("P4A_BOOTSTRAP") is not None
+_LOCATION = "android.permission.ACCESS_FINE_LOCATION"
+# Asked for once a process, when the first scan or connection starts.
+_permitted = False
+
+
+async def _android_permissions():
+    """Ask Android for what a scan or a connection needs, once."""
+    global _permitted
+    if _permitted or not _ANDROID:
+        return
+    from android.permissions import check_permission, request_permissions
+    from jnius import autoclass
+
+    wanted = [_LOCATION]
+    if autoclass("android.os.Build$VERSION").SDK_INT >= 31:
+        wanted += ["android.permission.BLUETOOTH_SCAN", "android.permission.BLUETOOTH_CONNECT"]
+    missing = [p for p in wanted if not check_permission(p)]
+    if missing:
+        loop = asyncio.get_running_loop()
+        answered = loop.create_future()
+
+        def done(permissions, grants):
+            # On Android's main thread, not the loop's.
+            def settle():
+                if not answered.done():
+                    answered.set_result([bool(g) for g in grants])
+
+            loop.call_soon_threadsafe(settle)
+
+        request_permissions(missing, done)
+        grants = await answered
+        refused = [p.rsplit(".", 1)[-1] for p, g in zip(missing, grants) if not g]
+        if refused:
+            raise BLEError("Android refused " + ", ".join(refused) + ": Bluetooth LE can't scan or connect without it")
+    _permitted = True
 
 
 class _Unasked(PairingError):
@@ -211,6 +257,7 @@ class BleakBLE(BLE):
         return _BleakScanner(self, duration_ms, active, interval_us, window_us)
 
     async def _connect(self, device, timeout_ms, pair=False, passkey=None, **options):
+        await _android_permissions()
         target = device.native if device.native is not None else device.address
         connection = None
         paired = None
@@ -253,7 +300,8 @@ def _wants_throughput(options):
 
 class _BleakScanner(Scanner):
     async def _start(self):
-        mode = "active" if self.active or sys.platform == "darwin" else "passive"
+        await _android_permissions()
+        mode = "active" if self.active or _ANDROID or sys.platform == "darwin" else "passive"
         self._scanner = BleakScanner(self._detected, scanning_mode=mode, **self._ble._scanner_args)
         try:
             await self._scanner.start()
@@ -288,7 +336,8 @@ class _BleakScanner(Scanner):
                 Device(self._ble, native.address, name=name or native.name, native=native),
                 rssi=adv.rssi,
                 name=name,
-                services=[UUID(u) for u in adv.service_uuids],
+                # bleak's Android backend gives None for an advert that lists no services.
+                services=[UUID(u) for u in adv.service_uuids or ()],
                 manufacturer=[(k, bytes(v)) for k, v in adv.manufacturer_data.items()],
                 service_data=[(UUID(k), bytes(v)) for k, v in adv.service_data.items()],
             )
