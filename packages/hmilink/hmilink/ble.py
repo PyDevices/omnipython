@@ -38,8 +38,10 @@ A link's ``state`` says what it's doing: ``"connecting"``, ``"advertising"``,
 sent before it connects wait and go out once it does. When the other side
 goes away the link closes: a device drops it, and a panel's ``closed`` turns
 true. `serve` keeps advertising, so the next central that connects becomes a
-new panel. A connection that fails doesn't stop it: the listener's ``error``
-holds what went wrong, and it advertises again `RETRY_MS` later.
+new panel. A connection that fails (``OSError`` or a ``bledev`` error) doesn't
+stop it: the listener's ``error`` holds what went wrong, and it advertises
+again `RETRY_MS` later. An adapter that can't advertise, or any other error,
+stops it with ``state`` saying why.
 
 Needs ``bledev``: OmniPython firmware with Bluetooth, ``omnipython[ble]`` on a
 computer, or ``bledev.fake`` in tests.
@@ -48,6 +50,7 @@ computer, or ``bledev.fake`` in tests.
 import asyncio
 import sys
 
+import bledev
 from bledev import nus
 
 from . import stream, ticks_diff, ticks_ms
@@ -264,18 +267,29 @@ class Listener:
 
     async def _keep(self):
         # One failed connection (a central that times out mid-handshake) must
-        # not end the listener: record it, pause, and advertise again.
+        # not end the listener: record it, pause, and advertise again. Anything
+        # else, such as an adapter that can't advertise at all, stops it.
         while True:
             try:
                 link = await nus.serve(self._ble, self._name, **self._options)
-            except Exception as e:  # noqa: BLE001 - kept in error and state
+            except bledev.UnsupportedError as e:
+                self._stop(e)
+                return
+            except (OSError, bledev.BLEError) as e:
                 self.error = e
                 self.state = "retrying: %s" % (e,)
                 await asyncio.sleep(RETRY_MS / 1000)
                 self.state = "advertising"
                 continue
+            except Exception as e:  # noqa: BLE001 - kept in error and state
+                self._stop(e)
+                return
             self.links += 1
             self._pending.append(Link(_Opened(link), "connected", False))
+
+    def _stop(self, e):
+        self.error = e
+        self.state = "stopped: %s" % (e,)
 
     def accept(self):
         self._driver.pump()
