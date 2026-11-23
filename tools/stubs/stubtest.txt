@@ -152,6 +152,7 @@ pdwidgets.widgets.toggle
 pdwidgets.widgets.toggle_button
 pngio
 svgio
+threadnet
 ttfio
 usdl2
 wifi_manager

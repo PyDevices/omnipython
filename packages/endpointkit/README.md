@@ -64,6 +64,10 @@ Boards that each run `import espnowpeers; espnowpeers.register()` find one
 another over ESP-NOW under a new kind, `espnow.peer`, and
 `espnowpeers.send` and `espnowpeers.recv` talk to the ones chosen
 ([espnowpeers](../../lib/espnowpeers.py)).
+On firmware with the `openthread` module, `import threadnet;
+threadnet.register()` lists Thread networks under `thread.net`: one board
+forms a network with `threadnet.form("name")`, and the others join it from
+a picker with its dataset or network key ([threadnet](../../lib/threadnet.py)).
 
 The kinds are `audio.out`, `audio.in`, `midi.in`, `midi.out`, `net`,
 `cast.target`, `camera`, `gamepad`, `keys`, `pointer` and `assistant` (the
