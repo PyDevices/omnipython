@@ -341,6 +341,61 @@ def t_no_host():
     usb.core._usbhost = saved
 
 
+def t_audio_out():
+    # A USB speaker chosen under audio.out opens through usb.host.audio, on
+    # the device the endpoint names. A stand-in records what it was asked.
+    reg = endpointkit.Registry()
+    made = endpoints.register(reg)
+    out = [p for p in made if p.kind == "audio.out"][0]
+    check(isinstance(out, endpoints.UsbAudioOut), "audio.out's provider can open what it lists")
+    if not [d for d in fake.devices.values() if d is CODEC]:
+        fake.plug(CODEC)
+    reg.poll()
+    codec = [e for e in reg.endpoints("audio.out") if e.label == "USB Audio CODEC"][0]
+    try:
+        out.open_out(codec)
+        raised = None
+    except ImportError as exc:
+        raised = str(exc)
+    check(raised and "usb-host-audio" in raised, "without usb-host-audio, opening says what's missing (%r)" % raised)
+
+    class Audio:
+        calls = []
+
+        @staticmethod
+        def audio_out(format=None, **kwargs):
+            Audio.calls.append((format, kwargs))
+            return "player"
+
+    import usb.host
+
+    sys.modules["usb.host.audio"] = Audio
+    usb.host.audio = Audio
+    try:
+        reg.select("audio.out", codec.id)
+        check(reg.find(codec.id).state == endpointkit.CONNECTED, "choosing the codec marks it connected")
+        got = out.open_out(codec, "fmt", latency="buffered")
+        fmt, kwargs = Audio.calls[-1] if Audio.calls else (None, {})
+        check(got == "player" and fmt == "fmt", "open_out hands back usb.host.audio's player for the format asked")
+        check(kwargs.get("dev") is endpoints.device(codec) and kwargs.get("dev") is not None,
+              "on the device the endpoint names")
+        check(kwargs.get("latency") == "buffered", "with the keywords it was given: %r" % kwargs)
+        for dev_id, dev in list(fake.devices.items()):
+            if dev is CODEC:
+                fake.pull(dev_id)
+        reg.poll()
+        try:
+            out.open_out(codec)
+            code = None
+        except OSError as exc:
+            code = exc.args[0]
+        check(code == 19, "a pulled-out speaker can't be opened (%r)" % code)
+    finally:
+        del sys.modules["usb.host.audio"]
+        del usb.host.audio
+        endpoints.unregister(reg, made)
+
+
 def _cleanup():
     for d in ("/usb/host/endpoints.py", "/usb/core.py", "/usb/util.py"):
         try:
@@ -358,6 +413,7 @@ try:
     t_parsers()
     t_hotplug()
     t_flaky()
+    t_audio_out()
     t_no_host()
 finally:
     _cleanup()
