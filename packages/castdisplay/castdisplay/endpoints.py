@@ -257,6 +257,7 @@ class _Input:
         self._push = push_key
         self._pos = (0, 0)
         self._down = False
+        self._pending = []
         self._named = {}
         for name, lvname in _LV_NAMED.items():
             if hasattr(keys, name):
@@ -284,17 +285,29 @@ class _Input:
     def _read(self, indev, data):
         import events
 
-        for e in self._server.read():
+        # One button change a read: a quick click's press and release can
+        # arrive together, and LVGL has to see the press to click. What is
+        # left waits for the next read.
+        pending = self._pending
+        pending.extend(self._server.read())
+        i = 0
+        while i < len(pending):
+            e = pending[i]
+            i += 1
             t = e.type
             if t in (events.MOUSEBUTTONDOWN, events.MOUSEBUTTONUP) and e.button == 1:
                 self._pos = e.pos
-                self._down = t == events.MOUSEBUTTONDOWN
+                down = t == events.MOUSEBUTTONDOWN
+                if down != self._down:
+                    self._down = down
+                    break
             elif t == events.MOUSEMOTION:
                 self._pos = e.pos
             elif t == events.KEYDOWN and self._push is not None:
                 key = self._key(e)
                 if key is not None:
                     self._push(key)
+        del pending[:i]
         data.point.x = self._pos[0]
         data.point.y = self._pos[1]
         data.state = self._lv.INDEV_STATE.PRESSED if self._down else self._lv.INDEV_STATE.RELEASED
