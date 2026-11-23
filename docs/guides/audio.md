@@ -211,12 +211,17 @@ pump, so a status screen can ask unconditionally:
 ```python
 from audiodev import pump
 print(pump.health())
-# {'clients': 1, 'reentered': 0, 'dropped': 0, 'waited': 0, 'waited_us': 0,
+# {'clients': 1, 'reentered': 0, 'dropped': 0, 'starved': 0,
+#  'slowest_us': 1210, 'cedes': 0, 'waited': 0, 'waited_us': 0,
 #  'blocks': 1, 'bytes': 38400, 'running': True, 'ahead_ms': 400.0,
 #  'fault': None, 'blocked': False}
 ```
 
-`dropped` is the one that means **audio was not heard**. `reentered` is not:
+`dropped` and `starved` are the two that mean **audio was not heard**.
+`starved` is the one that climbs when your graph is too heavy for the
+processor: the pump falls behind the speaker, which plays silence in the gaps.
+`slowest_us` longer than one block says the same thing before you hear it.
+`reentered` is not bad news:
 it counts service ticks that arrived while something was rearranging who is
 sounding, and a refused tick costs nothing — the buffer under it is hundreds
 of milliseconds deep and the next tick does what this one did not. A number
