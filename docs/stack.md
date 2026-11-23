@@ -218,8 +218,8 @@ and Android.
   Get it: `pip omnipython-desktop`. Runs on: Desktop.
 - [`espnowpeers`](https://github.com/PyDevices/omnipython/blob/main/lib/espnowpeers.py): Find boards nearby over ESP-NOW and talk to the ones chosen, as `endpointkit` peers.\
   Get it: `mip omnipython`, `pip omnipython`, firmware build. Runs on: MP.
-- [`hmilink`](https://github.com/PyDevices/omnipython/blob/main/packages/hmilink/README.md): Use any screen as a device's front panel, over Wi-Fi, a UART, OSC or in-process.\
-  Get it: `mip hmilink`. Runs on: MP, CP, Desktop.
+- [`hmilink`](https://github.com/PyDevices/omnipython/blob/main/packages/hmilink/README.md): Use any screen as a device's front panel, over Wi-Fi, a UART, Bluetooth LE, OSC, a web page's WebSerial or Web Bluetooth port, or in-process.\
+  Get it: `mip hmilink`. Runs on: MP, CP, Desktop, Web.
 - [`lite-assistant`](https://github.com/PyDevices/lite-assistant/blob/main/README.md): Chat, speak, transcribe and see through a local, OpenAI-compatible server that a board can call.\
   Get it: from source. Runs on: Desktop.
 - [`wifi`](https://github.com/PyDevices/omnipython/blob/main/lib/wifi.py): Use CircuitPython's `wifi.radio` API on MicroPython.\
