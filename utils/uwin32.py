@@ -2,11 +2,11 @@
 #
 # SPDX-License-Identifier: MIT
 """
-Pure-Python Win32 subset for CPython and MicroPython on Windows.
+Pure-Python Win32 subset for CPython, MicroPython and CircuitPython on Windows.
 
 Used by ``displaydev.windisplay``, ``multimer``'s win32 timer backend, and
-``audiodev.win_audio``. Supports ``ffi`` on MicroPython Windows and ``ctypes``
-on CPython Windows.
+``audiodev.win_audio``. Supports ``ffi`` on MicroPython and CircuitPython
+for Windows, and ``ctypes`` on CPython Windows.
 
 Exports real Win32 / WASAPI names (plus a few thin COM helpers that wrap
 vtable calls). Policy (event mapping, PCM coalesce, timer ``_deliver``)
@@ -20,7 +20,7 @@ if sys.platform != "win32":
     raise ImportError("uwin32 requires Windows")
 
 _use_ffi = False
-if getattr(sys.implementation, "name", "") == "micropython":
+if getattr(sys.implementation, "name", "") in ("micropython", "circuitpython"):
     try:
         import ffi  # noqa: F401
 
@@ -29,7 +29,7 @@ if getattr(sys.implementation, "name", "") == "micropython":
         pass
 
 if not _use_ffi and getattr(sys.implementation, "name", "") != "cpython":
-    raise ImportError("uwin32 requires MicroPython ffi or CPython ctypes")
+    raise ImportError("uwin32 requires ffi (MicroPython, CircuitPython) or CPython's ctypes")
 
 # ---------------------------------------------------------------------------
 # Constants
