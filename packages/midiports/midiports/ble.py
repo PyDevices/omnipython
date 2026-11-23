@@ -51,6 +51,7 @@ import time
 import asyncio
 
 from . import INOUT, PortIn, PortOut, Stamps, _stamp, ticks_us
+from . import ticks_add as _ticks_add
 
 #: Messages waiting for a reader before the oldest are dropped and counted.
 QUEUE_LIMIT = 256
@@ -60,21 +61,6 @@ PUMP_MS = 4
 WATCH_MS = 100
 
 _MASK = 0x1FFF  # BLE-MIDI timestamps: 13 bits of milliseconds
-
-try:
-    from time import ticks_add as _ticks_add
-except ImportError:
-    from . import ticks_diff as _ticks_diff
-
-    if _ticks_diff(0, 1 << 29) > 0:  # a clock that wraps at 2**30
-
-        def _ticks_add(t, d):
-            return (t + d) & ((1 << 30) - 1)
-
-    else:
-
-        def _ticks_add(t, d):
-            return t + d
 
 
 if hasattr(time, "ticks_ms"):
@@ -333,6 +319,21 @@ class BleIn(PortIn):
             self._pos = pos
         self._waiting -= n
         return n or None
+
+    def read(self, nbytes=None):
+        """Waiting MIDI bytes as ``bytes``, or ``None``. A SysEx comes out in
+        one piece when ``nbytes`` allows: the read buffer grows to hold the
+        next message, so ``adafruit_midi``, which can't join a SysEx handed
+        out in parts, gets a long one whole."""
+        if self._waiting or self.any():
+            pending = self._pending
+            need = len(pending) - self._pos if self._pos < len(pending) else len(self._msgs[0])
+            if need > len(self._scratch):
+                need = need if nbytes is None or nbytes > need else nbytes
+                if need > len(self._scratch):
+                    self._scratch = bytearray(need)
+                    self._view = memoryview(self._scratch)
+        return PortIn.read(self, nbytes)
 
     def write(self, buf, nbytes=None):
         port = self._port

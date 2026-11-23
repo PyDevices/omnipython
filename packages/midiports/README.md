@@ -263,8 +263,10 @@ clock a worker's relayed times are on.
 
 - Windows: a write holds a SysEx until its 0xF7, then returns once the port
   has sent it, so a long one blocks for as long as it takes to send.
-- Linux: MicroPython's unix port can list ports but not open them, since its
-  `os` has no `open` or `read`. CPython opens them.
+- Linux: MicroPython's and CircuitPython's unix ports have no `os.open` or
+  `os.read`, so they open a port with `open()` and `select.poll`, a byte at a
+  time. It's checked against a pipe and plain files standing in for the device,
+  not yet against a kernel MIDI port. `serial_ports()` needs CPython's `termios`.
 - Linux serial: `serial_ports()` sets MIDI's 31250 baud through the driver's
   custom-rate call, and raises if the driver can't come within 1% of it. A
   Pi whose UART clock was changed so that 38400 comes out as 31250 takes

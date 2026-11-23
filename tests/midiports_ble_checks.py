@@ -42,6 +42,9 @@ import midiports
 from midiports import ble
 
 MICROPYTHON = sys.implementation.name == "micropython"
+#: ``--adafruit=DIR`` (where ``adafruit_midi/`` is, as test_midiports.py
+#: fetches it) adds the checks that run Adafruit's library over the port.
+ADAFRUIT = False
 CHECK_TIMEOUT_S = 10
 NAME = "synth"
 
@@ -200,6 +203,73 @@ async def sysex_across_packets_is_one_message(air):
     client.write(sysex + b"\x90\x40\x40")
     got = await messages(midi_in, 2, buf=bytearray(400))
     equal(got, [sysex, b"\x90\x40\x40"], "a 302-byte SysEx at MTU 23, then a note")
+    midi_in.close()
+
+
+@check
+async def sysex_of_64_and_1024_bytes_go_both_ways(air):
+    midi_in, midi_out, client, _ = await pair(air)
+    small = bytes([0xF0] + [i % 128 for i in range(62)] + [0xF7])
+    large = bytes([0xF0] + [(i * 7) % 128 for i in range(1022)] + [0xF7])
+    equal((len(small), len(large)), (64, 1024), "the two sizes")
+    client.write(small + large + b"\x90\x40\x40")
+    got = await messages(midi_in, 3, buf=bytearray(1100))
+    equal(got, [small, large, b"\x90\x40\x40"], "up: a 64-byte and a 1 KB SysEx, then a note")
+    midi_out.write(small + large)
+    first = await client.receive(timeout_ms=2000)
+    second = await client.receive(timeout_ms=2000)
+    equal([first[1], second[1]], [small, large], "down: the same two, whole")
+    midi_in.close()
+
+
+@check
+async def adafruit_midi_round_trip(air):
+    if not ADAFRUIT:
+        print("     (skipped: no --adafruit=DIR)")
+        return
+    import adafruit_midi
+    from adafruit_midi.control_change import ControlChange
+    from adafruit_midi.note_off import NoteOff
+    from adafruit_midi.note_on import NoteOn
+    from adafruit_midi.system_exclusive import SystemExclusive
+    from adafruit_midi.timing_clock import TimingClock
+
+    midi_in, midi_out, client, _ = await pair(air)
+    board = adafruit_midi.MIDI(midi_in=midi_in, midi_out=midi_out, in_channel=0, out_channel=0, in_buf_size=1100)
+    # controller -> board: the bytes a controller sends, parsed by adafruit_midi
+    client.write(b"\x90\x3c\x64\x3e\x50\x80\x3c\x00\xb0\x07\x7f")  # running status
+    client.write(bytes([0xF0, 0x7D] + list(range(61)) + [0xF7]))  # a 64-byte SysEx
+    client.write(bytes([0xF0, 0x7D] + [i % 128 for i in range(1021)] + [0xF7]))  # 1 KB
+    client.write(b"\xf8")
+    seen = []
+    for _ in range(3000):
+        message = board.receive()
+        if message is not None:
+            seen.append(message)
+        if len(seen) >= 7:
+            break
+        await asyncio.sleep(0.001)
+    equal(len(seen), 7, "seven messages parsed")
+    expect(isinstance(seen[0], NoteOn) and seen[0].note == 0x3C and seen[0].velocity == 0x64, "NoteOn 60")
+    expect(isinstance(seen[1], NoteOn) and seen[1].note == 0x3E and seen[1].velocity == 0x50, "NoteOn 62 on running status")
+    expect(isinstance(seen[2], NoteOff) or (isinstance(seen[2], NoteOn) and seen[2].velocity == 0), "note off")
+    expect(isinstance(seen[3], ControlChange) and seen[3].control == 7 and seen[3].value == 127, "control change")
+    # A clock byte may pass a SysEx that waits for room in the reader's buffer.
+    sysex = [m for m in seen if isinstance(m, SystemExclusive)]
+    expect(len(sysex) == 2, "two SysEx messages, got " + str([type(m).__name__ for m in seen]))
+    equal([len(m.data) for m in sysex], [61, 1021], "the 64-byte and 1 KB SysEx, whole and in order")
+    expect(len([m for m in seen if isinstance(m, TimingClock)]) == 1, "a clock byte")
+    # board -> controller: adafruit_midi's bytes arrive whole, stamped
+    board.send(NoteOn(72, 100))
+    board.send(SystemExclusive([0x7D], bytes(range(61))))
+    board.send(NoteOff(72, 0))
+    ts, message = await client.receive(timeout_ms=1000)
+    equal(message, b"\x90\x48\x64", "NoteOn out")
+    expect(0 <= ts <= 0x1FFF, "a 13-bit timestamp")
+    _, message = await client.receive(timeout_ms=1000)
+    equal(message, bytes([0xF0, 0x7D] + list(range(61)) + [0xF7]), "SysEx out")
+    _, message = await client.receive(timeout_ms=1000)
+    equal(message[0] & 0xF0, 0x80, "NoteOff out")
     midi_in.close()
 
 
@@ -393,7 +463,11 @@ def run(only=None):
 def main(argv):
     only = []
     for arg in argv:
-        if arg.startswith("--plant="):
+        if arg.startswith("--adafruit="):
+            global ADAFRUIT
+            ADAFRUIT = True
+            sys.path.insert(0, arg.split("=", 1)[1])
+        elif arg.startswith("--plant="):
             _plant(arg.split("=", 1)[1])
             print("PLANTED", arg.split("=", 1)[1])
         else:

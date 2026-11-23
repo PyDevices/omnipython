@@ -23,6 +23,7 @@ It prints one PASS/FAIL line per check and exits non-zero on any failure.
 """
 
 import gc
+import time
 import sys
 
 try:
@@ -42,6 +43,28 @@ for _arg in sys.argv[1:]:
         PLANT = _arg.split("=", 1)[1]
 
 MICROPYTHON = sys.implementation.name == "micropython"
+
+
+def _allocation_is_measurable():
+    """Whether "allocates nothing" can be asked of this interpreter: only
+    MicroPython counts its heap, and a build that heap-allocates a frame for
+    every Python call (the Windows port's) would fail any poll no matter what
+    the poll does, so it's measured with an empty function first."""
+    if not MICROPYTHON:
+        return False
+
+    def nothing(_):
+        pass
+
+    nothing(0)
+    gc.collect()
+    before = gc.mem_alloc()
+    for i in range(50):
+        nothing(i)
+    return gc.mem_alloc() == before
+
+
+MEASURE_ALLOC = _allocation_is_measurable()
 
 import adafruit_midi
 from adafruit_midi.control_change import ControlChange
@@ -228,7 +251,7 @@ def c_whole_messages_edges():
            % (got,))
     got, _ = through(b"\xe0\x00\x40\xfa\x01\x40")
     expect(got == b"\xe0\x00\x40\xfa\xe0\x01\x40", "bend, start, running bend %r" % (got,))
-    if MICROPYTHON:
+    if MEASURE_ALLOC:
         empty = WholeMessages(FakeIn())
         empty.read(30)
         gc.collect()
@@ -261,7 +284,7 @@ def c_shapes():
 
 
 def c_empty_poll_allocates_nothing():
-    if not MICROPYTHON:
+    if not MEASURE_ALLOC:
         return  # CPython allocates for any call; the promise is MicroPython's
     port = FakeIn()
     port.read(30)
@@ -410,7 +433,7 @@ def _install_fake_usb():
     sys.modules.pop("midiports.usb_device", None)
     from midiports import usb_device
 
-    if not MICROPYTHON:
+    if not hasattr(time, "ticks_ms"):  # CPython; CircuitPython's unix port has ticks too
         usb_device.time = _Ticks()
     return usb_device
 
@@ -1197,7 +1220,7 @@ def any_first(midi_in, midi_out, notes=200, pump=None):
 
 
 def quiet_any_allocates_nothing(port):
-    if not MICROPYTHON:
+    if not MEASURE_ALLOC:
         return
     port.any()
     gc.collect()
@@ -1654,7 +1677,7 @@ def c_stamps_ring_is_fixed():
         stamps.push(t)
     expect(len(stamps) == 4, "a full ring holds 4, has %d" % len(stamps))
     expect([stamps.take() for _ in range(5)] == [6, 7, 8, 9, None], "keeps the newest")
-    if MICROPYTHON:
+    if MEASURE_ALLOC:
         now = midiports.ticks_us()
         stamps.push(now)
         stamps.take()
