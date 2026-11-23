@@ -21,7 +21,7 @@ globals().update(configure(
     mock_imports=["bleak", "winrt", "dbus_fast", "_bleio", "bluetooth", "IPython", "pygame", "js",
                   "pyodide", "_wasm_bridge", "uwin32", "aioble", "PIL", "lvgl",
                   # vtterm draws with pygraphics and colors from palettes.
-                  "pygraphics", "palettes", "usb"],
+                  "pygraphics", "palettes", "usb", "btclassic"],
     # windisplay builds window styles from uwin32 constants at import time,
     # which a mock cannot stand in for.
     api_skip=["windisplay"],
