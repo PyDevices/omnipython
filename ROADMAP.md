@@ -47,8 +47,8 @@ with each kind of peripheral described honestly by its role.
 
 ## Remote display
 
-- A board's own panel cast to a TV: castdisplay's Miracast and HLS read the
-  frame the screen shows, so an ESP32-P4 board mirrors its panel unchanged.
+- A board's own panel mirrored to a TV over Miracast (`mirror_cast`), checked
+  against a Roku and the Windows Wireless Display app.
 - `RemoteDisplay` over Bluetooth LE or a USB serial link, for a board with no
   Wi-Fi.
 

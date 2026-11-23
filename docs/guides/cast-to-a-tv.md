@@ -136,6 +136,27 @@ Companion channel plays the stream. Otherwise open the printed address in VLC
 (Media > Open Network Stream). Every viewer gets the same stream. HLS is video
 only: a Roku plays HLS audio only as AAC.
 
+## Cast the screen a board already has
+
+`HlsDisplay` and `CastDisplay` are displays of their own. To send what a
+board's panel already shows, keeping the panel, mirror it instead. It works
+for any display that keeps its whole frame in memory (an `FBDisplay`: MIPI
+DSI, RGB, DVI), with a width and height in multiples of 16:
+
+```python
+from castdisplay.mirror import mirror_hls
+
+hls = mirror_hls(display_drv)   # prints http://<board>:8090/r.../stream.m3u8
+```
+
+Open the printed address in VLC. Each frame the app finishes goes to the
+encoder, and `hls.close()` stops the stream. `mirror_cast(display_drv, sink,
+kind="windows")` does the same over Miracast. It needs a panel with one frame
+buffer: a double-buffered panel can use `mirror_hls` only.
+
+To watch and drive a board from a browser instead, with no video encoder, see
+[Show a display in a browser](show-a-display-in-a-browser.md).
+
 ## Let AutoDisplay pick a cast display
 
 Each display registers itself with the `backends` registry when its module is
