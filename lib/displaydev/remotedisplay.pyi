@@ -26,7 +26,7 @@ def mirror(display: FBDisplay, port: int = 80, period_ms: int = 40, sweep_ms: in
 
 class RemoteDisplay(FBDisplay):
     """A display with no panel, shown and used in a web browser."""
-    server: RemoteServer
+    server: RemoteServer | None  # None only while the display is being made
     def __init__(self, width: int = 480, height: int = 320, port: int = 80, period_ms: int = 40, sweep_ms: int = 2000, *, quiet: bool = False) -> None: ...
     def get_events(self) -> list[Any]: ...
     @property

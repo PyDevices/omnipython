@@ -855,7 +855,10 @@ class RemoteDisplay(FBDisplay):
     def __init__(self, width=480, height=320, port=80, period_ms=40, sweep_ms=2000, *, quiet=False):
         super().__init__(alloc_buffer(width * height * 2), width, height, quiet=quiet)
         self.server = RemoteServer(self, port=port, period_ms=period_ms, sweep_ms=sweep_ms)
-        self.get_events = self.server.read
+
+    def get_events(self):
+        """The browser's input since the last call: give it to the app as ``host_read``."""
+        return self.server.read()
 
     @property
     def needs_refresh(self):
