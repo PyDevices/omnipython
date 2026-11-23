@@ -45,6 +45,17 @@ with each kind of peripheral described honestly by its role.
 - A BLE transport, using ADPCM to fit its bandwidth, for boards with no
   Wi-Fi between them.
 
+## Remote display
+
+- A board's own panel cast to a TV: castdisplay's Miracast and HLS read the
+  frame the screen shows, so an ESP32-P4 board mirrors its panel unchanged.
+- Large changes sent as JPEG from the ESP32-P4's engine, so scrolling or video
+  in the browser takes a fraction of the network it takes now.
+- Fewer bytes a pixel for apps that use few colours: a palette or 4-bit grey,
+  for slow networks and large screens.
+- `RemoteDisplay` over Bluetooth LE or a USB serial link, for a board with no
+  Wi-Fi.
+
 ## vtterm
 
 - CircuitPython's own console on the display. CircuitPython has no
