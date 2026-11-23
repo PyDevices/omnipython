@@ -16,6 +16,7 @@ boards, a desktop, a browser and an Android phone.
 - [Bringing up a board](guides/bring-up-a-board.md)
 - [App and board config](guides/write-an-application.md)
 - [Displays](guides/displays.md)
+- [Show a display in a browser](guides/show-a-display-in-a-browser.md)
 - [appdev](guides/the-app-loop.md)
 - [multimer](guides/timers.md)
 - [Upgrade multimer from OmniPython 0.5](guides/upgrade-multimer-from-0.5.md)
