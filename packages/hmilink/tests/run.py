@@ -229,6 +229,45 @@ def test_local():
     device.close()
 
 
+def test_rehello():
+    """A new panel on a link an old one left open gets the document; a
+    fresh link gets it once."""
+    device = hmilink.Device(Knobs())
+    lst = device.add(local.serve())
+    old = hmilink.Panel(local.connect(lst))
+    docs = []
+    old.on_doc = lambda doc, desc: docs.append(1)
+    pump(device, (old,))
+    check(old.ready and len(docs) == 1, "a fresh link gets the document once: %d" % len(docs))
+    old.send("replace", "/knobs/a", 0.25)
+    pump(device, (old,))
+    new = hmilink.Panel(old.link)  # the page reloaded over the same connection
+    pump(device, (new,))
+    check(new.ready and new.doc["knobs"]["a"] == 0.25, "the new panel got the document")
+    device.close()
+    return True
+
+
+def test_rehello_plant():
+    """Without the device's answer to a second hello, the check must fail."""
+    saved = hmilink.Device._handle
+
+    def deaf(self, link, msg):
+        if msg.get("t") != "hello":
+            saved(self, link, msg)
+
+    hmilink.Device._handle = deaf
+    try:
+        try:
+            test_rehello()
+            failed = False
+        except AssertionError:
+            failed = True
+    finally:
+        hmilink.Device._handle = saved
+    check(failed, "a device that ignores a second hello must fail the rehello check")
+
+
 # -- order --
 
 
@@ -900,6 +939,9 @@ def test_all():
     print("ops ok")
     test_local()
     print("local ok")
+    test_rehello()
+    test_rehello_plant()
+    print("rehello ok (a new panel on an old link gets the document; a deaf device caught)")
     test_order()
     print("order ok (crossed lists, a swapped op caught)")
     test_stream()

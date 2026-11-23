@@ -21,6 +21,10 @@ Every message is a JSON object with a ``t`` (type). What a panel sends:
     A command. What the model does with it is the model's business.
 ``{"t": "ping", "at": 12345}``
     Answered with ``pong`` carrying the same ``at``, for round-trip timing.
+``{"t": "hello", "v": 1}``
+    Sent first by every panel. A second hello on the same link means a new
+    panel took over a connection the old one left open, and the device
+    sends it the document.
 ``{"t": "sync"}``
     Asks for the whole document again. A panel sends it when an op arrives
     out of order, or when its own early edits to a list may have landed in a
@@ -276,6 +280,7 @@ class Device:
 
     def _attach(self, link):
         link.hmi_id = self._next_link
+        link.hmi_hello = False
         self._next_link += 1
         self.links.append(link)
         self._send(link, self._snapshot(link))
@@ -415,6 +420,13 @@ class Device:
             self._send(link, {"t": "pong", "at": msg.get("at")})
         elif t == "sync":
             self._send(link, self._snapshot(link))
+        elif t == "hello":
+            # The first hello on a link follows the document attach sent.
+            # Another one is a new panel on a connection the old one left
+            # open (a reloaded page over Bluetooth), which needs it again.
+            if link.hmi_hello:
+                self._send(link, self._snapshot(link))
+            link.hmi_hello = True
 
 
 # -- the panel ---------------------------------------------------------------
