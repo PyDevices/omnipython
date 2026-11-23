@@ -50,6 +50,11 @@ class FakePortIn:
         buf[: len(chunk)] = chunk
         return len(chunk)
 
+    def read(self, nbytes=None):
+        buf = bytearray(64)
+        n = self.readinto(buf, nbytes)
+        return bytes(buf[:n]) if n else None
+
     def any(self):
         return sum(len(c) for c in self.data)
 
@@ -98,6 +103,37 @@ class FakeMidiBackend:
         return port
 
 
+class _Raw:
+    """A raw byte source that hands its bytes out ``step`` at a time."""
+
+    def __init__(self, data, step):
+        self.data = bytes(data)
+        self.step = step
+
+    def readinto(self, buf, nbytes=None):
+        n = min(self.step, len(self.data), len(buf) if nbytes is None else nbytes)
+        if not n:
+            return None
+        buf[:n] = self.data[:n]
+        self.data = self.data[n:]
+        return n
+
+
+def t_merged_sysex():
+    from midiports import WholeMessages
+    from midiports.endpoints import Merged
+
+    sysex = b"\xf0" + bytes(i % 128 for i in range(298)) + b"\xf7"
+    note = b"\x90\x40\x7f"
+
+    class One:
+        open = {"a": WholeMessages(_Raw(note + sysex, 20))}
+
+    merged = Merged(One())
+    got = [merged.read(), merged.read(), merged.read()]
+    check(got == [note, sysex, None], "merged read() hands a 300-byte SysEx out whole")
+
+
 def t_midi():
     from midiports import IN, OUT
     from midiports.endpoints import FanOut, HostMidi, Merged
@@ -115,6 +151,11 @@ def t_midi():
     got = [merged.readinto(buf), merged.readinto(buf), merged.readinto(buf)]
     check(got == [3, 3, None], "merged input reads every chosen port")
     check(merged.take_timestamp() == 7, "merged stamps come from the port read")
+    r.select("midi.in", ["fakemidi-midi-in:Keys", "fakemidi-midi-in:Pad"])  # Pad opens fresh
+    got = [Merged(ins).read(), Merged(ins).read()]
+    check(got == [b"\x90\x3c\x40", None], "merged read() reads a chosen port")
+    r.select("midi.in", ["fakemidi-midi-in:Keys", "fakemidi-midi-in:Pad #2"])
+    t_merged_sysex()
     r.select("midi.out", ["fakemidi-midi-out:Synth", "fakemidi-midi-out:Drums"])
     FanOut(outs).write(b"\x80\x3c\x00")
     check(be.opened["out:0"].sent == [b"\x80\x3c\x00"] and be.opened["out:1"].sent == [b"\x80\x3c\x00"], "fan-out writes to each")
