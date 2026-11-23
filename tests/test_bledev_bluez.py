@@ -100,6 +100,7 @@ class Bus:
         self.adverts = []
         self.apps = []
         self.refuse = None
+        self.adapter = {"Name": "laptop", "Alias": "laptop"}
         Bus.last = self
 
     async def connect(self):
@@ -130,6 +131,11 @@ class Bus:
             self.adverts.remove(message.body[0])
         elif message.member == "Disconnect":
             self.signal_connected(message.path, False)
+        elif message.member == "Get" and message.body[0] == "org.bluez.Adapter1":
+            return Message(message_type=MessageType.METHOD_RETURN, body=[Variant("s", self.adapter[message.body[1]])])
+        elif message.member == "Set" and message.body[:2] == ["org.bluez.Adapter1", "Alias"]:
+            # BlueZ keeps the alias across restarts; an empty one means the adapter's name.
+            self.adapter["Alias"] = message.body[2].value or self.adapter["Name"]
         return Message(message_type=MessageType.METHOD_RETURN)
 
     def signal_connected(self, path, connected):
@@ -418,6 +424,41 @@ class BlueZPeripheral(unittest.TestCase):
             self.assertEqual(got, [b"\x80\x40\x00"])
 
         run(go())
+
+    def test_close_puts_the_adapters_alias_back(self):
+        async def go(before):
+            ble = bz.BlueZBLE()
+            task = asyncio.ensure_future(midi.serve(ble, name="synth"))
+            await asyncio.sleep(0.02)
+            bus = Bus.last
+            self.assertEqual(bus.adapter["Alias"], "synth")
+            task.cancel()
+            await ble.aclose()
+            return bus
+
+        # Set before serve() registers, so the fake starts from what each case wants.
+        for before in ("laptop", "studio"):
+            Bus.__init__ = _with_alias(before)
+            try:
+                bus = run(go(before))
+            finally:
+                Bus.__init__ = _plain_init
+            self.assertEqual(bus.adapter["Alias"], before, "the alias it had before serve()")
+            sets = [c[3] for c in bus.calls if c[2] == "Set"]
+            self.assertEqual(sets[0][2].value, "synth")
+            self.assertEqual(sets[-1][2].value, "" if before == "laptop" else "studio",
+                             "back to the adapter's own name when it had no alias of its own")
+
+
+_plain_init = Bus.__init__
+
+
+def _with_alias(alias):
+    def init(self, bus_type=None):
+        _plain_init(self, bus_type)
+        self.adapter["Alias"] = alias
+
+    return init
 
 
 if __name__ == "__main__":
