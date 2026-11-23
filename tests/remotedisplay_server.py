@@ -3,7 +3,9 @@
 # SPDX-License-Identifier: MIT
 """Serve a RemoteDisplay for test_remotedisplay.py, under MicroPython.
 
-Usage: micropython remotedisplay_server.py PORT SECONDS
+Usage: micropython remotedisplay_server.py PORT SECONDS [jpeg]
+
+With ``jpeg``, large changes go as JPEG even without a JPEG engine.
 
 Draws a test picture, prints ``crc <hex>`` of its frame, then serves for
 SECONDS and prints each click it gets as ``click X Y`` (and the new CRC
@@ -24,6 +26,10 @@ def picture(d):
     d.fill(0)
     d.fill_rect(5, 5, 40, 20, 0xF800)
     d.fill_rect(50, 10, 30, 40, 0x07E0)
+    # Checks of three colours, where runs are no use but a palette is.
+    for y in range(18, 30):
+        for x in range(64, 96):
+            d.pixel(x, y, (0xFFFF, 0x001F, 0x7BEF)[(x + y) % 3])
     # A noisy band, where runs would be larger than raw pixels.
     for y in range(H - 16, H):
         for x in range(W):
@@ -34,6 +40,8 @@ def main():
     port = int(sys.argv[1])
     secs = int(sys.argv[2])
     d = RemoteDisplay(W, H, port=port, quiet=True)
+    if len(sys.argv) > 3:
+        d.server.jpeg_changes = True
     picture(d)
     print("crc %08x" % (binascii.crc32(d._raw_buffer) & 0xFFFFFFFF))
     t0 = time.ticks_ms()

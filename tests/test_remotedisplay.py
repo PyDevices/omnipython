@@ -111,11 +111,30 @@ class _Client:
         while o + 16 <= len(payload):
             x, y, w, h, enc, _, n = struct.unpack_from("<6HI", payload, o)
             data = payload[o + 16 : o + 16 + n]
-            o += 16 + n
+            o += 16 + n + (n & 1)
             self.encodings.add(enc)
             pixels = []
             if enc == 0:
                 pixels = [data[i : i + 2] for i in range(0, n, 2)]
+            elif enc == 2:
+                from io import BytesIO
+
+                from PIL import Image
+
+                img = Image.open(BytesIO(data)).convert("RGB")
+                assert img.size == (w, h), (img.size, w, h)
+                for py in range(h):
+                    for px in range(w):
+                        r, g, b = img.getpixel((px, py))
+                        v = ((r >> 3) << 11) | ((g >> 2) << 5) | (b >> 3)
+                        pixels.append(struct.pack("<H", v))
+            elif enc == 3:
+                k = struct.unpack_from("<H", data, 0)[0]
+                pal = [data[4 + 2 * i : 6 + 2 * i] for i in range(k)]
+                q = 4 + 2 * k
+                for i in range(w * h):
+                    v = data[q + (i >> 1)]
+                    pixels.append(pal[v & 15 if i & 1 else v >> 4])
             else:
                 for i in range(0, n, 4):
                     count = struct.unpack_from("<H", data, i)[0]
@@ -221,6 +240,65 @@ class TestOnCPython(unittest.TestCase):
         b.close()
 
 
+class TestPassword(unittest.TestCase):
+    def setUp(self):
+        from displaydev.remotedisplay import RemoteDisplay
+
+        self.port = _free_port()
+        self.d = RemoteDisplay(64, 32, port=self.port, password="sesame", quiet=True)
+        self.d.fill_rect(2, 2, 10, 10, 0xF800)
+        self._stop = False
+        self._thread = threading.Thread(target=self._pump, daemon=True)
+        self._thread.start()
+
+    def _pump(self):
+        while not self._stop:
+            self.d.server.poll()
+            time.sleep(0.005)
+
+    def tearDown(self):
+        self._stop = True
+        self._thread.join()
+        self.d.deinit()
+
+    def _text(self, c):
+        c.sock.settimeout(5)
+        op, payload = c.message()
+        self.assertEqual(op, 1)
+        return json.loads(payload)
+
+    def test_wrong_then_right(self):
+        a = _Client(self.port)
+        self.assertEqual(self._text(a), {"auth": 1})
+        a.send(["p", "nope"])
+        self.assertEqual(self._text(a), {"bye": "password"})
+        a.close()
+
+        b = _Client(self.port)
+        self.assertEqual(self._text(b), {"auth": 1})
+        b.send(["p", "sesame"])
+        self.assertEqual(b.hello(), {"w": 64, "h": 32, "swap": 0})
+        b.until_crc(binascii.crc32(bytes(self.d._raw_buffer)))
+
+        # A stranger without the password doesn't take it away.
+        c = _Client(self.port)
+        self.assertEqual(self._text(c), {"auth": 1})
+        c.send(["p", "guess"])
+        self.assertEqual(self._text(c), {"bye": "password"})
+        self.assertTrue(self.d.server.connected)
+        self.d.fill_rect(30, 10, 5, 5, 0x07E0)
+        b.until_crc(binascii.crc32(bytes(self.d._raw_buffer)))
+        b.close()
+        c.close()
+
+    def test_video_player_needs_it(self):
+        s = _connect(self.port)
+        s.sendall(b"GET /stream.mjpg HTTP/1.1\r\nHost: x\r\n\r\n")
+        s.settimeout(5)
+        self.assertTrue(s.recv(100).startswith(b"HTTP/1.1 401"))
+        s.close()
+
+
 def _line(proc, prefix):
     """The server's next output line that starts with ``prefix``."""
     while True:
@@ -247,11 +325,37 @@ class TestOnMicroPython(unittest.TestCase):
             c = _Client(port)
             c.hello()
             c.until_crc(crc)
-            # The picture's flat areas went as runs, and the varied row raw.
-            self.assertEqual(c.encodings, {0, 1})
+            # The picture's flat areas went as runs, the few-coloured
+            # checks as a palette, and the varied rows raw.
+            self.assertEqual(c.encodings, {0, 1, 3})
             c.send(["d", 60, 30, 1, 0, 1])
             self.assertEqual(_line(proc, "click"), "click 60 30")
             c.until_crc(int(_line(proc, "crc").split()[1], 16))
+            c.close()
+        finally:
+            proc.kill()
+            proc.wait()
+            proc.stdout.close()
+
+    @unittest.skipUnless(_has_pil, "Pillow decodes the JPEGs")
+    def test_large_changes_as_jpeg_then_exact(self):
+        mp = _mprun.need_micropython(self)
+        port = _free_port()
+        env = dict(os.environ, MICROPYPATH=str(_mprun.LIB))
+        proc = subprocess.Popen(
+            [mp, str(_mprun.TESTS / "remotedisplay_server.py"), str(port), "8", "jpeg"],
+            stdout=subprocess.PIPE,
+            text=True,
+            env=env,
+        )
+        try:
+            crc = int(_line(proc, "crc").split()[1], 16)
+            c = _Client(port)
+            c.hello()
+            # The whole first picture is one JPEG, and once nothing changes
+            # its tiles come again exactly.
+            c.until_crc(crc)
+            self.assertIn(2, c.encodings)
             c.close()
         finally:
             proc.kill()

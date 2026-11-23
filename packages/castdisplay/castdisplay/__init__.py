@@ -13,6 +13,8 @@ Each display is an ``FBDisplay``, so a board config can make one its
   Roku running the PyDevices Companion channel, about ten seconds behind.
 - ``castdisplay.roku_companion.RokuDisplay``: frames shown by the OmniPython
   Companion channel on a Roku.
+- ``castdisplay.mirror``: ``mirror_hls`` and ``mirror_cast`` send what a board's
+  own panel shows, beside the panel.
 
 On an ESP32-P4 the stream is the firmware's ``castif`` task; on CPython,
 ffmpeg encodes. Each module is imported on its own, so this package imports

@@ -231,12 +231,15 @@ class Provider:
     finding is slow writes `poll` too, and one that must do something when
     an endpoint is chosen or let go writes `apply`. One whose endpoints
     must be paired or joined first (Bluetooth, a Wi-Fi network) reports
-    them as `NEEDS_PAIRING` and writes `pair`.
+    them as `NEEDS_PAIRING` and writes `pair`. One whose choice must not
+    come back after a restart (it opens the device to the network, say)
+    sets ``remember`` False, and the store never holds its endpoints.
     """
 
     kind = None
     name = None
     resources = ()
+    remember = True
 
     def __init__(self, kind=None, name=None, resources=None):
         if kind is not None:
@@ -688,7 +691,11 @@ class Registry:
 
     def _save(self):
         if self._store:
-            _dump(self._store, {"selection": self._chosen})
+            forget = [p.name + ":" for p in self._providers if not p.remember]
+            keep = {}
+            for kind, ids in self._chosen.items():
+                keep[kind] = [i for i in ids if not any(i.startswith(f) for f in forget)]
+            _dump(self._store, {"selection": keep})
 
 
 def _known(kind):

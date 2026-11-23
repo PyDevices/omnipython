@@ -2,7 +2,11 @@
 #
 # SPDX-License-Identifier: MIT
 
-"""Rokus on the network as endpointkit ``cast.target`` endpoints.
+"""Rokus on the network, and a browser mirror of this board's screen, as
+endpointkit ``cast.target`` endpoints.
+
+`Mirror` (`register_mirror`) is the browser: choosing it starts the mirror,
+behind the board's WebREPL password. The rest of this page is the Rokus.
 
 Register the provider and keep calling `endpointkit.poll`; each Roku that
 answers appears with its own name::
@@ -232,3 +236,200 @@ def register(registry=None):
     if not _provider:
         _provider.append((registry or endpointkit.registry).register(Rokus()))
     return _provider[0]
+
+
+# -- the browser mirror -------------------------------------------------------
+
+_LV_KEYS = {8: "BACKSPACE", 9: "NEXT", 13: "ENTER", 27: "ESC", 127: "DEL"}
+_LV_NAMED = {"K_UP": "UP", "K_DOWN": "DOWN", "K_LEFT": "LEFT", "K_RIGHT": "RIGHT", "K_HOME": "HOME", "K_END": "END"}
+
+
+class _Input:
+    # The browser's pointer as an LVGL pointer input, and its keys typed
+    # through push_key, read each time LVGL reads the pointer.
+
+    def __init__(self, server, push_key):
+        import keys
+        import lvgl as lv
+
+        self._lv = lv
+        self._server = server
+        self._push = push_key
+        self._pos = (0, 0)
+        self._down = False
+        self._named = {}
+        for name, lvname in _LV_NAMED.items():
+            if hasattr(keys, name):
+                self._named[getattr(keys, name)] = getattr(lv.KEY, lvname)
+        self._shift = keys.KMOD_SHIFT
+        self._caps = keys.KMOD_CAPS
+        self.indev = lv.indev_create()
+        self.indev.set_type(lv.INDEV_TYPE.POINTER)
+        self.indev.set_read_cb(self._read)
+
+    def _key(self, e):
+        code = e.key
+        lv = self._lv
+        if code in _LV_KEYS:
+            return getattr(lv.KEY, _LV_KEYS[code])
+        if code in self._named:
+            return self._named[code]
+        if 32 <= code < 127:
+            ch = chr(code)
+            if ch.isalpha() and bool(e.mod & self._shift) != bool(e.mod & self._caps):
+                ch = ch.upper()
+            return ch
+        return None
+
+    def _read(self, indev, data):
+        import events
+
+        for e in self._server.read():
+            t = e.type
+            if t in (events.MOUSEBUTTONDOWN, events.MOUSEBUTTONUP) and e.button == 1:
+                self._pos = e.pos
+                self._down = t == events.MOUSEBUTTONDOWN
+            elif t == events.MOUSEMOTION:
+                self._pos = e.pos
+            elif t == events.KEYDOWN and self._push is not None:
+                key = self._key(e)
+                if key is not None:
+                    self._push(key)
+        data.point.x = self._pos[0]
+        data.point.y = self._pos[1]
+        data.state = self._lv.INDEV_STATE.PRESSED if self._down else self._lv.INDEV_STATE.RELEASED
+
+    def close(self):
+        self.indev.delete()
+
+
+class Mirror(endpointkit.Provider):
+    """This board's screen in a browser, as a ``cast.target`` endpoint.
+
+    Choosing it starts the mirror (`displaydev.remotedisplay.mirror`): the
+    browser at the endpoint's ``caps["url"]`` shows the screen and drives
+    the app, once it gives the board's WebREPL password (``PASS`` in
+    ``webrepl_cfg.py``). Letting it go stops the mirror. A board with no
+    WebREPL password lists the endpoint as unavailable, and it never runs
+    open. The choice isn't saved, so the mirror is off after a restart.
+
+    Args:
+        display: The display to mirror; ``board_config.display_drv`` by
+            default. One without ``framebuffers()`` lists no endpoint, and
+            nor does a `RemoteDisplay`, which is in the browser already.
+        push_key (callable): Types a key the browser sends: a character, or
+            an LVGL key code. ``appkit.keys.push`` in the Shell. Keys are
+            dropped without one.
+        port (int): The port the page is served on. Default 80.
+        password (str): The password to ask for, in place of WebREPL's.
+
+    Attributes:
+        server: The running `RemoteServer`, or None.
+    """
+
+    kind = "cast.target"
+    name = "mirror"
+    remember = False
+
+    def __init__(self, display=None, push_key=None, port=80, password=None):
+        endpointkit.Provider.__init__(self)
+        self._display_drv = display
+        self._push_key = push_key
+        self.port = port
+        self._given = password
+        self.server = None
+        self._input = None
+        self._viewing = False
+        self._shown = None
+
+    def _display(self):
+        if self._display_drv is None:
+            import sys
+
+            bc = sys.modules.get("board_config")
+            if bc is None:
+                import board_config as bc
+            self._display_drv = getattr(bc, "display_drv", None)
+        return self._display_drv
+
+    def _password(self):
+        if self._given:
+            return self._given
+        try:
+            import webrepl_cfg
+        except ImportError:
+            return None
+        return getattr(webrepl_cfg, "PASS", None) or None
+
+    def _list(self):
+        d = self._display()
+        if d is None or not hasattr(d, "framebuffers") or d.framebuffers() is None:
+            return []
+        if hasattr(getattr(d, "server", None), "note"):
+            return []  # a RemoteDisplay: already in the browser
+        if not self._password():
+            return [self.endpoint("browser", "Browser on this network", endpointkit.UNAVAILABLE,
+                                  caps={"why": "Set a WebREPL password to mirror this screen"})]
+        url = self.server.url if self.server is not None else None
+        state = endpointkit.CONNECTED if self.server is not None else endpointkit.AVAILABLE
+        return [self.endpoint("browser", "Browser on this network", state,
+                              caps={"url": url, "viewing": self._viewing})]
+
+    def scan(self):
+        self._shown = (self.server is not None, self._viewing)
+        return self._list()
+
+    def poll(self):
+        # Report a start, a stop, and a browser coming or going.
+        self._viewing = self.server is not None and self.server.connected
+        now = (self.server is not None, self._viewing)
+        if now != self._shown:
+            self._shown = now
+            return self._list()
+        return None
+
+    def apply(self, endpoint, chosen):
+        if not chosen:
+            self._close()
+            return
+        if self.server is not None:
+            return
+        password = self._password()
+        if not password:
+            raise ValueError("Set a WebREPL password first: the mirror asks for it")
+        from displaydev.remotedisplay import mirror
+
+        try:
+            self.server = mirror(self._display(), port=self.port, password=password)
+        except OSError:
+            raise ValueError("Port %d is in use" % self.port)
+        try:
+            self._input = _Input(self.server, self._push_key)
+        except ImportError:
+            self._input = None  # no LVGL: the program reads server.read() itself
+        self._viewing = False
+
+    def _close(self):
+        if self._input is not None:
+            self._input.close()
+            self._input = None
+        if self.server is not None:
+            self.server.close()
+            self.server = None
+        self._viewing = False
+
+    def stop(self):
+        self._close()
+
+
+_mirror = []
+
+
+def register_mirror(registry=None, **kwargs):
+    """Register the browser mirror; registering again returns the one already registered.
+
+    Takes `Mirror`'s arguments (``push_key=appkit.keys.push`` in the Shell).
+    """
+    if not _mirror:
+        _mirror.append((registry or endpointkit.registry).register(Mirror(**kwargs)))
+    return _mirror[0]

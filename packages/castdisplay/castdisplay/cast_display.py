@@ -75,14 +75,17 @@ class CastDisplay(FBDisplay):
             app opened a mono stream, so a 24 kHz mono app is (24000, 2).
         audio_loop: play a desktop's audio file over and over. A file starts
             from its beginning with each session, once the sink is listening.
+        buffer: the frame to cast, for a display that already has one; by
+            default a new one. ``castdisplay.mirror.mirror_cast`` uses it.
     """
 
     def __init__(self, sink, width=720, height=720, kind="windows", canvas=None,
                  fps=30, bitrate=3_000_000, name=None, log=None,
-                 audio=None, audio_format=(24000, 2), audio_loop=False):
+                 audio=None, audio_format=(24000, 2), audio_loop=False, buffer=None):
         if kind not in ("windows", "roku"):
             raise ValueError("kind is 'windows' or 'roku'")
-        self._buf = bytearray(width * height * 2)
+        # castdisplay.mirror.mirror_cast passes a panel's own frame.
+        self._buf = buffer if buffer is not None else bytearray(width * height * 2)
         super().__init__(self._buf, width=width, height=height, quiet=True)
         # framebuf fills and blits in C; FBDisplay over a plain bytearray would
         # do it a row at a time in Python (a full 720x720 fill took ~1 s)
