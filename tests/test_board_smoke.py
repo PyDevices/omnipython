@@ -98,6 +98,12 @@ class TestBoardSmoke(unittest.TestCase):
         self.assertNotIn("sleep answers", checks)
         self.assertEqual(result["skipped"], ["sleep"])
 
+    def test_roles_that_re_enumerate_the_usb_console_are_skipped_by_default(self):
+        # Calling usb_midi() makes the board re-enumerate as a MIDI device, so
+        # a smoke test run over the USB serial port loses its own console.
+        for role in ("usb_device", "usb_midi"):
+            self.assertIn(role, mark_tested.DEFAULT_SKIP)
+
     def test_a_board_with_no_display_runs_from_board_peripherals(self):
         result = self._smoke(board_config=False)
         self.assertTrue(result["board_ok"], result)
