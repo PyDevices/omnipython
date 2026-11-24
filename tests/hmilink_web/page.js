@@ -10,7 +10,7 @@
 //                WebSerial, the host a panel (the browser as the box)
 // The ports are the stand-ins in mock_ports.js. The page logs PAGE lines;
 // the test reads them and checks the host's side itself.
-import { openSerial, openBluetooth, Link } from "/packages/hmilink/web-page/hmilink.js";
+import { openSerial, openBluetooth, Link } from "/lib/hmilink/hmilink.js";
 
 const q = new URLSearchParams(location.search);
 const CASE = q.get("case");
@@ -23,7 +23,7 @@ async function loadPython() {
   const mp = await loadMicroPython({ stdout: (line) => log("PY " + line), linebuffer: true });
   mp.FS.mkdirTree("/lib/hmilink");
   for (const name of PY_FILES) {
-    const response = await fetch(`/packages/hmilink/hmilink/${name}.py`, { cache: "no-store" });
+    const response = await fetch(`/lib/hmilink/${name}.py`, { cache: "no-store" });
     mp.FS.writeFile(`/lib/hmilink/${name}.py`, await response.text());
   }
   mp.runPython("import sys\nif '/lib' not in sys.path: sys.path.append('/lib')");

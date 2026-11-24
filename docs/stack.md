@@ -213,7 +213,7 @@ and Android.
 ## Connect devices
 
 - [`medialink`](https://github.com/PyDevices/omnipython/blob/main/docs/guides/medialink.md): Send live sound and pictures between boards and computers.\
-  Get it: `mip medialink`, `pip omnipython`, firmware build. Runs on: MP, CP, Desktop.
+  Get it: `mip omnipython`, `pip omnipython`, firmware build. Runs on: MP, CP, Desktop.
 - [`endpointkit`](https://github.com/PyDevices/omnipython/blob/main/packages/endpointkit/README.md): List what a device can connect to, by kind, and choose where audio, MIDI, network, camera and casting go.\
   Get it: `mip endpointkit`, `pip omnipython-desktop`. Runs on: MP, Desktop.
 - [`hostnet`](https://github.com/PyDevices/omnipython/blob/main/utils/hostnet.py): Show a computer's network link as an `endpointkit` endpoint, reported and never changed.\
@@ -222,8 +222,8 @@ and Android.
   Get it: `mip omnipython`, `pip omnipython`, firmware build. Runs on: MP.
 - [`ethnet`](https://github.com/PyDevices/omnipython/blob/main/lib/ethnet.py): Move a board's traffic onto its Ethernet port from a picker, with Wi-Fi left up, as an `endpointkit` endpoint.\
   Get it: `mip omnipython`, `pip omnipython`, firmware build. Runs on: MP.
-- [`hmilink`](https://github.com/PyDevices/omnipython/blob/main/packages/hmilink/README.md): Use any screen as a device's front panel, over Wi-Fi, a UART, Bluetooth LE, OSC, a web page's WebSerial or Web Bluetooth port, or in-process.\
-  Get it: `mip hmilink`. Runs on: MP, CP, Desktop, Web.
+- [`hmilink`](https://github.com/PyDevices/omnipython/blob/main/docs/guides/hmilink.md): Use any screen as a device's front panel, over Wi-Fi, a UART, Bluetooth LE, OSC, a web page's WebSerial or Web Bluetooth port, or in-process.\
+  Get it: `mip omnipython`, `pip omnipython`, firmware build. Runs on: MP, CP, Desktop, Web.
 - [`lite-assistant`](https://github.com/PyDevices/lite-assistant/blob/main/README.md): Chat, speak, transcribe and see through a local, OpenAI-compatible server that a board can call.\
   Get it: from source. Runs on: Desktop.
 - [`wifi`](https://github.com/PyDevices/omnipython/blob/main/lib/wifi.py): Use CircuitPython's `wifi.radio` API on MicroPython.\
@@ -277,8 +277,8 @@ and Android.
   Get it: `mip usb-device-msc`. Runs on: MP.
 - [`usb-device-net`](https://github.com/PyDevices/omnipython/blob/main/docs/guides/usb.md): Give the computer a network link to the board over its USB cable, with no driver to install.\
   Get it: `mip usb-device-net`. Runs on: MP.
-- [`usb-hid`](https://github.com/PyDevices/omnipython/blob/main/docs/guides/usb.md): Use CircuitPython's `usb_hid` on MicroPython, so `adafruit_hid` can type, move the mouse and be a gamepad or a touch pointer.\
-  Get it: `mip usb-hid`. Runs on: MP.
+- [`usb_hid`](https://github.com/PyDevices/omnipython/blob/main/docs/guides/usb.md): Use CircuitPython's `usb_hid` on MicroPython, so `adafruit_hid` can type, move the mouse and be a gamepad or a touch pointer.\
+  Get it: `mip omnipython`, firmware build. Runs on: MP.
 
 ## Use cameras, video and AI on a board
 
@@ -286,8 +286,8 @@ and Android.
   Get it: firmware build. Runs on: MP on ESP32-P4.
 - [`h264enc`](https://github.com/PyDevices/omnipython-builds/tree/main/modules/h264enc): Encode RGB565 frames as H.264 in hardware.\
   Get it: firmware build. Runs on: MP on ESP32-P4.
-- [`mp4mux`](https://github.com/PyDevices/omnipython/blob/main/packages/mp4mux/README.md): Record H.264 video and PCM sound into an MP4 file that plays everywhere.\
-  Get it: `mip mp4mux`. Runs on: MP, CP, Desktop.
+- [`mp4mux`](https://github.com/PyDevices/omnipython/blob/main/docs/guides/mp4mux.md): Record H.264 video and PCM sound into an MP4 file that plays everywhere.\
+  Get it: `mip omnipython`, `pip omnipython`, firmware build. Runs on: MP, CP, Desktop.
 - [`castdisplay`](https://github.com/PyDevices/omnipython/blob/main/docs/guides/cast-to-a-tv.md): Cast what an app draws to a Roku TV, a Windows laptop or VLC, as a display the app uses unchanged.\
   Get it: `mip castdisplay`. Runs on: MP on ESP32-P4, Desktop.
 - [`tsmux`](https://github.com/PyDevices/omnipython-builds/tree/main/modules/tsmux): Wrap H.264 in MPEG-TS and cut it into HLS segments, so anything that plays HLS can watch a board.\
@@ -488,7 +488,7 @@ and Android.
 - **R:** [`Radios`](#drive-a-chip), [`Real-time clocks`](#drive-a-chip), [`RemoteDisplay`](#draw-on-a-screen), [`REPL`](#run-a-finished-app), [`Roku remote`](#run-a-finished-app)
 - **S:** [`sayso`](#libraries-the-apps-use), [`Security camera`](#run-a-finished-app), [`songmodel`](#play-and-sequence-music), [`Sound card`](#run-a-finished-app), [`soundmodule`](#play-and-sequence-music), [`spectrum`](#draw-on-a-screen), [`Spotify`](#run-a-finished-app), [`Stompbox`](#run-a-finished-app), [`Storage`](#drive-a-chip), [`Surveillance camera`](#run-a-finished-app), [`svgio`](#draw-on-a-screen), [`svgio for CPython`](#draw-on-a-screen), [`Synth Station`](#run-a-finished-app), [`synthio`](#make-and-shape-sound), [`System`](#run-a-finished-app)
 - **T:** [`tflite`](#use-cameras-video-and-ai-on-a-board), [`threadnet`](#connect-devices), [`Touch drivers`](#drive-a-chip), [`touchkit`](#libraries-the-apps-use), [`tsmux`](#use-cameras-video-and-ai-on-a-board), [`ttfio`](#draw-on-a-screen), [`ttfio for CPython`](#draw-on-a-screen)
-- **U:** [`ulab`](#use-cameras-video-and-ai-on-a-board), [`usb-core`](#use-usb), [`usb-device-audio`](#use-usb), [`usb-device-msc`](#use-usb), [`usb-device-net`](#use-usb), [`usb-device-video`](#use-usb), [`usb-hid`](#use-usb), [`usb-host-audio`](#use-usb), [`usb-host-cdc`](#use-usb), [`usb-host-dfu`](#use-usb), [`usb-host-endpoints`](#use-usb), [`usb-host-hid`](#use-usb), [`usb-host-msc`](#use-usb), [`usb-host-mtp`](#use-usb), [`usb-host-net`](#use-usb), [`usb-host-video`](#use-usb), [`usbhost`](#use-usb), [`usdl2`](#run-somewhere-other-than-a-board), [`uwin32`](#run-somewhere-other-than-a-board)
+- **U:** [`ulab`](#use-cameras-video-and-ai-on-a-board), [`usb-core`](#use-usb), [`usb-device-audio`](#use-usb), [`usb-device-msc`](#use-usb), [`usb-device-net`](#use-usb), [`usb-device-video`](#use-usb), [`usb-host-audio`](#use-usb), [`usb-host-cdc`](#use-usb), [`usb-host-dfu`](#use-usb), [`usb-host-endpoints`](#use-usb), [`usb-host-hid`](#use-usb), [`usb-host-msc`](#use-usb), [`usb-host-mtp`](#use-usb), [`usb-host-net`](#use-usb), [`usb-host-video`](#use-usb), [`usb_hid`](#use-usb), [`usbhost`](#use-usb), [`usdl2`](#run-somewhere-other-than-a-board), [`uwin32`](#run-somewhere-other-than-a-board)
 - **V:** [`Vamp`](#run-a-finished-app), [`Video doorbell`](#run-a-finished-app), [`Videophone`](#run-a-finished-app), [`vision`](#use-cameras-video-and-ai-on-a-board), [`vtterm`](#draw-on-a-screen)
 - **W:** [`Wake word`](#run-a-finished-app), [`Walkie-talkie`](#run-a-finished-app), [`wasm.py`](#run-somewhere-other-than-a-board), [`Weather`](#run-a-finished-app), [`wifi`](#connect-devices), [`wifi_manager`](#connect-devices), [`wifinet`](#connect-devices)
 

@@ -19,7 +19,10 @@ directory each, installed with `omip`:
 | [`usb-device-video`](https://github.com/PyDevices/omnipython/tree/main/packages/usb/usb-device-video) | `usb.device.video` | The board as a USB webcam, YUY2 or MJPEG |
 | [`usb-device-msc`](https://github.com/PyDevices/omnipython/tree/main/packages/usb/usb-device-msc) | `usb.device.msc` | The board as a USB drive, from any block device |
 | [`usb-device-net`](https://github.com/PyDevices/omnipython/tree/main/packages/usb/usb-device-net) | `usb.device.net` | A network link to the computer over the cable, with no Wi-Fi |
-| [`usb-hid`](https://github.com/PyDevices/omnipython/tree/main/packages/usb/usb-hid) | `usb_hid` | CircuitPython's `usb_hid`, so `adafruit_hid` types and moves the mouse |
+
+CircuitPython's `usb_hid`, so `adafruit_hid` types and moves the mouse, is
+[`usb_hid`](https://github.com/PyDevices/omnipython/blob/main/lib/usb_hid.py), which comes with OmniPython and runs over
+micropython-lib's `usb-device-hid`.
 
 MIDI is [`midiports`](https://github.com/PyDevices/omnipython/blob/main/packages/midiports/README.md): `midiports.usb_device` and
 `midiports.usb_host`. It installs by name the same way.
@@ -81,7 +84,7 @@ ValueError: 2 IN endpoints left (4 on this chip, the REPL's serial port takes 2)
 frees its two endpoints. The REPL stays on the UART and WebREPL, and the next
 reset brings the serial port back.
 
-`usb-hid` also has a gamepad and a pointer that says where it is, as a touch
+`usb_hid` also has a gamepad and a pointer that says where it is, as a touch
 screen does, in the shape of CircuitPython's custom `usb_hid.Device`s:
 
 ```python

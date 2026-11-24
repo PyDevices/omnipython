@@ -1,27 +1,27 @@
 # SPDX-FileCopyrightText: 2026 Brad Barnett
 #
 # SPDX-License-Identifier: MIT
-"""Run hmilink's own checks (packages/hmilink/tests/run.py) under unittest."""
+"""Run hmilink's own checks (tests/hmilink_checks.py) under unittest."""
 
 import os
 import sys
 import unittest
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-HMILINK = os.path.join(os.path.dirname(HERE), "packages", "hmilink")
+LIB = os.path.join(os.path.dirname(HERE), "lib")
 
 
 class TestHmilink(unittest.TestCase):
     def test_all(self):
-        sys.path.insert(0, os.path.join(HMILINK, "tests"))
-        sys.path.insert(0, HMILINK)
+        sys.path.insert(0, HERE)
+        sys.path.insert(0, LIB)
         try:
-            import run
+            import hmilink_checks
 
-            run.test_all()
+            hmilink_checks.test_all()
         finally:
-            sys.path.remove(HMILINK)
-            sys.path.remove(os.path.join(HMILINK, "tests"))
+            sys.path.remove(LIB)
+            sys.path.remove(HERE)
 
 
 if __name__ == "__main__":

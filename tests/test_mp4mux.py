@@ -4,7 +4,7 @@
 """mp4mux's files, read back by ffprobe and decoded by ffmpeg.
 
 ffmpeg makes the H.264 (baseline, as the ESP32-P4's encoder gives, and high)
-and a 440 Hz sine; packages/mp4mux/tests/mux_file.py muxes them on CPython and
+and a 440 Hz sine; tests/mp4mux_file.py muxes them on CPython and
 on unix MicroPython with frame times that vary and a hole in the sound.
 """
 
@@ -25,8 +25,8 @@ if HERE not in sys.path:
 
 import _mprun  # noqa: E402
 
-MP4MUX = os.path.join(os.path.dirname(HERE), "packages", "mp4mux")
-MUX = os.path.join(MP4MUX, "tests", "mux_file.py")
+MUX = os.path.join(HERE, "mp4mux_file.py")
+LIB = os.path.join(os.path.dirname(HERE), "lib")
 
 FRAMES = 100
 FRAME_MS = (30, 40, 50)
@@ -251,14 +251,14 @@ class TestDefaultBytes(unittest.TestCase):
     }
 
     def setUp(self):
-        sys.path.insert(0, MP4MUX)
+        sys.path.insert(0, LIB)
         import mp4mux
 
         self.mp4mux = mp4mux
         self.path = tempfile.mktemp(suffix=".mp4")
 
     def tearDown(self):
-        sys.path.remove(MP4MUX)
+        sys.path.remove(LIB)
         if os.path.exists(self.path):
             os.remove(self.path)
 
@@ -273,14 +273,14 @@ class TestDefaultBytes(unittest.TestCase):
 
 class TestWriter(unittest.TestCase):
     def setUp(self):
-        sys.path.insert(0, MP4MUX)
+        sys.path.insert(0, LIB)
         import mp4mux
 
         self.mp4mux = mp4mux
         self.path = tempfile.mktemp(suffix=".mp4")
 
     def tearDown(self):
-        sys.path.remove(MP4MUX)
+        sys.path.remove(LIB)
         if os.path.exists(self.path):
             os.remove(self.path)
 

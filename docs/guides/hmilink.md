@@ -34,7 +34,7 @@ while True:
     panel.set("/modules/vco1/params/range", 0.5)
 ```
 
-The contract is in [`packages/hmilink/__init__.py`](packages/hmilink/__init__.py)'s docstring: a document changed by
+The contract is in [`hmilink/__init__.py`](https://github.com/PyDevices/omnipython/blob/main/lib/hmilink/__init__.py)'s docstring: a document changed by
 JSON Patch ops with JSON Pointer paths, numbered and echoed to every panel;
 lossy telemetry; commands and events; and a self-description that says
 what the document holds, never how to lay it out.
@@ -44,9 +44,9 @@ order, or whose early edit to a list (or to an item in one, by index) crossed
 another panel's, asks for the whole document again rather than guess
 (`panel.stats["resyncs"]`).
 
-[`examples/hmilink_simpletest.py`](examples/hmilink_simpletest.py) runs a device and two panels in one program.
-[`hmilink_device_simpletest.py`](examples/hmilink_device_simpletest.py) and
-[`hmilink_panel_simpletest.py`](examples/hmilink_panel_simpletest.py) are the
+[`examples/hmilink_simpletest.py`](https://github.com/PyDevices/omnipython/blob/main/examples/hmilink_simpletest.py) runs a device and two panels in one program.
+[`hmilink_device_simpletest.py`](https://github.com/PyDevices/omnipython/blob/main/examples/hmilink_device_simpletest.py) and
+[`hmilink_panel_simpletest.py`](https://github.com/PyDevices/omnipython/blob/main/examples/hmilink_panel_simpletest.py) are the
 same over Wi-Fi, one on each board, and the device serves a browser a slider.
 
 Transports are swappable and neither side knows which carries it:
@@ -68,14 +68,14 @@ the laptop's device adds `ble.connect("desk")`. It needs `bledev`, which
 OmniPython firmware with Bluetooth carries; on a laptop, `pip install
 "omnipython[ble]"`. Each `poll()` runs the Bluetooth tasks, so a program
 with no event loop needs nothing more; one with a loop gives it time between
-polls. [`hmilink/ble.py`](hmilink/ble.py)'s docstring has the rest.
+polls. [`hmilink/ble.py`](https://github.com/PyDevices/omnipython/blob/main/lib/hmilink/ble.py)'s docstring has the rest.
 
-On a web page, [`web-page/hmilink.js`](web-page/hmilink.js) opens a board through
+On a web page, [`hmilink/hmilink.js`](https://github.com/PyDevices/omnipython/blob/main/lib/hmilink/hmilink.js) opens a board through
 WebSerial or Web Bluetooth from a click. A page written in JavaScript speaks
 hmilink with its `Link`. Python running in the page (MicroPython's
 WebAssembly build, or Pyodide) wraps the port with `hmilink.web.stream()`
 and runs a device or a panel over `stream.link()`, as
-[`hmilink/web.py`](hmilink/web.py) shows.
+[`hmilink/web.py`](https://github.com/PyDevices/omnipython/blob/main/lib/hmilink/web.py) shows.
 
 Announce the device and a panel finds it without its address.
 `tcp.serve(9000, page="index.html", announce=True)` announces the board's
@@ -91,14 +91,14 @@ the path it names: a fader that sends `/synth/cutoff 0.5` sets the
 document's `/synth/cutoff`. An app with fixed addresses maps them with
 `osc.serve(8000, routes={"/1/fader1": "/synth/cutoff"})`. The board sends
 every change back, so a fader moved on another panel moves on the phone
-too. [`packages/hmilink/osc.py`](packages/hmilink/osc.py)'s docstring has the rest.
+too. [`hmilink/osc.py`](https://github.com/PyDevices/omnipython/blob/main/lib/hmilink/osc.py)'s docstring has the rest.
 
 Use it on a network you trust. hmilink has no encryption and no passwords, so
 anyone who can reach the device's port can read its document and change it.
 Keep it off public and guest Wi-Fi, and don't forward its port to the internet.
 
 Runs on MicroPython, CircuitPython and CPython, with no threads, and no
-asyncio except under the Bluetooth transport. [`packages/hmilink/tests/run.py`](tests/run.py) runs on all three (CircuitPython has no
+asyncio except under the Bluetooth transport. [`tests/hmilink_checks.py`](https://github.com/PyDevices/omnipython/blob/main/tests/hmilink_checks.py) runs on all three (CircuitPython has no
 sockets on the desktop, so the TCP checks are skipped there).
 
 This is a preview: it isn't released yet, and the names may still change.

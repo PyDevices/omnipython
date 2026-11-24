@@ -39,8 +39,18 @@
 # struct.pack("<BHH", buttons, x, y).
 import time
 
-from micropython import const
-from usb.device.hid import HIDInterface
+try:
+    from micropython import const
+except ImportError:  # CPython
+
+    def const(x):
+        return x
+
+
+try:
+    from usb.device.hid import HIDInterface
+except ImportError:  # CPython, or a firmware without usb-device-hid; interface() says so
+    HIDInterface = None
 
 _EP_BUSY_WAIT_MS = const(100)
 
@@ -177,7 +187,7 @@ Device.ABSOLUTE_POINTER = Device(
 devices = ()
 
 
-class _HIDInterface(HIDInterface):
+class _HIDInterface(HIDInterface or object):
     def __init__(self, devs, interval_ms):
         out_max = max(max(d.out_report_lengths) for d in devs)
         in_max = max(max(d.in_report_lengths) for d in devs)
@@ -232,6 +242,11 @@ def interface(devs=None, *, interval_ms=1):
     devs = tuple(devs)
     if not devs:
         raise ValueError("no HID devices")
+    if HIDInterface is None:
+        raise ImportError(
+            "usb_hid needs MicroPython with micropython-lib's usb-device-hid: "
+            'mip.install("usb-device-hid") on a board that can be a USB device'
+        )
     itf = _HIDInterface(devs, interval_ms)
     for d in devs:
         d._interface = itf

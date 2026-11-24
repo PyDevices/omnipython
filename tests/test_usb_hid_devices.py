@@ -19,7 +19,7 @@ import types
 import unittest
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
-SOURCE = ROOT / "packages" / "usb" / "usb-hid" / "usb_hid.py"
+SOURCE = ROOT / "lib" / "usb_hid.py"
 sys.path.insert(0, str(ROOT / "lib"))
 
 import events  # noqa: E402

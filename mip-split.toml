@@ -102,16 +102,6 @@ host-only = ["bleak", "winrt", "bluez", "webble"]
 # Windows and the dbus-fast bluez uses on Linux.
 pypi-extras = { ble = ["bleak>=1.0"] }
 
-[medialink]
-# Board-to-board audio and video is its own MIP package, as BLE is, so a
-# board that never streams doesn't carry it:
-#     omip.install("medialink")
-# Discovery uses the firmware's mdns module and advertises the board's name,
-# boarddev.name(), from OmniPython; the intercom takes any audiodev microphone
-# and speaker it is handed.
-own-package = true
-requires = ["omnipython"]
-
 # midiports and the USB packages are directories at the top of the repository,
 # not in lib/, each with its own manifest.py. `top-level = true` publishes that
 # directory to the index under its own name, so a board installs it with
@@ -140,19 +130,11 @@ requires = ["omnipython"]
 top-level = true
 pypi-desktop = true
 
-[hmilink]
-top-level = true
-pypi-desktop = true
-
 [endpointkit]
 top-level = true
 pypi-desktop = true
 
 [icons]
-top-level = true
-pypi-desktop = true
-
-[mp4mux]
 top-level = true
 pypi-desktop = true
 
@@ -165,9 +147,6 @@ top-level = true
 pypi-desktop = true
 
 [usb-core]
-top-level = true
-
-[usb-hid]
 top-level = true
 
 [usb-host-audio]

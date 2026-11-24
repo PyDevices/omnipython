@@ -116,7 +116,7 @@ To join from `secrets.py` or a network the board remembered, use
 ## usb_hid
 
 CircuitPython's `usb_hid` on MicroPython boards that can be a USB device, from
-the `usb-hid` package, over `usb-device-hid`. `usb_hid.enable()` takes
+OmniPython, over `usb-device-hid`. `usb_hid.enable()` takes
 CircuitPython's `Device` objects, including the custom gamepad and absolute
 pointer. See [USB, both ways round](../guides/usb.md).
 

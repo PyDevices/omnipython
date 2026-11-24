@@ -32,15 +32,9 @@ described below.
 
 ## Install
 
-On a board, medialink is its own package in the OmniPython index, so a board
-that never streams doesn't carry it:
-
-```python
-import mip
-mip.install("medialink", index="https://lib.omnipython.org")
-```
-
-On a computer it comes with `omnipython`. Finding a peer by name needs the
+medialink comes with OmniPython: OmniPython firmware has it built in,
+`omip.install("omnipython")` puts it on a board, and `pip install omnipython`
+on a computer. Finding a peer by name needs the
 `mdns` module ([mdns](mdns.md)): built into CircuitPython and into
 MicroPython firmware that carries it, and from `omnipython-desktop` with
 python-zeroconf on CPython.

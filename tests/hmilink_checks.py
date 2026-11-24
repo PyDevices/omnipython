@@ -4,8 +4,8 @@
 
 """hmilink's checks, runnable on MicroPython, CircuitPython and CPython.
 
-    python packages/hmilink/tests/run.py           # from the repo root, or
-    micropython packages/hmilink/tests/run.py
+    python tests/hmilink_checks.py           # from the repo root, or
+    micropython tests/hmilink_checks.py
 
 pytest collects ``test_all`` from here too.
 """
@@ -14,11 +14,11 @@ import binascii
 import os
 import sys
 
-sys.path.insert(0, os.getcwd() + "/hmilink")
+# OmniPython's lib/, which holds hmilink and boarddev (for boarddev.name()
+# when a device announces itself).
+sys.path.insert(0, os.getcwd() + "/lib")
 try:
-    sys.path.insert(0, __file__.rsplit("/", 2)[0])
-    # OmniPython's lib/, for boarddev.name() when a device announces itself.
-    sys.path.insert(0, __file__.rsplit("/", 1)[0] + "/../../../lib")
+    sys.path.insert(0, __file__.rsplit("/", 1)[0] + "/../lib")
 except (NameError, IndexError):
     pass
 

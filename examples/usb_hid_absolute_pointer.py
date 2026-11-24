@@ -10,7 +10,7 @@ middle. The pointer never presses a button. Replace the positions with readings
 from a touch panel to make the board a touch screen for your computer.
 
 Needs: an ESP32-S2, S3 or P4 board running MicroPython, with ``usb-device-hid``
-and ``usb-hid`` installed. Plug the board's USB device port into your computer.
+and OmniPython installed. Plug the board's USB device port into your computer.
 The program keeps the board's serial port, so the REPL stays on the same cable.
 
 Run it:

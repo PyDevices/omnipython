@@ -31,6 +31,8 @@ guides/board-name
 guides/wifi
 guides/mdns
 guides/medialink
+guides/hmilink
+guides/mp4mux
 guides/lvgl
 guides/vtterm
 guides/cast-to-a-tv

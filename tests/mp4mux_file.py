@@ -4,7 +4,7 @@
 
 """Mux an Annex B H.264 file and a raw PCM file into an MP4, on any Python.
 
-    micropython packages/mp4mux/tests/mux_file.py in.h264 in.pcm out.mp4 [fragment_ms [skip]]
+    micropython tests/mp4mux_file.py in.h264 in.pcm out.mp4 [fragment_ms [skip]]
 
 The video stream must carry access unit delimiters (x264's ``aud=1``), which
 is where it is split into frames. Frame times vary between 30 and 50 ms, and
@@ -19,7 +19,7 @@ without writing it.
 import sys
 
 try:
-    sys.path.insert(0, __file__.rsplit("/", 2)[0])
+    sys.path.insert(0, __file__.rsplit("/", 1)[0] + "/../lib")
 except (NameError, IndexError):
     pass
 
