@@ -13,9 +13,8 @@ hmilink_device_simpletest.py, or anything else that speaks hmilink.
 
 Needs: a board with Wi-Fi and hmilink. On MicroPython, a secrets.py
 holding WIFI_SSID and WIFI_PASSWORD; on CircuitPython, settings.toml.
-Install hmilink with:
-    mpremote mip install github:PyDevices/omnipython/hmilink
-On CircuitPython, copy its hmilink folder into the board's lib folder.
+hmilink comes with OmniPython. On CircuitPython, copy OmniPython's
+lib/hmilink folder into the board's lib folder.
 It runs on a laptop too, without the Wi-Fi step.
 
 Run it:

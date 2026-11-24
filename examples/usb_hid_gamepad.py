@@ -11,7 +11,7 @@ controls follow. Replace ``send()`` calls with readings from real buttons and
 sticks to build a controller.
 
 Needs: an ESP32-S2, S3 or P4 board running MicroPython, with ``usb-device-hid``
-and ``usb-hid`` installed. Plug the board's USB device port into your computer.
+and OmniPython installed. Plug the board's USB device port into your computer.
 The program keeps the board's serial port, so the REPL stays on the same cable.
 
 Run it:

@@ -29,7 +29,7 @@ import time
 import unittest
 
 ROOT = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(ROOT / "packages" / "hmilink"))
+sys.path.insert(0, str(ROOT / "lib"))
 
 import hmilink  # noqa: E402
 from hmilink import local, stream  # noqa: E402

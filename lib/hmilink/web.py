@@ -4,7 +4,7 @@
 
 """A page's serial port or Bluetooth link, for Python running in the browser.
 
-``hmilink.js``, beside this package, opens a port on the page: a board on
+``hmilink.js``, in this package's folder, opens a port on the page: a board on
 USB through WebSerial, or one advertising the Nordic UART service (`hmilink.ble`)
 through Web Bluetooth. Python in MicroPython's WebAssembly build, or in
 Pyodide, then runs a device or a panel over it with `hmilink.stream`::

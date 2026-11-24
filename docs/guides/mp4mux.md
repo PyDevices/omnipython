@@ -14,7 +14,7 @@ mp4.add_audio(pcm_block, pts_ms)               # 16-bit little-endian
 mp4.close()                                    # writes the index
 ```
 
-[`examples/mp4mux_simpletest.py`](examples/mp4mux_simpletest.py) writes two
+[`examples/mp4mux_simpletest.py`](https://github.com/PyDevices/omnipython/blob/main/examples/mp4mux_simpletest.py) writes two
 seconds of a tone, which runs anywhere and prints `tone.mp4: 2000 ms of sound`.
 
 ## Recording on an ESP32-P4
