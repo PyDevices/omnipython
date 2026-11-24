@@ -217,6 +217,14 @@ network goes without it. Then it goes round once more. Each attempt waits up to
 `timeout` seconds (20 by default), but a missing network ends it after about
 six seconds and a wrong password after about fourteen.
 
+An access point can turn a board away for a few minutes after the board
+resets, because it still holds the board's old connection. ESP32 boards report
+that as a wrong password. So when a password that has joined a network before
+is refused, `connect()` doesn't give up or start setup mode yet: it waits 10
+seconds, then 20, then 40, and tries every known network again each time, for
+up to two minutes (`REFUSED_RETRY_S`). A password that has never worked is
+still reported as wrong after the two rounds.
+
 A board with a fixed address (`ifconfig()` set before the join) counts as
 connected only once the station has a link, so it joins at boot and rejoins
 after a drop.
@@ -313,5 +321,6 @@ the module that holds `WIFI_SSID` and `WIFI_PASSWORD` when it isn't `secrets`.
 | `AP_NAME` | `None` | The setup access point's name; `None` is the board's name |
 | `JOIN_TIMEOUT_S` | `20` | Seconds to wait for one network |
 | `RESCAN_S` | `60` | Seconds between looks for a known network while `connect()`'s setup mode waits |
+| `REFUSED_RETRY_S` | `120` | Seconds to keep trying when a network refuses a password that has joined it before; `0` gives up after two rounds |
 | `NVM_OFFSET` | `0` | CircuitPython: where the record starts in `microcontroller.nvm` |
 | `CACHE_FILE` | `"/wifi_networks.json"` | MicroPython ports without `esp32.NVS` |
