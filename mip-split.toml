@@ -142,6 +142,7 @@ pypi-desktop = true
 
 [hmilink]
 top-level = true
+pypi-desktop = true
 
 [endpointkit]
 top-level = true
@@ -153,12 +154,15 @@ pypi-desktop = true
 
 [mp4mux]
 top-level = true
+pypi-desktop = true
 
 [vtterm]
 top-level = true
+pypi-desktop = true
 
 [castdisplay]
 top-level = true
+pypi-desktop = true
 
 [usb-core]
 top-level = true
