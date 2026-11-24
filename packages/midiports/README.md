@@ -36,7 +36,7 @@ To use another transport, change the line that opens the ports:
 | Bluetooth LE, the board connecting to a controller that waits, such as a foot controller | `ble.connect_ports("FootCtrl")` |
 | Windows' MIDI ports (a keyboard, loopMIDI, a DAW) | `windows.ports("loopMIDI")` |
 | Windows' loopback, for trying MIDI with no hardware | `windows.ports(midiports.LOOPBACK)` |
-| Linux raw MIDI | `linux.ports("DMK25")` |
+| Linux's MIDI ports (a keyboard, a DAW, a Bluetooth MIDI device BlueZ connected) | `linux.ports("DMK25")` |
 | Linux, 5-pin DIN on a serial port (a Pi's UART) | `linux.serial_ports("/dev/ttyAMA0")` |
 | Web MIDI, in a browser page (Pyodide) | `await webmidi.open("DMK25")` |
 | Web MIDI, in a browser page (MicroPython) | `webmidi.page_in("DMK25")`, `webmidi.page_out("synth")` |

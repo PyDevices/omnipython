@@ -283,8 +283,9 @@ class LinuxPort(unittest.TestCase):
         self.assertEqual({p.id for p in linux.find("donner", IN, proc=self.proc)}, {"in:0:0"})
 
     def test_ids_carry_the_alsa_address_and_bad_ones_are_refused(self):
-        self.assertEqual(linux._split_id("out:2:3"), (OUT, 2, 3))
-        for bad in ("", "out:0", "0:0", "sideways:0:0", "in:x:0"):
+        self.assertEqual(linux._split_id("out:2:3"), (OUT, 2, 3, None))
+        self.assertEqual(linux._split_id("in:seq:128:0"), (IN, 128, 0, "seq"))
+        for bad in ("", "out:0", "0:0", "sideways:0:0", "in:x:0", "in:seq:128", "in:raw:1:0"):
             self.assertRaises(ValueError, linux._split_id, bad)
 
     def test_ports_reads_and_writes_whole_messages(self):
@@ -315,6 +316,185 @@ class LinuxPort(unittest.TestCase):
     def test_no_matching_port_says_so(self):
         _make_asound(self.proc, {})
         self.assertRaises(OSError, linux.ports, "nothing", proc=self.proc, dev=self.dev)
+
+
+#: /proc/asound/seq/clients as a Raspberry Pi with PipeWire shows it while
+#: BlueZ is connected to a BLE-MIDI board, plus a sound card's kernel client.
+SEQ_CLIENTS = """Client info
+  cur  clients : 6
+  peak clients : 21
+  max  clients : 192
+
+Client   0 : "System" [Kernel Legacy]
+  Port   0 : "Timer" (Rwe-) [In/Out]
+    Connecting To: 142:0
+  Port   1 : "Announce" (R-e-) [In]
+Client  14 : "Midi Through" [Kernel Legacy]
+  Port   0 : "Midi Through Port-0" (RWe-) [In/Out]
+Client  20 : "DONNER DMK25Pro" [Kernel Legacy]
+  Port   0 : "DONNER DMK25Pro MIDI 1" (RWeX) [In/Out]
+Client 128 : "THMI-MIDI" [User Legacy]
+  Port   0 : "THMI-MIDI Bluetooth" (RWe-) [In/Out]
+  Output pool :
+    Pool size          : 500
+Client 129 : "Some DAW" [User UMP MIDI2]
+  Port   0 : "out only" (R-e-) [Out]
+  Port   1 : "hidden" (RW--) [In/Out]
+Client 142 : "PipeWire-System" [User UMP MIDI2]
+  Port   0 : "input" (rwe-) [In/Out]
+    Connected From: 0:1, 0:0
+"""
+
+
+class _FakeSeq:
+    """A `_SeqClient` that keeps what's written and hands out canned reads."""
+
+    def __init__(self, reads=()):
+        self.fd = 3
+        self.client, self.port = 130, 0
+        self.written = []
+        self.reads = list(reads)
+
+    def write(self, data):
+        self.written.append(bytes(data))
+        return len(data)
+
+    def read(self, buf):
+        if not self.reads:
+            return 0
+        data = self.reads.pop(0)
+        buf[:len(data)] = data
+        return len(data)
+
+    def close(self):
+        self.fd = None
+
+
+def _decode(stream):
+    out = bytearray()
+    used = linux.decode_events(stream, out)
+    return used, bytes(out)
+
+
+class LinuxSequencer(unittest.TestCase):
+    """``midiports.linux``'s ALSA sequencer ports, where BlueZ puts a BLE-MIDI
+    device, without a sequencer: the proc listing, the event codec and the
+    ports' byte handling, against fakes."""
+
+    def setUp(self):
+        self.tmp = tempfile.mkdtemp()
+        self.proc = self.tmp + "/asound"
+        os.makedirs(self.proc + "/seq")
+        with open(self.proc + "/seq/clients", "w") as handle:
+            handle.write(SEQ_CLIENTS)
+        with open(self.proc + "/devices", "w") as handle:
+            handle.write("")
+
+    def tearDown(self):
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    def test_only_ports_a_program_can_subscribe_to_are_listed(self):
+        self.assertEqual(linux._seq_ports(self.proc), (
+            (14, 0, "Midi Through Port-0", True, True),
+            (128, 0, "THMI-MIDI Bluetooth", True, True),
+            (129, 0, "out only", True, False),
+        ))
+        self.assertEqual(linux._seq_ports(self.tmp + "/nothing"), ())
+
+    @unittest.skipUnless(sys.platform.startswith("linux"), "fcntl.ioctl")
+    def test_available_and_find_list_sequencer_ports_by_direction(self):
+        ids = [p.id for p in linux.available(self.proc)]
+        self.assertEqual(ids, ["out:seq:14:0", "in:seq:14:0", "out:seq:128:0", "in:seq:128:0", "in:seq:129:0"])
+        found = linux.find("thmi", proc=self.proc)
+        self.assertEqual({(p.id, p.direction) for p in found}, {("in:seq:128:0", IN), ("out:seq:128:0", OUT)})
+        self.assertEqual(linux._seq_name(128, 0, self.proc), "THMI-MIDI Bluetooth")
+        self.assertEqual(linux._seq_name(200, 1, self.proc), "sequencer 200:1")
+
+    def test_every_message_survives_the_event_codec(self):
+        sysex = bytes([0xF0, 0x7D] + [i % 128 for i in range(1021)] + [0xF7])
+        messages = [b"\x90\x3c\x64", b"\x9f\x3c\x00", b"\x80\x3c\x40", b"\xa1\x40\x10", b"\xb2\x07\x7f",
+                    b"\xc3\x05", b"\xd4\x33", b"\xe5\x00\x40", b"\xe5\x7f\x7f", b"\xe5\x00\x00",
+                    b"\xf1\x21", b"\xf2\x10\x20", b"\xf3\x04", b"\xf6", b"\xf8", b"\xfa", b"\xfb",
+                    b"\xfc", b"\xfe", b"\xff", sysex]
+        stream = b"".join(linux.encode_message(m, (130, 0), (128, 0)) for m in messages)
+        self.assertEqual(_decode(stream), (len(stream), b"".join(messages)))
+
+    def test_an_event_is_the_kernel_layout(self):
+        event = linux.encode_message(b"\x91\x3c\x64", (130, 1), (128, 0))
+        self.assertEqual(len(event), 28)
+        # type NOTEON, sent at once (queue 253), source 130:1, dest 128:0, channel 1, note, velocity
+        self.assertEqual(event[0], 6)
+        self.assertEqual(event[3], 253)
+        self.assertEqual(tuple(event[12:16]), (130, 1, 128, 0))
+        self.assertEqual(tuple(event[16:19]), (1, 0x3C, 0x64))
+        bend = linux.encode_message(b"\xe0\x00\x00")
+        self.assertEqual(struct.unpack_from("<i", bend, 24)[0], -8192)
+        sysex = linux.encode_message(b"\xf0\x01\xf7")
+        self.assertEqual((sysex[0], sysex[1], struct.unpack_from("<I", sysex, 16)[0], sysex[28:]),
+                         (130, 0x04, 3, b"\xf0\x01\xf7"))
+        self.assertEqual(linux.encode_message(b"\xf4"), b"")
+
+    def test_14_bit_and_parameter_events_become_controller_messages(self):
+        def ctrl(kind, channel, param, value):
+            return struct.pack("<BBbBIIBBBB", kind, 0, 0, 253, 0, 0, 0, 0, 0, 0) + struct.pack("<B3xIi", channel, param, value)
+        self.assertEqual(_decode(ctrl(14, 2, 7, 0x1234))[1], bytes((0xB2, 7, 0x24, 0xB2, 39, 0x34)))
+        self.assertEqual(_decode(ctrl(16, 0, 0x0081, 0x0102))[1],
+                         bytes((0xB0, 101, 1, 0xB0, 100, 1, 0xB0, 6, 2, 0xB0, 38, 2)))
+        self.assertEqual(_decode(ctrl(15, 0, 0, 0))[1][:3], bytes((0xB0, 99, 0)))
+
+    def test_events_with_no_midi_and_a_cut_short_read_are_skipped(self):
+        announce = struct.pack("<BBbBIIBBBB12s", 63, 0, 0, 253, 0, 0, 0, 1, 130, 0, b"")
+        note = linux.encode_message(b"\x90\x3c\x64")
+        sysex = linux.encode_message(b"\xf0\x01\x02\xf7")
+        self.assertEqual(_decode(announce + note), (56, b"\x90\x3c\x64"))
+        self.assertEqual(_decode(note + sysex[:30]), (28, b"\x90\x3c\x64"))
+
+    def _out(self):
+        port = linux.LinuxSeqOut.__new__(linux.LinuxSeqOut)
+        port.info, port.address = None, (128, 0)
+        port._seq = _FakeSeq()
+        port._source = (130, 0)
+        port._status, port._sysex, port._partial = 0, None, bytearray()
+        return port
+
+    def _sent(self, port):
+        return _decode(b"".join(port._seq.written))[1]
+
+    def test_output_expands_running_status_and_joins_split_writes(self):
+        port = self._out()
+        self.assertEqual(port.write(b"\x90\x3c\x64\x3e"), 4)
+        self.assertEqual(port.write(b"\x50\x40\x30\x00\xf8"), 5)
+        self.assertEqual(self._sent(port), b"\x90\x3c\x64\x90\x3e\x50\x90\x40\x30\xf8")
+        self.assertEqual(port._seq.written[0][12:16], bytes((130, 0, 128, 0)))
+
+    def test_output_sends_a_sysex_whole_with_realtime_ahead_of_it(self):
+        port = self._out()
+        port.write(b"\x05\xf0\x7d\x01")      # a stray data byte is dropped
+        port.write(b"\x02\xf8\x03\xf7\xc1\x07")
+        port.write(b"\xf0\x01\x90\x3c\x64")  # a status byte ends a SysEx
+        self.assertEqual(self._sent(port),
+                         b"\xf8\xf0\x7d\x01\x02\x03\xf7\xc1\x07\xf0\x01\xf7\x90\x3c\x64")
+
+    def test_output_refuses_writes_once_closed(self):
+        port = self._out()
+        port.close()
+        self.assertRaises(OSError, port.write, b"\xfa")
+        port.close()
+
+    def test_input_hands_out_the_bytes_of_what_it_reads(self):
+        sysex = bytes([0xF0] + [1] * 300 + [0xF7])
+        reads = [linux.encode_message(b"\x90\x3c\x64") + linux.encode_message(sysex), b""]
+        port = linux.LinuxSeqIn.__new__(linux.LinuxSeqIn)
+        midiports.PortIn.__init__(port)
+        port._seq = _FakeSeq(reads)
+        port._raw = bytearray(4096)
+        port._bytes, port._pos = bytearray(), 0
+        midi_in = WholeMessages(port)
+        self.assertEqual(midi_in.read(), b"\x90\x3c\x64")
+        self.assertEqual(midi_in.read(), sysex)
+        self.assertIsNone(midi_in.read())
+        port.close()
+        self.assertRaises(OSError, port.readinto, bytearray(4))
 
 
 @unittest.skipUnless(sys.platform.startswith("linux"), "named pipes and ALSA")

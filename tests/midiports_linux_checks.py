@@ -108,6 +108,52 @@ def sysex_whole(port):
               len(got[1].data))
 
 
+def sequencer(proc):
+    """The ALSA sequencer half: its listing, its event codec, and how this
+    interpreter reaches ``/dev/snd/seq`` (``fcntl``, ``ffi`` or nothing)."""
+    try:
+        os.mkdir(proc + "/seq")
+    except OSError:
+        pass
+    write(proc + "/seq/clients", b'Client   0 : "System" [Kernel Legacy]\n  Port   0 : "Timer" (Rwe-)\n'
+          b'Client 128 : "THMI-MIDI" [User Legacy]\n  Port   0 : "THMI-MIDI Bluetooth" (RWe-) [In/Out]\n')
+    check("BlueZ's sequencer port is read from the listing",
+          linux._seq_ports(proc) == ((128, 0, "THMI-MIDI Bluetooth", True, True),), linux._seq_ports(proc))
+    messages = [bytes((0x90, 0x3C, 0x64)), bytes((0xE5, 0x7F, 0x7F)), bytes((0xF2, 0x10, 0x20)), bytes((0xF8,)),
+                bytes([0xF0, 0x7D] + [i % 128 for i in range(300)] + [0xF7])]
+    stream = b"".join(linux.encode_message(m, (130, 0), (128, 0)) for m in messages)
+    out = bytearray()
+    used = linux.decode_events(memoryview(stream), out)
+    check("MIDI survives the sequencer's event codec", used == len(stream) and bytes(out) == b"".join(messages))
+    io = linux._seq_io()
+    if sys.implementation.name == "circuitpython":
+        check("CircuitPython lists no sequencer ports (no ioctl)",
+              io is None and not [p for p in linux.available(proc) if ":seq:" in p.id])
+        return
+    check("this interpreter can reach /dev/snd/seq", io is not None, sys.implementation.name)
+    if io is None:
+        return
+    check("sequencer ports are listed", [p.id for p in linux.available(proc) if ":seq:" in p.id]
+          == ["out:seq:128:0", "in:seq:128:0"])
+    # The C library calls, on a plain file: what an ALSA sequencer is read and written with.
+    path = SCRATCH + "/seqfile"
+    write(path, b"")
+    fd = io.open(path, 1)  # O_WRONLY
+    check("a write goes through", io.write(fd, b"abc") == 3)
+    io.close(fd)
+    fd = io.open(path, 0 | 0o4000)
+    buf = bytearray(8)
+    n = io.read(fd, buf)
+    check("a read comes back", n == 3 and bytes(buf[:3]) == b"abc", n)
+    try:
+        io.ioctl(fd, linux._IOCTL_CLIENT_ID, bytearray(4))
+        refused = False
+    except OSError:
+        refused = True
+    check("an ioctl the file doesn't know raises OSError", refused)
+    io.close(fd)
+
+
 def main():
     proc, dev = tree()
     found = linux.available(proc)
@@ -150,6 +196,7 @@ def main():
     except OSError:
         said = True
     check("no matching port says so", said)
+    sequencer(proc)
 
     if FIFO:
         info = midiports.PortInfo(id="in:9:9", name="fifo", direction=midiports.IN)

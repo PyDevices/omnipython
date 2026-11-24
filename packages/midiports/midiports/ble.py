@@ -52,7 +52,8 @@ the tasks.
 Needs ``bledev`` and a firmware with Bluetooth LE: MicroPython with
 ``aioble``, or CircuitPython. A computer's own Bluetooth MIDI devices
 appear among its MIDI ports instead (the ``windows`` and ``linux`` modules
-here), once the operating system has paired them.
+here), once the operating system has connected them: on Linux, BlueZ makes
+each one a sequencer port named after the device.
 """
 
 import sys
