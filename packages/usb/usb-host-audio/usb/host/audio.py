@@ -329,10 +329,17 @@ def _device(cls, dev, wait_ms, full_speed):
     return dev
 
 
-def _format(format):
-    if format is None:
-        return {}
-    return {"rate": format.rate, "channels": format.channels, "bits": format.bits}
+def _format(format, cls=None, dev=None):
+    """The stream to ask *cls* for on *dev*: *format*'s, or with none, the
+    device's best offer at 16 bits where it has one. audiodev's formats
+    are 8, 16 or 32 bits, and a 24-bit best offer (common on USB headsets
+    and hubs, beside a 16-bit one) would open a stream audiodev can't
+    describe."""
+    if format is not None:
+        return {"rate": format.rate, "channels": format.channels, "bits": format.bits}
+    if dev is not None and any(s.direction == cls._direction and s.bits == 16 for s in _streams(dev)):
+        return {"bits": 16}
+    return {}
 
 
 def pcm_out(format=None, *, dev=None, ring_ms=_PCM_RING_MS, wait_ms=_WAIT_MS, full_speed=False,
@@ -340,7 +347,8 @@ def pcm_out(format=None, *, dev=None, ring_ms=_PCM_RING_MS, wait_ms=_WAIT_MS, fu
     """A USB speaker on the host port as an audiodev ``PCMOutput``.
 
     ``format`` (an ``audiodev.AudioFormat``) picks the stream; None takes
-    the device's best offer, and the output's ``format`` says what that was.
+    the device's best offer at 16 bits where it has a 16-bit stream, and
+    the output's ``format`` says what that was.
     ``dev`` is a ``usb.core`` device; None finds the first speaker, starting
     the host for audio (``full_speed`` as for ``usb.core.start()``) if it
     isn't running, and waits up to ``wait_ms`` for one to arrive.
@@ -349,7 +357,8 @@ def pcm_out(format=None, *, dev=None, ring_ms=_PCM_RING_MS, wait_ms=_WAIT_MS, fu
     ``PCMOutput``."""
     from . import _pcm
 
-    spk = Speaker(_device(Speaker, dev, wait_ms, full_speed), ring_ms=ring_ms, **_format(format))
+    dev = _device(Speaker, dev, wait_ms, full_speed)
+    spk = Speaker(dev, ring_ms=ring_ms, **_format(format, Speaker, dev))
     return _pcm.SpeakerOutput(spk, **kwargs)
 
 
@@ -361,7 +370,8 @@ def pcm_in(format=None, *, dev=None, ring_ms=_PCM_RING_MS, wait_ms=_WAIT_MS, ful
     webcam's, often) is mixed down as the packets land."""
     from . import _pcm
 
-    mic = Microphone(_device(Microphone, dev, wait_ms, full_speed), ring_ms=ring_ms, **_format(format))
+    dev = _device(Microphone, dev, wait_ms, full_speed)
+    mic = Microphone(dev, ring_ms=ring_ms, **_format(format, Microphone, dev))
     return _pcm.MicrophoneInput(mic, **kwargs)
 
 
