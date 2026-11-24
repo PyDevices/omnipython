@@ -48,7 +48,7 @@ Omit the name entirely when the hardware is absent. Canonical symbols:
 | Storage | `sdcard` | Driver object only; no auto-mount |
 | Camera | `camera` | |
 | Expansion I2C | `i2c` | Dedicated STEMMA/Qwiic/Grove only (not internal-only) |
-| Power | `battery` | |
+| Power | `battery` | Properties, not methods: `voltage` in volts, and `percent` (0 to 100) and `charging` where the chip knows them; each reads `None` with no battery (`battery_adc.BatteryADC`, `bq27220.BQ27220`, `axp2101.AXP2101`) |
 | Field / PHY | `can`, `rs485`, `ethernet` | Dedicated board hardware |
 | Wi‑Fi | `wlan` | Station/AP handle; leave high-level `wifi` for utils / CP |
 | Bluetooth LE | `ble` | Omit when absent |
