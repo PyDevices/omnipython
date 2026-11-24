@@ -1209,6 +1209,77 @@ async def midi_take_never_waits(air):
 
 
 @check
+async def midi_connect_skips_a_service_that_wants_pairing(air):
+    # A Linux desktop serves WirePlumber's BLE-MIDI, which needs an encrypted
+    # link, beside bledev's own; a central that doesn't pair takes bledev's.
+    board = FakeBLE(air=air)
+    laptop = FakeBLE(air=air, peripheral=False)
+    locked = Service(midi.SERVICE)
+    Characteristic(locked, midi.CHARACTERISTIC, write=True, write_no_response=True, notify=True, encrypted=True)
+    server = midi._Server(board, "synth")
+    board.register_services(locked, server.service)
+    board._midi_server = server
+    served = asyncio.create_task(midi.serve(board, name="synth", timeout_ms=2000))
+    client = await midi.connect(laptop, name="synth", timeout_ms=2000)
+    port = await served
+    client.write(b"\x90\x3c\x64")
+    port.write(b"\x80\x3c\x00")
+    equal(await _collect(port, 1), [b"\x90\x3c\x64"], "the note reached the open service")
+    equal(await _collect(client, 1), [b"\x80\x3c\x00"], "and came back from it")
+    await client.aclose()
+
+
+@check
+async def midi_connect_says_when_only_a_locked_service_is_there(air):
+    board = FakeBLE(air=air)
+    laptop = FakeBLE(air=air, peripheral=False)
+    locked = Service(midi.SERVICE)
+    Characteristic(locked, midi.CHARACTERISTIC, write=True, notify=True, encrypted=True)
+    board.register_services(locked)
+
+    async def advertise():
+        await board.advertise(name="synth", services=[midi.SERVICE], timeout_ms=4000)
+
+    task = asyncio.create_task(advertise())
+    error = None
+    try:
+        await midi.connect(laptop, name="synth", timeout_ms=2000)
+    except GattError as e:
+        error = e
+    task.cancel()
+    expect(error is not None and error.status in bledev.NEEDS_PAIRING,
+           "the pairing refusal reaches the caller: {!r}".format(error))
+
+
+@check
+async def midi_blue_z_refusing_a_write_says_why(air):
+    server, client = await midi_pair(air)
+
+    async def refused(data, response=None, timeout_ms=1000):
+        raise GattError(0x08, "write: Insufficient Authorization")
+
+    client._char.write = refused
+    linux, backend = midi._LINUX, client.connection._ble.backend
+    midi._LINUX, client.connection._ble.backend = True, "bluez"
+    try:
+        client.write(b"\x90\x3c\x64")
+        try:
+            await client.drain()
+            said = None
+        except BLEError as e:
+            said = str(e)
+    finally:
+        midi._LINUX, client.connection._ble.backend = linux, backend
+    expect(said is not None and "ExportClaimedServices" in said and "midiports.linux" in said,
+           "the error names both ways round BlueZ's MIDI plugin: {!r}".format(said))
+    await raises(BLEError, _write_after_error(client))
+
+
+async def _write_after_error(port):
+    port.write(b"\x80\x3c\x00")
+
+
+@check
 async def midi_a_receive_error_reaches_the_port(air):
     server, client = await midi_pair(air)
     client.write(b"\x90\x3c\x64")

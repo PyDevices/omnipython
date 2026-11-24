@@ -94,6 +94,13 @@ On Linux:
   under `[LE]` in `/etc/bluetooth/main.conf` and restart Bluetooth: on a
   Raspberry Pi 4 that took the one-way time from 46 ms to 18 ms, and to 11 ms
   when the central asked for 7.5 ms.
+- BlueZ's MIDI plugin takes the MIDI service of every BLE-MIDI device it
+  connects to and makes it an ALSA sequencer port named after the device,
+  which `midiports.linux.ports(NAME)` opens. While the plugin holds a device,
+  BlueZ lets other programs read and subscribe but refuses their writes, so a
+  `bledev.midi.connect` port receives and raises `BLEError` saying so on its
+  first send. Setting `ExportClaimedServices = read-write` under `[GATT]` in
+  `/etc/bluetooth/main.conf` and restarting Bluetooth lets both work.
 - As a central, bledev asks BlueZ for notifications on a socket of their own
   (`AcquireNotify`). bleak's default, `StartNotify`, reports this side's own
   writes as notifications, and after a link drops and is made again in the
