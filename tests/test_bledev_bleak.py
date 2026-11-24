@@ -356,3 +356,56 @@ class LinuxNotifications(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class _BlueZBackend:
+    """bleak's BlueZ backend as far as the MTU goes: 23 until asked."""
+
+    def __init__(self, fails=False):
+        self._mtu_size = None
+        self.fails = fails
+        self.asked = 0
+
+    async def _acquire_mtu(self):
+        self.asked += 1
+        if self.fails:
+            raise BleakError("Operation Not Authorized")
+        self._mtu_size = 247
+
+
+class _BlueZClient:
+    def __init__(self, backend):
+        self._backend = backend
+        self.is_connected = True
+
+    @property
+    def mtu_size(self):
+        return self._backend._mtu_size or 23
+
+
+class BlueZMtu(unittest.TestCase):
+    """On Linux bleak learns the MTU only when it asks BlueZ for it."""
+
+    def _connection(self, backend):
+        ble = bb.BleakBLE()
+        return bb._BleakConnection(ble, _device(ble), _BlueZClient(backend))
+
+    def test_exchange_mtu_asks_bluez_once(self):
+        backend = _BlueZBackend()
+        conn = self._connection(backend)
+        self.assertEqual(conn.mtu, 23)
+        self.assertEqual(asyncio.run(conn.exchange_mtu()), 247)
+        self.assertEqual(asyncio.run(conn.exchange_mtu()), 247)
+        self.assertEqual(backend.asked, 1)
+
+    def test_a_refused_ask_leaves_the_default(self):
+        backend = _BlueZBackend(fails=True)
+        conn = self._connection(backend)
+        self.assertEqual(asyncio.run(conn.exchange_mtu(timeout_ms=40)), 23)
+        self.assertEqual(backend.asked, 1)
+
+    def test_other_backends_are_not_asked(self):
+        ble = bb.BleakBLE()
+        client = types.SimpleNamespace(_backend=types.SimpleNamespace(_requester=None), is_connected=True, mtu_size=185)
+        conn = bb._BleakConnection(ble, _device(ble), client)
+        self.assertEqual(asyncio.run(conn.exchange_mtu()), 185)
