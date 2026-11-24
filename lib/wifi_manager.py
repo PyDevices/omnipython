@@ -121,6 +121,13 @@ CACHE_FILE = _cache_file()
 JOIN_TIMEOUT_S = 20
 # Seconds between scans for a known network while setup mode waits.
 RESCAN_S = 60
+# Seconds to keep trying, with waits in between, when an access point turns
+# away a password that has joined it before.  0 gives up after two rounds.
+REFUSED_RETRY_S = 120
+_RETRY_FIRST_S = 10
+_RETRY_MAX_S = 40
+# A join that ended with one of these never reached the access point.
+_NOT_FOUND = ("network not found", "No network with that ssid")
 _WRONG_HOLD_MS = 8000  # how long esp32 must report a bad password before we believe it
 
 _MAX_NETWORKS = 16
@@ -465,7 +472,20 @@ def _sync_time():
         return False
 
 
-def _join_known(radio, timeout, module="secrets"):
+def _join_known(radio, timeout, module="secrets", retry_s=None):
+    """Join the first known network that lets the board in.  Returns its
+    address, or None.
+
+    An access point can refuse a board for minutes after the board reset
+    without leaving the network: it still holds the old association, and
+    esp32 reports the refusal as a wrong password.  So when a password that
+    has joined a network before is turned away, the known networks are tried
+    again after a wait that grows, for up to *retry_s* seconds
+    (``REFUSED_RETRY_S``).  The waits leave the radio quiet, since joins
+    that keep coming seem to make the refusal last longer.
+    """
+    if retry_s is None:
+        retry_s = REFUSED_RETRY_S
     known = _known(module)
     if not known:
         print("wifi_manager: no networks known yet")
@@ -487,35 +507,77 @@ def _join_known(radio, timeout, module="secrets"):
         order = [n for n in known if n["ssid"] in seen]
         order.sort(key=lambda n: -seen[n["ssid"]])
         order += [n for n in known if n["ssid"] not in seen]
+    proven = _proven()
+    absent = set()
     # Two rounds: on a weak link esp32 fails a join ("wrong password",
     # "network not found") that works a moment later.
-    absent = set()
-    for n in order + order:
-        if n["ssid"] in absent:
-            continue
-        ip = _try_join(radio, n["ssid"], n.get("password", ""), timeout, seen)
-        if not ip and getattr(radio, "absent", False):
-            # CircuitPython searched every channel for it. The second round
-            # would hold the interpreter for as long again to say the same.
-            absent.add(n["ssid"])
-        if ip:
-            # A network from secrets.py lands in the cache here, which is what
-            # lets secrets.py be deleted afterwards.
-            _remember(n["ssid"], n.get("password", ""), bool(n.get("hidden")))
+    ip, refused = _join_round(radio, order + order, timeout, seen, proven, absent)
+    if ip or not refused or retry_s <= 0:
+        return ip
+    t0 = _ticks_ms()
+    wait = _RETRY_FIRST_S
+    while _ticks_diff(_ticks_ms(), t0) + wait * 1000 <= retry_s * 1000:
+        print("wifi_manager: %s turned this board away; trying again in %d s" % (", ".join(refused), wait))
+        _sleep_ms(wait * 1000)
+        ip, refused = _join_round(radio, order, timeout, seen, proven, absent)
+        if ip or not refused:
             return ip
+        wait = min(2 * wait, _RETRY_MAX_S)
+    print(
+        "wifi_manager: %s still turned this board away after %d s. If its password changed, "
+        "join it again with the new one" % (", ".join(refused), retry_s)
+    )
     return None
 
 
+def _join_round(radio, order, timeout, seen, proven, absent):
+    """Try each network in *order* once.  Returns the address, or None and
+    the networks that refused a password they had taken before."""
+    refused = []
+    for n in order:
+        ssid = n["ssid"]
+        if ssid in absent:
+            continue
+        password = n.get("password", "")
+        known_good = (ssid, password) in proven
+        ip, err = _attempt(radio, ssid, password, timeout, seen, known_good)
+        if ip:
+            # A network from secrets.py lands in the cache here, which is what
+            # lets secrets.py be deleted afterwards.
+            _remember(ssid, password, bool(n.get("hidden")))
+            return ip, []
+        if getattr(radio, "absent", False):
+            # CircuitPython searched every channel for it. The second round
+            # would hold the interpreter for as long again to say the same.
+            absent.add(ssid)
+        elif known_good and err not in _NOT_FOUND and ssid not in refused:
+            refused.append(ssid)
+    return None, refused
+
+
+def _proven():
+    """``(ssid, password)`` for every network a join has worked with."""
+    return {(n["ssid"], n.get("password", "")) for n in _load()}
+
+
 def _try_join(radio, ssid, password, timeout, seen=None):
+    return _attempt(radio, ssid, password, timeout, seen)[0]
+
+
+def _attempt(radio, ssid, password, timeout, seen=None, known_good=False):
+    """One join.  Returns the address and None, or None and the reason."""
     rssi = seen.get(ssid) if seen else None
     print("wifi_manager: joining", ssid, "(%d dBm)" % rssi if rssi is not None else "")
     err = radio.join(ssid, password, timeout)
     if err is None:
         ip = radio.ip()
         print("wifi_manager: connected to", ssid, "as", ip)
-        return ip
-    print("wifi_manager:", ssid, "-", err)
-    return None
+        return ip, None
+    if known_good and err not in _NOT_FOUND:
+        print("wifi_manager:", ssid, "-", err, "(this password has joined it before)")
+    else:
+        print("wifi_manager:", ssid, "-", err)
+    return None, err
 
 
 class _MPRadio:
@@ -800,7 +862,8 @@ class _Setup:
                     last_scan = _ticks_ms()
                 elif self.rescan and _ticks_diff(_ticks_ms(), last_scan) > RESCAN_S * 1000:
                     ui.status("Looking for a known network...")
-                    ip = _join_known(radio, self.timeout)
+                    # No waits here: the setup page has to keep answering.
+                    ip = _join_known(radio, self.timeout, retry_s=0)
                     if ip:
                         ui.status("Connected  %s" % ip, ok=True)
                         _sleep_ms(2000)

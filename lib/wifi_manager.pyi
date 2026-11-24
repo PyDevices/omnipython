@@ -10,6 +10,7 @@ NVM_OFFSET: int
 CACHE_FILE: str
 JOIN_TIMEOUT_S: int
 RESCAN_S: int
+REFUSED_RETRY_S: int
 
 def connect(
     *,

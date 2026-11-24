@@ -93,14 +93,16 @@ class _Patched(unittest.TestCase):
     def setUp(self):
         self._saved = {
             name: getattr(wm, name)
-            for name in ("_known", "_remember", "_sleep_ms", "_ticks_ms", "_ticks_diff", "_make_ui")
+            for name in ("_known", "_load", "_remember", "_sleep_ms", "_ticks_ms", "_ticks_diff", "_make_ui")
         }
         self.known = []
+        self.stored = []  # what a join has worked with before
         self.remembered = []
         _clock[0] = 0
         self.sleeps = 0
         self.on_sleep = None
         wm._known = lambda module="secrets": list(self.known)
+        wm._load = lambda: list(self.stored)
         wm._remember = lambda ssid, password, hidden=False: self.remembered.append(ssid)
         wm._ticks_ms = lambda: _clock[0]
         wm._ticks_diff = lambda a, b: a - b
@@ -227,6 +229,59 @@ class JoinKnownTest(_Patched):
         radio = FakeRadio(seen={"home": -50})
         self.assertIsNone(wm._join_known(radio, 5))
         self.assertEqual(radio.joins, [])
+
+
+class RefusedTest(_Patched):
+    """An access point that turns away a password it has taken before: after
+    a reset that sent no deauthentication it can, for minutes."""
+
+    def test_a_password_that_worked_before_is_tried_again_after_a_wait(self):
+        self.known = self.stored = [_net("home")]
+        radio = FakeRadio(seen={}, script={"home": ["wrong password"] * 3 + [None]})
+        self.assertEqual(wm._join_known(radio, 5), "10.0.0.5")
+        self.assertEqual(radio.joins, ["home"] * 4)
+        self.assertGreaterEqual(_clock[0], wm._RETRY_FIRST_S * 1000)
+
+    def test_the_other_known_networks_are_tried_in_each_retry(self):
+        self.known = self.stored = [_net("extender"), _net("router")]
+        radio = FakeRadio(
+            seen={"extender": -40, "router": -60},
+            script={"extender": ["wrong password"] * 3, "router": ["wrong password"] * 2 + [None]},
+        )
+        self.assertEqual(wm._join_known(radio, 5), "10.0.0.5")
+        self.assertEqual(radio.joins, ["extender", "router"] * 3)
+        self.assertEqual(self.remembered, ["router"])
+
+    def test_it_gives_up_after_the_retry_time_and_says_so(self):
+        self.known = self.stored = [_net("home")]
+        radio = FakeRadio(seen={}, script={"home": ["wrong password"] * 50})
+        with mock.patch("builtins.print") as out:
+            self.assertIsNone(wm._join_known(radio, 5))
+        self.assertLessEqual(_clock[0], wm.REFUSED_RETRY_S * 1000)
+        self.assertGreater(len(radio.joins), 2)
+        said = " ".join(str(a) for c in out.call_args_list for a in c.args)
+        self.assertIn("still turned this board away", said)
+
+    def test_a_password_that_never_worked_is_not_retried(self):
+        self.known = [_net("home")]
+        self.stored = [{"ssid": "home", "password": "old"}]
+        radio = FakeRadio(seen={}, script={"home": ["wrong password"] * 5})
+        self.assertIsNone(wm._join_known(radio, 5))
+        self.assertEqual(radio.joins, ["home", "home"])
+        self.assertEqual(_clock[0], 0)
+
+    def test_a_network_that_isnt_there_is_not_waited_for(self):
+        self.known = self.stored = [_net("home")]
+        radio = FakeRadio(seen={})
+        self.assertIsNone(wm._join_known(radio, 5))
+        self.assertEqual(radio.joins, ["home", "home"])
+        self.assertEqual(_clock[0], 0)
+
+    def test_setup_modes_rescan_does_not_wait(self):
+        self.known = self.stored = [_net("home")]
+        radio = FakeRadio(seen={}, script={"home": ["wrong password"] * 5})
+        self.assertIsNone(wm._join_known(radio, 5, retry_s=0))
+        self.assertEqual(radio.joins, ["home", "home"])
 
 
 class CircuitPythonJoinTest(_Patched):
