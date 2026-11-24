@@ -135,6 +135,7 @@ and `omnipython`; its `manifest.py` lists them.
 | Waveshare RP2040-Touch-LCD-1.28 | `busdisplay/spi/rp2040-touch-lcd-1.28` |  | 240×240 round, GC9A01A SPI (`spibus` / FourWire); touch CST816 (`cst8xx` / `cst816`) | `touch` | `accelerometer`, `gyroscope`, `battery` |
 | GC9A01 round display on QT Py ESP32-S3 | `busdisplay/spi/seeed_gc9a01_on_qtpy_esp32s3` |  |  |  |  |
 | GC9A01 on QT Py RP2040 | `busdisplay/spi/seeed_gc9a01_on_qtpy_rp2040` |  |  |  |  |
+| Seeed Round Display for XIAO on a XIAO ESP32C5 | `busdisplay/spi/seeed_gc9a01_on_xiao_esp32c5` |  | 240×240 round, GC9A01 SPI (`spibus`); touch CHSC6X | `touch` | `sdcard`, `rtc`, `battery`, `led`, `boot_button`, `i2c`, `wlan`, `ble` |
 | Seeed Round Display for XIAO (GC9A01, CHSC6X touch, microSD, PCF8563 clock) on a XIAO nRF52840, stock MicroPython | `busdisplay/spi/seeed_gc9a01_on_xiao_nrf52840` | yes |  |  |  |
 | SSD1331 color OLED (MP) | `busdisplay/spi/ssd1331_096_oled` | yes |  |  |  |
 | SSD1351 color OLED (MP) | `busdisplay/spi/ssd1351_128_oled` | yes |  |  |  |

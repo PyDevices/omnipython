@@ -26,6 +26,10 @@ _CONFIGS = (
         _MP_DRIVER,
     ),
     (
+        "board_configs/busdisplay/spi/seeed_gc9a01_on_xiao_esp32c5/board_config.py",
+        _MP_DRIVER,
+    ),
+    (
         "board_configs/cp/busdisplay/spi/seeed_gc9a01_on_xiao_nrf52840/board_config.py",
         _CP_DRIVER,
     ),
