@@ -30,16 +30,20 @@ The first report gives an event for every axis and hat, so a program learns
 where each one rests. A device's range for an axis is `axis_range(usage)`, and
 `scaled(usage)` maps the value to -1.0 to 1.0.
 
+Vendor-defined input values, which some pads use for button pressure or motion
+sensors, don't make events: `extras` holds the latest of each, in report order,
+and `extra_info` the usage and logical range of each, ``(usage, low, high)``.
+
 It reads the buttons, the Generic Desktop axes (X, Y, Z, Rx, Ry, Rz, slider,
 dial and wheel), the Simulation Controls axes (throttle, rudder, steering,
-accelerator and brake) and hat switches. A D-pad reported as four buttons, an
-array of buttons, and vendor-defined fields are left out. A controller that
+accelerator and brake), hat switches, and vendor-defined values as `extras`. A
+D-pad reported as four buttons and an array of buttons are left out. A controller that
 needs a start-up message before it sends full reports (a DualShock 4 or a
 Switch Pro controller, say) is not handled.
 
 The decoder is checked against the report descriptors of a generic pad, adafruit_ble's
-gamepad and a 16-bit-axis pad, in the unit tests and under unix MicroPython. It has not
-yet run against a real gamepad on a host board.
+gamepad and a 16-bit-axis pad, in the unit tests and under unix MicroPython, and on an
+ESP32-S31's host port with a full-speed pad in the PS3 layout.
 """
 
 import usb.core
@@ -53,6 +57,7 @@ HAT = 9
 _BUTTON = 0
 _AXIS = 1
 _HAT = 2
+_EXTRA = 3
 
 _SET_IDLE = 0x0A
 
@@ -102,9 +107,10 @@ def parse(descriptor):
     """The input fields of a report descriptor, and which application it is.
 
     Returns ``(fields, uses_report_ids, applications)``. A field is
-    ``[kind, report id, bit offset, size, low, high, usage, last]``, plus a hat's index,: ``kind`` is
-    0 for a button, 1 for an axis and 2 for a hat; the offset counts from the
-    first byte of the report, report ID included; ``low`` and ``high`` are the
+    ``[kind, report id, bit offset, size, low, high, usage, last]``, plus a
+    hat's or vendor-defined value's index: ``kind`` is 0 for a button, 1 for an
+    axis, 2 for a hat and 3 for a vendor-defined value; the offset counts from
+    the first byte of the report, report ID included; ``low`` and ``high`` are the
     logical range; ``last`` is the value seen in the previous report. Fields
     this module doesn't read are left out. ``applications`` lists each top-level
     collection's usage as ``page << 16 | usage``.
@@ -117,7 +123,7 @@ def _parse(descriptor):
     # the ID byte included.
     d = descriptor
     fields, apps, offsets, stack, kept = [], [], {0: 0}, [], []
-    page = size = count = rid = lmin = lmax = hats = 0
+    page = size = count = rid = lmin = lmax = hats = extras = 0
     ids = False
     usages, umin, umax = [], None, None
     i = 0
@@ -180,6 +186,9 @@ def _parse(descriptor):
                         hats += 1
                     elif _axis_usage(u):
                         fields.append([_AXIS, rid, at + j * size, size, lmin, lmax, u, None])
+                    elif u >> 16 >= 0xFF00:
+                        fields.append([_EXTRA, rid, at + j * size, size, lmin, lmax, u, None, extras])
+                        extras += 1
         if t in (0x80, 0x90, 0xB0, 0xA0, 0xC0):
             usages, umin, umax = [], None, None
     return fields, ids, apps, offsets
@@ -246,6 +255,9 @@ class Gamepad:
         self.buttons = set()    # the numbers of the buttons held
         self.axes = {}          # axis code -> the last value
         self.hats = {}          # hat index -> the last direction
+        self.extra_info = [(f[6], f[4], f[5]) for f in self._fields if f[0] == _EXTRA]
+        self.extras = [None] * len(self.extra_info)    # vendor-defined values, in report order
+        self.reports = 0        # reports read, those that changed nothing included
         dev.set_configuration()
         try:
             dev.ctrl_transfer(0x21, _SET_IDLE, 0, self.interface, None, 1000)    # report only on change
@@ -271,11 +283,14 @@ class Gamepad:
     def read(self, timeout=1):
         """The next event, or None if nothing happened within timeout ms (a
         report that changes nothing counts). One report can make several
-        events, so call it again until it returns None."""
+        events, so call it again until it returns None. `reports` counts the
+        reports read, so a caller can tell a quiet pad from one whose report
+        only moved its `extras`."""
         if not self._queue:
             n = self._read_report(timeout)
             if not n:
                 return None
+            self.reports += 1
             self._decode(self._buf, n)
             if not self._queue:
                 return None
@@ -320,6 +335,10 @@ class Gamepad:
                     f[7] = v
                     self.axes[f[6]] = v
                     moves.append((AXIS, f[6], v))
+            elif kind == _EXTRA:
+                v = _get(buf, f[2], f[3], f[4] < 0)
+                f[7] = v
+                self.extras[f[8]] = v
             else:
                 v = _get(buf, f[2], f[3], f[4] < 0)
                 if f[4] <= v <= f[5]:
