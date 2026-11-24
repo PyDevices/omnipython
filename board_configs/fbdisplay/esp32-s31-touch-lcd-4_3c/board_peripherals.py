@@ -501,12 +501,17 @@ def rtc():
 def battery():
     """BQ27220 fuel gauge: ``voltage`` (volts, None with no battery),
     ``percent``, ``current`` (mA, positive while charging), ``charging``,
-    ``battery_status``."""
+    ``battery_status``.
+
+    The board ties the gauge's BIN pin to ground, so the gauge always flags a
+    battery; the driver goes by the current through it instead. With the
+    board on USB, a fitted battery charges, or carries about 20 mA once the
+    charger stops."""
     global _gauge
     if _gauge is None:
         from bq27220 import BQ27220
 
-        _gauge = BQ27220(_i2c_bus())
+        _gauge = BQ27220(_i2c_bus(), bin_tied_low=True)
     return _gauge
 
 
