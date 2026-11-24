@@ -57,3 +57,17 @@ def networks() -> list[str]:
 def forget(ssid: str | None = None) -> bool:
     """Forget one remembered network, or all of them when `ssid` is `None`."""
     ...
+
+def power_save() -> bool:
+    """Whether the radio may sleep between beacons: the choice made with
+    `set_power_save`, or else `True` when the board has a battery fitted.
+    """
+    ...
+
+def set_power_save(on: bool | None) -> None:
+    """Choose power saving, remember the choice across boots, and apply it now.
+
+    Args:
+        on: `True` lets the radio sleep between beacons, which saves battery and slows every reply to the board. `False` keeps it awake. `None` forgets the choice and goes back to the default.
+    """
+    ...

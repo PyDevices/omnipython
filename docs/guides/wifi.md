@@ -161,16 +161,28 @@ On a P4 sending 27 KB camera pictures one request at a time, at -60 to
 | Wi-Fi, power saving on (the default) | 300 to 690 ms | 7.9 s |
 | Wi-Fi, power saving off | 110 to 210 ms | 2.4 s |
 
-Turn it off when your app talks back and forth, streams, or needs low latency:
+`wifi_manager.connect()` turns power saving off on a board with no
+battery, and leaves it on for one with a battery fitted (its `battery` role
+reads a voltage). Choose for yourself with `set_power_save()`, which
+remembers the choice across boots along with the networks:
+
+```python
+import wifi_manager
+wifi_manager.set_power_save(False)  # always awake: answers at once
+wifi_manager.set_power_save(True)   # sleeps between beacons: saves battery
+wifi_manager.set_power_save(None)   # back to the default
+```
+
+While Bluetooth is on, power saving stays on: an ESP32 shares its antenna
+between the two by putting Wi-Fi to sleep.
+
+For a change that lasts only until the next join, set the radio directly,
+on CircuitPython or on MicroPython with OmniPython's `wifi`:
 
 ```python
 import wifi
 wifi.radio.power_management = wifi.PowerManagement.NONE
 ```
-
-On MicroPython without `wifi`, `network.WLAN(network.STA_IF).config(pm=network.WLAN.PM_NONE)`
-does the same. It costs battery, so leave it on for a board that only
-checks in now and then.
 
 Power saving also makes pings lie. An idle board in power saving answers
 pings in 100 to 900 ms however good the signal is. To judge the link, read
@@ -306,6 +318,8 @@ sets another.
 | `cancel()` | Ends a waiting setup mode without a network. Call it from a timer or another app. |
 | `networks()` | The remembered SSIDs. |
 | `forget(ssid=None)` | Forgets one remembered network, or all of them. A network still in `secrets.py` comes back the next time it's joined. |
+| `power_save()` | Whether the radio may sleep between beacons: the remembered choice, or `True` on a board with a battery fitted. |
+| `set_power_save(on)` | Remembers power saving on (`True`), off (`False`) or back to the default (`None`), and applies it now. |
 
 `display_drv` defaults to `board_config.display_drv` when there is one.
 `hostname` is set before the join so DHCP and mDNS see it, and defaults to

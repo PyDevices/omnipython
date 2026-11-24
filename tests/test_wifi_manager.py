@@ -10,6 +10,8 @@ and a join fails once and then works, so the join order and the two rounds
 are what keep a board on its network.
 """
 
+import importlib
+import json
 import sys
 import types
 import unittest
@@ -331,6 +333,9 @@ class CircuitPythonJoinTest(_Patched):
         self.assertEqual(again.r.calls, [("home", 6)])
 
 
+_RADIO_AND_POWER = ("bluetooth", "btclassic", "_bleio", "board_peripherals")
+
+
 class ConnectLinkTest(unittest.TestCase):
     """``connect()`` on an esp32-shaped station: an address without a link is
     not a connection, so a static address joins at boot and rejoins after a
@@ -339,12 +344,21 @@ class ConnectLinkTest(unittest.TestCase):
     def setUp(self):
         self._saved = {
             name: getattr(wm, name)
-            for name in ("_load", "_save", "_sleep_ms", "_ticks_ms", "_ticks_diff")
+            for name in ("_load", "_save", "_settings", "_write_record", "_sleep_ms", "_ticks_ms", "_ticks_diff")
         }
         _fake_clock[0] = 0
         self.stored = []
+        self.settings = {}
         wm._load = lambda: list(self.stored)
         wm._save = lambda nets: self.stored.__init__(nets) or True
+        wm._settings = lambda: dict(self.settings)
+
+        def write_record(nets, settings):
+            self.settings.clear()
+            self.settings.update(settings)
+            return True
+
+        wm._write_record = write_record
         wm._sleep_ms = _fake_sleep_ms
         wm._ticks_ms = _fake_ticks_ms
         wm._ticks_diff = _fake_ticks_diff
@@ -359,7 +373,14 @@ class ConnectLinkTest(unittest.TestCase):
         ntp = types.ModuleType("ntptime")
         ntp.settime = settime
         self._modules = {"_wm_test_secrets": secrets, "ntptime": ntp}
-        self._before = {name: sys.modules.get(name) for name in ("network", "secrets", *self._modules)}
+        self._before = {
+            name: sys.modules.get(name)
+            for name in ("network", "secrets", "wifi", *_RADIO_AND_POWER, *self._modules)
+        }
+        # Other tests leave fakes of these behind; here each test brings its
+        # own, and None makes the rest fail to import, as on a bare board.
+        for name in _RADIO_AND_POWER:
+            sys.modules[name] = None
         sys.modules.update(self._modules)
         sys.modules["secrets"] = types.ModuleType("secrets")  # no network of its own
 
@@ -377,7 +398,22 @@ class ConnectLinkTest(unittest.TestCase):
         net.STA_IF = 0
         net.AP_IF = 1
         net.WLAN = lambda _if: wlan
+        net.PM_NONE, net.PM_PERFORMANCE, net.PM_POWERSAVE = 0, 1, 2
+        net.hostname = lambda name=None: None
         sys.modules["network"] = net
+        # The MicroPython wifi shim binds the station it finds at import, and
+        # wants MicroPython's time functions.
+        sys.modules.pop("wifi", None)
+        real_time = sys.modules["time"]
+        fake_time = types.ModuleType("time")
+        fake_time.sleep_ms = _fake_sleep_ms
+        fake_time.ticks_ms = _fake_ticks_ms
+        fake_time.ticks_diff = _fake_ticks_diff
+        sys.modules["time"] = fake_time
+        try:
+            importlib.import_module("wifi")
+        finally:
+            sys.modules["time"] = real_time
         kwargs.setdefault("module", "_wm_test_secrets")
         kwargs.setdefault("setup", False)
         return wm.connect(**kwargs)
@@ -434,6 +470,65 @@ class ConnectLinkTest(unittest.TestCase):
     def test_the_clock_is_set_after_a_join_when_asked(self):
         self.assertEqual(self._connect(FakeWLAN(), ntp=True), "10.0.0.77")
         self.assertEqual(self.ntp_calls, 1)
+
+    def _battery(self, voltage):
+        bp = types.ModuleType("board_peripherals")
+        bp.PERIPHERALS = frozenset({"battery"})
+        bp.battery = lambda: types.SimpleNamespace(voltage=voltage)
+        sys.modules["board_peripherals"] = bp
+
+    def test_a_board_without_a_battery_keeps_its_radio_awake(self):
+        wlan = FakeWLAN()
+        self.assertEqual(self._connect(wlan), "10.0.0.77")
+        self.assertEqual(wlan.pm, 0)
+
+    def test_a_board_already_joined_is_kept_awake_too(self):
+        wlan = FakeWLAN(ip="10.0.0.77", linked=True)
+        self.assertEqual(self._connect(wlan), "10.0.0.77")
+        self.assertEqual(wlan.pm, 0)
+
+    def test_power_saving_is_set_only_when_it_changes(self):
+        wlan = FakeWLAN(ip="10.0.0.77", linked=True)
+        wlan.pm = 0
+        self._connect(wlan)
+        self.assertEqual(wlan.pm_sets, 0)
+
+    def test_a_board_with_a_battery_saves_power(self):
+        self._battery(3.9)
+        wlan = FakeWLAN()
+        wlan.pm = 0
+        self._connect(wlan)
+        self.assertEqual(wlan.pm, 1)
+
+    def test_a_battery_role_with_no_battery_fitted_keeps_it_awake(self):
+        self._battery(None)
+        wlan = FakeWLAN()
+        self._connect(wlan)
+        self.assertEqual(wlan.pm, 0)
+
+    def test_bluetooth_on_leaves_the_radio_to_sleep(self):
+        ble = types.ModuleType("bluetooth")
+        ble.BLE = lambda: types.SimpleNamespace(active=lambda: True)
+        sys.modules["bluetooth"] = ble
+        wlan = FakeWLAN()
+        self.assertEqual(self._connect(wlan), "10.0.0.77")
+        self.assertEqual((wlan.pm, wlan.pm_sets), (1, 0))
+
+    def test_the_choice_is_remembered_and_beats_the_default(self):
+        wlan = FakeWLAN()
+        self._connect(wlan)  # the station the wifi shim binds
+        wm.set_power_save(True)
+        self.assertEqual(wlan.pm, 1)
+        self.assertEqual(self.settings, {"power_save": True})
+        self._connect(wlan)
+        self.assertEqual(wlan.pm, 1)
+        self._battery(3.9)
+        wm.set_power_save(False)
+        self._connect(wlan)
+        self.assertEqual(wlan.pm, 0)
+        wm.set_power_save(None)
+        self.assertEqual(self.settings, {})
+        self.assertTrue(wm.power_save())
 
     def test_the_clock_is_left_alone_by_default(self):
         self.assertEqual(self._connect(FakeWLAN()), "10.0.0.77")
@@ -706,3 +801,44 @@ class CacheFileTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class SettingsStoreTest(unittest.TestCase):
+    """The power saving choice rides in the networks' own store, in an entry
+    with no ``ssid`` that versions before it pass over."""
+
+    def setUp(self):
+        import tempfile
+
+        self._dir = tempfile.TemporaryDirectory()
+        self._saved = wm.CACHE_FILE
+        wm.CACHE_FILE = self._dir.name + "/wifi_networks.json"
+
+    def tearDown(self):
+        wm.CACHE_FILE = self._saved
+        self._dir.cleanup()
+
+    def test_networks_and_the_choice_are_kept_together(self):
+        wm._save([{"ssid": "bench", "password": "pw"}])
+        with mock.patch.object(wm, "_apply_power_save"):
+            wm.set_power_save(False)
+        wm._save([{"ssid": "attic", "password": "x"}, {"ssid": "bench", "password": "pw"}])
+        self.assertEqual(wm.networks(), ["attic", "bench"])
+        self.assertIs(wm.power_save(), False)
+        with open(wm.CACHE_FILE) as f:
+            entries = json.load(f)
+        old_reader = [n for n in entries if isinstance(n, dict) and n.get("ssid")]
+        self.assertEqual([n["ssid"] for n in old_reader], ["attic", "bench"])
+
+    def test_forgetting_the_networks_keeps_the_choice(self):
+        with mock.patch.object(wm, "_apply_power_save"):
+            wm.set_power_save(True)
+        wm.forget()
+        self.assertEqual(wm.networks(), [])
+        self.assertIs(wm.power_save(), True)
+
+    def test_no_choice_saved_means_the_default(self):
+        with mock.patch.object(wm, "_has_battery", return_value=False):
+            self.assertIs(wm.power_save(), False)
+        with mock.patch.object(wm, "_has_battery", return_value=True):
+            self.assertIs(wm.power_save(), True)

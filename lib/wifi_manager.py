@@ -38,6 +38,16 @@ Before it joins, ``connect()`` and ``run()`` make the board's name
 (``boarddev.name()``) its hostname, so DHCP, mDNS and Bluetooth Classic see
 it, unless they're given ``hostname=``.
 
+Power saving lets the radio sleep between the access point's beacons.  It
+saves battery, and every reply to the board then waits up to a couple of
+seconds for the radio to wake: WebREPL, pings, your app's clients.  So
+``connect()`` turns it off on a board with no battery and leaves it on for one
+with a battery fitted (its ``battery`` role reads a voltage).
+``set_power_save(True)`` or ``set_power_save(False)`` overrides that and is
+remembered with the networks; ``set_power_save(None)`` goes back to the
+default, and ``power_save()`` says which applies.  It is left on while
+Bluetooth runs, which shares the antenna by putting Wi-Fi to sleep.
+
 ``connect(ntp=True)`` sets the clock from NTP once a network is joined.
 ``connect(wait=False)`` starts the join and returns at once, for an app that
 can't stall: poll ``wifi.radio.connected``, or call it again after the link
@@ -208,6 +218,7 @@ def connect(
         # block of internal RAM that a running radio no longer leaves.
         display_drv = _board_display()
     radio = _radio()
+    _apply_power_save()
     _set_hostname(radio, hostname or boarddev.name())
     ip = radio.ip()
     if ip:
@@ -238,6 +249,7 @@ def run(*, hostname=None, display_drv=None, timeout=JOIN_TIMEOUT_S):
     if display_drv is None:
         display_drv = _board_display()
     radio = _radio()
+    _apply_power_save()
     _set_hostname(radio, hostname or boarddev.name())
     return _Setup(radio, display_drv, timeout, rescan=False).run()
 
@@ -261,6 +273,36 @@ def forget(ssid=None):
     """Forget one remembered network, or all of them when ``ssid`` is None."""
     nets = [] if ssid is None else [n for n in _load() if n["ssid"] != ssid]
     return _save(nets)
+
+
+def power_save():
+    """Whether the radio may sleep between beacons: the choice made with
+    `set_power_save`, or else True when the board has a battery fitted.
+
+    Returns:
+        bool: True for power saving, False to keep the radio awake.
+    """
+    on = _settings().get("power_save")
+    if on is None:
+        return _has_battery()
+    return bool(on)
+
+
+def set_power_save(on):
+    """Choose power saving, remember the choice across boots, and apply it now.
+
+    Args:
+        on (bool | None): True lets the radio sleep between beacons, which
+            saves battery and slows every reply to the board.  False keeps it
+            awake.  None forgets the choice and goes back to the default.
+    """
+    settings = _settings()
+    if on is None:
+        settings.pop("power_save", None)
+    else:
+        settings["power_save"] = bool(on)
+    _write_record(_load(), settings)
+    _apply_power_save()
 
 
 # ------------------------------------------------------------ known networks
@@ -317,7 +359,9 @@ def _remember(ssid, password, hidden=False):
     return _save(nets)
 
 
-def _load():
+def _record():
+    """The saved list: a dict per network, and one ``{"settings": {...}}``
+    entry, which has no ``ssid`` so that older versions pass over it."""
     try:
         raw = _store_read()
     except Exception as exc:
@@ -326,20 +370,34 @@ def _load():
     if not raw:
         return []
     try:
-        nets = json.loads(raw.decode())
+        entries = json.loads(raw.decode())
     except (ValueError, UnicodeError):
         print("wifi_manager: saved networks are unreadable; starting fresh")
         return []
-    if not isinstance(nets, list):
-        return []
-    return [n for n in nets if isinstance(n, dict) and n.get("ssid")]
+    return entries if isinstance(entries, list) else []
+
+
+def _load():
+    return [n for n in _record() if isinstance(n, dict) and n.get("ssid")]
+
+
+def _settings():
+    for e in _record():
+        if isinstance(e, dict) and isinstance(e.get("settings"), dict):
+            return e["settings"]
+    return {}
 
 
 def _save(nets):
+    return _write_record(nets, _settings())
+
+
+def _write_record(nets, settings):
     nets = nets[:_MAX_NETWORKS]
+    tail = [{"settings": settings}] if settings else []
     limit = _store_limit()
     while True:
-        data = json.dumps(nets).encode()
+        data = json.dumps(nets + tail).encode()
         if len(data) <= limit or not nets:
             break
         nets.pop()  # drop the oldest until it fits
@@ -446,6 +504,60 @@ def _set_hostname(radio, name):
         radio.set_hostname(name)
     except Exception as exc:
         print("wifi_manager: can't set hostname:", exc)
+
+
+def _apply_power_save():
+    """Put the radio in the power saving mode `power_save` gives."""
+    try:
+        import wifi
+
+        on = power_save()
+        if not on and _bluetooth_on():
+            return  # Bluetooth needs the Wi-Fi side to sleep to share the antenna
+        mode = wifi.PowerManagement.MIN if on else wifi.PowerManagement.NONE
+        if wifi.radio.power_management != mode:
+            wifi.radio.power_management = mode
+    except Exception as exc:
+        print("wifi_manager: can't set power saving:", exc)
+
+
+def _bluetooth_on():
+    """True when this board's Bluetooth radio is running."""
+    try:
+        import bluetooth
+
+        if bluetooth.BLE().active():
+            return True
+    except Exception:
+        pass  # no BLE in this firmware
+    try:
+        import btclassic
+
+        if btclassic.Bluetooth().active():
+            return True
+    except Exception:
+        pass  # no Bluetooth Classic in this firmware
+    try:
+        import _bleio  # CircuitPython
+
+        return bool(_bleio.adapter.enabled)
+    except Exception:
+        return False
+
+
+def _has_battery():
+    """True when the board's ``battery`` role reads a fitted battery."""
+    try:
+        import board_peripherals
+    except ImportError:
+        return False
+    if "battery" not in getattr(board_peripherals, "PERIPHERALS", ()):
+        return False
+    try:
+        return board_peripherals.battery().voltage is not None
+    except Exception as exc:
+        print("wifi_manager: can't read the battery:", exc)
+        return False
 
 
 def _start_join(radio, module):

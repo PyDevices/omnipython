@@ -81,8 +81,15 @@ class FakeWLAN:
             return -50
         return 1010 if self.linked else 1001
 
-    def config(self, key):
-        return {"ssid": "bench", "channel": 6, "mac": b"\x00\x11\x22\x33\x44\x55"}[key]
+    pm = 1  # esp32's default, PM_PERFORMANCE: sleep between beacons
+    pm_sets = 0
+
+    def config(self, key=None, **kwargs):
+        if "pm" in kwargs:
+            self.pm = kwargs["pm"]
+            self.pm_sets += 1
+            return None
+        return {"ssid": "bench", "channel": 6, "pm": self.pm, "mac": b"\x00\x11\x22\x33\x44\x55"}[key]
 
     def disconnect(self):
         """Leave the network: the link falls, a static address stays."""
