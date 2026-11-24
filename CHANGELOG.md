@@ -1,3 +1,21 @@
+## v0.8.1.dev9 (2026-11-24)
+
+- omnipython-desktop: carry hmilink, mp4mux, castdisplay and vtterm (#822)
+- usb.host.msc: a drive never waits on a transfer the host can't allocate (#820)
+- bq27220: no battery reads missing where the board ties BIN low (#819)
+- wifi_manager: keep trying when an access point refuses a password that worked (#817)
+- Board contract: the battery role's properties (#816)
+- mark_tested: skip usb_midi by default, so a run over USB serial keeps its console (#812)
+- usb.host.audio: with no format, open a card's 16-bit stream where it has one (#815)
+- BLE MIDI on Linux: BlueZ's devices open by name, and bledev.midi works beside BlueZ (#813)
+- usb-host-hid: a gamepad's pressure and motion values as extras (#811)
+- USB guide: the generic gamepad decoder reads a real pad on an ESP32-S31 (#810)
+- Roadmap: drop RemoteDisplay over Bluetooth LE or serial (#809)
+- threadnet: say that a board can't lead on build()'s dataset
+- Add threadnet to the desktop PyScript filesystem
+- stack: threadnet and the openthread firmware module
+- threadnet: form or join Thread networks from a picker, as thread.net
+
 ## v0.8.1.dev8 (2026-11-23)
 
 - displaydev: RemoteDisplay's fast loops freeze into any firmware (#807)
