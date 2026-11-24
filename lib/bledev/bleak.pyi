@@ -30,6 +30,8 @@ class BleakBLE(BLE):
 class _BleakConnection(Connection):
     reused_bond: bool
     def __init__(self, ble: BLE, device: Device, client: Any) -> None: ...
+    async def disconnect(self, timeout_ms: int = 5000) -> None:
+        """Drop the link and wait for it to be gone. BlueZ waits two seconds before it drops one."""
     def request_throughput(self) -> bool:
         """Ask the OS for a short connection interval. Windows 11 only; returns whether it asked."""
 

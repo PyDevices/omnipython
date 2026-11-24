@@ -49,7 +49,9 @@ from . import (
     BusyError,
     Characteristic,
     DisconnectedError,
+    GattError,
     MAX_MTU,
+    NEEDS_PAIRING,
     Service,
     UnsupportedError,
     UUID,
@@ -73,6 +75,17 @@ QUEUE_LIMIT = 1024
 
 _POLL_MS = 50
 _BUSY_WAIT_MS = 1
+_INSUFFICIENT_AUTHORIZATION = 0x08
+
+#: Why a Linux computer refuses to send to a BLE-MIDI device it reads from.
+BLUEZ_MIDI_CLAIMED = (
+    "BlueZ refused the write: its MIDI plugin has taken this device's MIDI "
+    "service, and BlueZ only lets other programs read a service a plugin has "
+    "taken. Either open the ALSA sequencer port BlueZ made for it "
+    "(midiports.linux.ports(NAME)), or let programs write to it by setting "
+    "ExportClaimedServices = read-write under [GATT] in "
+    "/etc/bluetooth/main.conf and restarting bluetooth"
+)
 
 # ---------------------------------------------------------------- the port contract
 
@@ -428,7 +441,21 @@ class _ClientPort(Port):
             self._finish()
 
     async def _send_packet(self, packet):
-        await self._char.write(packet, response=not self._no_response)
+        try:
+            await self._char.write(packet, response=not self._no_response)
+        except GattError as e:
+            if e.status == _INSUFFICIENT_AUTHORIZATION and _on_bluez(self.connection):
+                raise BLEError(BLUEZ_MIDI_CLAIMED) from None
+            raise
+
+
+_LINUX = sys.platform.startswith("linux")
+
+
+def _on_bluez(connection):
+    # bleak on Linux, or bledev.bluez, which centrals through bleak.
+    ble = getattr(connection, "_ble", None)
+    return _LINUX and getattr(ble, "backend", None) in ("bleak", "bluez")
 
 
 class _Server:
@@ -546,14 +573,30 @@ async def connect(
             await connection.exchange_mtu(mtu)
         except (UnsupportedError, BLETimeoutError):
             pass
-        service = await connection.service(SERVICE)
-        if service is None:
-            raise BLEError("{!r} has no BLE-MIDI service".format(connection.device))
-        char = await service.characteristic(CHARACTERISTIC)
-        if char is None:
-            raise BLEError("{!r}: the BLE-MIDI service has no MIDI characteristic".format(connection.device))
-        await char.subscribe(notify=True)
-        return char
+        # A Linux desktop can serve two: WirePlumber's, which wants an
+        # encrypted link, beside bledev's own. Take the first one that lets
+        # this central subscribe without pairing.
+        # Discovery runs to the end before anything else is asked of the link.
+        services = []
+        async for service in connection.services(SERVICE):
+            if service.uuid == SERVICE:
+                services.append(service)
+        refused = None
+        for service in services:
+            char = await service.characteristic(CHARACTERISTIC)
+            if char is None:
+                continue
+            try:
+                await char.subscribe(notify=True)
+            except GattError as e:
+                if e.status not in NEEDS_PAIRING:
+                    raise
+                refused = refused or e
+                continue
+            return char
+        if refused is not None:
+            raise refused
+        raise BLEError("{!r} has no BLE-MIDI service with a MIDI characteristic".format(connection.device))
 
     connection, char = await connect_and_set_up(
         ble, setup, name=name, service=SERVICE, device=device, timeout_ms=timeout_ms, **connect_options

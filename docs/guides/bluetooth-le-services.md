@@ -186,6 +186,12 @@ The port follows the [`midiports`](https://github.com/PyDevices/omnipython/blob/
 
 On a board, ask for the shortest connection interval: `midi.connect(ble, name="synth", min_conn_interval_us=7500, max_conn_interval_us=7500)`.
 
+On Linux, BlueZ connects BLE-MIDI devices itself and makes each one a MIDI
+port, so the simplest way to reach one from a Linux computer is
+`bluetoothctl connect ADDRESS` and then `midiports.linux.ports("NAME")`.
+`midi.connect` from Linux needs one setting first, which [the Linux
+limits](../reference/bluetooth-le-support.md#on-a-laptop) explain.
+
 For an instrument that a controller plays, `midiports.ble.ports("synth")` does
 the rest for you: it advertises again after every disconnect, releases the
 notes a dropped link left sounding, and runs from a polling loop with no event

@@ -19,8 +19,10 @@ translates:
   raises from the next ``notified()`` rather than dropping data.
 * The OS negotiates the MTU on its own. ``exchange_mtu()`` waits briefly for
   that negotiation to finish and returns the result; it can't ask for a
-  particular value. BlueZ always reports 23 through bleak, so on Linux the MTU
-  comes from the characteristics' write-without-response size instead.
+  particular value. BlueZ reports 23 through bleak until it's asked, so on
+  Linux ``exchange_mtu()`` asks it (with ``AcquireWrite`` or
+  ``AcquireNotify``), and the MTU also follows the characteristics'
+  write-without-response size.
 * A write longer than ``mtu - 3`` raises `bledev.BLEError` before it
   reaches the OS, as on every backend, even though a write with response
   could go out as a long write.
@@ -395,7 +397,9 @@ class _BleakConnection(Connection):
         except Exception:
             return False
 
-    async def disconnect(self, timeout_ms=2000):
+    async def disconnect(self, timeout_ms=5000):
+        # BlueZ waits two seconds after a Disconnect before it drops the
+        # link, so the contract's 2000 ms would time out every time on Linux.
         try:
             await wait_ms(self._client.disconnect(), timeout_ms, "disconnect")
         except BleakError:
@@ -474,12 +478,26 @@ class _BleakConnection(Connection):
         self._live("exchange_mtu")
         if mtu:
             self._ble.config(mtu=mtu)
+        await self._acquire_bluez_mtu()
         waited = 0
         limit = min(timeout_ms if timeout_ms is not None else _MTU_SETTLE_MS, _MTU_SETTLE_MS)
         while self.mtu == DEFAULT_MTU and waited < limit and self.is_connected():
             await asyncio.sleep(0.02)
             waited += 20
         return self.mtu
+
+    async def _acquire_bluez_mtu(self):
+        # BlueZ tells bleak the MTU only when asked through AcquireWrite or
+        # AcquireNotify; the size a characteristic reported at discovery may
+        # be from before the exchange finished, which leaves writes at 20 bytes.
+        backend = getattr(self._client, "_backend", None)
+        acquire = getattr(backend, "_acquire_mtu", None)
+        if acquire is None or getattr(backend, "_mtu_size", 0) is not None:
+            return
+        try:
+            await acquire()
+        except Exception:
+            pass  # a service a BlueZ plugin has taken refuses AcquireWrite
 
     def request_throughput(self):
         """Ask the OS for a short connection interval. Windows 11 only; returns whether it asked."""
