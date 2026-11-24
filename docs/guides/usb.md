@@ -291,14 +291,21 @@ while True:
 ```
 
 The first report gives an event for every axis and hat, so a program learns where each rests.
-It doesn't read a D-pad reported as four buttons, an array of buttons or a vendor-defined
-field, and a controller that needs a start-up message before it sends full reports (a
+It doesn't read a D-pad reported as four buttons or an array of buttons, and a controller that needs a start-up message before it sends full reports (a
 DualShock 4, a Switch Pro controller) doesn't work.
 
 This decoder is tested against report descriptors, with the events worked out by hand, and on
 an ESP32-S31 with a generic full-speed HID gamepad in the PS3 layout: buttons, hat and sticks
-come through. Analog trigger and pressure bytes on a vendor page, which that layout carries,
-are skipped; read the raw report for those.
+come through.
+
+Values on a vendor page, such as the pressure bytes and motion sensors a pad in the PS3 layout
+sends after its sticks, make no events. `pad.extras` holds each one's latest value, in report
+order, and `pad.extra_info` its usage and range. A report that moves only those still adds one
+to `pad.reports`:
+
+```python
+tilt = pad.extras[12]        # the first motion value on a PS3-layout pad, 0 to 1023
+```
 
 Up to 0.7.6, `read()` returned the report's raw bytes. It no longer
 does; the CHANGELOG has the details.

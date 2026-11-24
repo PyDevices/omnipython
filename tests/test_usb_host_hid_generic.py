@@ -75,6 +75,15 @@ USB_HID_PAD = h("""
 05 01 09 39 15 01 25 08 35 00 46 3b 01 65 14 75 04 95 01 81 42
 35 00 45 00 65 00 81 03 09 30 09 31 09 32 09 35 15 81 25 7f 75 08 95 04 81 02 c0
 """)
+# A full-speed pad in the PS3 layout, read from a real one: thirteen buttons, a hat, four
+# 8-bit axes, then on a vendor page twelve pressure bytes and four 10-bit motion values.
+PS3_LAYOUT = h("""
+05 01 09 05 a1 01 15 00 25 01 35 00 45 01 75 01 95 0d 05 09 19 01 29 0d 81 02 95 03
+81 01 05 01 25 07 46 3b 01 75 04 95 01 65 14 09 39 81 42 65 00 95 01 81 01 26 ff 00
+46 ff 00 09 30 09 31 09 32 09 35 75 08 95 04 81 02 06 00 ff 09 20 09 21 09 22 09 23
+09 24 09 25 09 26 09 27 09 28 09 29 09 2a 09 2b 95 0c 81 02 0a 21 26 95 08 b1 02 0a
+21 26 91 02 26 ff 03 46 ff 03 09 2c 09 2d 09 2e 09 2f 75 10 95 04 81 02 c0
+""")
 KEYBOARD = h("05 01 09 06 a1 01 05 07 19 e0 29 e7 15 00 25 01 75 01 95 08 81 02 c0")
 
 
@@ -136,9 +145,11 @@ class Parsing(unittest.TestCase):
         self.assertEqual(kinds[:5], [(1, 0, 8, Axis.X), (1, 8, 8, Axis.Y), (1, 16, 8, Axis.Z),
                                      (1, 24, 8, Axis.Z), (1, 32, 8, Axis.RZ)])
         self.assertEqual(kinds[5], (2, 40, 4, 0x10039))
-        self.assertEqual([k[1] for k in kinds[6:]], list(range(44, 56)))
-        self.assertEqual([k[3] for k in kinds[6:]], list(range(1, 13)))
-        self.assertEqual(len(fields), 5 + 1 + 12)       # the vendor byte is left out
+        self.assertEqual([k[1] for k in kinds[6:18]], list(range(44, 56)))
+        self.assertEqual([k[3] for k in kinds[6:18]], list(range(1, 13)))
+        self.assertEqual(len(fields), 5 + 1 + 12 + 8)   # the vendor byte is eight one-bit extras
+        self.assertEqual([f[0] for f in fields[18:]], [3] * 8)
+        self.assertEqual([f[8] for f in fields[18:]], list(range(8)))
         self.assertEqual(fields[0][4:6], [0, 255])
         self.assertEqual(fields[5][4:6], [0, 7])
 
@@ -270,6 +281,29 @@ class Reading(unittest.TestCase):
         while dev.reports:      # the middle report makes no event, so read on past it
             got += events(pad, dev)
         self.assertEqual([e for e in got if e[0] == AXIS and e[1] == Axis.X], [(AXIS, Axis.X, 127), (AXIS, Axis.X, 132)])
+
+
+class Extras(unittest.TestCase):
+    def test_vendor_values_are_kept_in_report_order_and_make_no_events(self):
+        dev = FakePad(PS3_LAYOUT, packet=64)
+        pad = Gamepad(dev)
+        self.assertEqual([i[0] for i in pad.extra_info],
+                         [0xFF000000 | u for u in range(0x20, 0x30)])
+        self.assertEqual(pad.extra_info[0][1:], (0, 255))
+        self.assertEqual(pad.extra_info[12][1:], (0, 1023))
+        self.assertEqual(pad.extras, [None] * 16)
+        # As captured: button 2 (A) held, its pressure byte (the seventh) full, the
+        # motion values at rest.
+        dev.reports = [h("02 00 0f 80 7f 80 7f 00 00 00 00 00 00 ff 00 00 00 00 00 f3 01 ee 00 b4 01 03 02")]
+        got = events(pad, dev)
+        self.assertIn((BUTTON_DOWN, 2, 0), got)
+        self.assertEqual(pad.extras, [0, 0, 0, 0, 0, 0, 255, 0, 0, 0, 0, 0, 499, 238, 436, 515])
+        self.assertEqual(pad.reports, 1)
+        # Only the motion values move: the report is read and kept, with no event.
+        dev.reports = [h("02 00 0f 80 7f 80 7f 00 00 00 00 00 00 ff 00 00 00 00 00 00 02 ee 00 b4 01 03 02")]
+        self.assertEqual(events(pad, dev), [])
+        self.assertEqual(pad.extras[12], 512)
+        self.assertEqual(pad.reports, 2)
 
 
 class OnMicroPython(unittest.TestCase):
