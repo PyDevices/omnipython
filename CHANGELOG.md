@@ -1,3 +1,8 @@
+## v0.8.1.dev10 (2026-11-24)
+
+- OmniPython: hmilink, medialink, mp4mux and usb_hid come with it (#825)
+- wifi_manager: power saving off without a battery, and a remembered choice (#826)
+
 ## v0.8.1.dev9 (2026-11-24)
 
 - omnipython-desktop: carry hmilink, mp4mux, castdisplay and vtterm (#822)
