@@ -129,8 +129,9 @@ python tools/mark_tested.py esp32-s3-touch-lcd-4_3 -d ws://my-board.local \
 ```
 
 It checks that `board_config` imports, the display draws, touch reads, and
-each peripheral in `PERIPHERALS` answers. `usb_device` and `can` are skipped
-by default, since on some boards they take the USB console away. A role that
+each peripheral in `PERIPHERALS` answers. `usb_device`, `usb_midi` and `can` are
+skipped by default, since on some boards they take the USB console away
+(`usb_midi` re-enumerates the port as a MIDI device). A role that
 would put the board to sleep or reset it, such as `sleep`, is never called;
 the test only checks that it is there. Skip a peripheral you can't attach (an
 empty SD slot) with `--skip sdcard`. Skipped roles are written down. When every check passes it writes `tested.json` in

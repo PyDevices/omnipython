@@ -20,8 +20,9 @@ its drivers publish to the main index. Nothing is written when a check fails.
 ``--local MICROPYTHON`` runs a desktop interpreter instead, for the desktop
 board configs. ``--path`` is where the package was installed if not the
 board's ``/lib``. ``--skip ROLE`` leaves a peripheral out (by default
-``usb_device`` and ``can``, which take the USB console away on some boards);
-skipped roles are written in the record.
+``usb_device``, ``usb_midi`` and ``can``, which take the USB console away on
+some boards: ``usb_midi`` re-enumerates the port as a MIDI device); skipped
+roles are written in the record.
 """
 
 from __future__ import annotations
@@ -38,7 +39,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 SMOKE = ROOT / "tools" / "smoke" / "board_smoke.py"
-DEFAULT_SKIP = ("usb_device", "can")
+DEFAULT_SKIP = ("usb_device", "usb_midi", "can")
 TESTED_FILE = "tested.json"
 
 
