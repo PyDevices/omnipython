@@ -295,8 +295,10 @@ It doesn't read a D-pad reported as four buttons, an array of buttons or a vendo
 field, and a controller that needs a start-up message before it sends full reports (a
 DualShock 4, a Switch Pro controller) doesn't work.
 
-This decoder is tested against report descriptors, with the events worked out by hand. It
-hasn't run against a real gamepad on a host board yet.
+This decoder is tested against report descriptors, with the events worked out by hand, and on
+an ESP32-S31 with a generic full-speed HID gamepad in the PS3 layout: buttons, hat and sticks
+come through. Analog trigger and pressure bytes on a vendor page, which that layout carries,
+are skipped; read the raw report for those.
 
 Up to 0.7.6, `read()` returned the report's raw bytes. It no longer
 does; the CHANGELOG has the details.
