@@ -28,6 +28,14 @@ _EPIPE = getattr(errno, "EPIPE", 32)
 _CBW = 0x43425355
 _CSW = 0x53425355
 _MAX_BLOCKS = 64    # per command: 32 KB at 512 bytes
+# Per bulk transfer in a command's data phase. The host's buffer for a transfer
+# comes from DMA-capable RAM, and an ESP32-S3 driving a display often has no
+# 32 KB of it in one piece. The CBW has gone by then, so a transfer the host
+# can't allocate leaves the drive part way through the command, and some drives
+# then answer nothing, not even after a bus reset, until they lose power: the
+# drive is never listed again. Bulk-Only lets a data phase span any number of
+# transfers, and 4 KB always fits.
+_PIECE = 4096
 
 
 class Drive:
@@ -108,10 +116,19 @@ class Drive:
     def _data_and_status(self, data_in, data_out, length):
         try:
             if data_in is not None and length:
-                # One transfer: it ends full, or early on a short packet.
-                self.dev.read(self._in, data_in, self.timeout)
+                # It ends full, or early on a short packet.
+                mv = memoryview(data_in)
+                got = 0
+                while got < length:
+                    want = min(_PIECE, length - got)
+                    n = self.dev.read(self._in, mv[got:got + want], self.timeout)
+                    got += n
+                    if n < want:
+                        break
             elif data_out is not None and length:
-                self.dev.write(self._out, data_out, self.timeout)
+                mv = memoryview(data_out)
+                for at in range(0, length, _PIECE):
+                    self.dev.write(self._out, mv[at:at + _PIECE], self.timeout)
         except usb.core.USBError as e:
             if e.errno != _EPIPE:   # a stalled data phase; the CSW still follows
                 raise
