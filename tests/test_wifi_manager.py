@@ -333,6 +333,9 @@ class CircuitPythonJoinTest(_Patched):
         self.assertEqual(again.r.calls, [("home", 6)])
 
 
+_RADIO_AND_POWER = ("bluetooth", "btclassic", "_bleio", "board_peripherals")
+
+
 class ConnectLinkTest(unittest.TestCase):
     """``connect()`` on an esp32-shaped station: an address without a link is
     not a connection, so a static address joins at boot and rejoins after a
@@ -372,8 +375,12 @@ class ConnectLinkTest(unittest.TestCase):
         self._modules = {"_wm_test_secrets": secrets, "ntptime": ntp}
         self._before = {
             name: sys.modules.get(name)
-            for name in ("network", "secrets", "wifi", "bluetooth", "board_peripherals", *self._modules)
+            for name in ("network", "secrets", "wifi", *_RADIO_AND_POWER, *self._modules)
         }
+        # Other tests leave fakes of these behind; here each test brings its
+        # own, and None makes the rest fail to import, as on a bare board.
+        for name in _RADIO_AND_POWER:
+            sys.modules[name] = None
         sys.modules.update(self._modules)
         sys.modules["secrets"] = types.ModuleType("secrets")  # no network of its own
 
