@@ -46,6 +46,18 @@ class BoardAudio(endpointkit.Provider):
     def open_out(self, endpoint: endpointkit.Endpoint, *args: object, **kwargs: object) -> object:
         """Open the board's own output, with the arguments ``audio_out`` was given."""
 
+class BoardAudioIn(endpointkit.Provider):
+    """A board's own microphones, the ones its ``pcm_in`` role opens."""
+
+    factory: Callable[..., object]
+    label: str
+    chosen: bool
+    def __init__(self, factory: Callable[..., object], label: str = "Built-in microphones") -> None: ...
+    def scan(self) -> list[endpointkit.Endpoint]: ...
+    def apply(self, endpoint: endpointkit.Endpoint, chosen: bool) -> None: ...
+    def open_in(self, endpoint: endpointkit.Endpoint, *args: object, **kwargs: object) -> object:
+        """Open the board's own microphones, with the arguments ``pcm_in`` was given."""
+
 class RoutedAudioOut:
     """A board's ``audio_out`` that opens whichever ``audio.out`` endpoint is chosen."""
 
@@ -58,5 +70,22 @@ class RoutedAudioOut:
 def playing_on(registry: endpointkit.Registry | None = None) -> endpointkit.Endpoint | None:
     """The ``audio.out`` endpoint a routed ``audio_out`` opens now, or None for the board's own output."""
 
-def route(peripherals: object, registry: endpointkit.Registry | None = None, label: str = "Built-in audio") -> BoardAudio:
-    """List the board's own output under ``audio.out``, and make its ``audio_out`` play wherever ``audio.out`` is chosen."""
+class RoutedPCMIn:
+    """A board's ``pcm_in`` that records from whichever ``audio.in`` endpoint is chosen."""
+
+    board: BoardAudioIn
+    registry: endpointkit.Registry
+    capability: object
+    def __init__(self, board: BoardAudioIn, registry: endpointkit.Registry, capability: object = None) -> None: ...
+    def __call__(self, *args: object, **kwargs: object) -> object: ...
+
+def listening_on(registry: endpointkit.Registry | None = None) -> endpointkit.Endpoint | None:
+    """The ``audio.in`` endpoint a routed ``pcm_in`` opens now, or None for the board's own microphones."""
+
+def route(
+    peripherals: object,
+    registry: endpointkit.Registry | None = None,
+    label: str = "Built-in audio",
+    in_label: str = "Built-in microphones",
+) -> BoardAudio:
+    """List the board's own output under ``audio.out``, and make its ``audio_out`` play wherever ``audio.out`` is chosen; its ``pcm_in`` the same under ``audio.in``."""
