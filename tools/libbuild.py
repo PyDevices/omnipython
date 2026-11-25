@@ -130,16 +130,19 @@ class Pinned:
     ref: str
     description: str
     pypi: str | None
-    # A repository whose lib/ holds several packages, published as this one
-    # package: it installs every folder of that lib/ with an __init__.py, each
-    # under its own import name, and requires what they require. The lockfile
-    # says only "bundle"; the folders and their requires are read from the
-    # pinned source (bundle_members), so a folder added there is published
-    # with no edit here.
+    # A repository whose lib/ holds several packages: each folder of that lib/
+    # with an __init__.py is published as a package of its own, under its
+    # import name, and this one requires them all. The lockfile says only
+    # "bundle"; the folders and their requires are read from the pinned source
+    # (bundle_members), so a folder added there is published with no edit here.
     bundle: bool = False
     # What the bundle takes from Adafruit's bundle on CircuitPython: the same
     # key a package of this repository carries in ``repo``.
     circuitpython: tuple[str, ...] = ()
+    # A bundle's folder of apps: each subfolder with an app.json and a
+    # package.json is published as ``app-<name>``, and all of them as ``apps``
+    # (assemble_apps).
+    apps: str | None = None
 
     @property
     def version(self) -> str:
@@ -185,7 +188,7 @@ def read_lock(root: Path) -> Lock:
             raise BuildError(f"{LOCKFILE} repo.{name} has no description")
     pinned = {}
     for name, entry in data.get("pinned", {}).items():
-        extra = sorted(set(entry) - {"repository", "ref", "description", "pypi", "bundle", "circuitpython"})
+        extra = sorted(set(entry) - {"repository", "ref", "description", "pypi", "bundle", "circuitpython", "apps"})
         if extra:
             raise BuildError(f"{LOCKFILE} pinned.{name} has unknown keys: {', '.join(extra)}")
         for key in ("repository", "ref", "description"):
@@ -196,6 +199,9 @@ def read_lock(root: Path) -> Lock:
             raise BuildError(f"{LOCKFILE} pinned.{name}.bundle is true or false, not {bundle!r}")
         if entry.get("circuitpython") and not bundle:
             raise BuildError(f"{LOCKFILE} pinned.{name}.circuitpython is for a bundle")
+        apps = entry.get("apps")
+        if apps is not None and (not bundle or not isinstance(apps, str) or not apps.strip("/")):
+            raise BuildError(f"{LOCKFILE} pinned.{name}.apps is a bundle's folder of apps, not {apps!r}")
         pinned[name] = Pinned(
             name,
             entry["repository"],
@@ -204,6 +210,7 @@ def read_lock(root: Path) -> Lock:
             entry.get("pypi"),
             bundle=bundle,
             circuitpython=tuple(entry.get("circuitpython", ())),
+            apps=apps.strip("/") if apps else None,
         )
     folders = {}
     for name, entry in data.get("folders", {}).items():
@@ -406,6 +413,18 @@ class Tree:
     upstream: dict[str, tuple[str, ...]] = field(default_factory=dict)  # lib-lock.json's repo.<name>.upstream
     circuitpython: dict[str, tuple[str, ...]] = field(default_factory=dict)  # lib-lock.json's repo.<name>.circuitpython
     stands_in_for: dict[str, str] = field(default_factory=dict)  # a pinned repository's package.json "stands_in_for"
+    # What a package's index JSON says it needs, in place of what its
+    # manifest.py requires: {"deps": [...], "upstream": [...], "circuitpython": [...]}.
+    # A bundle member's manifest keeps the requires a firmware freezes; the
+    # index gives it everything it imports. An app has only this.
+    needs: dict[str, dict[str, list[str]]] = field(default_factory=dict)
+    # Files a package installs as they are, beside its Python: (path, source).
+    data: dict[str, list[tuple[str, Path]]] = field(default_factory=dict)
+    # Files a package fetches from elsewhere: [path, url].
+    urls: dict[str, list[list[str]]] = field(default_factory=dict)
+    # The folder a package installs into in place of the library folder, as
+    # omip reads it: "apps" puts an app beside /lib, in /apps.
+    targets: dict[str, str] = field(default_factory=dict)
 
 
 def assemble_repo_packages(root: Path, lock: Lock, version: str, tree: Tree, library: str, local: frozenset[str]) -> None:
@@ -587,38 +606,14 @@ def bundle_members(pinned: Pinned, source_root: Path) -> dict[str, tuple[str, ..
     return {folder.name: member_requires(folder / "manifest.py", folder.name) for folder in folders}
 
 
-def render_bundle_manifest(
-    pinned: Pinned, members: dict[str, tuple[str, ...]], library: str, local: frozenset[str]
-) -> str:
-    """The bundle's manifest: every member, and what they require from outside it.
+def render_bundle_manifest(pinned: Pinned, members: dict[str, tuple[str, ...]], library: str) -> str:
+    """The bundle's manifest: it requires every member, each a package of its own.
 
     On the index it installs everything. A firmware build can freeze some of
-    it, with whatever those members need from among the rest:
+    it, and each member brings what it requires:
     ``require("applibs", library="omnipython-lib", packages=("appkit", "touchkit"))``.
     """
-    # What each member brings along from inside the bundle, itself included.
-    closure: dict[str, set[str]] = {}
-    for name in members:
-        seen: set[str] = set()
-        todo = [name]
-        while todo:
-            member = todo.pop()
-            if member not in seen:
-                seen.add(member)
-                todo.extend(need for need in members[member] if need in members)
-        closure[name] = seen
-    # For each member, and each package from outside: the members that bring it.
-    wanted_by = {name: {m for m in members if name in closure[m]} for name in members}
-    outside: dict[str, set[str]] = {}
-    for name in members:
-        for member in closure[name]:
-            for need in members[member]:
-                if need not in members:
-                    outside.setdefault(need, set()).add(name)
-
-    def names(found) -> str:
-        return ", ".join(f'"{n}"' for n in sorted(found))
-
+    names = ", ".join(f'"{n}"' for n in sorted(members))
     lines = [
         "metadata(",
         f"    description={pinned.description!r},",
@@ -632,39 +627,232 @@ def render_bundle_manifest(
         ")",
         "# The index installs every member. packages=(...) freezes only those, and what they need.",
         "options.defaults(opt=None, packages=None)",
-        f"_MEMBERS = ({names(members)},)",
+        f"_MEMBERS = ({names},)",
         "for _name in options.packages or ():",
         "    if _name not in _MEMBERS:",
         f'        raise ValueError("{pinned.name} has no package %r" % (_name,))',
         "",
-        "",
-        "def _wants(*names):",
-        "    return options.packages is None or any(name in options.packages for name in names)",
-        "",
-        "",
     ]
-    for need in sorted(outside):
-        call = f'require("{need}", library="{library}", opt=options.opt)' if need in local else f'require("{need}")'
-        lines += [f"if _wants({names(outside[need])}):", f"    {call}"]
-    for name in members:
-        lines += [f"if _wants({names(wanted_by[name])}):", f'    package("{name}", opt=options.opt)']
+    for name in sorted(members):
+        lines += [
+            f'if options.packages is None or "{name}" in options.packages:',
+            f'    require("{name}", library="{library}", opt=options.opt)',
+        ]
     lines.append("")
     return "\n".join(lines)
 
 
+#: In a bundle's lib/: what each member needs on the index, by name. Written by
+#: the pinned repository's own tooling from the members' imports.
+BUNDLE_NEEDS_FILE = "applibs.json"
+_NEEDS_KEYS = ("deps", "upstream", "circuitpython")
+
+
+def _read_needs(path: Path, entry, where: str) -> dict[str, list[str]]:
+    if not isinstance(entry, dict) or set(entry) - set(_NEEDS_KEYS):
+        raise BuildError(f"{path}: {where} takes only {', '.join(_NEEDS_KEYS)}")
+    needs = {}
+    for key in _NEEDS_KEYS:
+        items = entry.get(key, [])
+        if not isinstance(items, list) or not all(isinstance(item, str) for item in items):
+            raise BuildError(f"{path}: {where}.{key} is a list of package names")
+        needs[key] = list(items)
+    return needs
+
+
+def bundle_needs(pinned: Pinned, source_root: Path, members: dict[str, tuple[str, ...]]) -> dict[str, dict[str, list[str]]]:
+    """What lib/applibs.json says each member needs, or nothing when there's no such file."""
+    path = source_root / "lib" / BUNDLE_NEEDS_FILE
+    if not path.is_file():
+        return {}
+    try:
+        libraries = json.loads(path.read_text(encoding="utf-8"))["libraries"]
+    except (json.JSONDecodeError, KeyError, TypeError) as exc:
+        raise BuildError(f"{pinned.repository} at {pinned.ref}: {path.name} has no libraries table ({exc})") from None
+    unknown = sorted(set(libraries) - set(members))
+    if unknown:
+        raise BuildError(f"{pinned.repository} at {pinned.ref}: {path.name} names {', '.join(unknown)}, which lib/ doesn't hold")
+    return {name: _read_needs(path, entry, name) for name, entry in libraries.items()}
+
+
+def _claim(tree: Tree, name: str, origin: str) -> Path:
+    if name in tree.packages:
+        raise BuildError(f"two packages are named {name!r}: {tree.packages[name]} and {origin}")
+    tree.packages[name] = origin
+    destination = tree.path / name
+    destination.mkdir()
+    return destination
+
+
 def assemble_bundle(pinned: Pinned, source_root: Path, tree: Tree, library: str, local: frozenset[str]) -> None:
-    """One package named for the repository, holding every package in its lib/."""
+    """Each package in the repository's lib/ on its own, and one named for the bundle that requires them all."""
     members = bundle_members(pinned, source_root)
-    if pinned.name in tree.packages:
-        raise BuildError(f"two packages are named {pinned.name!r}: {tree.packages[pinned.name]} and {pinned.repository}")
-    tree.packages[pinned.name] = f"{pinned.repository}@{pinned.ref}"
+    needs = bundle_needs(pinned, source_root, members)
+    origin = f"{pinned.repository}@{pinned.ref}"
+    destination = _claim(tree, pinned.name, origin)
     if pinned.circuitpython:
         tree.circuitpython[pinned.name] = pinned.circuitpython
-    destination = tree.path / pinned.name
-    destination.mkdir()
-    for name in members:
-        shutil.copytree(source_root / "lib" / name, destination / name, ignore=_ignore_member_extras)
-    (destination / "manifest.py").write_text(render_bundle_manifest(pinned, members, library, local), encoding="utf-8")
+    (destination / "manifest.py").write_text(render_bundle_manifest(pinned, members, library), encoding="utf-8")
+    here = local | set(members)
+    for name, requires in members.items():
+        member = _claim(tree, name, f"{origin} lib/{name}")
+        shutil.copytree(source_root / "lib" / name, member / name, ignore=_ignore_member_extras)
+        (member / "manifest.py").write_text(
+            render_manifest(
+                description=_docstring_summary(member / name / "__init__.py") or f"{name}, from {pinned.name}",
+                version=pinned.version,
+                pypi=None,
+                requires=requires,
+                payloads=(f'package("{name}")',),
+                library=library,
+                local=here,
+            ),
+            encoding="utf-8",
+        )
+        if name in needs:
+            tree.needs[name] = needs[name]
+    if pinned.apps:
+        assemble_apps(pinned, source_root, tree, library, here)
+
+
+#: What an app package is called on the index, and the package of every app.
+APP_PREFIX = "app-"
+APPS_PACKAGE = "apps"
+
+
+def _is_remote(url: str) -> bool:
+    return url.startswith(("http://", "https://", "github:", "gitlab:", "codeberg:"))
+
+
+def app_needs(body: dict, name: str, pinned: Pinned, apps: set[str], members: set[str], tree: Tree, where: Path) -> dict[str, list[str]]:
+    """An app's package.json needs, said in the index's names.
+
+    ``applibs`` becomes the libraries the app lists under ``applibs`` (all of
+    applibs when it lists none), another
+    app of the same folder ``app-<name>``, and a package.json elsewhere the
+    index package of the same name.
+    """
+    own = f"github:{pinned.repository}/{pinned.apps}/"
+    deps: list[str] = []
+
+    def add(dep: str) -> None:
+        if dep not in deps:
+            deps.append(dep)
+
+    for dep, _version in body.get("deps", ()):
+        if dep == pinned.name:
+            # An app from a release that doesn't list them needs the bundle whole.
+            listed = body.get(pinned.name) or [pinned.name]
+            for member in listed:
+                if member == pinned.name:
+                    add(member)
+                    continue
+                if member not in members:
+                    raise BuildError(f"{where}: lists {member!r} under {pinned.name!r}, which lib/ doesn't hold")
+                add(member)
+        elif dep.startswith(own):
+            other = dep[len(own):].strip("/")
+            if other not in apps:
+                raise BuildError(f"{where}: needs the app {other!r}, which {pinned.apps}/ doesn't publish")
+            add(APP_PREFIX + other)
+        elif _is_remote(dep):
+            package = dep.rstrip("/").rpartition("/")[2]
+            if package not in tree.packages:
+                raise BuildError(f"{where}: needs {dep}, and the index has no package {package!r}")
+            add(package)
+        elif dep in tree.packages or dep in members:
+            add(dep)
+        else:
+            raise BuildError(f"{where}: needs {dep!r}, which isn't on the index")
+    return {
+        "deps": deps,
+        "upstream": [dep for dep, _version in body.get("upstream", ())],
+        "circuitpython": [dep for dep, _version in body.get("circuitpython", ())],
+    }
+
+
+def assemble_apps(pinned: Pinned, source_root: Path, tree: Tree, library: str, local: frozenset[str]) -> None:
+    """Each app of the bundle's folder of apps as ``app-<name>``, and ``apps`` with them all.
+
+    An app's own package.json says what it installs and needs, as it does for
+    a ``github:`` install. Its files go in ``apps/<name>``, beside the library
+    folder, where Home finds them.
+    """
+    folder = source_root / pinned.apps
+    if not folder.is_dir():
+        raise BuildError(f"{pinned.repository} at {pinned.ref} has no {pinned.apps}/")
+    apps = sorted(
+        entry.name for entry in folder.iterdir()
+        if entry.is_dir() and (entry / "app.json").is_file() and (entry / "package.json").is_file()
+    )
+    if not apps:
+        raise BuildError(f"{pinned.repository} at {pinned.ref}: {pinned.apps}/ holds no app (an app.json and a package.json)")
+    members = {name for name in local if (tree.path / name / name / "__init__.py").is_file()}
+    origin = f"{pinned.repository}@{pinned.ref}"
+    for name in apps:
+        where = folder / name / "package.json"
+        try:
+            body = json.loads(where.read_text(encoding="utf-8"))
+        except json.JSONDecodeError as exc:
+            raise BuildError(f"{where} is not valid JSON: {exc}") from None
+        package = APP_PREFIX + name
+        destination = _claim(tree, package, f"{origin} {pinned.apps}/{name}")
+        data: list[tuple[str, Path]] = []
+        urls: list[list[str]] = []
+        for path, source in body.get("urls", ()):
+            installed = f"{name}/{path}"
+            if _is_remote(source):
+                urls.append([installed, source])
+                continue
+            full = folder / name / source
+            if not full.is_file():
+                raise BuildError(f"{where}: installs {source}, which isn't in the app's folder")
+            copy = destination / installed
+            copy.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(full, copy)
+            if not path.endswith(".py"):
+                data.append((installed, copy))
+        if not any((destination / name).rglob("*.py")):
+            raise BuildError(f"{where}: installs no Python")
+        (destination / "manifest.py").write_text(
+            render_manifest(
+                description=body.get("description") or name,
+                version=pinned.version,
+                pypi=None,
+                requires=(),
+                payloads=(f'package("{name}")',),
+                library=library,
+                local=local,
+            ),
+            encoding="utf-8",
+        )
+        tree.needs[package] = app_needs(body, name, pinned, set(apps), members, tree, where)
+        tree.targets[package] = pinned.apps
+        if data:
+            tree.data[package] = data
+        if urls:
+            tree.urls[package] = urls
+    # The folder's own __init__.py, so apps.<name> imports as a package's module.
+    every = _claim(tree, APPS_PACKAGE, f"{origin} {pinned.apps}/")
+    init = folder / "__init__.py"
+    payloads: tuple[str, ...] = ()
+    if init.is_file():
+        shutil.copy2(init, every / "__init__.py")
+        payloads = ('module("__init__.py")',)
+    (every / "manifest.py").write_text(
+        render_manifest(
+            description=f"Every app in {pinned.repository}",
+            version=pinned.version,
+            pypi=None,
+            requires=(),
+            payloads=payloads,
+            library=library,
+            local=local,
+        ),
+        encoding="utf-8",
+    )
+    tree.needs[APPS_PACKAGE] = {"deps": [APP_PREFIX + name for name in apps], "upstream": [], "circuitpython": []}
+    tree.targets[APPS_PACKAGE] = pinned.apps
 
 
 def assemble_pinned(pinned: Pinned, source_root: Path, tree: Tree, library: str, local: frozenset[str]) -> None:
@@ -1204,7 +1392,6 @@ def compile_index(
                 raise BuildError(f"{name}/manifest.py has no version")
             if manifest.left_out:
                 left_out[name] = manifest.left_out
-            compiled_info.deps[name] = list(manifest.deps)
             mpy_hashes, py_hashes = [], []
             seen: dict[str, Path] = {}
             for item in manifest.files:
@@ -1228,20 +1415,44 @@ def compile_index(
                 compiled = scratch_dir / "tagged.mpy"
                 mpy_cross.compile(tagged, item.target_path, compiled, item.opt)
                 mpy_hashes.append([item.target_path[:-2] + "mpy", _write_hashed(compiled.read_bytes(), file_dir, prefix, where)])
+            for target_path, full_path in tree.data.get(name, ()):
+                # Not Python: the same file in every channel.
+                if target_path in seen:
+                    raise BuildError(f"{name}: {target_path} comes from both {seen[target_path]} and {full_path}")
+                seen[target_path] = full_path
+                short = _write_hashed(full_path.read_bytes(), file_dir, prefix, f"{name}: {target_path}")
+                mpy_hashes.append([target_path, short])
+                py_hashes.append([target_path, short])
+            needs = tree.needs.get(name)
+            deps = needs["deps"] if needs else list(manifest.deps)
+            for dep in deps:
+                if dep not in tree.packages:
+                    raise BuildError(f"{name} needs {dep!r}, which isn't on the index")
+            compiled_info.deps[name] = list(deps)
+            # What the package needs from micropython-lib. mip and mpremote
+            # stop at the first dep they can't find on the index they were
+            # given, so these aren't deps: only omip reads this key.
+            if needs:
+                needed = list(needs["upstream"])
+            else:
+                needed = [*manifest.left_out, *(n for n in tree.upstream.get(name, ()) if n not in manifest.left_out)]
+            # What it needs from Adafruit's bundle on CircuitPython, in
+            # place of those. Only omip on CircuitPython reads this key.
+            adafruit = list(needs["circuitpython"]) if needs and needs["circuitpython"] else list(tree.circuitpython.get(name, ()))
             for kind, hashes in ((mpy_cross.mpy_version, mpy_hashes), ("py", py_hashes)):
                 body = {"v": PACKAGE_JSON_VERSION, "hashes": hashes, "version": version}
-                if manifest.deps:
-                    body["deps"] = [[dep, "latest"] for dep in manifest.deps]
-                # What the package needs from micropython-lib. mip and mpremote
-                # stop at the first dep they can't find on the index they were
-                # given, so these aren't deps: only omip reads this key.
-                needed = [*manifest.left_out, *(n for n in tree.upstream.get(name, ()) if n not in manifest.left_out)]
+                if tree.urls.get(name):
+                    body["urls"] = tree.urls[name]
+                if deps:
+                    body["deps"] = [[dep, "latest"] for dep in deps]
                 if needed:
                     body["upstream"] = [[dep, "latest"] for dep in needed]
-                # What it needs from Adafruit's bundle on CircuitPython, in
-                # place of those. Only omip on CircuitPython reads this key.
-                if tree.circuitpython.get(name):
-                    body["circuitpython"] = [[dep, "latest"] for dep in tree.circuitpython[name]]
+                if adafruit:
+                    body["circuitpython"] = [[dep, "latest"] for dep in adafruit]
+                # A package that isn't a library names its own folder, which
+                # omip puts beside the library folder: an app goes in /apps.
+                if tree.targets.get(name):
+                    body["target"] = tree.targets[name]
                 if tree.stands_in_for.get(name):
                     body["stands_in_for"] = tree.stands_in_for[name]
                 for stem in ("latest", version):
@@ -1274,7 +1485,7 @@ def check_no_overwrites(index: Path, names: list[str]) -> None:
             path = kind_dir / name / "latest.json"
             if not path.is_file():
                 continue
-            seen: dict[str, tuple[str, str]] = {}
+            seen: dict[tuple[str, str], tuple[str, str]] = {}
             stack = [name]
             visited: set[str] = set()
             while stack:
@@ -1283,13 +1494,16 @@ def check_no_overwrites(index: Path, names: list[str]) -> None:
                     continue
                 visited.add(current)
                 body = json.loads((kind_dir / current / "latest.json").read_text(encoding="utf-8"))
+                # A package with a target of its own installs into that folder, not the library's.
+                folder = body.get("target", "")
                 for target, short in body["hashes"]:
-                    if target in seen and seen[target][1] != short:
+                    key = (folder, target)
+                    if key in seen and seen[key][1] != short:
                         raise BuildError(
-                            f"{name}: {target} comes from both {seen[target][0]} and {current}, with different "
+                            f"{name}: {target} comes from both {seen[key][0]} and {current}, with different "
                             f"contents; mip would leave {current}'s"
                         )
-                    seen.setdefault(target, (current, short))
+                    seen.setdefault(key, (current, short))
                 stack.extend(dep for dep, _version in body.get("deps", ()))
 
 
