@@ -400,19 +400,57 @@ def _how_to_replace():
     return "To run a newer copy, rebuild the firmware with it"
 
 
-def _skip_frozen(plan, spec, paths):
-    """Whether every module a package installs is frozen in already, where it would win."""
+def _left_out():
+    """The modules a firmware left out of a package it froze, on purpose, to save flash.
+
+    A build that freezes only part of a package names the rest in a frozen
+    `_omip_left_out` module, and those count as there: installing them would
+    fill the filesystem the build made room in.
+    """
+    path = sys.path[:]
+    sys.path[:] = [".frozen"]
+    try:
+        import _omip_left_out
+
+        return tuple(_omip_left_out.MODULES)
+    except ImportError:
+        return ()
+    finally:
+        sys.path[:] = path
+        sys.modules.pop("_omip_left_out", None)
+
+
+def _in_modules(path, names):
+    """Whether the file at path belongs to one of the modules named."""
+    stem, dot, ext = path.rpartition(".")
+    dotted = (stem if dot and ext in ("py", "mpy") else path).replace("/", ".")
+    return any(dotted == name or dotted.startswith(name + ".") for name in names)
+
+
+def _frozen_part(plan, spec, paths):
+    """What of a package not to install, as (modules, whole).
+
+    The modules are the ones the firmware has frozen in, where they would win,
+    and the ones it left out on purpose. whole is True when that is all of them,
+    and the package is skipped. A package the firmware froze an older copy of,
+    without a module added since, gets that module alone.
+    """
     names = _module_names(paths)
     if not names or not _frozen_wins(plan):
-        return False
+        return [], False
     found = [_in_firmware(name) for name in names]
     # A module the firmware has built in counts when the rest is frozen: CircuitPython's own
     # wifi, say, beside a frozen library. Built in alone doesn't, as a package may extend one.
-    if None in found or "frozen" not in found:
-        return False
-    print("Skipping %s: it's frozen into this firmware, and that copy runs ahead of one in %s." % (spec, plan.libs))
-    print(_how_to_replace())
-    return True
+    if "frozen" not in found:
+        return [], False
+    left_out = _left_out()
+    missing = [n for n, f in zip(names, found) if f is None and n.split(".")[0] not in left_out]
+    if not missing:
+        print("Skipping %s: it's frozen into this firmware, and that copy runs ahead of one in %s." % (spec, plan.libs))
+        print(_how_to_replace())
+        return names, True
+    print("Installing only %s of %s: the firmware has the rest frozen in." % (", ".join(missing), spec))
+    return [n for n, f in zip(names, found) if f == "frozen" or (f is None and n not in missing)], False
 
 
 def _skip_stand_in(plan, spec, module):
@@ -448,7 +486,7 @@ def _walk(plan, spec, version, indexes, owner=None):
         url = _rewrite_url(spec, version)
         if spec.endswith(".py") or spec.endswith(".mpy"):
             name = spec.rsplit("/", 1)[-1]
-            if not _skip_frozen(plan, spec, [name]):
+            if not _frozen_part(plan, spec, [name])[1]:
                 plan.files.append((name, url, None, owner))
             return indexes[0]
         if not spec.endswith(".json"):
@@ -478,10 +516,15 @@ def _walk(plan, spec, version, indexes, owner=None):
         entry[3] = _beside(plan.target, folder)
         if entry is plan.roots[0]:
             plan.libs = _libs_for_app(plan.target)
-    elif _skip_stand_in(plan, spec, body.get("stands_in_for")) or _skip_frozen(
-        plan, spec, [path for path, _ in hashes] + [path for path, _ in urls]
-    ):
+    elif _skip_stand_in(plan, spec, body.get("stands_in_for")):
         hashes = urls = ()
+    else:
+        drop, whole = _frozen_part(plan, spec, [path for path, _ in hashes] + [path for path, _ in urls])
+        if whole:
+            hashes = urls = ()
+        elif drop:
+            hashes = [h for h in hashes if not _in_modules(h[0], drop)]
+            urls = [u for u in urls if not _in_modules(u[0], drop)]
     for path, short in hashes:
         plan.files.append((path, entry[1], short, owner))
     for path, url in urls:
@@ -808,6 +851,9 @@ def install(package, index=None, target=None, version=None, mpy=True, prompt=Tru
     frozen module runs ahead of a copy in `/lib`. What it needs is still checked
     and installed. When the target folder comes before `.frozen` on `sys.path`,
     the copy would run, so nothing is skipped.
+
+    Of a package the firmware has only part of frozen in, just the modules it
+    lacks are installed, leaving out any a frozen `_omip_left_out` names.
 
     Args:
         package (str): A name on an index, or a `github:`, `gitlab:`, `codeberg:`

@@ -100,6 +100,8 @@ def build_indexes(scratch):
     # micropython is built into every unix MicroPython: beside a frozen module it counts, alone it doesn't.
     write_package(ours, "frozen-and-built-in", {"asyncio/__init__.py": "COPY = True\n", "micropython.py": "COPY = True\n"})
     write_package(ours, "built-in-only", {"micropython.py": "COPY = True\n"})
+    # asyncio frozen and left_out not: only left_out lands, unless the firmware left it out on purpose.
+    write_package(ours, "partly-frozen", {"asyncio/__init__.py": "COPY = True\n", "left_out.py": "COPY = True\n"})
     # The stand-in for a module: skipped where the firmware has it, installed where it doesn't.
     write_package(ours, "stand-in-built-in", {"micropython.py": "COPY = True\n"}, stands_in_for="micropython")
     write_package(ours, "stand-in-frozen", {"asyncio/__init__.py": "COPY = True\n"}, stands_in_for="asyncio")
@@ -792,6 +794,22 @@ class MicroPythonRun(Indexes):
         out = self.frozen("frozen-and-built-in")
         self.assertIn("Nothing to install: the firmware has frozen-and-built-in frozen in", out)
         self.assertEqual(self.landed(), [])
+
+    def test_a_package_partly_frozen_installs_only_what_the_firmware_lacks(self):
+        out = self.frozen("partly-frozen")
+        self.assertIn("Installing only left_out of partly-frozen", out)
+        self.assertIn("RESULT True", out)
+        self.assertIn("ASYNCIO frozen", out)
+        self.assertEqual(self.landed(), ["left_out.py"])
+
+    def test_a_module_the_firmware_left_out_on_purpose_isnt_installed(self):
+        out = self.frozen("partly-frozen", before="omip._left_out = lambda: ('left_out',)")
+        self.assertIn("Skipping partly-frozen: it's frozen into this firmware", out)
+        self.assertEqual(self.landed(), [])
+
+    def test_no_left_out_module_means_nothing_left_out(self):
+        out = self.run_mp("import omip\nprint('LEFT', omip._left_out())\n")
+        self.assertIn("LEFT ()", out)
 
     def test_a_package_of_built_in_modules_alone_still_installs(self):
         # A package may extend a built-in module, as micropython-lib's time does.
