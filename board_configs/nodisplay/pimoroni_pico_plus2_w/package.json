@@ -1,0 +1,21 @@
+{
+  "urls": [
+    [
+      "board_peripherals.py",
+      "github:PyDevices/omnipython/board_configs/nodisplay/pimoroni_pico_plus2_w/board_peripherals.py"
+    ],
+    [
+      "keypad_gpio.py",
+      "github:PyDevices/omnipython/drivers/input/keypad_gpio.py"
+    ]
+  ],
+  "deps": [
+    [
+      "omnipython",
+      "latest"
+    ]
+  ],
+  "version": "0.1.0",
+  "description": "board_peripherals for the Pimoroni Pico Plus 2 W, on MicroPython",
+  "generated": "from manifest.py by tools/libbuild.py installers; edit manifest.py, not this"
+}
