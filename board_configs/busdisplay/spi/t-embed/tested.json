@@ -1,0 +1,28 @@
+{
+  "board": "t-embed",
+  "runs": [
+    {
+      "hardware": "LILYGO T-Embed S3 (ESP32-S3, 16 MB flash, 8 MB PSRAM), its own display, mics, rotary encoder and APA102 ring",
+      "firmware": "micropython 1.30.0 (Generic ESP32S3 module with Octal-SPIRAM with ESP32-S3), v1.30.0-preview.322.gb9620707e3 on 2026-11-25",
+      "date": "2026-11-25",
+      "smoke": "passed",
+      "checks": [
+        "board_config imports",
+        "display draws",
+        "audio_in_power answers",
+        "audio_out answers",
+        "audio_power answers",
+        "battery answers",
+        "ble answers",
+        "i2c answers",
+        "pcm_in answers",
+        "pcm_out answers",
+        "pixels answers",
+        "sdcard answers",
+        "wlan answers"
+      ],
+      "skipped": [],
+      "tool": "tools/mark_tested.py"
+    }
+  ]
+}
