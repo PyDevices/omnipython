@@ -1,3 +1,10 @@
+## v0.8.1rc5 (2026-11-25)
+
+- lib-lock: applibs at v0.1.3rc4, font fallback, local time in the bar, SPI SD unmount (#854)
+- ESP32 Audio Kit: tested (#852)
+- T-Embed S3: tested, mics included (#850)
+- Pimoroni Pico Plus 2 W: a board_peripherals package for the headless board (#851)
+
 ## v0.8.1rc4 (2026-11-25)
 
 - lib-lock: applibs at v0.1.3rc3, Home and Wake word on a 170 px screen (#846)
