@@ -44,7 +44,7 @@
     },
     "applibs": {
       "repository": "PyDevices/apps",
-      "ref": "v0.1.3rc2",
+      "ref": "v0.1.3rc3",
       "description": "Every library the apps share; each is a package of its own too",
       "bundle": true,
       "apps": "apps",
