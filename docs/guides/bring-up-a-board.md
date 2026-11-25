@@ -122,6 +122,11 @@ rebuild the firmware, or put `/lib` ahead of `.frozen` on `sys.path`, which
 `omip` notices and then installs as usual. `force=True` installs everything
 regardless.
 
+When the firmware has only part of a package frozen in, `omip` installs the
+modules it lacks and nothing else: `Installing only medialink of omnipython`. A
+firmware that left modules out on purpose to save flash says so in a frozen
+`_omip_left_out` module, and `omip` doesn't install those either.
+
 **Take both halves from the same place.** The pair above mixes the *released*
 `omnipython` (the index) with the board config from `main` (`github:`). That
 is fine when the two agree, and wrong the moment `main`'s board configs pass
