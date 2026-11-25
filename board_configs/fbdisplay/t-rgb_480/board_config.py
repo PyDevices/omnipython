@@ -83,6 +83,8 @@ tft_timings = {
 fb = dotclockframebuffer.DotClockFramebuffer(**tft_pins, **tft_timings)
 
 display_drv = FBDisplay(fb)
+# The 2.1 inch panel is a full circle: apps lay out for a round screen.
+display_drv.round = True
 
 # CST820: RST on XL9535 IO1. Poll continuously (IRQ is edge-only on CST820).
 touch = CST8XX(
