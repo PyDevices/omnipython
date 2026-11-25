@@ -163,20 +163,14 @@ def pixels():
 
 
 def _i2c_bus():
-    """The on-board I2C (the ES7210), shared with whatever already opened it.
+    """The on-board I2C (the ES7210), opened once and handed out after.
 
-    Never ``import board_config`` from here: a non-graphics app importing
-    this module must not start a display.
-
-    Without board_config, open that port once and hand out the same object
-    after -- never a second controller on these pins.
+    Never ``board_config.i2c``: that role is the Qwiic socket on port 1,
+    where the ES7210 isn't. Nothing else opens port 0, so this module owns
+    it -- never a second controller on these pins.
     """
     global _i2c_own
 
-    bc = sys.modules.get("board_config")
-    bus = getattr(bc, "i2c", None) if bc is not None else None
-    if bus is not None:
-        return bus
     if _i2c_own is None:
         from machine import I2C, Pin
 
