@@ -1,0 +1,26 @@
+{
+  "board": "esp32_audio_kit",
+  "runs": [
+    {
+      "hardware": "Ai-Thinker ESP32-Audio-Kit V2.2 (ESP32-A1S: 4 MB flash, 4 MB PSRAM, ES8388), no display wired, with the remote-display board config",
+      "firmware": "micropython 1.30.0 (Generic ESP32 module with SPIRAM with ESP32), v1.30.0-preview.322.gb9620707e3 on 2026-11-25",
+      "date": "2026-11-25",
+      "smoke": "passed",
+      "checks": [
+        "board_config imports",
+        "display draws",
+        "audio_out answers",
+        "audio_power answers",
+        "ble answers",
+        "bt answers",
+        "led answers",
+        "pcm_in answers",
+        "pcm_out answers",
+        "sdcard answers",
+        "wlan answers"
+      ],
+      "skipped": [],
+      "tool": "tools/mark_tested.py"
+    }
+  ]
+}
