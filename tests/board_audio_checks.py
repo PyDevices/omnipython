@@ -163,6 +163,8 @@ elif PLANT == "radio_at_register":
     bt_audio.BluetoothOut.scan = _always_looks
 elif PLANT == "no_drop_before_stream":
     bt_audio.SourceOutput._write = lambda self, buf: self.source.write(buf)
+elif PLANT == "mic_ignores_choice":
+    endpoints.RoutedPCMIn.__call__ = lambda self, *a, **k: self.board.factory(*a, **k)
 elif PLANT == "capability_lost":
     _init = endpoints.RoutedAudioOut.__init__
 
@@ -189,6 +191,39 @@ class Board:
         self.audio_out = AudioFactory(opens, self.CAP)
         self.PERIPHERALS = frozenset({"audio_out"})
         self.FACTORY_ROLES = frozenset({"audio_out"})
+
+
+class MicBoard(Board):
+    """A board with microphones too: its pcm_in, as a factory role."""
+
+    def __init__(self):
+        Board.__init__(self)
+        self.MIC_CAP = AudioCapability(AudioFormat(48000, 2, 16))
+        self.recorded = []
+
+        def records(format=None, **kwargs):
+            self.recorded.append((format, kwargs))
+            return ("mics", format)
+
+        self.pcm_in = AudioFactory(records, self.MIC_CAP)
+        self.PERIPHERALS = frozenset({"audio_out", "pcm_in"})
+        self.FACTORY_ROLES = frozenset({"audio_out", "pcm_in"})
+
+
+class UsbMic(FakeProvider):
+    """A microphone on the host port: connected while chosen, opened by open_in."""
+
+    def __init__(self):
+        FakeProvider.__init__(self, "audio.in", "usb-audio-in", [("0d8c-0014-i2", "USB Microphone")])
+        self.opened = []
+
+    def apply(self, endpoint, chosen):
+        FakeProvider.apply(self, endpoint, chosen)
+        endpoint.state = endpointkit.CONNECTED if chosen else endpointkit.AVAILABLE
+
+    def open_in(self, endpoint, format=None, **kwargs):
+        self.opened.append((endpoint.id, format, kwargs))
+        return ("usb", format)
 
 
 class UsbCard(FakeProvider):
@@ -394,7 +429,43 @@ def t_register():
     check(raised and "AudioSource" in raised, "btclassic without an A2DP source: register says so (%r)" % raised)
 
 
+def t_route_in():
+    mono = AudioFormat(16000, 1, 16)
+    bp = MicBoard()
+    reg = endpointkit.Registry()
+    endpoints.route(bp, reg)
+    check(isinstance(bp.pcm_in, endpoints.RoutedPCMIn), "route puts a routed pcm_in in the board's place")
+    check(bp.pcm_in.capability is bp.MIC_CAP, "it keeps the microphones' capability")
+    eps = reg.endpoints("audio.in")
+    check([e.id for e in eps] == ["board-in:main"], "the board's own microphones are listed: %r" % [e.id for e in eps])
+    check(bp.pcm_in(mono, queue_ms=100) == ("mics", mono) and bp.recorded[-1][1] == {"queue_ms": 100},
+          "nothing chosen: pcm_in records from the board's microphones, with its arguments")
+
+    usb = UsbMic()
+    reg.register(usb)
+    reg.select("audio.in", "usb-audio-in:0d8c-0014-i2")
+    check(bp.pcm_in(mono) == ("usb", mono), "choosing the USB microphone: pcm_in records from it")
+    reg.select("audio.in", "board-in:main")
+    check(bp.pcm_in(mono) == ("mics", mono), "choosing the board's own: pcm_in records from them again")
+
+    fake = FakeProvider("audio.in", "fake", [("x", "Stand-in")])
+    reg.register(fake)
+    reg.select("audio.in", "fake:x")
+    reg.find("fake:x").state = endpointkit.CONNECTED
+    try:
+        bp.pcm_in(mono)
+        raised = None
+    except ValueError as exc:
+        raised = str(exc)
+    check(raised and "can't open" in raised, "a chosen input a board can't open says so (%r)" % raised)
+
+    plain = Board()
+    endpoints.route(plain, endpointkit.Registry())
+    check(not hasattr(plain, "pcm_in"), "a board with no microphones gets no pcm_in")
+
+
 bp, reg = t_route()
+t_route_in()
 t_bluetooth(bp, reg)
 t_register()
 

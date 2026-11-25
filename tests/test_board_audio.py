@@ -13,7 +13,8 @@ import _mprun
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 CHECKS = os.path.join(HERE, "board_audio_checks.py")
-PLANTS = ("route_ignores_choice", "plays_before_link", "radio_at_register", "no_drop_before_stream", "capability_lost")
+PLANTS = ("route_ignores_choice", "plays_before_link", "radio_at_register", "no_drop_before_stream", "capability_lost",
+          "mic_ignores_choice")
 
 
 def _run(interpreter, plant=None):

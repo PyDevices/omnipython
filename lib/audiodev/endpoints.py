@@ -40,6 +40,13 @@ its provider's ``open_out``; the USB host's and the Bluetooth providers
 connected, it opens the board's own output, as it did before anything was
 chosen. A program that plays follows ``audio.out`` and opens ``audio_out``
 again when the choice moves.
+
+A board with microphones gets the same for ``audio.in``: `route` lists
+them as ``board-in:main``, and its ``pcm_in`` records from the first chosen
+``audio.in`` endpoint that is connected, through its provider's ``open_in``
+(a USB microphone on the host port has one), or from the board's own
+microphones when none is. A program that records follows ``audio.in`` and
+opens ``pcm_in`` again when the choice moves.
 """
 
 import time
@@ -191,6 +198,37 @@ class BoardAudio(endpointkit.Provider):
         return self.factory(*args, **kwargs)
 
 
+class BoardAudioIn(endpointkit.Provider):
+    """A board's own microphones, the ones its ``pcm_in`` role opens.
+
+    Its one endpoint, ``board-in:main``, is what the board records from
+    when nothing else is chosen.
+
+    Args:
+        factory (callable): the board's ``pcm_in`` role, before `route`
+            replaces it.
+        label (str): what a picker shows.
+    """
+
+    def __init__(self, factory, label="Built-in microphones"):
+        endpointkit.Provider.__init__(self, "audio.in", "board-in")
+        self.factory = factory
+        self.label = label
+        self.chosen = False
+
+    def scan(self):
+        state = endpointkit.CONNECTED if self.chosen else endpointkit.AVAILABLE
+        return [self.endpoint("main", self.label, state)]
+
+    def apply(self, endpoint, chosen):
+        self.chosen = bool(chosen)
+        endpoint.state = endpointkit.CONNECTED if chosen else endpointkit.AVAILABLE
+
+    def open_in(self, endpoint, *args, **kwargs):
+        """Open the board's own microphones, with the arguments ``pcm_in`` was given."""
+        return self.factory(*args, **kwargs)
+
+
 class RoutedAudioOut:
     """A board's ``audio_out`` that opens whichever ``audio.out`` endpoint is chosen.
 
@@ -241,12 +279,78 @@ def playing_on(registry=None):
     return None
 
 
+class RoutedPCMIn:
+    """A board's ``pcm_in`` that records from whichever ``audio.in`` endpoint is chosen.
+
+    `route` puts one in place of the board's role, keeping its
+    ``capability``.
+
+    Args:
+        board (BoardAudioIn): the board's own microphones, opened when no
+            chosen endpoint is connected.
+        registry (endpointkit.Registry): whose choice to follow.
+        capability: what the board's own role says it takes.
+    """
+
+    def __init__(self, board, registry, capability=None):
+        self.board = board
+        self.registry = registry
+        self.capability = capability
+
+    def __call__(self, *args, **kwargs):
+        ep = listening_on(self.registry)
+        if ep is None:
+            return self.board.factory(*args, **kwargs)
+        return ep.provider.open_in(ep, *args, **kwargs)
+
+    def __repr__(self):
+        return "RoutedPCMIn(%r)" % (self.capability,)
+
+
+def listening_on(registry=None):
+    """The ``audio.in`` endpoint a routed ``pcm_in`` opens now, or None for
+    the board's own microphones.
+
+    It's the first chosen endpoint that is connected.
+
+    Raises:
+        ValueError: that endpoint's provider can't be opened on a board (it
+            has no ``open_in``).
+    """
+    for ep in (registry or endpointkit.registry).selected("audio.in"):
+        if ep.state != endpointkit.CONNECTED:
+            continue
+        if not hasattr(ep.provider, "open_in"):
+            raise ValueError("%s (%s) is chosen, but a board can't open it as its audio in" % (ep.label, ep.id))
+        return ep
+    return None
+
+
+def _route_in(peripherals, registry, label):
+    """Route the board's ``pcm_in`` under ``audio.in``, when it has one that
+    is a factory role; None otherwise."""
+    own = getattr(peripherals, "pcm_in", None)
+    if own is None or "pcm_in" not in getattr(peripherals, "FACTORY_ROLES", ()):
+        return None
+    if isinstance(own, RoutedPCMIn):
+        own = own.board.factory
+    capability = getattr(own, "capability", None) or getattr(peripherals, "AUDIO_IN", None)
+    board = BoardAudioIn(own, label)
+    registry.register(board)
+    boarddev.replace_role(peripherals, "pcm_in", RoutedPCMIn(board, registry, capability))
+    return board
+
+
 _routes = []  # (registry, BoardAudio)
 
 
-def route(peripherals, registry=None, label="Built-in audio"):
+def route(peripherals, registry=None, label="Built-in audio", in_label="Built-in microphones"):
     """List the board's own output under ``audio.out``, and make its
     ``audio_out`` play wherever ``audio.out`` is chosen.
+
+    A board whose ``pcm_in`` is a factory role gets the same for its
+    microphones: they're listed under ``audio.in``, and ``pcm_in`` records
+    from wherever ``audio.in`` is chosen.
 
     Call it once, before anything opens ``audio_out``; again with the same
     registry, it returns the provider it made. `boarddev.replace_role`
@@ -257,6 +361,7 @@ def route(peripherals, registry=None, label="Built-in audio"):
         peripherals: the board's ``board_peripherals`` module.
         registry (endpointkit.Registry): endpointkit's own when None.
         label (str): what a picker calls the board's own output.
+        in_label (str): what a picker calls the board's own microphones.
 
     Returns:
         BoardAudio: the board's own output's provider.
@@ -280,5 +385,6 @@ def route(peripherals, registry=None, label="Built-in audio"):
     board = BoardAudio(own, label)
     registry.register(board)
     boarddev.replace_role(peripherals, "audio_out", RoutedAudioOut(board, registry, capability))
+    _route_in(peripherals, registry, in_label)
     _routes.append((registry, board))
     return board
