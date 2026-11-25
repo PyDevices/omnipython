@@ -1,3 +1,9 @@
+## v0.8.1rc3 (2026-11-25)
+
+- lib-lock: applibs at v0.1.3rc2, the release that carries per-app packages (#837)
+- board configs: one remote-display config for every board with no screen (#836)
+- Package library: each app and each applibs library is a package of its own (#835)
+
 ## v0.8.1rc2 (2026-11-25)
 
 - usb-host-hid: a vendor page's usage range no longer stops the gamepad scan (#833)
