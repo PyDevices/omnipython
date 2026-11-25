@@ -1,0 +1,21 @@
+{
+  "board": "remote-display",
+  "runs": [
+    {
+      "hardware": "Waveshare ESP32-S31-Zero (32 MB flash, 16 MB PSRAM) with the esp32-s31-zero board_peripherals package, nothing on its pads",
+      "firmware": "micropython 1.30.0 (Waveshare ESP32-S31-Zero with ESP32-S31), v1.30.0-preview.322.gb9620707e3 on 2026-11-25",
+      "date": "2026-11-25",
+      "smoke": "passed",
+      "checks": [
+        "board_config imports",
+        "display draws",
+        "ble answers",
+        "boot_button answers",
+        "pixels answers",
+        "wlan answers"
+      ],
+      "skipped": [],
+      "tool": "tools/mark_tested.py"
+    }
+  ]
+}
