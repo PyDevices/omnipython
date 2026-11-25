@@ -1,3 +1,10 @@
+## v0.8.1rc1 (2026-11-25)
+
+- Library lock: pygraphics 0.2.1rc1, audioinstruments 0.5.3rc1, applibs 0.1.3rc1 (#831)
+- lib-lock: audioinstruments 0.5.3.dev6, which plays a SoundFont bank frozen into firmware (#830)
+- audiodev: a board's pcm_in records from the chosen microphone (#829)
+- BLE MIDI guide: Windows MIDI Services connects without pairing; timing is tightest with Wi-Fi off (#828)
+
 ## v0.8.1.dev10 (2026-11-24)
 
 - OmniPython: hmilink, medialink, mp4mux and usb_hid come with it (#825)
