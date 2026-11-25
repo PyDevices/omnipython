@@ -114,7 +114,7 @@ and `omnipython`; its `manifest.py` lists them.
 | ESP32-WROVER-E ST7789 + joystick | `busdisplay/spi/esp32_wrover_e_st7789_joystick` |  |  | `joystick` | `wlan` |
 | Adafruit FunHouse (no BLE on ESP32-S2) | `busdisplay/spi/funhouse` | yes |  | `touch`, `keypad` | `temperature`, `humidity`, `pressure`, `light`, `motion`, `pixels`, `audio_out`, `wlan` |
 | Adafruit HalloWing M4 | `busdisplay/spi/hallowing_m4` | yes |  | — | `pixels`, `accelerometer`, `audio_out`, `i2c` |
-| Ai-Thinker ESP32-Audio-Kit V2.2 + 2.8" ILI9341 IPS touch module | `busdisplay/spi/ili9341_esp32_audio_kit` |  |  |  |  |
+| Ai-Thinker ESP32-Audio-Kit V2.2 + 2.8" ILI9341 IPS touch module | `busdisplay/spi/ili9341_esp32_audio_kit` |  | 240×320 ILI9341; touch FT6336G (`ft6x36`) | `touch` | from the `nodisplay/esp32_audio_kit` package |
 | Adafruit QT Py ESP32 Pico + EyeSPI ILI9341 | `busdisplay/spi/ili9341_eyespi_qtpy_esp32` |  |  |  |  |
 | Adafruit ESP32-S3 QT Py + EyeSPI ILI9341 | `busdisplay/spi/ili9341_eyespi_qtpy_esp32s3` |  |  |  |  |
 | QT Py RP2040 + EyeSPI ILI9341 | `busdisplay/spi/ili9341_eyespi_qtpy_rp2040` |  |  |  |  |
@@ -126,7 +126,7 @@ and `omnipython`; its `manifest.py` lists them.
 | Pico LCD 1.8" | `busdisplay/spi/pico-lcd-1.8` |  |  |  |  |
 | Waveshare Pico-OLED-2.23 and Pico-Audio on a Pico | `busdisplay/spi/pico-oled-2.23-audio` |  | 128×32, SSD1305 SPI |  | `audio_out`, `pcm_out`, `audio_power` |
 | 3.5" TFT FeatherWing (HX8357D) (host-dependent STEMMA) | `busdisplay/spi/pitft_hx8357_featherwing` | yes |  | `touch` | `i2c` |
-| 3.5" TFT FeatherWing, HX8357D + STMPE610 on an Adafruit Feather ESP32 V2 | `busdisplay/spi/pitft_hx8357_featherwing_on_feather_esp32_v2` |  |  |  |  |
+| 3.5" TFT FeatherWing, HX8357D + STMPE610 on an Adafruit Feather ESP32 V2 | `busdisplay/spi/pitft_hx8357_featherwing_on_feather_esp32_v2` |  |  |  | from the `nodisplay/adafruit_feather_esp32_v2` package |
 | PiTFT ILI9341 FeatherWing (host-dependent STEMMA) | `busdisplay/spi/pitft_ili9341_featherwing` | yes |  | `touch` | `i2c` |
 | Adafruit PyBadge | `busdisplay/spi/pybadge` | yes |  | `keypad` | `pixels`, `accelerometer`, `audio_out`, `i2c` |
 | Adafruit PyGamer | `busdisplay/spi/pygamer` | yes |  | `joystick`, `keypad` | `pixels`, `accelerometer`, `sdcard`, `battery`, `audio_out`, `i2c` |
@@ -205,12 +205,21 @@ and `omnipython`; its `manifest.py` lists them.
 
 ### Headless boards
 
-A board with no display has no `board_config.py`, because there's nothing to
-construct up front; an app imports `board_peripherals` directly, and an app
-that also runs with a display treats `board_config` as optional.
+A board with no display ships only its `board_peripherals` package. An app
+that needs no screen imports `board_peripherals` directly. For a screen in a
+web browser, install `nodisplay/remote-display` beside it: one
+`board_config.py` for every headless board, a 480x320
+[`RemoteDisplay`](../guides/show-a-display-in-a-browser.md) that asks for the
+WebREPL password and builds the board's buttons into `keypad` when its
+package has a `keypad()`. A board that later gets a real display installs
+that display's board config instead, and keeps its apps.
 
 | Directory | Board |
 |-----------|-------|
+| `nodisplay/remote-display` | any board with a network: the board config, with no pins (MicroPython; `display_drv` in a browser, `host_read`, `keypad` from the board's package) |
+| `nodisplay/adafruit_feather_esp32_v2` | Adafruit ESP32 Feather V2 (MicroPython; `pixels`, `led`, `i2c`, `battery`, `wlan`, `ble`; SW38 as `keypad()`) |
+| `nodisplay/esp32_audio_kit` | Ai-Thinker ESP32-Audio-Kit V2.2, ES8388 (MicroPython; `audio_out`, `pcm_out`, `pcm_in`, `audio_power`, `led`, `sdcard`, `wlan`, `bt`, `ble`; KEY1-KEY6 as `keypad()`) |
+| `nodisplay/esp32-p4-wifi6-dev-kit` | Waveshare ESP32-P4-WIFI6-DEV-KIT (MicroPython; `audio_out`, `pcm_out`, `pcm_in`, `audio_power`, `i2c`, `sdcard`, `camera`, `ethernet`, `radio`, `wlan`, `ble`, `boot_button`, `usb_device`) |
 | `nodisplay/qtpy_esp32_pico_audio_bff` | QT Py ESP32 Pico + Adafruit Audio BFF (MicroPython; `audio_out` on I2S, `boot_button`) |
 | `nodisplay/esp32-s31-zero` | Waveshare ESP32-S31-Zero (MicroPython; `pixels`, `boot_button`, `wlan`, `ble`) |
 | `cp/nodisplay/qtpy_esp32_pico_audio_bff` | the same, on CircuitPython (`audio_out` is `audiobusio.I2SOut`) |

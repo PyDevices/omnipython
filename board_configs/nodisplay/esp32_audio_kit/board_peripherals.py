@@ -14,6 +14,28 @@ them.
 Many of these kits ship with the microphones' two coupling capacitors on the
 wrong pads, and their microphones record only noise until those are moved.
 The line-in jack works either way.
+
+The kit's own buttons and LED, from its schematic and Espressif's board
+definition:
+
+    KEY1-KEY6         IO36, IO13, IO19, IO23, IO18, IO5, each low while
+                      pressed; ``keypad()`` gives them as the keys 1 to 6
+    green LED D4      IO22
+    headphone detect  IO39
+
+KEY2 (IO13) is the microSD card's D3, so it works only while the card runs
+1-bit and DIP switch 1 is on. KEY3 to KEY6 and the LED are on the 2x7
+header, so a display wired there takes them: the ILI9341 module's board
+config uses IO5, IO18, IO19, IO22 and IO23.
+
+It has no display. Install the ``remote-display`` board config beside this
+package for a screen in a web browser, or the 2.8" ILI9341 module's
+``ili9341_esp32_audio_kit``, which brings this package too.
+
+Checked on a board, with the ILI9341 module fitted: ``audio_out`` and
+``pcm_out`` on the headphone output, ``pcm_in`` from the line-in jack, and
+``bt`` playing a phone's music. Not checked yet: ``keypad()``, ``led`` and
+``sdcard``.
 """
 
 import sys
@@ -39,6 +61,7 @@ PERIPHERALS = frozenset(
         "pcm_out",
         "pcm_in",
         "audio_power",
+        "led",
         "sdcard",
         "wlan",
         "bt",
@@ -57,6 +80,8 @@ _LRCK = 25
 _DOUT = 26
 _DIN = 35  # the ES8388's ADC output
 _AMP = 21  # NS4150B enable, high = on
+_LED = 22  # the green LED, D4
+_KEYS = (36, 13, 19, 23, 18, 5)  # KEY1 to KEY6
 
 # The codec's I2C: a port of its own, inside the A1S module.
 _CODEC_I2C_PORT = 1
@@ -317,12 +342,35 @@ audio_power = _audio_power
 def sdcard():
     """The kit's microSD slot in 1-bit mode (CLK IO14, CMD IO15, D0 IO2).
 
-    It has to stay 1-bit: IO12, the 4-bit D2, is the display's chip select.
+    It stays 1-bit: IO12, the 4-bit D2, is a boot strap, and the ILI9341
+    module's chip select.
     CMD reaches IO15 through DIP switch 3, which must be on.
     """
     from machine import SDCard
 
     return SDCard(slot=1, width=1)
+
+
+def led():
+    """The green LED D4 on IO22, a ``machine.Pin``."""
+    from machine import Pin
+
+    return Pin(_LED, Pin.OUT, value=0)
+
+
+def keypad():
+    """KEY1 to KEY6 as the keys 1 to 6, for a board config to give the app as ``keypad``."""
+    import keys
+    from keypad_gpio import GPIOButtons
+    from machine import Pin
+
+    codes = (keys.K_1, keys.K_2, keys.K_3, keys.K_4, keys.K_5, keys.K_6)
+    mapping = {}
+    for n, (gpio, code) in enumerate(zip(_KEYS, codes)):
+        # IO36 is input only, with no internal pull-up: the kit's resistor holds it.
+        pull = None if gpio == 36 else Pin.PULL_UP
+        mapping["key%d" % (n + 1)] = (Pin(gpio, Pin.IN, pull), code)
+    return GPIOButtons(mapping)
 
 
 def wlan():

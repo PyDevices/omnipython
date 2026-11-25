@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: MIT
 
-"""Adafruit 3.5" TFT FeatherWing (HX8357D) + STMPE610 on an Unexpected Maker Feather ESP32 V2
+"""Adafruit 3.5" TFT FeatherWing (HX8357D) + STMPE610 on an Adafruit ESP32 Feather V2
 
 The HX8357D takes the ILI9341 driver's init unchanged; only the size differs:
 320x480 native, shown as 480x320 landscape. Pins are the Feather ESP32 V2's GPIO

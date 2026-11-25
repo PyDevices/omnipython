@@ -195,10 +195,18 @@ for a role that is constructed, such as `sdcard`.
 ## Boards with no display
 
 [`board_configs/nodisplay/`](https://github.com/PyDevices/omnipython/tree/main/board_configs/nodisplay) holds boards that are only peripherals — an audio
-DAC or amplifier on a QT Py, say. They ship a `board_peripherals.py` and **no
-`board_config.py`**, because there is nothing eager to construct. Apps import
-`board_peripherals` directly, which is the non-graphics idiom with nothing
-else in the way.
+DAC or amplifier on a QT Py, say. Each ships a `board_peripherals.py` and **no
+`board_config.py`**, because there is nothing eager to construct. Apps that
+need no screen import `board_peripherals` directly, which is the non-graphics
+idiom with nothing else in the way.
+
+`nodisplay/remote-display` is the one `board_config.py` for all of them: a
+`RemoteDisplay` in a web browser, with no pins. It ends like every other
+config, binding the board's `board_peripherals`, and it builds `keypad` from
+the board's buttons when that module has a `keypad()` function returning a
+`keypad_gpio.GPIOButtons` or anything with `read()`. A board's package keeps
+its buttons there, not in `PERIPHERALS`, because a display wired to the
+same header may need the pins; a display's own config can call it too.
 
 Every other category is named for a display technology (`busdisplay`,
 `fbdisplay`, `pixeldisplay`, …), so `nodisplay` is where a board with no

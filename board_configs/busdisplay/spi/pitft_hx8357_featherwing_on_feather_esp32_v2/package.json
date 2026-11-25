@@ -6,7 +6,15 @@
     ],
     [
       "board_peripherals.py",
-      "github:PyDevices/omnipython/board_configs/busdisplay/spi/pitft_hx8357_featherwing_on_feather_esp32_v2/board_peripherals.py"
+      "github:PyDevices/omnipython/board_configs/nodisplay/adafruit_feather_esp32_v2/board_peripherals.py"
+    ],
+    [
+      "battery_adc.py",
+      "github:PyDevices/omnipython/drivers/power/battery_adc.py"
+    ],
+    [
+      "keypad_gpio.py",
+      "github:PyDevices/omnipython/drivers/input/keypad_gpio.py"
     ],
     [
       "ili9341.py",
@@ -23,7 +31,7 @@
       "latest"
     ]
   ],
-  "version": "0.1",
-  "description": "Adafruit 3.5\" TFT FeatherWing (HX8357D) + STMPE610 on an Unexpected Maker Feather ESP32 V2",
+  "version": "0.2",
+  "description": "Adafruit 3.5\" TFT FeatherWing (HX8357D) + STMPE610 on an Adafruit ESP32 Feather V2",
   "generated": "from manifest.py by tools/libbuild.py installers; edit manifest.py, not this"
 }
