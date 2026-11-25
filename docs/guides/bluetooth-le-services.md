@@ -186,6 +186,16 @@ The port follows the [`midiports`](https://github.com/PyDevices/omnipython/blob/
 
 On a board, ask for the shortest connection interval: `midi.connect(ble, name="synth", min_conn_interval_us=7500, max_conn_interval_us=7500)`.
 
+On Windows 11, Windows MIDI Services (Preview 14 or later) reaches a board's
+`midi.serve()` port with no pairing: `midi bluetooth connect` brings it up, and
+every MIDI app on the PC sees it as a port under the board's name.
+
+On an ESP32, Wi-Fi and Bluetooth share one radio. With the board joined to
+Wi-Fi, some MIDI messages leave tens of milliseconds late, and a receiver that
+smooths timing, as Windows MIDI Services does by default, holds every note
+longer to cover them. For the tightest timing, leave the board's Wi-Fi off
+while it plays MIDI over Bluetooth.
+
 On Linux, BlueZ connects BLE-MIDI devices itself and makes each one a MIDI
 port, so the simplest way to reach one from a Linux computer is
 `bluetoothctl connect ADDRESS` and then `midiports.linux.ports("NAME")`.
