@@ -1,3 +1,13 @@
+## v0.8.1rc4 (2026-11-25)
+
+- lib-lock: applibs at v0.1.3rc3, Home and Wake word on a 170 px screen (#846)
+- Boards: Feather ESP32 V2, remote-display and both QT Py ESP32 Pico configs are tested (#845)
+- omip: a package the firmware has partly frozen gets only the modules it lacks (#844)
+- T-RGB: the round layout for its full-circle panel, and tested (#842)
+- Tested boards: the ESP32-P4X-EYE, the P4 Pico with Pico-LCD-1.8 and Pico-Audio, and remote-display on the S31 Zero (#841)
+- Boards: T-HMI, T-Display-S3 and WT32-SC01 Plus are tested (#840)
+- T-Embed: the microphones open on the on-board I2C again (#839)
+
 ## v0.8.1rc3 (2026-11-25)
 
 - lib-lock: applibs at v0.1.3rc2, the release that carries per-app packages (#837)
