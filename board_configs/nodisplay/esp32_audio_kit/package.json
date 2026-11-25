@@ -1,0 +1,25 @@
+{
+  "urls": [
+    [
+      "board_peripherals.py",
+      "github:PyDevices/omnipython/board_configs/nodisplay/esp32_audio_kit/board_peripherals.py"
+    ],
+    [
+      "es8388.py",
+      "github:PyDevices/omnipython/drivers/codec/es8388.py"
+    ],
+    [
+      "keypad_gpio.py",
+      "github:PyDevices/omnipython/drivers/input/keypad_gpio.py"
+    ]
+  ],
+  "deps": [
+    [
+      "omnipython",
+      "latest"
+    ]
+  ],
+  "version": "0.1.0",
+  "description": "board_peripherals for the Ai-Thinker ESP32-Audio-Kit V2.2 (ESP32-A1S, ES8388), on MicroPython",
+  "generated": "from manifest.py by tools/libbuild.py installers; edit manifest.py, not this"
+}

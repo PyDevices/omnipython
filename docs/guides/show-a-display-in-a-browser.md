@@ -14,7 +14,25 @@ With a password set, the page asks for it before it shows anything.
 
 ## A board with no screen
 
-In the board's `board_config.py`:
+Install the `remote-display` board config beside your board's own package.
+It is the same for every board, a 480x320 `RemoteDisplay` that asks for your
+WebREPL password, so a board with no screen of its own needs nothing else:
+
+```python
+import mip
+
+mip.install("github:PyDevices/omnipython/board_configs/nodisplay/remote-display")
+mip.install("github:PyDevices/omnipython/board_configs/nodisplay/esp32-s31-zero")
+```
+
+[Boards with no display](../boards/board-configs.md#headless-boards) lists the
+boards' own packages. To change the size, the port or the password, set
+`OMNIPYTHON_WIDTH`, `OMNIPYTHON_HEIGHT`, `OMNIPYTHON_REMOTE_PORT` or
+`OMNIPYTHON_REMOTE_PASSWORD` before the first `import board_config`. When you
+fit a real display, install its board config: it replaces this one, and your
+apps stay.
+
+To write your own instead, in the board's `board_config.py`:
 
 ```python
 from displaydev.remotedisplay import RemoteDisplay

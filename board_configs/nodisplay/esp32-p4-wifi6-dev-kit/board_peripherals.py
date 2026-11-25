@@ -4,9 +4,11 @@
 
 """board_peripherals for the Waveshare ESP32-P4-WIFI6-DEV-KIT, on MicroPython.
 
-Headless, so there is no board_config.py; an app imports board_peripherals
-directly. A display on the DSI connector brings its own board_config (see
-fbdisplay/esp32-p4-wifi6-dev-kit_kedei-5in-dsi), which loads this file.
+Headless: an app imports board_peripherals directly, or the
+``remote-display`` board config installed beside it gives the board a
+screen in a web browser. A display on the DSI connector brings its own
+board_config instead (see fbdisplay/esp32-p4-wifi6-dev-kit_kedei-5in-dsi),
+which loads this file.
 PERIPHERALS = lazy roles only: nothing is constructed until it is asked for.
 
 What the board carries, from Waveshare's schematic (ESP32-P4-WIFI6-DEV-KIT

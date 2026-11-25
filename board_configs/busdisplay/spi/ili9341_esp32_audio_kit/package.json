@@ -6,7 +6,15 @@
     ],
     [
       "board_peripherals.py",
-      "github:PyDevices/omnipython/board_configs/busdisplay/spi/ili9341_esp32_audio_kit/board_peripherals.py"
+      "github:PyDevices/omnipython/board_configs/nodisplay/esp32_audio_kit/board_peripherals.py"
+    ],
+    [
+      "es8388.py",
+      "github:PyDevices/omnipython/drivers/codec/es8388.py"
+    ],
+    [
+      "keypad_gpio.py",
+      "github:PyDevices/omnipython/drivers/input/keypad_gpio.py"
     ],
     [
       "ili9341.py",
@@ -15,10 +23,6 @@
     [
       "ft6x36.py",
       "github:PyDevices/omnipython/drivers/touch/ft6x36.py"
-    ],
-    [
-      "es8388.py",
-      "github:PyDevices/omnipython/drivers/codec/es8388.py"
     ]
   ],
   "deps": [
@@ -27,7 +31,7 @@
       "latest"
     ]
   ],
-  "version": "0.1",
+  "version": "0.2",
   "description": "Ai-Thinker ESP32-Audio-Kit V2.2 with a 2.8\" ILI9341 IPS touch module - MicroPython",
   "generated": "from manifest.py by tools/libbuild.py installers; edit manifest.py, not this"
 }

@@ -6,8 +6,9 @@
 
 The Zero is an ESP32-S31 with 32 MB of flash and 16 MB of PSRAM, a USB-C
 port, two buttons, an RGB LED, 18 edge pads and a 40-pin FPC connector.
-Pins are from Waveshare's schematic. It has no display of its own, so there
-is no ``board_config.py``: import this module.
+Pins are from Waveshare's schematic. It has no display of its own: import this
+module, or install the ``remote-display`` board config beside it for a
+screen in a web browser.
 
     RGB LED           WS2812B on GPIO60, through a level shifter to 5 V
     BOOT button       GPIO61, low while pressed (a boot strap at reset)

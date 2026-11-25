@@ -28,7 +28,8 @@ This board has no display, which is why the ``nodisplay`` category exists:
 every other board_configs/ category is named for a display technology, and a
 board that is only an audio peripheral fits none of them. There is no
 board_config.py here either -- nothing eager to construct. A non-graphics app
-imports board_peripherals directly, which is the whole point of the idiom.
+imports board_peripherals directly; for a screen in a web browser, install
+the ``remote-display`` board config beside this package.
 
 The amplifier is a MAX98357A: no codec, no I2C, no register set, no MCLK. It
 takes its clock from BCLK, which is why rates are continuous here rather than
