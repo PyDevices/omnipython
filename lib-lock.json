@@ -45,8 +45,9 @@
     "applibs": {
       "repository": "PyDevices/apps",
       "ref": "v0.1.3rc1",
-      "description": "The libraries apps share, all in one package",
+      "description": "Every library the apps share; each is a package of its own too",
       "bundle": true,
+      "apps": "apps",
       "circuitpython": ["adafruit_requests"]
     }
   }

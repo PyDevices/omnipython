@@ -470,48 +470,142 @@ class Bundle(unittest.TestCase):
         })
         return required, frozen
 
-    def test_one_package_installs_every_folder_with_an_init(self):
+    def test_each_folder_is_a_package_and_the_bundle_requires_them(self):
         libbuild.assemble_pinned(self.pinned, self.scratch / "src", self.tree, "lib", self.local)
-        self.assertEqual(sorted(self.tree.packages), ["all"])
+        self.assertEqual(sorted(self.tree.packages), ["all", "one", "three", "two"])
         for name in ("one", "two", "three"):
-            self.assertTrue((self.tree.path / "all" / name / "__init__.py").is_file())
-            self.assertFalse((self.tree.path / "all" / name / "manifest.py").exists())
-            self.assertFalse((self.tree.path / name).exists())
-        self.assertFalse((self.tree.path / "all" / "one" / "examples").exists())
-        self.assertFalse((self.tree.path / "all" / "data").exists())
+            self.assertTrue((self.tree.path / name / name / "__init__.py").is_file())
+            self.assertFalse((self.tree.path / name / name / "manifest.py").exists())
+        self.assertFalse((self.tree.path / "one" / "one" / "examples").exists())
+        self.assertFalse((self.tree.path / "data").exists())
         self.assertIn('version="1.2.3"', self.manifest())
-        self.assertEqual(self.freeze(), (["icons", "requests"], ["one", "three", "two"]))
+        self.assertEqual(self.freeze(), (["one", "three", "two"], []))
+        self.assertEqual(self.tree.circuitpython, {"all": ("adafruit_requests",)})
 
     def test_a_new_folder_is_published_with_no_other_change(self):
         self.member("four")
         libbuild.assemble_pinned(self.pinned, self.scratch / "src", self.tree, "lib", self.local)
-        self.assertIn("four", self.freeze()[1])
-        self.assertTrue((self.tree.path / "all" / "four" / "__init__.py").is_file())
+        self.assertIn("four", self.freeze()[0])
+        self.assertTrue((self.tree.path / "four" / "four" / "__init__.py").is_file())
 
-    def test_requires_from_the_library_and_from_micropython_lib(self):
+    def test_a_member_keeps_its_requires_for_a_firmware(self):
         libbuild.assemble_pinned(self.pinned, self.scratch / "src", self.tree, "lib", self.local)
-        manifest = self.manifest()
-        self.assertIn('require("icons", library="lib", opt=options.opt)', manifest)
-        self.assertIn('    require("requests")\n', manifest)
-        self.assertNotIn('require("one"', manifest)
-        self.assertEqual(self.tree.circuitpython, {"all": ("adafruit_requests",)})
+        one = (self.tree.path / "one" / "manifest.py").read_text(encoding="utf-8")
+        self.assertIn('require("icons", library="lib", opt=options.opt)', one)
+        self.assertIn('require("requests")\n', one)
+        two = (self.tree.path / "two" / "manifest.py").read_text(encoding="utf-8")
+        self.assertIn('require("one", library="lib", opt=options.opt)', two)
+        self.assertIn('package("two", opt=options.opt)', two)
 
-    def test_a_firmware_can_freeze_some_members_and_what_they_need(self):
+    def test_a_firmware_can_freeze_some_members(self):
         libbuild.assemble_pinned(self.pinned, self.scratch / "src", self.tree, "lib", self.local)
-        self.assertEqual(self.freeze(("two",)), (["icons", "requests"], ["one", "two"]))
-        self.assertEqual(self.freeze(("three",)), ([], ["three"]))
+        self.assertEqual(self.freeze(("two",)), (["two"], []))
+        self.assertEqual(self.freeze(("three", "one")), (["one", "three"], []))
         with self.assertRaisesRegex(ValueError, "has no package 'nine'"):
             self.freeze(("nine",))
 
-    def test_the_index_installs_the_bundle_and_its_requires(self):
+    def test_the_index_reads_each_members_needs_from_applibs_json(self):
+        (self.scratch / "src" / "lib" / "applibs.json").write_text(json.dumps({"libraries": {
+            "one": {"deps": ["icons"], "upstream": ["requests"], "circuitpython": ["adafruit_requests"]},
+            "two": {"deps": ["one"], "upstream": [], "circuitpython": []},
+        }}), encoding="utf-8")
         libbuild.assemble_pinned(self.pinned, self.scratch / "src", self.tree, "lib", self.local)
-        icons = self.tree.path / "icons"
-        icons.mkdir()
-        (icons / "manifest.py").write_text('metadata(version="1.0.0")\n', encoding="utf-8")
-        manifest = libbuild.read_manifest("lib", self.tree.path, "all", None)
-        self.assertEqual(manifest.deps, ["icons"])
-        self.assertEqual(manifest.left_out, ["requests"])
-        self.assertEqual(sorted({item.target_path.split("/")[0] for item in manifest.files}), ["one", "three", "two"])
+        self.assertEqual(self.tree.needs["one"], {"deps": ["icons"], "upstream": ["requests"], "circuitpython": ["adafruit_requests"]})
+        self.assertEqual(self.tree.needs["two"]["deps"], ["one"])
+        self.assertNotIn("three", self.tree.needs)
+
+    def test_applibs_json_naming_a_missing_folder_fails(self):
+        (self.scratch / "src" / "lib" / "applibs.json").write_text('{"libraries": {"nine": {}}}', encoding="utf-8")
+        with self.assertRaisesRegex(libbuild.BuildError, "nine"):
+            libbuild.assemble_pinned(self.pinned, self.scratch / "src", self.tree, "lib", self.local)
+
+    def app(self, name, body, files=("__init__.py",)):
+        folder = self.scratch / "src" / "apps" / name
+        folder.mkdir(parents=True)
+        (folder / "app.json").write_text(json.dumps({"name": name}), encoding="utf-8")
+        for path in files:
+            (folder / path).parent.mkdir(parents=True, exist_ok=True)
+            (folder / path).write_text(f"APP = {name!r}\n", encoding="utf-8")
+        body = dict(body, urls=[[path, path] for path in (*files, "app.json")] + body.get("urls", []))
+        (folder / "package.json").write_text(json.dumps(body), encoding="utf-8")
+
+    def with_apps(self):
+        (self.scratch / "src" / "apps").mkdir()
+        (self.scratch / "src" / "apps" / "__init__.py").write_text("", encoding="utf-8")
+        self.app("perch", {"description": "Perch, an app for Home"})
+        self.app(
+            "clock",
+            {
+                "description": "Clock, an app for Home",
+                "urls": [["bank.sf2", "https://example.com/bank.sf2"]],
+                "deps": [["all", "latest"], ["icons", "latest"], ["github:Org/repo/apps/perch", "main"]],
+                "all": ["one", "two"],
+                "upstream": [["requests", "latest"]],
+                "circuitpython": [["adafruit_requests", "latest"]],
+            },
+            files=("__init__.py", "face.py", "fonts/big.bin"),
+        )
+        (self.tree.path / "icons").mkdir()
+        (self.tree.path / "icons" / "manifest.py").write_text('metadata(version="1.0.0")\n', encoding="utf-8")
+        self.tree.packages["icons"] = "icons/"
+        return libbuild.Pinned("all", "Org/repo", "v1.2.3", "All of them", None, bundle=True, apps="apps")
+
+    def test_each_app_is_a_package_and_apps_has_them_all(self):
+        libbuild.assemble_pinned(self.with_apps(), self.scratch / "src", self.tree, "lib", self.local)
+        self.assertTrue({"app-clock", "app-perch", "apps"} <= set(self.tree.packages))
+        self.assertTrue((self.tree.path / "app-clock" / "clock" / "face.py").is_file())
+        self.assertEqual(self.tree.targets["app-clock"], "apps")
+        self.assertEqual(self.tree.needs["app-clock"], {
+            "deps": ["one", "two", "icons", "app-perch"],
+            "upstream": ["requests"],
+            "circuitpython": ["adafruit_requests"],
+        })
+        self.assertEqual([path for path, _ in self.tree.data["app-clock"]], ["clock/fonts/big.bin", "clock/app.json"])
+        self.assertEqual(self.tree.urls["app-clock"], [["clock/bank.sf2", "https://example.com/bank.sf2"]])
+        self.assertEqual(self.tree.needs["apps"]["deps"], ["app-clock", "app-perch"])
+        self.assertEqual(self.tree.targets["apps"], "apps")
+        self.assertTrue((self.tree.path / "apps" / "__init__.py").is_file())
+
+    def test_an_app_that_doesnt_list_its_libraries_needs_the_whole_bundle(self):
+        pinned = self.with_apps()
+        package = self.scratch / "src" / "apps" / "perch" / "package.json"
+        package.write_text(json.dumps(dict(json.loads(package.read_text()), deps=[["all", "latest"]])), encoding="utf-8")
+        libbuild.assemble_pinned(pinned, self.scratch / "src", self.tree, "lib", self.local)
+        self.assertEqual(self.tree.needs["app-perch"]["deps"], ["all"])
+
+    def test_an_app_needing_a_package_the_index_lacks_fails(self):
+        pinned = self.with_apps()
+        package = self.scratch / "src" / "apps" / "perch" / "package.json"
+        package.write_text(json.dumps(dict(json.loads(package.read_text()), deps=[["nowhere", "latest"]])), encoding="utf-8")
+        with self.assertRaisesRegex(libbuild.BuildError, "isn't on the index"):
+            libbuild.assemble_pinned(pinned, self.scratch / "src", self.tree, "lib", self.local)
+
+    def test_the_index_json_of_an_app(self):
+        libbuild.assemble_pinned(self.with_apps(), self.scratch / "src", self.tree, "lib", self.local)
+
+        class FakeMpyCross:
+            mpy_version = "6"
+
+            def compile(self, source, target_path, dest, opt):
+                dest.write_bytes(b"M" + source.read_bytes())
+
+        out = self.scratch / "index"
+        libbuild.compile_index(self.tree, out, FakeMpyCross(), "lib", None, 8)
+        for kind in ("6", "py"):
+            body = json.loads((out / "package" / kind / "app-clock" / "latest.json").read_text())
+            self.assertEqual(body["target"], "apps")
+            self.assertEqual(body["deps"], [["one", "latest"], ["two", "latest"], ["icons", "latest"], ["app-perch", "latest"]])
+            self.assertEqual(body["upstream"], [["requests", "latest"]])
+            self.assertEqual(body["urls"], [["clock/bank.sf2", "https://example.com/bank.sf2"]])
+            paths = sorted(path for path, _ in body["hashes"])
+            ext = "mpy" if kind == "6" else "py"
+            self.assertEqual(paths, sorted(["clock/app.json", "clock/fonts/big.bin", f"clock/__init__.{ext}", f"clock/face.{ext}"]))
+        every = json.loads((out / "package" / "6" / "apps" / "latest.json").read_text())
+        self.assertEqual(every["hashes"][0][0], "__init__.mpy")
+        self.assertEqual(every["target"], "apps")
+        bundle = json.loads((out / "package" / "6" / "all" / "latest.json").read_text())
+        self.assertEqual(bundle["hashes"], [])
+        self.assertEqual(bundle["deps"], [["one", "latest"], ["three", "latest"], ["two", "latest"]])
 
     def test_a_require_that_names_no_string_fails(self):
         (self.scratch / "src" / "lib" / "three" / "manifest.py").write_text('name = "x"\nrequire(name)\n', encoding="utf-8")
@@ -529,10 +623,11 @@ class Bundle(unittest.TestCase):
         with self.assertRaisesRegex(libbuild.BuildError, "holds no package"):
             libbuild.assemble_pinned(self.pinned, self.scratch / "src", self.tree, "lib", self.local)
 
-    def test_the_lock_publishes_applibs_as_one_bundle(self):
+    def test_the_lock_publishes_applibs_and_the_apps(self):
         # deskkit asks the network through appkit.net: requests on MicroPython, from its own manifest.
         pinned = libbuild.read_lock(ROOT).pinned["applibs"]
         self.assertTrue(pinned.bundle)
+        self.assertEqual(pinned.apps, "apps")
         self.assertEqual(pinned.circuitpython, ("adafruit_requests",))
 
     def test_a_repository_that_stands_in_for_a_module_says_so(self):
