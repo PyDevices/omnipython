@@ -306,6 +306,22 @@ class Extras(unittest.TestCase):
         self.assertEqual(pad.reports, 2)
 
 
+    def test_a_vendor_usage_range_is_read_without_a_list(self):
+        # Usage Page 0xFF00, Usage Minimum 1, Usage Maximum 0xFFFF, three 8-bit
+        # values: a 32-bit board can't make range(0xFF000001, 0xFF010000).
+        d = bytes([0x06, 0x00, 0xFF, 0x09, 0x01, 0xA1, 0x01, 0x19, 0x01, 0x2A, 0xFF, 0xFF,
+                   0x15, 0x00, 0x26, 0xFF, 0x00, 0x75, 0x08, 0x95, 0x03, 0x81, 0x02, 0xC0])
+        fields, ids, apps = parse(d)
+        self.assertEqual([f[6] for f in fields], [0xFF000001, 0xFF000002, 0xFF000003])
+        self.assertEqual(apps, [0xFF000001])
+
+    def test_a_count_past_the_usage_range_repeats_its_last_usage(self):
+        d = bytes([0x05, 0x09, 0x19, 0x01, 0x29, 0x02, 0x15, 0x00, 0x25, 0x01,
+                   0x75, 0x01, 0x95, 0x04, 0x81, 0x02])
+        fields, ids, apps = parse(d)
+        self.assertEqual([f[6] for f in fields], [1, 2, 2, 2])
+
+
 class OnMicroPython(unittest.TestCase):
     def test_the_decoder_runs_there(self):
         interpreter = need_micropython(self)

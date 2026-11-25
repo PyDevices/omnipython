@@ -174,11 +174,15 @@ def _parse(descriptor):
             at = offsets.setdefault(rid, 0)
             offsets[rid] = at + size * count
             if not v & 1 and v & 2 and size:         # data, not padding; a variable, not an array
-                names = usages
-                if umin is not None and umax is not None:
-                    names = list(range(umin, umax + 1))
+                # A usage range is read one usage at a time, never built as a
+                # list: a vendor page's usages (0xFF00 << 16 and up) don't fit
+                # a 32-bit board's machine word, which range() needs.
+                ranged = umin is not None and umax is not None
                 for j in range(count):
-                    u = names[j] if j < len(names) else (names[-1] if names else 0)
+                    if ranged:
+                        u = umin + j if j <= umax - umin else umax
+                    else:
+                        u = usages[j] if j < len(usages) else (usages[-1] if usages else 0)
                     if u >> 16 == 9:
                         fields.append([_BUTTON, rid, at + j * size, size, lmin, lmax, u & 0xFFFF, 0])
                     elif u == 0x10039:
