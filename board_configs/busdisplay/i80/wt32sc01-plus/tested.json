@@ -1,0 +1,22 @@
+{
+  "board": "wt32sc01-plus",
+  "runs": [
+    {
+      "hardware": "Wireless-Tag WT32-SC01 Plus (ESP32-S3, 16 MB flash, 2 MB PSRAM), 3.5 inch ST7796 with FT6336 touch, SD slot empty",
+      "firmware": "micropython 1.30.0 (Generic ESP32S3 module with ESP32-S3), v1.30.0-preview.322.gb9620707e3 on 2026-11-25",
+      "date": "2026-11-25",
+      "smoke": "passed",
+      "checks": [
+        "board_config imports",
+        "display draws",
+        "touch reads",
+        "ble answers",
+        "wlan answers"
+      ],
+      "skipped": [
+        "sdcard"
+      ],
+      "tool": "tools/mark_tested.py"
+    }
+  ]
+}
