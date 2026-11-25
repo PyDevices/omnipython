@@ -1,3 +1,7 @@
+## v0.8.1rc2 (2026-11-25)
+
+- usb-host-hid: a vendor page's usage range no longer stops the gamepad scan (#833)
+
 ## v0.8.1rc1 (2026-11-25)
 
 - Library lock: pygraphics 0.2.1rc1, audioinstruments 0.5.3rc1, applibs 0.1.3rc1 (#831)
