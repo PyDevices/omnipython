@@ -1,0 +1,30 @@
+{
+  "board": "esp32-p4-wifi6_pico-lcd-1.8_pico-audio",
+  "runs": [
+    {
+      "hardware": "Waveshare ESP32-P4-WIFI6 (Pico size, 32 MB flash) with a Pico-LCD-1.8 and a Pico-Audio",
+      "firmware": "micropython 1.30.0 (Waveshare ESP32-P4-WIFI6-DEV-KIT, USB device on H2 with ESP32-P4), v1.30.0-preview.322.gb9620707e3 on 2026-11-25",
+      "date": "2026-11-25",
+      "smoke": "passed",
+      "checks": [
+        "board_config imports",
+        "display draws",
+        "audio_out answers",
+        "audio_power answers",
+        "ble answers",
+        "boot_button answers",
+        "camera answers",
+        "i2c answers",
+        "pcm_in answers",
+        "pcm_out answers",
+        "radio answers",
+        "sdcard answers",
+        "wlan answers"
+      ],
+      "skipped": [
+        "usb_device"
+      ],
+      "tool": "tools/mark_tested.py"
+    }
+  ]
+}
