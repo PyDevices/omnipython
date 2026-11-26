@@ -57,6 +57,7 @@ class STMPE610:
         self._height = height
         self._rotation = rotation
         self._calib = calibration if calibration is not None else ((0, 4095), (0, 4095))
+        self._last = None  # this press's newest point
         self._baudrate = baudrate
         self._claim_bus()
         version = self._get_version()
@@ -108,7 +109,10 @@ class STMPE610:
         # The touch-detect bit drops out for single polls during a press, so
         # samples still waiting in the FIFO count as a touch too.
         self._claim_bus()
-        return (self._read_byte(_STMPE_TSC_CTRL) & 0x80) == 0x80 or not self.buffer_empty
+        down = (self._read_byte(_STMPE_TSC_CTRL) & 0x80) == 0x80 or not self.buffer_empty
+        if not down:
+            self._last = None  # the press is over: the next starts with no point
+        return down
 
     @property
     def buffer_empty(self):
@@ -137,6 +141,11 @@ class STMPE610:
     def touch_point(self):
         if not self.touched:
             return None
+        if self.buffer_empty:
+            # Touch is detected a moment before a press's first sample reaches
+            # the FIFO, and reading an empty FIFO gives the last press's point
+            # again: a tap would start where the one before it ended.
+            return self._last
         x_loc, y_loc, _pressure = self._read_raw()
         x_c = self._calib[0]
         y_c = self._calib[1]
@@ -152,4 +161,5 @@ class STMPE610:
         else:
             x = _map_range(x_loc, x_c[0], x_c[1], self._width, 0)
             y = _map_range(y_loc, y_c[0], y_c[1], 0, self._height)
+        self._last = (x, y)
         return (x, y)
