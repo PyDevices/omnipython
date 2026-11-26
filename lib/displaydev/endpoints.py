@@ -21,6 +21,9 @@ In a browser page they're the pads the browser shows it (the Gamepad API),
 which appear once a button is pressed on one and go when it's unplugged.
 Choosing an endpoint changes nothing about which events arrive: a program
 that reads one gamepad reads the chosen one.
+
+A browser page's cameras are listed under ``camera`` as well, and the chosen
+one is the one a camera app opens (`displaydev.page_camera`).
 """
 
 import sys
@@ -63,10 +66,14 @@ _PAGE_PADS = """() => {
 }"""
 
 
+def _in_browser():
+    return sys.platform in ("webassembly", "emscripten") and sys.implementation.name == "micropython"
+
+
 def joystick_names():
     """The names of the joysticks the running display opened, in its order;
     in a browser page, the pads the browser shows it."""
-    if sys.platform in ("webassembly", "emscripten") and sys.implementation.name == "micropython":
+    if _in_browser():
         import js
 
         text = str(js.eval(_PAGE_PADS)())
@@ -143,6 +150,8 @@ _providers = []
 def register(registry=None):
     """Register the keyboard, the mouse and the gamepads; returns them as a list.
 
+    In a browser page, the page's cameras too (`displaydev.page_camera`).
+
     Registering again returns the providers already registered.
     """
     if not _providers:
@@ -150,4 +159,8 @@ def register(registry=None):
         _providers.append(registry.register(Fixed("keys", "host-keys", "keyboard", "Computer keyboard")))
         _providers.append(registry.register(Fixed("pointer", "host-pointer", "mouse", "Mouse or touchpad")))
         _providers.append(registry.register(Gamepads()))
+        if _in_browser():
+            from displaydev import page_camera
+
+            _providers.append(registry.register(page_camera.Cameras()))
     return list(_providers)

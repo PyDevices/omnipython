@@ -9,6 +9,10 @@ type. ``pcm_out``/``pcm_in`` hand back a raw ``PCMOutput``/``PCMInput``;
 ``audio_out`` hands back an ``AudioOut`` sample player. There is no
 ``audio_in`` -- capture has no player layer.
 
+In a browser page there's a ``camera`` role too: the camera the browser
+gives the page, read the way cameraif reads a board's
+(`displaydev.page_camera`).
+
 Unlike the single-backend host packages beside this one, the backend here is
 probed at first use via ``audiodev.auto``.
 """
@@ -18,7 +22,10 @@ import sys
 import boarddev
 from audiodev import AudioCapability, AudioFactory, AudioFormat, adapt_channels, negotiate
 
-PERIPHERALS = frozenset({"audio_out", "pcm_out", "pcm_in"})
+# A browser page also has the camera the browser gives it.
+_BROWSER = sys.platform in ("webassembly", "emscripten") and sys.implementation.name == "micropython"
+
+PERIPHERALS = frozenset({"audio_out", "pcm_out", "pcm_in"} | ({"camera"} if _BROWSER else set()))
 
 # Audio roles are factories: first attribute access must not construct, so a
 # caller can pass a format. See boarddev.bind_lazy.
@@ -103,3 +110,12 @@ def _audio_out(format=None, **kwargs):
 pcm_out = AudioFactory(_pcm_out, AUDIO_OUT)
 pcm_in = AudioFactory(_pcm_in, AUDIO_IN)
 audio_out = AudioFactory(_audio_out, AUDIO_OUT)
+
+
+if _BROWSER:
+
+    def camera(format=None, flip=False, mirror=False, **kwargs):
+        """The page's camera, open: `displaydev.page_camera.Camera`."""
+        from displaydev.page_camera import Camera
+
+        return Camera(format=format, flip=flip, mirror=mirror, **kwargs)
