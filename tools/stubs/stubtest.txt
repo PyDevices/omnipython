@@ -156,5 +156,6 @@ svgio
 threadnet
 ttfio
 usdl2
+webserial
 wifi_manager
 wifinet
