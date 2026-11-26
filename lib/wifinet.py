@@ -102,13 +102,28 @@ class WifiNet(endpointkit.Provider):
         self._join(endpoint.local_id, secret or "", ValueError)
 
     def _join(self, ssid, password, error):
+        # Joining leaves the network the board is on first. When the new one
+        # fails, go back: a board reached over Wi-Fi (WebREPL, a browser
+        # display) is otherwise cut off, with the error shown where nobody
+        # can see it.
+        before = self.radio.ssid()
+        back = self._password(before) if before else None
+        self._last = _ticks_ms() - self.rescan_ms  # the next poll shows where it ended up
         reason = self.radio.join(ssid, password, self.timeout)
+        if reason is None:
+            wifi_manager._remember(ssid, password)
+            return
         if reason == "wrong password":
-            raise error("Wrong password for %s" % ssid)
-        if reason is not None:
-            raise error("Couldn't join %s: %s" % (ssid, reason))
-        wifi_manager._remember(ssid, password)
-        self._last = _ticks_ms() - self.rescan_ms  # the next poll shows it joined
+            message = "Wrong password for %s" % ssid
+        else:
+            message = "Couldn't join %s: %s" % (ssid, reason)
+        if back is not None:
+            again = self.radio.join(before, back, self.timeout)
+            if again is None:
+                message += ". Back on %s" % before
+            else:
+                message += ". Couldn't get back on %s: %s" % (before, again)
+        raise error(message)
 
     def _password(self, ssid):
         """The password a known network was joined with; "" for an open one, None when unknown."""
