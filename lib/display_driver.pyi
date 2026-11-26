@@ -116,6 +116,10 @@ TWO_FINGER_SWIPE_PX: int
 
 def set_wheel_mapping(adjust_axis: str | None = None, adjust_sign: int | None = None, navigate: bool | None = None, navigate_sign: int | None = None) -> None:
     """Configure how the two wheel/swipe axes map onto LVGL."""
+def take_keys(callback: Callable[[Any], None]) -> bool:
+    """Send the keys typed on the display itself to *callback* instead of LVGL."""
+def give_back_keys(callback: Callable[[Any], None]) -> None:
+    """Stop sending the display's keys to *callback* (from `take_keys`)."""
 def create_devices(devs: Iterable[Any], lv_display: Any, virtual_devices: list[Any] | None = None, window_id: int | None = None) -> list[Any]:
     """Register LVGL input devices as LVGL indevs (pointer / encoder / keypad)."""
 

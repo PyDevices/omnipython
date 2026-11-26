@@ -140,6 +140,7 @@ _RETRY_MAX_S = 40
 # A join that ended with one of these never reached the access point.
 _NOT_FOUND = ("network not found", "No network with that ssid")
 _WRONG_HOLD_MS = 8000  # how long esp32 must report a bad password before we believe it
+_LEAVE_MS = 3000  # how long a station may take to say it has left a network
 
 _MAX_NETWORKS = 16
 _MAGIC = b"WSU1"
@@ -747,11 +748,25 @@ class _MPRadio:
 
     def start(self, ssid, password):
         """Begin joining and return; ``ip()`` says when it has."""
+        self._leave()
+        self.sta.connect(ssid, password)
+
+    def _leave(self):
+        # Until the station has handled the disconnect, isconnected() and the
+        # old address still read as a link, and a join that follows would
+        # take them for the new network: a wrong password then passes.
         try:
             self.sta.disconnect()
         except OSError:
-            pass
-        self.sta.connect(ssid, password)
+            return
+        t0 = _ticks_ms()
+        while _ticks_diff(_ticks_ms(), t0) < _LEAVE_MS:
+            try:
+                if not self.sta.isconnected():
+                    return
+            except Exception:
+                return
+            _sleep_ms(50)
 
     def join(self, ssid, password, timeout):
         """None on success, else a short reason."""
@@ -763,10 +778,7 @@ class _MPRadio:
         # status has to hold for _WRONG_HOLD_MS, not just show once.
         wrong = (getattr(net, "STAT_WRONG_PASSWORD", 202), 15, 204)
         no_ap = getattr(net, "STAT_NO_AP_FOUND", 201)
-        try:
-            self.sta.disconnect()
-        except OSError:
-            pass
+        self._leave()
         # `reconnects` stays at its default of 0, which in this port is retry
         # forever. -1 means give up after the first drop (network_wlan.c).
         self.sta.connect(ssid, password)

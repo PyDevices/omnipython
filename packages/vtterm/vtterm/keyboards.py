@@ -1,7 +1,7 @@
 # SPDX-FileCopyrightText: 2026 Brad Barnett
 #
 # SPDX-License-Identifier: MIT
-"""Keyboards on the USB host port and over BLE, read from a timer.
+"""Keyboards on the USB host port, over BLE and on the display itself, read from a timer.
 
 Each source has ``poll()``, which never waits and returns a list of
 ``events.Key`` records (possibly empty), ``status``, a line saying what it's
@@ -179,6 +179,35 @@ class BleKeyboard:
             pass
 
 
+class DisplayKeyboard:
+    """The keys typed on the display itself: a desktop window's keyboard, or
+    the browser showing a RemoteDisplay. While it's open they come here, not
+    to LVGL's focused widget.
+
+    Raises:
+        ImportError: the display has no keys of its own to give (only touch),
+            or there's no LVGL display.
+    """
+
+    def __init__(self):
+        import display_driver
+
+        self._driver = display_driver
+        self._events = []
+        # One bound method, kept: give_back_keys finds it by equality.
+        self._take = self._events.append
+        if not display_driver.take_keys(self._take):
+            raise ImportError("this display has no keyboard of its own")
+        self.status = "Display: typing here"
+
+    def poll(self):
+        out, self._events[:] = list(self._events), []
+        return out
+
+    def close(self):
+        self._driver.give_back_keys(self._take)
+
+
 def start_all():
     """Start every keyboard source this board can have.
 
@@ -187,6 +216,10 @@ def start_all():
         for each that couldn't, saying why.
     """
     out, missing = [], []
+    try:
+        out.append(DisplayKeyboard())
+    except (ImportError, AttributeError):
+        pass  # a panel with no keyboard of its own isn't worth a line
     for name, cls in (("USB", UsbKeyboard), ("BLE", BleKeyboard)):
         try:
             out.append(cls())

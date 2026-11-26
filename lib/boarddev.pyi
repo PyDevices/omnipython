@@ -61,8 +61,9 @@ def name(new: str | None) -> None:
     """The board's name, or give it a new one.
 
     With no argument, the name: a saved one, else `omnipython-` and the last
-    three bytes of the unique ID on a board, the computer's name on a desktop,
-    or `omnipython-` and six random hex digits in a browser. With a string,
+    three bytes of the unique ID on a board (of the Wi-Fi MAC on an ESP32), the
+    computer's name on a desktop, or `omnipython-` and six random hex digits
+    in a browser. With a string,
     save it as the new name; with None, forget a saved one.
 
     Raises:

@@ -328,7 +328,9 @@ class FakeStation:
         return "10.0.0.7" if self.on else None
 
     def join(self, ssid, password, timeout):
+        # Like the real station, a join leaves the network it was on first.
         self.joins.append(ssid)
+        self.on = None
         if ssid not in self.seen:
             return "network not found"
         if self.passwords.get(ssid, "") != password:
@@ -481,7 +483,28 @@ def t_wifi():
             r.pair("wifi:Cafe", "latte")
             check(False, "a wrong password is refused")
         except ValueError as exc:
-            check(str(exc) == "Wrong password for Cafe", "the refusal says the password was wrong: %s" % exc)
+            check(str(exc) == "Wrong password for Cafe. Back on Home", "the refusal says the password was wrong: %s" % exc)
+        check(radio.on == "Home" and radio.joins[-2:] == ["Cafe", "Home"], "a failed join goes back to the network the board was on")
+        seen["Faraway"] = (-90, True)
+        r.refresh("net")
+        r.poll()
+        del seen["Faraway"]
+        try:
+            r.pair("wifi:Faraway", "x")
+            check(False, "a network gone from range is refused")
+        except ValueError as exc:
+            check(str(exc) == "Couldn't join Faraway: network not found. Back on Home", "the refusal says why and where the board is: %s" % exc)
+        check(radio.on == "Home", "the board is back on its network after a network not found")
+        radio.passwords["Home"] = "changed"
+        try:
+            r.pair("wifi:Cafe", "latte")
+            check(False, "a wrong password is refused when the way back fails too")
+        except ValueError as exc:
+            check(str(exc) == "Wrong password for Cafe. Couldn't get back on Home: wrong password", "the refusal says the way back failed too: %s" % exc)
+        radio.passwords["Home"] = "homepw"
+        radio.join("Home", "homepw", 1)
+        r.refresh("net")
+        r.poll()
         check(r.find("wifi:Cafe").state == endpointkit.NEEDS_PAIRING and "Cafe" not in [n["ssid"] for n in store], "a failed join remembers nothing")
         ep = r.pair("wifi:Cafe", "espresso")
         check(ep.state == endpointkit.CONNECTED, "the right password joins")

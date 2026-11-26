@@ -281,8 +281,12 @@ The network the board is on is `connected`, and registering chooses it when
 nothing else is chosen. A network the board knows (from `secrets.py`,
 `settings.toml`, or a join before) is `available`, and choosing it joins it.
 A new secured network `needs pairing`: `pair()` with its password joins it,
-or raises `ValueError("Wrong password for Cafe")`. A network it joins is
-remembered with the others, so `connect()` joins it at the next boot.
+or raises `ValueError("Wrong password for Cafe. Back on Home")`. Joining
+leaves the network the board was on, so when the new one fails it goes back
+there, and the message says whether it got back. A board you reach over
+Wi-Fi, through WebREPL or a browser display, then stays in reach to show you
+the error. A network it joins is remembered with the others, so `connect()`
+joins it at the next boot.
 
 A scan only runs when something asks for one, because it holds the board.
 Between scans, each `endpointkit.poll()` notices within three seconds when

@@ -349,7 +349,8 @@ def name(new=_GET):
     medialink and hmilink.
 
     With no saved name, a board is ``omnipython-`` plus the last three bytes
-    of its unique ID in hex (``omnipython-a1b2c3``), a desktop is the
+    of its unique ID in hex (``omnipython-a1b2c3``; of its Wi-Fi MAC on an
+    ESP32), a desktop is the
     computer's name, and a browser is ``omnipython-`` plus six random hex
     digits, new on each page load.
 
@@ -519,6 +520,17 @@ def _name_default(impl, platform):
         import microcontroller
 
         return _name_from_id(microcontroller.cpu.uid)
+    if platform == "esp32":
+        # On a chip with an 802.15.4 radio (C6, H2, S31) unique_id() is the
+        # 8-byte EUI-64 cut to six bytes, ending ff:fe and one byte of the
+        # MAC, so boards from one batch would share a name. The station's MAC
+        # is the base MAC, which is unique_id() on every other ESP32.
+        try:
+            import network
+
+            return _name_from_id(network.WLAN(network.STA_IF).config("mac"))
+        except (ImportError, AttributeError):
+            pass  # firmware without Wi-Fi: the H2, or a build with network left out
     import machine
 
     return _name_from_id(machine.unique_id())

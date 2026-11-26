@@ -821,5 +821,59 @@ class PointerHoverTest(unittest.TestCase):
         self.assertEqual(self.read(None), ((50, 60), "pressed"))
 
 
+class KeyTakersTest(unittest.TestCase):
+    """``take_keys``: a terminal gets the display's own keys, and LVGL doesn't."""
+
+    def setUp(self):
+        import events
+
+        import appdev
+
+        self.events = events
+        ns = {"events": events, "lv": types.SimpleNamespace(), "_wheel_navigate_cb": lambda e: None,
+              "HOST": appdev.HOST, "POINTER": appdev.POINTER, "ENCODER": appdev.ENCODER,
+              "KEYPAD": appdev.KEYPAD, "JOYSTICK": appdev.JOYSTICK,
+              "_virtual_peers": {}, "_key_takers": []}
+        cls = _exec_class("VirtualDevices", ns)
+        for name in ("take_keys", "give_back_keys"):
+            exec(compile(_function_source(name), str(DISPLAY_DRIVER), "exec"), ns)
+        self.ns = ns
+        vd = cls.__new__(cls)
+        vd._window_id = None
+        vd._vd_keypad = cls.VirtualDevice(vd, appdev.KEYPAD)
+        self.vd = vd
+
+    def key(self, down=True):
+        e = self.events
+        return e.Key(e.KEYDOWN if down else e.KEYUP, "a", ord("a"), 0, 0, None)
+
+    def test_keys_go_to_lvgl_when_nobody_takes_them(self):
+        self.vd._route(self.key())
+        self.assertEqual(len(self.vd._vd_keypad._fifo), 1)
+
+    def test_a_taker_gets_the_keys_and_lvgl_none(self):
+        self.ns["_virtual_peers"][1] = [self.vd]
+        got = []
+        self.assertTrue(self.ns["take_keys"](got.append))
+        self.vd._route(self.key())
+        self.vd._route(self.key(down=False))
+        self.assertEqual([k.type for k in got], [self.events.KEYDOWN, self.events.KEYUP])
+        self.assertEqual(self.vd._vd_keypad._fifo, [])
+
+    def test_given_back_keys_reach_lvgl_again(self):
+        self.ns["_virtual_peers"][1] = [self.vd]
+        got = []
+        take = got.append
+        self.ns["take_keys"](take)
+        self.ns["give_back_keys"](take)
+        self.vd._route(self.key())
+        self.assertEqual(got, [])
+        self.assertEqual(len(self.vd._vd_keypad._fifo), 1)
+
+    def test_a_display_without_host_input_has_no_keys_to_take(self):
+        self.assertFalse(self.ns["take_keys"](lambda e: None))
+        self.assertEqual(self.ns["_key_takers"], [])
+
+
 if __name__ == "__main__":
     unittest.main()

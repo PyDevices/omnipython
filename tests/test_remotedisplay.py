@@ -16,9 +16,12 @@ import os
 import socket
 import struct
 import subprocess
+import sys
 import threading
 import time
+import types
 import unittest
+from unittest import mock
 
 import _env
 import _mprun
@@ -204,6 +207,15 @@ class TestOnCPython(unittest.TestCase):
 
     def _crc(self):
         return binascii.crc32(bytes(self.d._raw_buffer))
+
+    def test_a_board_says_its_host_name_too(self):
+        from displaydev import remotedisplay
+
+        board = types.ModuleType("network")
+        board.hostname = lambda: "omnipython-d0a23a"
+        with mock.patch.dict(sys.modules, {"network": board}):
+            self.assertEqual(remotedisplay._own_name(), "omnipython-d0a23a")
+        self.assertIsNone(self.d.server.name_url, "a desktop has no host name of its own")
 
     def test_page(self):
         data = _get_page(self.port)

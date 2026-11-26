@@ -192,6 +192,9 @@ class RemoteServer:
     Attributes:
         url (str): Where to point a browser, as best the board knows its
             own address.
+        name_url (str): The same by the board's host name
+            (``http://omnipython-a1b2c3.local/``), which stays right when the
+            address changes, or None where there is no host name (a desktop).
         sent (int): Bytes of pixels sent since the server started.
         frames (int): Updates sent since the server started.
         quality (int): JPEG quality, 1 to 100, for a video player. Default 70.
@@ -249,9 +252,15 @@ class RemoteServer:
         s.listen(2)
         s.setblocking(False)
         self._listener = s
-        self.url = "http://%s%s/" % (_own_address(), "" if port == 80 else ":%d" % port)
+        at = "" if port == 80 else ":%d" % port
+        self.url = "http://%s%s/" % (_own_address(), at)
+        name = _own_name()
+        self.name_url = "http://%s.local%s/" % (name, at) if name else None
         self._timer = every(period_ms, self.poll, name="remotedisplay")
-        print("Display at %s" % self.url)
+        if self.name_url:
+            print("Display at %s and %s" % (self.url, self.name_url))
+        else:
+            print("Display at %s" % self.url)
 
     # -- the frame --
 
@@ -956,6 +965,22 @@ def _put_head(buf, off, x, y, w, h, enc, n):
     buf[off + 13] = (n >> 8) & 0xFF
     buf[off + 14] = (n >> 16) & 0xFF
     buf[off + 15] = n >> 24
+
+
+def _own_name():
+    """The host name mDNS answers to on a board, without ``.local``; None on a desktop."""
+    try:
+        import network
+
+        return network.hostname() or None
+    except (ImportError, AttributeError, OSError):
+        pass
+    try:
+        import wifi
+
+        return wifi.radio.hostname or None
+    except (ImportError, AttributeError):
+        return None
 
 
 def _own_address():

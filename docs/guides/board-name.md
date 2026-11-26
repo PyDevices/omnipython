@@ -33,7 +33,7 @@ Case is kept as you type it. mDNS and DHCP compare names without case.
 
 | Where | Default | A new name is kept in |
 |---|---|---|
-| ESP32 | `omnipython-` and the last three bytes of `machine.unique_id()` in hex | NVS, namespace `omnipython`, key `board_name` |
+| ESP32 | `omnipython-` and the last three bytes of its Wi-Fi MAC in hex (`machine.unique_id()` on a build without Wi-Fi) | NVS, namespace `omnipython`, key `board_name` |
 | Other MicroPython boards | the same | `/omnipython.json` (`/flash/omnipython.json` on an STM32) |
 | CircuitPython | `omnipython-` and the last three bytes of `microcontroller.cpu.uid` | `OMNIPYTHON_BOARD_NAME` in `settings.toml` |
 | A desktop | the computer's name | the `OMNIPYTHON_BOARD_NAME` environment variable, for this process |

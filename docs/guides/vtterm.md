@@ -185,9 +185,12 @@ lists every character of the set.
 
 ## Type on a keyboard
 
-`vtterm.keyboards` reads a USB keyboard on the board's host port and a BLE
-keyboard, each found on its own and found again after it's unplugged or
-switched off. `vtterm.keys.key_bytes` turns each key press into the bytes a
+`vtterm.keyboards` reads a USB keyboard on the board's host port, a BLE
+keyboard, and the display's own keys: a desktop window's keyboard, or the
+one in the browser [showing the display](show-a-display-in-a-browser.md).
+Each is found on its own, and the USB and BLE ones are found again after
+they're unplugged or switched off. While the display's keys come here,
+LVGL's focused widget doesn't get them (`display_driver.take_keys`). `vtterm.keys.key_bytes` turns each key press into the bytes a
 VT100 sends; [Keys](../reference/vtterm-keys.md) lists them.
 
 ```python
