@@ -74,6 +74,7 @@
 "https://raw.githubusercontent.com/PyDevices/omnipython/main/lib/displaydev/endpoints.py" = "/lib/displaydev/endpoints.py"
 "https://raw.githubusercontent.com/PyDevices/omnipython/main/lib/displaydev/fbdisplay.py" = "/lib/displaydev/fbdisplay.py"
 "https://raw.githubusercontent.com/PyDevices/omnipython/main/lib/displaydev/jndisplay.py" = "/lib/displaydev/jndisplay.py"
+"https://raw.githubusercontent.com/PyDevices/omnipython/main/lib/displaydev/page_camera.py" = "/lib/displaydev/page_camera.py"
 "https://raw.githubusercontent.com/PyDevices/omnipython/main/lib/displaydev/pgdisplay.py" = "/lib/displaydev/pgdisplay.py"
 "https://raw.githubusercontent.com/PyDevices/omnipython/main/lib/displaydev/pixeldisplay.py" = "/lib/displaydev/pixeldisplay.py"
 "https://raw.githubusercontent.com/PyDevices/omnipython/main/lib/displaydev/psdisplay.py" = "/lib/displaydev/psdisplay.py"
