@@ -506,13 +506,18 @@ class ConnectLinkTest(unittest.TestCase):
         self._connect(wlan)
         self.assertEqual(wlan.pm, 0)
 
-    def test_bluetooth_on_leaves_the_radio_to_sleep(self):
+    def test_bluetooth_on_still_keeps_it_awake(self):
+        # A board on a cable with Bluetooth running: an ESP32 Bluetooth
+        # speaker serving a page. Coexistence shares the radio either way.
         ble = types.ModuleType("bluetooth")
         ble.BLE = lambda: types.SimpleNamespace(active=lambda: True)
         sys.modules["bluetooth"] = ble
+        classic = types.ModuleType("btclassic")
+        classic.Bluetooth = lambda: types.SimpleNamespace(active=lambda: True)
+        sys.modules["btclassic"] = classic
         wlan = FakeWLAN()
         self.assertEqual(self._connect(wlan), "10.0.0.77")
-        self.assertEqual((wlan.pm, wlan.pm_sets), (1, 0))
+        self.assertEqual(wlan.pm, 0)
 
     def test_the_choice_is_remembered_and_beats_the_default(self):
         wlan = FakeWLAN()

@@ -173,8 +173,12 @@ wifi_manager.set_power_save(True)   # sleeps between beacons: saves battery
 wifi_manager.set_power_save(None)   # back to the default
 ```
 
-While Bluetooth is on, power saving stays on: an ESP32 shares its antenna
-between the two by putting Wi-Fi to sleep.
+The same goes with Bluetooth on. ESP-IDF shares the radio between Wi-Fi and
+Bluetooth in time slices, with power saving or without. On a classic ESP32
+running as a Bluetooth speaker, with power saving on it lost 83% of pings,
+and its page took up to 11 s to load or didn't load at all. With it off, it
+lost no pings, the page loaded in under 2 s every time, and the music played
+just as cleanly.
 
 For a change that lasts only until the next join, set the radio directly,
 on CircuitPython or on MicroPython with OmniPython's `wifi`:

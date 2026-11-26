@@ -45,8 +45,9 @@ seconds for the radio to wake: WebREPL, pings, your app's clients.  So
 with a battery fitted (its ``battery`` role reads a voltage).
 ``set_power_save(True)`` or ``set_power_save(False)`` overrides that and is
 remembered with the networks; ``set_power_save(None)`` goes back to the
-default, and ``power_save()`` says which applies.  It is left on while
-Bluetooth runs, which shares the antenna by putting Wi-Fi to sleep.
+default, and ``power_save()`` says which applies.  Bluetooth doesn't change
+the choice: while it runs, the radio still shares its time between the two
+whether Wi-Fi may sleep or not.
 
 ``connect(ntp=True)`` sets the clock from NTP once a network is joined.
 ``connect(wait=False)`` starts the join and returns at once, for an app that
@@ -512,37 +513,13 @@ def _apply_power_save():
         import wifi
 
         on = power_save()
-        if not on and _bluetooth_on():
-            return  # Bluetooth needs the Wi-Fi side to sleep to share the antenna
+        # The same with Bluetooth running: ESP-IDF's coexistence gives Wi-Fi
+        # and Bluetooth their own time slices, with power saving or without.
         mode = wifi.PowerManagement.MIN if on else wifi.PowerManagement.NONE
         if wifi.radio.power_management != mode:
             wifi.radio.power_management = mode
     except Exception as exc:
         print("wifi_manager: can't set power saving:", exc)
-
-
-def _bluetooth_on():
-    """True when this board's Bluetooth radio is running."""
-    try:
-        import bluetooth
-
-        if bluetooth.BLE().active():
-            return True
-    except Exception:
-        pass  # no BLE in this firmware
-    try:
-        import btclassic
-
-        if btclassic.Bluetooth().active():
-            return True
-    except Exception:
-        pass  # no Bluetooth Classic in this firmware
-    try:
-        import _bleio  # CircuitPython
-
-        return bool(_bleio.adapter.enabled)
-    except Exception:
-        return False
 
 
 def _has_battery():
