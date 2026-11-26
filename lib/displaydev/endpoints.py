@@ -17,6 +17,8 @@ The keyboard and the mouse are one endpoint each, always there. The gamepads
 are the joysticks the SDL or pygame display opened when it started; both open
 every joystick at start-up and see none plugged in later, so a gamepad
 plugged in after the window opened appears only when the program restarts.
+In a browser page they're the pads the browser shows it (the Gamepad API),
+which appear once a button is pressed on one and go when it's unplugged.
 Choosing an endpoint changes nothing about which events arrive: a program
 that reads one gamepad reads the chosen one.
 """
@@ -52,8 +54,23 @@ class Fixed(endpointkit.Provider):
         return [self.endpoint(self._local, self._label, endpointkit.CONNECTED)]
 
 
+# The pads a browser shows the page, one name a line, in the browser's order.
+_PAGE_PADS = """() => {
+    const nav = globalThis.navigator;
+    if (!nav || !nav.getGamepads) return '';
+    return Array.from(nav.getGamepads()).filter((pad) => pad && pad.connected)
+        .map((pad) => pad.id.replace(/[\\t\\n]/g, ' ')).join('\\n');
+}"""
+
+
 def joystick_names():
-    """The names of the joysticks the running display opened, in its order."""
+    """The names of the joysticks the running display opened, in its order;
+    in a browser page, the pads the browser shows it."""
+    if sys.platform in ("webassembly", "emscripten") and sys.implementation.name == "micropython":
+        import js
+
+        text = str(js.eval(_PAGE_PADS)())
+        return text.split("\n") if text else []
     pg = sys.modules.get("displaydev.pgdisplay")
     if pg is not None:
         out = []
