@@ -32,6 +32,11 @@ pairing it (a tap in appkit's picker, or `endpointkit.pair`) has the browser
 ask. A page the person allowed before lists its ports at once. Where the
 browser has no Web MIDI, or the person said no, that endpoint is unavailable
 and its ``caps["why"]`` says why.
+
+In a browser the other tabs of the same page are ports too, through
+`midiports.tabs`: "Tab: Synth Station" is an output that plays the Synth
+Station running in another tab, and an input hearing what it sends.
+`merged_in` and `fan_out` cover the page's ports and the tabs alike.
 """
 
 import sys
@@ -187,23 +192,28 @@ class HostMidi(endpointkit.Provider):
         self.open.clear()
 
 
+def _providers_of(providers):
+    return list(providers) if isinstance(providers, (list, tuple)) else [providers]
+
+
 class Merged(PortIn):
-    """Every chosen input as one port.
+    """Every chosen input as one port, of one provider or a list of them.
 
     It reads one port until it has nothing waiting, then the next, so a
     message is never cut by another port's bytes. ``take_timestamp`` hands
     out the stamps of the port it last read from.
     """
 
-    def __init__(self, provider):
+    def __init__(self, providers):
         PortIn.__init__(self)
-        self.provider = provider
+        self.providers = _providers_of(providers)
+        self.provider = self.providers[0]
         self._order = []
         self._at = 0
         self._last = None
 
     def _ports(self):
-        ports = list(self.provider.open.values())
+        ports = [port for provider in self.providers for port in provider.open.values()]
         if ports != self._order:
             self._order = ports
             self._at = 0
@@ -242,38 +252,49 @@ class Merged(PortIn):
 
 
 class FanOut(PortOut):
-    """Every chosen output at once: what you write goes to each."""
+    """Every chosen output at once, of one provider or a list of them: what
+    you write goes to each."""
 
-    def __init__(self, provider):
-        self.provider = provider
+    def __init__(self, providers):
+        self.providers = _providers_of(providers)
+        self.provider = self.providers[0]
 
     def write(self, buf, nbytes=None):
         n = len(buf) if nbytes is None else nbytes
-        for port in list(self.provider.open.values()):
+        for port in [port for provider in self.providers for port in provider.open.values()]:
             port.write(buf, n)
         return n
 
 
 _providers = {}
+_also = {IN: [], OUT: []}
 
 
 def register(registry=None, backend=None):
     """Register the host's MIDI inputs and outputs; returns ``(inputs, outputs)``.
 
-    Registering again returns the providers already registered.
+    In a browser, with no *backend* given, the other tabs' inputs and outputs
+    are registered too (`midiports.tabs`); `merged_in` and `fan_out` cover
+    them. Registering again returns the providers already registered.
     """
     if not _providers:
         registry = registry or endpointkit.registry
+        _also[IN], _also[OUT] = [], []
         _providers[IN] = registry.register(HostMidi(IN, backend))
         _providers[OUT] = registry.register(HostMidi(OUT, backend))
+        if backend is None and sys.platform in ("webassembly", "emscripten"):
+            from . import tabs
+
+            _also[IN].append(registry.register(HostMidi(IN, tabs)))
+            _also[OUT].append(registry.register(HostMidi(OUT, tabs)))
     return _providers[IN], _providers[OUT]
 
 
 def merged_in():
     """One port reading every chosen MIDI input. `register` first."""
-    return Merged(_providers[IN])
+    return Merged([_providers[IN]] + _also[IN])
 
 
 def fan_out():
     """One port writing to every chosen MIDI output. `register` first."""
-    return FanOut(_providers[OUT])
+    return FanOut([_providers[OUT]] + _also[OUT])
