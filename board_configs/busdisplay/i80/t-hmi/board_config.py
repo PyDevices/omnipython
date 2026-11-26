@@ -62,14 +62,16 @@ touch = Touch(
     int_pin=Pin(9),  # driver enables PULL_UP; IRQ active-low
 )
 
-# LilyGO examples/touch/touch.ino default cal (axes inverted vs ascending mins).
-# xpt2046.calibrate(orientation=0) swaps width/height args into map size, so pass
-# (height, width) to end up with 240x320 mapped coordinates.
+# x from LilyGO examples/touch/touch.ino's default cal; y measured on targets
+# across the screen, where LilyGO's (1877 to 311) put every tap about 35 px
+# too high and ran out above the top tenth. xpt2046.calibrate(orientation=0) swaps
+# width/height args into map size, so pass (height, width) to end up with
+# 240x320 mapped coordinates.
 touch.calibrate(
     xmin=1788,
     xmax=285,
-    ymin=1877,
-    ymax=311,
+    ymin=1716,
+    ymax=76,
     width=display_drv.height,
     height=display_drv.width,
     orientation=0,
@@ -98,10 +100,10 @@ def _touch_read():
     return ()
 
 
-# Button is BOTTOM_MID; taps only registered near the physical top → Y inverted
-# vs panel. REVERSE_Y for all portrait/landscape table slots.
-_REVERSE_Y = 0b100
-touch_rotation_table = (_REVERSE_Y, _REVERSE_Y, _REVERSE_Y, _REVERSE_Y)
+# The panel reads turned 180 degrees from the screen at rotation 0: taps on
+# targets across it came back mirrored left to right and top to bottom. The
+# other rotations turn from there.
+touch_rotation_table = (0b110, 0b011, 0b000, 0b101)
 
 touch_read = _touch_read
 
