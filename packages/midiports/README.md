@@ -247,6 +247,14 @@ answer was no. `midi_out.names` lists every output that matches, and
 `midi_out.name` is the one it sends to; until there is one, writes are dropped
 and counted in `midi_out.dropped`.
 
+A Bluetooth MIDI device needs no operating-system pairing in Chrome or Edge.
+In a page, `endpoints.register()` lists "Choose a Bluetooth MIDI device"
+under `midi.in` and `midi.out`. Pairing it opens the browser's chooser, and
+the device picked is listed by its name in both directions, to choose like
+any other port (`midiports.webble`). When the link drops, the page connects
+to the same device again without asking. A reload forgets the device, so
+choose it again.
+
 Web MIDI doesn't exist in a Web Worker, so a worker gets its MIDI from the
 page over a `MessagePort`, and a few lines of JavaScript on the page relay
 it. Open the worker's end with `webmidi.relay_ports(port)`. The relay's
