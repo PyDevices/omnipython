@@ -1,3 +1,19 @@
+## v0.8.1 (2026-11-26)
+
+- Library lock: pygraphics 0.2.1, audioinstruments 0.5.3, applibs 0.1.3 (#882)
+- docs: webserial on the stack page (#881)
+- webserial: a browser page's serial ports under serial in endpointkit (#880)
+- midiports: Bluetooth MIDI devices a browser page chooses (#879)
+- Stack: Eye Camera is an app, at apps/eyecam (#876)
+- stack and ecosystem pages: airwindows, apps, Watch and the System apps (#875)
+- T-Watch S3: the screen sleeps as one, the clock starts from its chip, steps on (#872)
+- displaydev: a browser page's camera, chosen in Connections (#874)
+- displaydev: a browser page's gamepads in endpointkit (#871)
+- audiodev: a browser page's speakers and microphones in endpointkit (#870)
+- midiports: MIDI between the tabs of a browser page (#868)
+- midiports: list a browser page's Web MIDI ports in endpointkit (#867)
+- remotedisplay: the page's title is the board's name (#865)
+
 ## v0.8.1rc6 (2026-11-26)
 
 - lib-lock: applibs at v0.1.3rc5, Home's System and Games tabs, the Touch app (#863)
