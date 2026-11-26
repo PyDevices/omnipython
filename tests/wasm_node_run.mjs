@@ -43,6 +43,7 @@ function put(from, to) {
 }
 put(path.join(repo, "lib"), "/w/lib");
 put(path.join(repo, "packages", "midiports"), "/w/packages/midiports");
+put(path.join(repo, "packages", "endpointkit"), "/w/packages/endpointkit");
 put(path.join(repo, "tests"), "/w/tests");
 put(adafruit, "/w/adafruit/adafruit_midi");
 

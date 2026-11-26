@@ -234,6 +234,11 @@ class WasmUnderNode(unittest.TestCase):
         result = self._run("midiports_contract.py", "--plain")
         self.assertIn(" 0 failed", result.stdout)
 
+    def test_a_pages_ports_in_endpointkit(self):
+        """Web MIDI's ports as endpointkit endpoints, against a fake Web MIDI."""
+        result = self._run("webmidi_page_checks.py")
+        self.assertIn(" 0 failed", result.stdout)
+
     def test_ble_over_the_fake_radio(self):
         result = self._run("midiports_ble_checks.py")
         self.assertIn(" 0 failed", result.stdout)

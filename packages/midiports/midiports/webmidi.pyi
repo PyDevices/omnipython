@@ -5,7 +5,7 @@
 
 from typing import Any
 
-from . import PortIn, PortOut
+from . import PortIn, PortInfo, PortOut
 
 PENDING_LIMIT: int
 PAGE_LIMIT: int
@@ -21,6 +21,26 @@ def page_in(name: str = "") -> PortIn:
 
 def page_out(name: str = "") -> PortOut:
     """An output to the first matching port, for MicroPython's WebAssembly port."""
+
+STAMP_LIMIT: int
+
+def state() -> str:
+    """Where the page stands with Web MIDI: idle, asking, granted, denied or unsupported."""
+
+def why() -> str | None:
+    """Why there are no ports, in a sentence, or ``None``."""
+
+def request() -> None:
+    """Ask the browser for MIDI, in the background."""
+
+def changes() -> int:
+    """A count that moves whenever the permission or a port's state changes."""
+
+def available() -> tuple[PortInfo, ...]:
+    """Every connected port the page may use, both directions."""
+
+def open_port(info: PortInfo) -> PortIn | PortOut:
+    """Open one of `available`'s ports."""
 
 def relay_ports(port: Any, ring: int = 1024) -> tuple[PortIn, PortOut]:
     """``(midi_in, midi_out)`` over a ``MessagePort`` the page relays MIDI on."""

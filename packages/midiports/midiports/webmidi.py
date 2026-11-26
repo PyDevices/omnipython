@@ -46,6 +46,11 @@ output that matches, so a program can offer them; ``midi_out.name`` is the
 one it sends to. Until an output is there, writes are dropped
 and counted in ``midi_out.dropped``.
 
+To choose ports one by one, in a picker or with ``endpointkit``,
+``midiports.endpoints.register()`` lists the page's ports there: `available`
+and `open_port` are its backend in a browser, `state` says whether the
+person has allowed MIDI yet, and `request` asks them.
+
 Timestamps
 ----------
 Each input keeps the time every message arrived, as the package's contract
@@ -83,7 +88,7 @@ over whole messages, never running status and never a clock byte inside a
 note.
 """
 
-from . import PortIn, PortOut, Stamps, _count, _stamp, message_length, ticks_us
+from . import IN, OUT, PortIn, PortInfo, PortOut, Stamps, _count, _stamp, message_length, ticks_us
 
 #: Longest unfinished message a write holds back, waiting for its end.
 PENDING_LIMIT = 4096
@@ -655,6 +660,241 @@ def page_out(name=""):
     place, and one plugged in later is picked up. Never blocks.
     """
     return _PageSentOut(name)
+
+
+# -- the page's ports one at a time, for midiports.endpoints ------------------------
+
+#: The most stamps an input keeps for messages whose time nobody took.
+STAMP_LIMIT = 1024
+
+_ACCESS = """(limit, stampLimit) => {
+    const nav = globalThis.navigator;
+    const has = !!(nav && nav.requestMIDIAccess);
+    let access = null, state = has ? 'idle' : 'unsupported', why = has ? null : 'This browser has no Web MIDI', changes = 0;
+    const watchers = new Set();
+    const bump = () => { changes++; for (const watch of watchers) watch(); };
+    const ask = () => {
+        if (!has || state === 'asking' || state === 'granted') return;
+        state = 'asking';
+        why = null;
+        bump();
+        nav.requestMIDIAccess().then((granted) => {
+            access = granted;
+            state = 'granted';
+            access.addEventListener('statechange', bump);
+            bump();
+        }, (error) => {
+            state = 'denied';
+            why = String((error && error.message) || error);
+            bump();
+        });
+    };
+    if (has && nav.permissions && nav.permissions.query) {
+        // A page the person already allowed lists its ports without asking again.
+        nav.permissions.query({name: 'midi'}).then((status) => {
+            if (status.state === 'granted') ask();
+            else if (status.state === 'denied' && state === 'idle') {
+                state = 'denied';
+                why = 'MIDI is blocked for this page in the browser\\'s site settings';
+                bump();
+            }
+        }, () => {});
+    }
+    const ports = (kind) => (access === null ? [] : Array.from(kind === 'in' ? access.inputs.values() : access.outputs.values()));
+    const list = () => ['in', 'out'].flatMap((kind) => ports(kind)
+        .filter((port) => port.state === 'connected')
+        .map((port) => kind + '\\t' + port.id + '\\t' + String(port.name).replace(/[\\t\\n]/g, ' '))).join('\\n');
+    const find = (kind, id) => ports(kind).find((port) => port.id === id && port.state === 'connected') || null;
+    const openIn = (id) => {
+        const bytes = [], stamps = [];
+        let port = null, overflows = 0;
+        const heard = (event) => {
+            if (bytes.length + event.data.length > limit) { overflows++; return; }
+            bytes.push(...event.data);
+            stamps.push(Math.round(event.timeStamp * 1000));
+            if (stamps.length > stampLimit) stamps.shift();
+        };
+        const attach = () => {
+            const found = find('in', id);
+            if (found === port) return;
+            if (port !== null) port.removeEventListener('midimessage', heard);
+            port = found;
+            if (port !== null) {
+                port.addEventListener('midimessage', heard);
+                port.open().catch(() => {});
+            }
+        };
+        attach();
+        watchers.add(attach);
+        return {
+            any: () => bytes.length,
+            next: () => bytes.shift(),
+            stamp: () => (stamps.length ? stamps.shift() : null),
+            overflows: () => overflows,
+            connected: () => port !== null,
+            close: () => {
+                watchers.delete(attach);
+                if (port !== null) port.removeEventListener('midimessage', heard);
+                port = null;
+                bytes.length = 0;
+                stamps.length = 0;
+            },
+        };
+    };
+    const openOut = (id) => {
+        const pending = [];
+        return {
+            put: (byte) => { pending.push(byte); },
+            send: () => {
+                const data = new Uint8Array(pending);
+                pending.length = 0;
+                const port = find('out', id);
+                if (port === null) return 'not connected';
+                try { port.send(data); } catch (error) { return String(error); }
+                return null;
+            },
+            connected: () => find('out', id) !== null,
+            close: () => { pending.length = 0; },
+        };
+    };
+    return {state: () => state, why: () => why, changes: () => changes, ask, list, openIn, openOut};
+}"""
+
+_access = []
+
+
+def _page_access():
+    """The page's one MIDIAccess holder, made the first time it's needed."""
+    if not _access:
+        import js
+
+        _access.append(js.eval(_ACCESS)(PAGE_LIMIT, STAMP_LIMIT))
+    return _access[0]
+
+
+def state():
+    """Where the page stands with Web MIDI.
+
+    ``"idle"`` until something asks (`request`), ``"asking"`` while the
+    browser asks the person, ``"granted"``, ``"denied"``, or
+    ``"unsupported"`` in a browser with no Web MIDI here (Safari, or any
+    worker). A page the person already allowed is asked again at once,
+    without a prompt, the first time this is called.
+    """
+    return _page_access().state()
+
+
+def why():
+    """Why there are no ports, in a sentence, or ``None``."""
+    return _page_access().why()
+
+
+def request():
+    """Ask the browser for MIDI, in the background; `state` says how it went.
+
+    Nothing happens once the page is granted or while the browser is asking.
+    """
+    _page_access().ask()
+
+
+def changes():
+    """A count that moves whenever the permission or a port's state changes."""
+    return _page_access().changes()
+
+
+def available():
+    """Every connected port the page may use, both directions, as ``PortInfo``.
+
+    Empty until the page is granted (`state`). This and `open_port` make
+    this module a backend for ``midiports.endpoints``.
+    """
+    text = _page_access().list()
+    found = []
+    for line in text.split("\n") if text else ():
+        kind, port_id, name = line.split("\t", 2)
+        found.append(PortInfo(id=port_id, name=name, direction=IN if kind == "in" else OUT))
+    return tuple(found)
+
+
+class _PortPolledIn(PortIn):
+    """One of the page's inputs, by id, polled as `page_in` is, with timestamps.
+
+    The port keeps its place when the device is unplugged: plugged back in,
+    it's read again.
+    """
+
+    def __init__(self, info):
+        PortIn.__init__(self)
+        self.info = info
+        self.name = info.name
+        self._page = _page_access().openIn(info.id)
+        self._any = self._page.any
+        self._next = self._page.next
+        self._closed = False
+
+    @property
+    def overflows(self):
+        """Messages dropped because nothing was reading."""
+        return self._page.overflows()
+
+    def any(self):
+        if self._closed:
+            raise OSError("MIDI input is closed")
+        return self._any()
+
+    def readinto(self, buf, nbytes=None):
+        nbytes = min(_count(buf, nbytes), self.any())
+        next_byte = self._next
+        for i in range(nbytes):
+            buf[i] = next_byte()
+        return nbytes or None
+
+    def take_timestamp(self):
+        return self._page.stamp()
+
+    def close(self):
+        if not self._closed:
+            self._closed = True
+            self._page.close()
+
+    deinit = close
+
+
+class _PortSentOut(_WholeOut):
+    """One of the page's outputs, by id. Writes while it's unplugged are
+    dropped and counted in ``dropped``, and ``why`` says what the browser
+    last refused."""
+
+    def __init__(self, info):
+        _WholeOut.__init__(self)
+        self.info = info
+        self.name = info.name
+        self.why = None
+        self._page = _page_access().openOut(info.id)
+        self._put = self._page.put
+        self._send = self._page.send
+
+    def _deliver(self, data):
+        put = self._put
+        for b in data:
+            put(b)
+        refused = self._send()
+        if refused is not None:
+            self.why = refused
+            self.dropped += 1
+
+    def close(self):
+        if not self._closed:
+            _WholeOut.close(self)
+            self._page.close()
+
+    deinit = close
+
+
+def open_port(info):
+    """Open one of `available`'s ports: an input reads it alone, an output
+    sends to it alone. Never blocks."""
+    return _PortPolledIn(info) if info.direction == IN else _PortSentOut(info)
 
 
 # -- in a worker: the page relays over a MessagePort ------------------------------

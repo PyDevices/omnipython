@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: MIT
 
-"""A computer's MIDI ports as endpointkit endpoints, chosen once for every program.
+"""A computer's or a browser page's MIDI ports as endpointkit endpoints, chosen once for every program.
 
 Register the providers, choose ports in a picker or a script, and read every
 chosen input as one port and write every chosen output at once::
@@ -16,7 +16,8 @@ chosen input as one port and write every chosen output at once::
     midi = adafruit_midi.MIDI(midi_in=endpoints.merged_in(), midi_out=endpoints.fan_out())
 
 Windows' ports come from `midiports.windows`, Linux raw MIDI from
-`midiports.linux`. An endpoint's id holds the port's name, which stays put
+`midiports.linux`, and a browser page's from Web MIDI through
+`midiports.webmidi`. An endpoint's id holds the port's name, which stays put
 across reboots where Windows' indices don't, so a saved choice finds its port
 again. Choosing a port opens it, and letting it go closes it: on Windows a
 port is held by one program at a time, so read it through `merged_in` rather
@@ -24,6 +25,13 @@ than opening it again.
 
 Ports plugged in later are found by `endpointkit.poll`, which rescans every
 ``rescan_ms``.
+
+A browser offers no ports until the person allows MIDI for the page. Until
+then each direction lists one endpoint, "Allow MIDI", that needs pairing:
+pairing it (a tap in appkit's picker, or `endpointkit.pair`) has the browser
+ask. A page the person allowed before lists its ports at once. Where the
+browser has no Web MIDI, or the person said no, that endpoint is unavailable
+and its ``caps["why"]`` says why.
 """
 
 import sys
@@ -35,6 +43,15 @@ from . import IN, OUT, PortIn, PortOut
 
 #: How often, in milliseconds, `endpointkit.poll` looks for new ports.
 RESCAN_MS = 2000
+
+#: The local id of the endpoint that stands for a browser's permission.
+ALLOW = "allow"
+
+#: What that endpoint says, by the page's state (`midiports.webmidi.state`).
+_ASKING = {
+    "idle": "Tap to have the browser ask",
+    "asking": "The browser is asking",
+}
 
 _ticks_ms = getattr(time, "ticks_ms", None)
 _ticks_diff = getattr(time, "ticks_diff", None)
@@ -49,6 +66,10 @@ if _ticks_ms is None:
 
 def _backend():
     """The module that lists and opens this host's ports, or None."""
+    if sys.platform in ("webassembly", "emscripten"):
+        from . import webmidi
+
+        return webmidi
     if sys.platform == "win32":
         from . import windows
 
@@ -66,7 +87,10 @@ class HostMidi(endpointkit.Provider):
     Args:
         direction (str): `midiports.IN` or `midiports.OUT`.
         backend (module): what lists and opens the ports, with ``available()``
-            and ``open_port(info)``; the host's own when None.
+            and ``open_port(info)``; the host's own when None. One whose ports
+            need the person's permission first (a browser's) has ``state()``,
+            ``why()``, ``request()`` and ``changes()`` too, as
+            `midiports.webmidi` does.
         rescan_ms (int): how often `poll` lists the ports again.
     """
 
@@ -84,9 +108,31 @@ class HostMidi(endpointkit.Provider):
         self._infos = {}  # local id -> PortInfo
         self._last = _ticks_ms()
         self._seen = None
+        self._changes = None
+
+    def _allow(self):
+        """The endpoint standing for a permission not given yet, or None once it's given."""
+        state = getattr(self.backend, "state", None)
+        if state is None:
+            return None
+        state = state()
+        if state == "granted":
+            return None
+        asking = _ASKING.get(state)
+        if asking is not None:
+            return self.endpoint(ALLOW, "Allow MIDI", endpointkit.NEEDS_PAIRING, caps={"why": asking, "grant": True})
+        why = self.backend.why() or "No MIDI here"
+        return self.endpoint(ALLOW, "Allow MIDI", endpointkit.UNAVAILABLE, caps={"why": why})
 
     def scan(self):
         self._last = _ticks_ms()
+        changes = getattr(self.backend, "changes", None)
+        self._changes = changes() if changes is not None else None
+        allow = self._allow()
+        if allow is not None:
+            self._infos = {}
+            self._seen = [allow.id, allow.state, allow.caps["why"]]
+            return [allow]
         infos = {}
         found = []
         for info in self.backend.available():
@@ -104,14 +150,27 @@ class HostMidi(endpointkit.Provider):
         return found
 
     def poll(self):
-        if _ticks_diff(_ticks_ms(), self._last) < self.rescan_ms:
+        changes = getattr(self.backend, "changes", None)
+        moved = changes is not None and changes() != self._changes
+        if not moved and _ticks_diff(_ticks_ms(), self._last) < self.rescan_ms:
             return None
         before = self._seen
         found = self.scan()
-        return found if [ep.id for ep in found] != before else None
+        return found if self._seen != before else None
+
+    def pair(self, endpoint, secret=None):
+        """Have the browser ask the person for MIDI; the ports follow from `poll`."""
+        request = getattr(self.backend, "request", None)
+        if endpoint.local_id != ALLOW or request is None:
+            endpointkit.Provider.pair(self, endpoint, secret)
+        request()
 
     def apply(self, endpoint, chosen):
         local = endpoint.local_id
+        if local not in self._infos and local not in self.open:
+            if chosen:
+                raise OSError(endpoint.caps.get("why") or "%s isn't a port" % endpoint.label)
+            return
         if chosen:
             if local not in self.open:
                 self.open[local] = self.backend.open_port(self._infos[local])

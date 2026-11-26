@@ -1,7 +1,7 @@
 # SPDX-FileCopyrightText: 2026 Brad Barnett
 #
 # SPDX-License-Identifier: MIT
-"""A computer's MIDI ports as endpointkit endpoints, chosen once for every program."""
+"""A computer's or a browser page's MIDI ports as endpointkit endpoints, chosen once for every program."""
 
 from types import ModuleType
 
@@ -12,6 +12,7 @@ import endpointkit
 from . import PortIn, PortOut
 
 RESCAN_MS: int
+ALLOW: str
 
 class HostMidi(endpointkit.Provider):
     """One direction of the host's MIDI ports."""
@@ -23,6 +24,7 @@ class HostMidi(endpointkit.Provider):
     def __init__(self, direction: str, backend: ModuleType | None = None, rescan_ms: int = ...) -> None: ...
     def scan(self) -> list[endpointkit.Endpoint]: ...
     def poll(self) -> list[endpointkit.Endpoint] | None: ...
+    def pair(self, endpoint: endpointkit.Endpoint, secret: str | None = None) -> None: ...
     def apply(self, endpoint: endpointkit.Endpoint, chosen: bool) -> None: ...
     def stop(self) -> None: ...
 
