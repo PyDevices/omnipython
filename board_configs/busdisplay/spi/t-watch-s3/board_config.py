@@ -16,6 +16,14 @@ src/utilities.h), matching CircuitPython's lilygo_twatch_s3 board:
 
 The crown also powers the watch: a press of about 2 s turns it on and about
 6 s turns it off, in the PMU itself, whatever the program is doing.
+
+``display_drv.sleep_mode(True)`` puts the whole screen to sleep: the panel's
+controller, its backlight's supply (ALDO2) and the touch controller, which
+then scans slowly and still wakes on a touch. ``sleep_mode(False)`` brings
+all three back with the picture the panel kept.
+
+The watch's clock chip (the ``rtc`` role) keeps time while the watch is off,
+so the system clock starts from it here, when it has a time it can trust.
 """
 
 import time
@@ -82,6 +90,36 @@ touch = FT6x36(touch_i2c)
 touch_rotation_table = (0b110, 0b011, 0b000, 0b101)
 touch_read = touch.read_points
 
+_panel_sleep = display_drv.sleep_mode
+_woke_at = time.ticks_ms()
+
+
+def _sleep_mode(value):
+    """The panel, its backlight's supply and the touch controller, asleep
+    (True) or awake (False) together."""
+    global _woke_at
+    if value:
+        # The controller wants 120 ms after SLPOUT before SLPIN.
+        wait = 120 - time.ticks_diff(time.ticks_ms(), _woke_at)
+        if wait > 0:
+            time.sleep_ms(wait)
+        _panel_sleep(True)
+        _pmu.set_rail("aldo2", enable=False)
+        mode = 1  # ft6x36.POWER_MONITOR: never hibernate, its reset isn't wired
+    else:
+        _pmu.set_rail("aldo2", 3300)
+        _panel_sleep(False)
+        time.sleep_ms(5)
+        _woke_at = time.ticks_ms()
+        mode = 0  # ft6x36.POWER_ACTIVE, for a quick first touch
+    try:
+        touch.power_mode = mode
+    except OSError:
+        pass
+
+
+display_drv.sleep_mode = _sleep_mode
+
 # The crown is the PMU's power key, read from its latched press and release
 # events. (The BOOT button inside the case is the boot_button role.)
 from axp2101 import PowerKey
@@ -92,3 +130,19 @@ keypad_read = keypad.read
 from board_peripherals import PERIPHERALS, load_peripherals
 
 load_peripherals(globals())
+
+
+def _clock_from_chip():
+    # The system clock from the clock chip, unless it stopped or lost its
+    # backup supply since it was last set. Nothing to do where it fails.
+    try:
+        chip = board_peripherals.rtc()
+        if not chip.lost_power:
+            from machine import RTC
+
+            RTC().datetime(chip.datetime())
+    except Exception as e:
+        print("t-watch-s3: the clock chip didn't set the clock: %r" % (e,))
+
+
+_clock_from_chip()
