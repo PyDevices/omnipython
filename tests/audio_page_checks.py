@@ -102,6 +102,9 @@ async def speakers_and_microphones_are_listed(air):
     await settle(reg)
     expect(labels(reg, "audio.out") == ["System default", "Speakers", "Headphones"], "out: %r" % labels(reg, "audio.out"))
     expect(labels(reg, "audio.in") == ["System default", "USB Mic"], "in: %r" % labels(reg, "audio.in"))
+    # A program opens its output with no device, as on a board: the page routes it.
+    reg.select("audio.out", "page-out:Headphones")
+    expect(endpoints.device("audio.out", reg) is None, "a device for the program: %r" % endpoints.device("audio.out", reg))
 
 
 @check

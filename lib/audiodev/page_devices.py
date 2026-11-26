@@ -17,7 +17,9 @@ anything again::
     endpoints.register()
     endpointkit.select("audio.out", "page-out:Headphones")
 
-"System default" is always there and follows the browser's default. A
+"System default" is always there and follows the browser's default. An
+endpoint's ``caps["page_device"]`` is the browser's deviceId, and it has no
+``device`` cap: a program opens its output with no device, as on a board. A
 browser names its devices only once the person has let the page use the
 microphone; until then they're "Speaker 1", "Microphone 1" and so on. One
 that can't send a page's sound to a chosen speaker (no
@@ -110,7 +112,9 @@ class PageAudio(endpointkit.Provider):
 
     def scan(self):
         self._changes = self.devices.changes()
-        found = [self.endpoint(DEFAULT, "System default", caps={"device": None})]
+        # No "device" cap: a program opens its output as before, and the page's
+        # sound follows the choice (`apply`), as a board's audio_out does.
+        found = [self.endpoint(DEFAULT, "System default", caps={"page_device": ""})]
         ids = {}
         if self._why() is None:
             text = str(self.devices.list())
@@ -126,7 +130,7 @@ class PageAudio(endpointkit.Provider):
                     local = "%s #%d" % (label, k)
                     k += 1
                 ids[local] = device_id
-                found.append(self.endpoint(local, local, caps={"device": device_id}))
+                found.append(self.endpoint(local, local, caps={"page_device": device_id}))
         else:
             found[0].caps["why"] = self._why()
         self._ids = ids
