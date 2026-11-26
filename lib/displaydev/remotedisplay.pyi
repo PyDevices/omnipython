@@ -11,6 +11,7 @@ class RemoteServer:
     display: DisplayDriver
     port: int
     url: str
+    name_url: str | None
     sent: int
     frames: int
     quality: int

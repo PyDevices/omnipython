@@ -135,6 +135,34 @@ def test_esp32():
         _unfake("esp32", "machine")
 
 
+class _WLAN:
+    STA_IF = 0
+    mac = b""
+
+    def __init__(self, interface):
+        pass
+
+    def config(self, key):
+        return _WLAN.mac
+
+
+def test_esp32_mac():
+    """A C6, H2 or S31 reads an EUI-64 cut to six bytes from unique_id(): the name comes from the station's MAC."""
+    _fake("esp32", NVS=_NVS)
+    _fake("network", WLAN=_WLAN, STA_IF=0)
+    try:
+        for mac, eui in ((b"\x1c\x29\x04\xd0\xa2\x3a", b"\x1c\x29\x04\xff\xfe\xd0"), (b"\x1c\x29\x04\xd0\x1d\x00", b"\x1c\x29\x04\xff\xfe\xd0")):
+            _WLAN.mac = mac
+            _fake("machine", unique_id=lambda eui=eui: eui)
+            want = "omnipython-" + "".join("%02x" % b for b in mac[3:])
+            got = boarddev._name_default("micropython", "esp32")
+            check(got == want, "the MAC's last three bytes, not the EUI-64's: %r" % got)
+        _unfake("network")
+        check(boarddev._name_default("micropython", "esp32") == "omnipython-fffed0", "without Wi-Fi, the unique ID")
+    finally:
+        _unfake("esp32", "machine", "network")
+
+
 def test_other_ports():
     _fake("machine", unique_id=lambda: b"\xe6\x61\x41\x04\x03\x5a\x2b\x2c")
     saved = boarddev._name_file
@@ -190,6 +218,7 @@ def main():
     test_desktop()
     test_browser()
     test_esp32()
+    test_esp32_mac()
     test_other_ports()
     test_circuitpython()
     print("OK")
