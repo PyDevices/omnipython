@@ -29,12 +29,12 @@
   "pinned": {
     "pygraphics": {
       "repository": "PyDevices/pygraphics",
-      "ref": "v0.2.1rc1",
+      "ref": "v0.2.1",
       "description": "Pure-Python pygraphics for MicroPython/CircuitPython/CPython (FrameBuffer, Draw, fonts); import as pygraphics"
     },
     "audioinstruments": {
       "repository": "PyDevices/audioinstruments",
-      "ref": "v0.5.3rc1",
+      "ref": "v0.5.3",
       "description": "Playable synthesizers, organs, electric pianos and drum machines on audiodsp; import as audioinstruments"
     },
     "audioeffects": {
@@ -44,7 +44,7 @@
     },
     "applibs": {
       "repository": "PyDevices/apps",
-      "ref": "v0.1.3rc5",
+      "ref": "v0.1.3",
       "description": "Every library the apps share; each is a package of its own too",
       "bundle": true,
       "apps": "apps",
