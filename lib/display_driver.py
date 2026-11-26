@@ -360,6 +360,34 @@ class EncoderInput(InputDevice):
 
 _virtual_peers = {}
 _virtual_pending = {}
+_key_takers = []  # newest last: it gets the keys
+
+
+def take_keys(callback):
+    """Send the keys typed on the display itself to *callback* instead of LVGL.
+
+    The display's own keys are the ones its host input brings: a desktop
+    window's keyboard, or the browser showing a
+    `RemoteDisplay <displaydev.remotedisplay.RemoteDisplay>`. A terminal
+    takes them while it's open, so typing reaches it and not the focused
+    widget. ``callback(event)`` gets each ``events.Key``, down and up, from
+    LVGL's input timer. The newest taker gets them until `give_back_keys`.
+
+    Returns:
+        bool: True when the display has a host input to take keys from;
+        False, and nothing is taken, when it has none (a panel with only
+        touch).
+    """
+    if not _virtual_peers:
+        return False
+    _key_takers.append(callback)
+    return True
+
+
+def give_back_keys(callback):
+    """Stop sending the display's keys to *callback* (from `take_keys`)."""
+    if callback in _key_takers:
+        _key_takers.remove(callback)
 
 
 class VirtualDevices:
@@ -550,7 +578,10 @@ class VirtualDevices:
             self._vd_encoder.add_event(event)
             _wheel_navigate_cb(event)
         elif event.type in (events.KEYDOWN, events.KEYUP):
-            self._vd_keypad.add_event(event)
+            if _key_takers:
+                _key_takers[-1](event)
+            else:
+                self._vd_keypad.add_event(event)
         elif event.type == events.QUIT:
             # Window-close reaches here (e.g. windisplay.WinDisplay's
             # WM_CLOSE handler queues one) but nothing previously acted on
