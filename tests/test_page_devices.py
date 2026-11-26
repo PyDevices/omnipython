@@ -2,8 +2,9 @@
 #
 # SPDX-License-Identifier: MIT
 """A browser page's speakers and microphones (`audiodev.page_devices`),
-gamepads (`displaydev.endpoints`) and cameras (`displaydev.page_camera`) in
-endpointkit, on the MicroPython WebAssembly build under node.
+gamepads (`displaydev.endpoints`), cameras (`displaydev.page_camera`) and
+serial ports (`webserial`) in endpointkit, on the MicroPython WebAssembly
+build under node.
 
     python -m unittest tests.test_page_devices
 
@@ -53,6 +54,9 @@ class PageDevices(unittest.TestCase):
 
     def test_cameras(self):
         self._run("camera_page_checks.py")
+
+    def test_serial_ports(self):
+        self._run("serial_page_checks.py")
 
 
 if __name__ == "__main__":
