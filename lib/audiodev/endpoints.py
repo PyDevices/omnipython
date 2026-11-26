@@ -20,6 +20,9 @@ argument takes it, and its ``caps`` hold ``backend`` and ``device``. The
 and is ``device=None``. Choosing an endpoint opens nothing: the program that
 plays subscribes to ``audio.out`` and opens its stream on the chosen device.
 
+In a browser the page's speakers and microphones are listed instead, and
+choosing one moves the page's sound there (`audiodev.page_devices`).
+
 Devices plugged in later are found by `endpointkit.poll`, which lists them
 again every ``rescan_ms``.
 
@@ -49,6 +52,7 @@ microphones when none is. A program that records follows ``audio.in`` and
 opens ``pcm_in`` again when the choice moves.
 """
 
+import sys
 import time
 
 import boarddev
@@ -139,10 +143,19 @@ _providers = []
 def register(registry=None, backend=None):
     """Register the host's outputs and inputs; returns ``(outputs, inputs)``.
 
+    In a browser, with no *backend* given, they're the page's speakers and
+    microphones (`audiodev.page_devices`).
+
     Registering again returns the providers already registered.
     """
     if not _providers:
         registry = registry or endpointkit.registry
+        if backend is None and sys.platform in ("webassembly", "emscripten"):
+            from audiodev import page_devices
+
+            _providers.append(registry.register(page_devices.PageAudio(False)))
+            _providers.append(registry.register(page_devices.PageAudio(True)))
+            return _providers[0], _providers[1]
         _providers.append(registry.register(HostAudio(False, backend)))
         _providers.append(registry.register(HostAudio(True, backend)))
     return _providers[0], _providers[1]

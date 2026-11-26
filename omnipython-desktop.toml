@@ -19,6 +19,7 @@
 "https://raw.githubusercontent.com/PyDevices/omnipython/main/lib/audiodev/emulated_audio.py" = "/lib/audiodev/emulated_audio.py"
 "https://raw.githubusercontent.com/PyDevices/omnipython/main/lib/audiodev/endpoints.py" = "/lib/audiodev/endpoints.py"
 "https://raw.githubusercontent.com/PyDevices/omnipython/main/lib/audiodev/i2s_audio.py" = "/lib/audiodev/i2s_audio.py"
+"https://raw.githubusercontent.com/PyDevices/omnipython/main/lib/audiodev/page_devices.py" = "/lib/audiodev/page_devices.py"
 "https://raw.githubusercontent.com/PyDevices/omnipython/main/lib/audiodev/pump.py" = "/lib/audiodev/pump.py"
 "https://raw.githubusercontent.com/PyDevices/omnipython/main/lib/audiodev/pwm_tone.py" = "/lib/audiodev/pwm_tone.py"
 "https://raw.githubusercontent.com/PyDevices/omnipython/main/lib/audiodev/pygame_audio.py" = "/lib/audiodev/pygame_audio.py"
