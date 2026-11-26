@@ -256,6 +256,7 @@ class RemoteServer:
         self.url = "http://%s%s/" % (_own_address(), at)
         name = _own_name()
         self.name_url = "http://%s.local%s/" % (name, at) if name else None
+        self._page = _titled(PAGE, _board_name())
         self._timer = every(period_ms, self.poll, name="remotedisplay")
         if self.name_url:
             print("Display at %s and %s" % (self.url, self.name_url))
@@ -630,8 +631,8 @@ class RemoteServer:
         if target in ("/", "/index.html"):
             conn.out = (
                 "HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=utf-8\r\n"
-                "Cache-Control: no-cache\r\nConnection: close\r\nContent-Length: %d\r\n\r\n" % len(PAGE)
-            ).encode() + PAGE
+                "Cache-Control: no-cache\r\nConnection: close\r\nContent-Length: %d\r\n\r\n" % len(self._page)
+            ).encode() + self._page
         else:
             conn.out = b"HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\nConnection: close\r\n\r\n"
         conn.done = True
@@ -965,6 +966,24 @@ def _put_head(buf, off, x, y, w, h, enc, n):
     buf[off + 13] = (n >> 8) & 0xFF
     buf[off + 14] = (n >> 16) & 0xFF
     buf[off + 15] = n >> 24
+
+
+def _board_name():
+    """The board's name from `boarddev`, for the page's title; None without it."""
+    try:
+        import boarddev
+
+        return boarddev.name() or None
+    except (ImportError, AttributeError, OSError, ValueError):
+        return None
+
+
+def _titled(page, name):
+    """The page with the board's name as its title, so a browser tab says which board it shows."""
+    if not name:
+        return page
+    safe = name.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+    return page.replace(b"<title>Display</title>", b"<title>" + safe.encode() + b"</title>", 1)
 
 
 def _own_name():

@@ -221,6 +221,22 @@ class TestOnCPython(unittest.TestCase):
         data = _get_page(self.port)
         self.assertTrue(data.startswith(b"HTTP/1.1 200"))
         self.assertIn(b'<canvas id="c"', data)
+        self.assertIn(b"Content-Length: %d\r\n" % len(data.split(b"\r\n\r\n", 1)[1]), data)
+
+    def test_the_page_is_titled_with_the_board_name(self):
+        from displaydev import remotedisplay
+
+        page = remotedisplay._titled(remotedisplay.PAGE, "kitchen-<panel>")
+        self.assertIn(b"<title>kitchen-&lt;panel&gt;</title>", page)
+        self.assertNotIn(b"<title>Display</title>", page)
+        self.assertEqual(remotedisplay._titled(remotedisplay.PAGE, None), remotedisplay.PAGE)
+        board = types.ModuleType("boarddev")
+        board.name = lambda: "omnipython-d0a23a"
+        with mock.patch.dict(sys.modules, {"boarddev": board}):
+            self.assertEqual(remotedisplay._board_name(), "omnipython-d0a23a")
+        name = remotedisplay._board_name()
+        want = b"<title>%s</title>" % (name.encode() if name else b"Display")
+        self.assertIn(want, _get_page(self.port), "the served page carries the board's name")
 
     def test_frame_click_and_takeover(self):
         a = _Client(self.port)
