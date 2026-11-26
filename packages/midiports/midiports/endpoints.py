@@ -37,6 +37,10 @@ In a browser the other tabs of the same page are ports too, through
 `midiports.tabs`: "Tab: Synth Station" is an output that plays the Synth
 Station running in another tab, and an input hearing what it sends.
 `merged_in` and `fan_out` cover the page's ports and the tabs alike.
+
+A browser with Web Bluetooth also lists "Choose a Bluetooth MIDI device" in
+each direction (`midiports.webble`): pairing it opens the browser's chooser,
+and the device picked is listed by its name, both ways round.
 """
 
 import sys
@@ -95,7 +99,10 @@ class HostMidi(endpointkit.Provider):
             and ``open_port(info)``; the host's own when None. One whose ports
             need the person's permission first (a browser's) has ``state()``,
             ``why()``, ``request()`` and ``changes()`` too, as
-            `midiports.webmidi` does.
+            `midiports.webmidi` does. Its ``ASK`` names the endpoint
+            that asks (``"Allow MIDI"`` when it has none), and a true
+            ``KEEP_ASKING`` keeps that endpoint beside the ports, as
+            `midiports.webble`'s, which adds a device each time.
         rescan_ms (int): how often `poll` lists the ports again.
     """
 
@@ -123,23 +130,25 @@ class HostMidi(endpointkit.Provider):
         state = state()
         if state == "granted":
             return None
+        label = getattr(self.backend, "ASK", "Allow MIDI")
         asking = _ASKING.get(state)
         if asking is not None:
-            return self.endpoint(ALLOW, "Allow MIDI", endpointkit.NEEDS_PAIRING, caps={"why": asking, "grant": True})
+            return self.endpoint(ALLOW, label, endpointkit.NEEDS_PAIRING, caps={"why": asking, "grant": True})
         why = self.backend.why() or "No MIDI here"
-        return self.endpoint(ALLOW, "Allow MIDI", endpointkit.UNAVAILABLE, caps={"why": why})
+        return self.endpoint(ALLOW, label, endpointkit.UNAVAILABLE, caps={"why": why})
 
     def scan(self):
         self._last = _ticks_ms()
         changes = getattr(self.backend, "changes", None)
         self._changes = changes() if changes is not None else None
         allow = self._allow()
-        if allow is not None:
+        keep = getattr(self.backend, "KEEP_ASKING", False)
+        if allow is not None and not keep:
             self._infos = {}
             self._seen = [allow.id, allow.state, allow.caps["why"]]
             return [allow]
         infos = {}
-        found = []
+        found = [allow] if allow is not None else []
         for info in self.backend.available():
             if info.direction != self.direction:
                 continue
@@ -151,7 +160,7 @@ class HostMidi(endpointkit.Provider):
             infos[local] = info
             found.append(self.endpoint(local, local, endpointkit.CONNECTED if local in self.open else endpointkit.AVAILABLE))
         self._infos = infos
-        self._seen = [ep.id for ep in found]
+        self._seen = [ep.id for ep in found] + ([allow.state, allow.caps["why"]] if allow is not None else [])
         return found
 
     def poll(self):
@@ -173,6 +182,8 @@ class HostMidi(endpointkit.Provider):
     def apply(self, endpoint, chosen):
         local = endpoint.local_id
         if local not in self._infos and local not in self.open:
+            if chosen and local == ALLOW and getattr(self.backend, "KEEP_ASKING", False):
+                raise OSError("tap it to choose a device")
             if chosen:
                 raise OSError(endpoint.caps.get("why") or "%s isn't a port" % endpoint.label)
             return
@@ -274,7 +285,8 @@ def register(registry=None, backend=None):
     """Register the host's MIDI inputs and outputs; returns ``(inputs, outputs)``.
 
     In a browser, with no *backend* given, the other tabs' inputs and outputs
-    are registered too (`midiports.tabs`); `merged_in` and `fan_out` cover
+    are registered too (`midiports.tabs`), and Bluetooth MIDI devices the
+    person chooses (`midiports.webble`); `merged_in` and `fan_out` cover
     them. Registering again returns the providers already registered.
     """
     if not _providers:
@@ -287,6 +299,11 @@ def register(registry=None, backend=None):
 
             _also[IN].append(registry.register(HostMidi(IN, tabs)))
             _also[OUT].append(registry.register(HostMidi(OUT, tabs)))
+
+            from . import webble
+
+            _also[IN].append(registry.register(HostMidi(IN, webble)))
+            _also[OUT].append(registry.register(HostMidi(OUT, webble)))
     return _providers[IN], _providers[OUT]
 
 

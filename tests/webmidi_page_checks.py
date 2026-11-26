@@ -114,8 +114,13 @@ async def settle(reg, rounds=5):
         reg.poll()
 
 
+def mine(reg, kind):
+    """Web MIDI's endpoints of *kind*: the tabs and Bluetooth have their own checks."""
+    return [ep for ep in reg.endpoints(kind) if ep.id.startswith("webmidi-")]
+
+
 def labels(reg, kind):
-    return [(ep.label, ep.state) for ep in reg.endpoints(kind)]
+    return [(ep.label, ep.state) for ep in mine(reg, kind)]
 
 
 @check
@@ -123,7 +128,7 @@ async def no_web_midi_says_so(air):
     fake, reg, ins, outs = fresh(present=False)
     await settle(reg)
     for kind in ("midi.in", "midi.out"):
-        eps = reg.endpoints(kind)
+        eps = mine(reg, kind)
         expect(len(eps) == 1, "%s lists %r" % (kind, eps))
         expect(eps[0].state == endpointkit.UNAVAILABLE, "%s is %s" % (kind, eps[0].state))
         expect(eps[0].caps.get("why") == "This browser has no Web MIDI", "why %r" % eps[0].caps.get("why"))
@@ -136,7 +141,7 @@ async def asks_only_when_tapped(air):
     fake, reg, ins, outs = fresh(permission="prompt")
     await settle(reg)
     expect(fake.asked == 0, "the browser was asked before anyone tapped")
-    allow = reg.endpoints("midi.in")
+    allow = mine(reg, "midi.in")
     expect(len(allow) == 1 and allow[0].state == endpointkit.NEEDS_PAIRING, "before: %r" % allow)
     expect(allow[0].caps.get("grant") is True, "it's a browser grant")
     reg.pair(allow[0].id)

@@ -84,6 +84,7 @@ midiports.endpoints
 midiports.linux
 midiports.loopback
 midiports.uart
+midiports.webble
 midiports.webmidi
 multimer
 omip
