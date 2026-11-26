@@ -216,6 +216,8 @@ and Android.
   Get it: `mip omnipython`, `pip omnipython`, firmware build. Runs on: MP, CP, Desktop.
 - [`endpointkit`](https://github.com/PyDevices/omnipython/blob/main/packages/endpointkit/README.md): List what a device can connect to, by kind, and choose where audio, MIDI, network, camera and casting go.\
   Get it: `mip endpointkit`, `pip omnipython-desktop`. Runs on: MP, Desktop.
+- [`webserial`](https://github.com/PyDevices/omnipython/blob/main/lib/webserial.py): Choose a browser page's serial ports, through Web Serial, as `endpointkit` endpoints, and read and write the one chosen.\
+  Get it: `mip omnipython`, `pip omnipython`, firmware build. Runs on: Web.
 - [`hostnet`](https://github.com/PyDevices/omnipython/blob/main/utils/hostnet.py): Show a computer's network link as an `endpointkit` endpoint, reported and never changed.\
   Get it: `pip omnipython-desktop`. Runs on: Desktop.
 - [`espnowpeers`](https://github.com/PyDevices/omnipython/blob/main/lib/espnowpeers.py): Find boards nearby over ESP-NOW and talk to the ones chosen, as `endpointkit` peers.\
@@ -508,6 +510,6 @@ and Android.
 - **T:** [`tflite`](#use-cameras-video-and-ai-on-a-board), [`threadnet`](#connect-devices), [`Touch`](#run-a-finished-app), [`Touch drivers`](#drive-a-chip), [`touchkit`](#libraries-the-apps-use), [`tsmux`](#use-cameras-video-and-ai-on-a-board), [`ttfio`](#draw-on-a-screen), [`ttfio for CPython`](#draw-on-a-screen)
 - **U:** [`ulab`](#use-cameras-video-and-ai-on-a-board), [`usb-core`](#use-usb), [`usb-device-audio`](#use-usb), [`usb-device-msc`](#use-usb), [`usb-device-net`](#use-usb), [`usb-device-video`](#use-usb), [`usb-host-audio`](#use-usb), [`usb-host-cdc`](#use-usb), [`usb-host-dfu`](#use-usb), [`usb-host-endpoints`](#use-usb), [`usb-host-hid`](#use-usb), [`usb-host-msc`](#use-usb), [`usb-host-mtp`](#use-usb), [`usb-host-net`](#use-usb), [`usb-host-video`](#use-usb), [`usb_hid`](#use-usb), [`usbhost`](#use-usb), [`usdl2`](#run-somewhere-other-than-a-board), [`uwin32`](#run-somewhere-other-than-a-board)
 - **V:** [`Vamp`](#run-a-finished-app), [`Video doorbell`](#run-a-finished-app), [`Videophone`](#run-a-finished-app), [`vision`](#use-cameras-video-and-ai-on-a-board), [`vtterm`](#draw-on-a-screen)
-- **W:** [`Wake word`](#run-a-finished-app), [`Walkie-talkie`](#run-a-finished-app), [`wasm.py`](#run-somewhere-other-than-a-board), [`Watch`](#run-a-finished-app), [`Weather`](#run-a-finished-app), [`wifi`](#connect-devices), [`wifi_manager`](#connect-devices), [`wifinet`](#connect-devices)
+- **W:** [`Wake word`](#run-a-finished-app), [`Walkie-talkie`](#run-a-finished-app), [`wasm.py`](#run-somewhere-other-than-a-board), [`Watch`](#run-a-finished-app), [`Weather`](#run-a-finished-app), [`webserial`](#connect-devices), [`wifi`](#connect-devices), [`wifi_manager`](#connect-devices), [`wifinet`](#connect-devices)
 
 <!-- PYDEVICES-STACK: END -->
