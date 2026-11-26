@@ -234,3 +234,36 @@ async def a_camera_never_answered_gives_up(air):
         expect("didn't open" in str(e), "said %s" % e)
     else:
         raise Failed("opened a camera that never answered")
+
+
+class SlowList:
+    """A browser that answers with its cameras after a few looks."""
+
+    def __init__(self, looks=3):
+        self.looks = looks
+
+    def has(self):
+        return True
+
+    def listed(self):
+        self.looks -= 1
+        return self.looks <= 0
+
+    def changes(self):
+        return 1 if self.looks <= 0 else 0
+
+    def list(self):
+        return "front\tIntegrated Camera\nusb\tUSB Camera" if self.looks <= 0 else ""
+
+
+@check
+async def a_camera_chosen_before_the_page_started_is_the_one_that_opens(air):
+    fake = js.eval(_FAKE)(True, True)
+    del page_camera._listing[:]
+    reg = endpointkit.registry
+    reg.register(page_camera.Cameras(devices=SlowList(), route=fake, has_camera=True))
+    reg.select("camera", "page-camera:USB Camera")  # restored from before, not listed yet
+    expect(fake.routed() == "", "routed before the list: %s" % fake.routed())
+    cam = page_camera.Camera(bridge=Bridge(opening=0))
+    expect(fake.routed() == "camera:usb", "opened after routing %s" % fake.routed())
+    cam.close()

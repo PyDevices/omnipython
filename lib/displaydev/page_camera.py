@@ -39,6 +39,12 @@ OPEN_MS = 30000
 
 _STEP_MS = 5
 
+#: How long, in milliseconds, `Camera` waits for the browser's list of
+#: cameras, so a camera chosen before the page started is the one it opens.
+LIST_MS = 2000
+
+_listing = []  # every `Cameras` made, to wait for before a camera opens
+
 # Why the camera didn't open, by the bridge's camera_state.
 _WHY = {
     -1: "this page wasn't allowed to use the camera: allow it in the browser, then open the app again",
@@ -50,8 +56,9 @@ _WHY = {
 _DEVICES = """() => {
     const media = globalThis.navigator && navigator.mediaDevices;
     const has = !!(media && media.enumerateDevices && media.getUserMedia);
-    let text = '', changes = 0;
+    let text = '', changes = 0, listed = false;
     const refresh = () => media.enumerateDevices().then((found) => {
+        listed = true;
         const lines = [];
         for (const device of found) {
             if (device.kind !== 'videoinput') continue;
@@ -64,7 +71,7 @@ _DEVICES = """() => {
         refresh();
         if (media.addEventListener) media.addEventListener('devicechange', refresh);
     }
-    return {has: () => has, list: () => text, changes: () => changes, refresh};
+    return {has: () => has, list: () => text, changes: () => changes, listed: () => listed || !has, refresh};
 }"""
 
 _ROUTE = """() => { const b = globalThis.Module && globalThis.Module.omnipythonBridge; return b && b.route ? b : null; }"""
@@ -78,11 +85,25 @@ def _bridge():
     return _wasm_bridge if hasattr(_wasm_bridge, "camera_open") else None
 
 
+def _settle_choice(bridge, wait_ms=LIST_MS):
+    """Wait for the browser to list its cameras, polling endpointkit so the
+    camera chosen there (perhaps before the page started) is routed first."""
+    if not _listing:
+        return
+    waited = 0
+    while waited < wait_ms and any(not p.listed() for p in _listing):
+        bridge.sleep_ms(20)
+        waited += 20
+    endpointkit.poll()
+
+
 class Camera:
     """The page's camera, open: the one chosen in endpointkit, or the
     browser's choice.
 
-    Waits up to `OPEN_MS` for the browser, which may be asking the person.
+    Waits up to `LIST_MS` for the browser's list of cameras, so the one
+    chosen is routed first, then up to `OPEN_MS` for the browser to open it,
+    since it may be asking the person.
 
     Args:
         format (object): taken for a board's camera mode, and ignored: the
@@ -106,6 +127,7 @@ class Camera:
         self._flip = bool(flip)
         self._mirror = bool(mirror)
         self._open = False
+        _settle_choice(bridge)
         bridge.camera_open()
         waited = 0
         while True:
@@ -254,6 +276,13 @@ class Cameras(endpointkit.Provider):
         self._ids = {}  # local id -> the browser's deviceId
         self._changes = None
         self._seen = None
+        _listing.append(self)
+
+    def listed(self):
+        """Whether the browser has answered with its cameras, so a choice
+        made before the page started has been routed."""
+        listed = getattr(self.devices, "listed", None)
+        return listed() if listed is not None else self.devices.changes() > 0
 
     def _why(self):
         """Why only the browser's choice is listed, or None when cameras can be chosen."""
