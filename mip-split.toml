@@ -30,7 +30,7 @@
 # module scope.
 
 [displaydev]
-# SDL, pygame, Windows GDI, Jupyter, PyScript, the browser canvas, Android.
+# SDL, pygame, Windows GDI, Jupyter, PyScript, the browser canvas and camera, Android.
 # `_desktop`, `_webcanvas` and `_webinput` are shared helpers for those and
 # nothing else. `_domkeys` is not: `remotedisplay` reads a browser's keys on a
 # board with it.
@@ -40,6 +40,7 @@ host-only = [
     "_webinput",
     "androidsdl",
     "jndisplay",
+    "page_camera",
     "pgdisplay",
     "psdisplay",
     "sdldisplay",
