@@ -61,6 +61,7 @@ see [install workflows](https://github.com/PyDevices/omnipython/blob/main/docs/g
 - Unified `framebuf`-style drawing surface (`fill`, `fill_rect`, `blit_rect`, `show`, …)
 - MCU (`BusDisplay`, `FBDisplay`) and host backends (SDL, PyGame, Jupyter, PyScript)
 - `displaydev.auto.AutoDisplay` / `host_kind` for desktop-like host selection (board_config remains the app import surface)
+- In a browser page, the page's camera read the way cameraif reads a board's (`displaydev.page_camera`), so a camera app runs there unchanged
 
 Host backends use `events` and `keys` for event records and key codes, and
 `appdev` when the application chooses that coordinator. All three arrive with

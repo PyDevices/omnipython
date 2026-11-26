@@ -247,23 +247,29 @@ def accelerometer():
     (register value 0x81 in SensorLib v0.2.6), which is board X = chip Y,
     board Y = chip X, board Z = -chip Z. Face up on a table reads +1 g on Z.
 
-    For the step counter, wrist tilt and double tap, load the chip's
-    feature firmware first (BMA423 only; about 200 ms)::
-
-        from bma423 import STEP_COUNTER, WRIST_WEAR, DOUBLE_TAP
-        accel.load_features()
-        accel.enable_features(STEP_COUNTER | WRIST_WEAR | DOUBLE_TAP)
-        accel.steps
-
-    The firmware stays loaded while the watch has power, across resets
-    and deep sleep; ``sleep(wake=("motion",))`` wakes on its interrupt.
+    The first access loads the chip's feature firmware (BMA423 only; about
+    200 ms the first time after the watch gets power) and turns on the step
+    counter, activity, wrist tilt and double tap, with the two gestures on
+    its interrupt, so ``accelerometer.steps`` and ``accelerometer.activity``
+    read at once. The firmware stays loaded while the watch has power,
+    across resets and deep sleep, and the day's count with it;
+    ``sleep(wake=("motion",))`` wakes on a tilt or a double tap.
     """
     global _accel
     if _accel is None:
-        from bma423 import BMA423
+        import bma423
 
         pmu()
-        _accel = BMA423(_i2c_bus(), axes=(1, 0, ~2))
+        _accel = bma423.BMA423(_i2c_bus(), axes=(1, 0, ~2))
+        # Steps, what you're doing, a wrist tilt and a double tap, ready for
+        # any app. The upload is skipped when the firmware already runs,
+        # which keeps the day's step count.
+        try:
+            _accel.load_features()
+            _accel.enable_features(bma423.STEP_COUNTER | bma423.ACTIVITY | bma423.WRIST_WEAR | bma423.DOUBLE_TAP)
+            _accel.map_interrupts(bma423.INT_WRIST_WEAR | bma423.INT_DOUBLE_TAP)
+        except OSError as e:
+            print("t-watch-s3: no step counter or gestures: %r" % (e,))
     return _accel
 
 

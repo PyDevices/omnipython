@@ -27,4 +27,4 @@ class Gamepads(endpointkit.Provider):
     def poll(self) -> list[endpointkit.Endpoint] | None: ...
 
 def register(registry: endpointkit.Registry | None = None) -> list[endpointkit.Provider]:
-    """Register the keyboard, the mouse and the gamepads."""
+    """Register the keyboard, the mouse and the gamepads, and a browser page's cameras."""
