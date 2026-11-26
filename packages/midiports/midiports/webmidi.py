@@ -698,6 +698,8 @@ _ACCESS = """(limit, stampLimit) => {
                 why = 'MIDI is blocked for this page in the browser\\'s site settings';
                 bump();
             }
+            // Allowed later, by a program's own request or the site settings: list the ports then.
+            if ('onchange' in status) status.onchange = () => { if (status.state === 'granted' && state === 'idle') ask(); };
         }, () => {});
     }
     const ports = (kind) => (access === null ? [] : Array.from(kind === 'in' ? access.inputs.values() : access.outputs.values()));

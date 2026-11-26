@@ -66,6 +66,8 @@ _FAKE = """(permission, answer, present) => {
         removeEventListener(type, fn) { this.heard[type]?.delete(fn); },
     };
     const fake = {access, asked: 0};
+    const status = {state: permission, onchange: null};
+    fake.grant = () => { status.state = 'granted'; if (status.onchange) status.onchange(); };
     fake.plug = (type, id, name) => {
         const map = type === 'input' ? access.inputs : access.outputs;
         let port = map.get(id);
@@ -89,7 +91,7 @@ _FAKE = """(permission, answer, present) => {
             fake.asked++;
             return answer === 'yes' ? Promise.resolve(access) : Promise.reject(new Error('Permission denied'));
         },
-        permissions: {query: () => Promise.resolve({state: permission})},
+        permissions: {query: () => Promise.resolve(status)},
     } : {};
     Object.defineProperty(globalThis, 'navigator', {value: nav, configurable: true, writable: true});
     return fake;
@@ -150,6 +152,16 @@ async def allowed_before_lists_at_once(air):
     await settle(reg)
     expect(fake.asked == 1, "asked %d times" % fake.asked)
     expect([l for l, _ in labels(reg, "midi.in")] == ["Keys", "Pads"], "in: %r" % labels(reg, "midi.in"))
+
+
+@check
+async def allowed_elsewhere_lists_at_once(air):
+    fake, reg, ins, outs = fresh(permission="prompt")
+    await settle(reg)
+    expect(fake.asked == 0, "asked before anything allowed it")
+    fake.grant()  # another request on the page, or the site settings
+    await settle(reg)
+    expect([l for l, _ in labels(reg, "midi.out")] == ["Synth", "Loopback"], "out: %r" % labels(reg, "midi.out"))
 
 
 @check
