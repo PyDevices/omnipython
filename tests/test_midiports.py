@@ -239,6 +239,11 @@ class WasmUnderNode(unittest.TestCase):
         result = self._run("webmidi_page_checks.py")
         self.assertIn(" 0 failed", result.stdout)
 
+    def test_midi_between_tabs(self):
+        """Other tabs as endpointkit ports, over a real BroadcastChannel."""
+        result = self._run("tabs_page_checks.py")
+        self.assertIn(" 0 failed", result.stdout)
+
     def test_ble_over_the_fake_radio(self):
         result = self._run("midiports_ble_checks.py")
         self.assertIn(" 0 failed", result.stdout)

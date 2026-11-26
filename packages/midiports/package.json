@@ -41,6 +41,10 @@
       "github:PyDevices/omnipython/packages/midiports/midiports/endpoints.py"
     ],
     [
+      "midiports/tabs.py",
+      "github:PyDevices/omnipython/packages/midiports/midiports/tabs.py"
+    ],
+    [
       "adafruit_midi/__init__.py",
       "https://raw.githubusercontent.com/adafruit/Adafruit_CircuitPython_MIDI/1.6.0/adafruit_midi/__init__.py"
     ],
