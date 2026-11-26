@@ -1,0 +1,41 @@
+{
+  "urls": [
+    [
+      "board_config.py",
+      "github:PyDevices/omnipython/board_configs/busdisplay/spi/seeed_gc9a01_on_xiao_esp32c5/board_config.py"
+    ],
+    [
+      "board_peripherals.py",
+      "github:PyDevices/omnipython/board_configs/busdisplay/spi/seeed_gc9a01_on_xiao_esp32c5/board_peripherals.py"
+    ],
+    [
+      "gc9a01.py",
+      "github:PyDevices/omnipython/drivers/display/gc9a01.py"
+    ],
+    [
+      "chsc6x.py",
+      "github:PyDevices/omnipython/drivers/touch/chsc6x.py"
+    ],
+    [
+      "pcf8563.py",
+      "github:PyDevices/omnipython/drivers/rtc/pcf8563.py"
+    ],
+    [
+      "battery_adc.py",
+      "github:PyDevices/omnipython/drivers/power/battery_adc.py"
+    ],
+    [
+      "sdcard.py",
+      "github:micropython/micropython-lib/micropython/drivers/storage/sdcard/sdcard.py"
+    ]
+  ],
+  "deps": [
+    [
+      "omnipython",
+      "latest"
+    ]
+  ],
+  "version": "0.1",
+  "description": "Seeed Studio Round Display for XIAO on a XIAO ESP32C5",
+  "generated": "from manifest.py by tools/libbuild.py installers; edit manifest.py, not this"
+}
