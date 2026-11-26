@@ -1,3 +1,13 @@
+## v0.8.1rc6 (2026-11-26)
+
+- lib-lock: applibs at v0.1.3rc5, Home's System and Games tabs, the Touch app (#863)
+- Wi-Fi changes, host names and REPL keys for a board shown in a browser (#861)
+- board configs: board_peripherals for the Seeed Studio XIAO ESP32C5 (#860)
+- wifi_manager: keep Wi-Fi awake with Bluetooth on, as without (#856)
+- LILYGO T-HMI: touch turned to match the screen, and its y calibrated (#859)
+- Waveshare ESP32-S3-Touch-LCD-4.3: taps land where you touch on MicroPython (#858)
+- stmpe610: a press no longer starts where the last one ended (#857)
+
 ## v0.8.1rc5 (2026-11-25)
 
 - lib-lock: applibs at v0.1.3rc4, font fallback, local time in the bar, SPI SD unmount (#854)
