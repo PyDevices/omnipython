@@ -127,19 +127,27 @@ class FakeSta:
     """An esp32 station: ``status()`` follows *timeline*, a list of
     ``(ms from connect, status)``, and it is connected from *up_at* on."""
 
-    def __init__(self, timeline, up_at=None):
+    def __init__(self, timeline, up_at=None, on_before=False, lingers_ms=0):
         self.timeline = timeline
         self.up_at = up_at
         self.t0 = None
+        # On a network already, whose link still reads as up for
+        # *lingers_ms* after disconnect(), as the esp32 port's does.
+        self.linked_until = 0 if on_before else None
+        self.lingers_ms = lingers_ms
 
     def disconnect(self):
+        if self.linked_until is not None:
+            self.linked_until = _clock[0] + self.lingers_ms
         self.t0 = None
 
     def connect(self, ssid, password):
         self.t0 = _clock[0]
 
     def isconnected(self):
-        return self.up_at is not None and _clock[0] - self.t0 >= self.up_at
+        if self.linked_until is not None and _clock[0] < self.linked_until:
+            return True
+        return self.up_at is not None and self.t0 is not None and _clock[0] - self.t0 >= self.up_at
 
     def ifconfig(self):
         return ("10.0.0.7", "255.255.255.0", "10.0.0.1", "10.0.0.1")
@@ -178,6 +186,17 @@ class MPRadioJoinTest(_Patched):
     def test_no_access_point_is_reported(self):
         sta = FakeSta([(0, 1001), (3000, 201)])
         self.assertEqual(self._radio(sta).join("home", "pw", 20), "network not found")
+
+    def test_the_old_link_lingering_after_disconnect_is_not_taken_for_the_new_one(self):
+        # Moving from one network to another: the old link still reads as
+        # up for a moment, and a wrong password must not pass for a join.
+        sta = FakeSta([(0, 1001), (4000, 202)], on_before=True, lingers_ms=300)
+        self.assertEqual(self._radio(sta).join("cafe", "wrong", 20), "wrong password")
+
+    def test_a_link_that_never_drops_is_not_waited_on_for_ever(self):
+        sta = FakeSta([(0, 1001)], up_at=2000, on_before=True, lingers_ms=10**9)
+        self.assertIsNone(self._radio(sta).join("cafe", "pw", 20))
+        self.assertLess(_clock[0], 10000)
 
 
 class JoinKnownTest(_Patched):
