@@ -1,0 +1,25 @@
+{
+  "urls": [
+    [
+      "board_peripherals.py",
+      "github:PyDevices/omnipython/board_configs/nodisplay/seeed_xiao_esp32c5/board_peripherals.py"
+    ],
+    [
+      "battery_adc.py",
+      "github:PyDevices/omnipython/drivers/power/battery_adc.py"
+    ],
+    [
+      "keypad_gpio.py",
+      "github:PyDevices/omnipython/drivers/input/keypad_gpio.py"
+    ]
+  ],
+  "deps": [
+    [
+      "omnipython",
+      "latest"
+    ]
+  ],
+  "version": "0.1.0",
+  "description": "board_peripherals for the Seeed Studio XIAO ESP32C5, on MicroPython",
+  "generated": "from manifest.py by tools/libbuild.py installers; edit manifest.py, not this"
+}

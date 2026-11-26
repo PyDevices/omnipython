@@ -223,6 +223,7 @@ that display's board config instead, and keeps its apps.
 | `nodisplay/qtpy_esp32_pico_audio_bff` | QT Py ESP32 Pico + Adafruit Audio BFF (MicroPython; `audio_out` on I2S, `boot_button`) |
 | `nodisplay/esp32-s31-zero` | Waveshare ESP32-S31-Zero (MicroPython; `pixels`, `boot_button`, `wlan`, `ble`) |
 | `nodisplay/pimoroni_pico_plus2_w` | Pimoroni Pico Plus 2 W (MicroPython; `led`, `i2c`, `wlan`, `ble`; the BOOT switch as `keypad()`) |
+| `nodisplay/seeed_xiao_esp32c5` | Seeed Studio XIAO ESP32C5 (MicroPython; `led`, `boot_button`, `battery`, `i2c`, `wlan`, `ble`; BOOT as `keypad()`) |
 | `cp/nodisplay/qtpy_esp32_pico_audio_bff` | the same, on CircuitPython (`audio_out` is `audiobusio.I2SOut`) |
 
 ### Desktop and browser
